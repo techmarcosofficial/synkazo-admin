@@ -118,9 +118,11 @@
   --popover-foreground:
     #14151b;
 
-  /* Primary */
+  /* Primary — buttons/CTAs use rich black in the light theme so they read as
+     confident action rather than brand-orange noise; brand orange still shows
+     up on the mark, sidebar accents, and dark-mode primary. */
   --primary:
-    #F85508;
+    #14151b;
   --primary-foreground:
     #ffffff;
 
