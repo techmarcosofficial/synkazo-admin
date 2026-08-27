@@ -150,8 +150,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenuButton asChild size="lg" tooltip="Synkazo">
               <Link to="/dashboard">
                 <SynkazoWordmark
-                  className="h-8! w-auto!"
-                  tone="light"
+                  className="h-7! w-auto! text-foreground"
+                  tone="auto"
                 />
               </Link>
             </SidebarMenuButton>

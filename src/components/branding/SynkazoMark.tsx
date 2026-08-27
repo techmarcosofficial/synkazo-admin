@@ -57,8 +57,12 @@ export function SynkazoWordmark({
   variant = 'full',
 }: {
   className?: string;
-  /** `light` = dark word text (for light bg); `dark` = white word text (for dark bg). */
-  tone?: 'light' | 'dark';
+  /**
+   * `light` = dark word text (for light bg); `dark` = white word text (for dark bg);
+   * `auto` = inherit `currentColor` from CSS — use with a Tailwind `text-*`
+   * class (e.g. `text-foreground`) so the word flips with the current theme.
+   */
+  tone?: 'light' | 'dark' | 'auto';
   /**
    * `full` (default) — mark + word.
    * `wordOnly` — just the "synkazo" letters with a tight viewBox. Use next to a
@@ -66,7 +70,12 @@ export function SynkazoWordmark({
    */
   variant?: 'full' | 'wordOnly';
 }) {
-  const wordFill = tone === 'dark' ? '#ffffff' : '#161616';
+  const wordFill =
+    tone === 'auto'
+      ? 'currentColor'
+      : tone === 'dark'
+        ? '#ffffff'
+        : '#161616';
   const viewBox = variant === 'wordOnly' ? '38 3 68 20' : '0 0 106 26';
   return (
     <svg
