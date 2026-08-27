@@ -12,7 +12,7 @@ import type { PricingPlan, PublicBillingInterval } from '@/types/pricing';
 // Kept local rather than a shared "site" module — the dashboard only ever needs this one
 // address, and the rest of the marketing site's SITE constant (nav links, footer, social)
 // has no reason to live in this app.
-const SUPPORT_EMAIL = 'support@techmarcos.com';
+const SUPPORT_EMAIL = 'hello@synkazo.com';
 
 /**
  * Hard paywall shown in place of the entire dashboard when a logged-in org has no active
