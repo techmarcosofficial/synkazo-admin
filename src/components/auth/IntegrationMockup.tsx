@@ -1,5 +1,4 @@
 import {
-  RefreshCw,
   Map,
   Filter,
   ShieldCheck,
@@ -20,6 +19,7 @@ import {
 
 import { BrowserMockup } from './BrowserMockup';
 
+import { SynkazoMark } from '@/components/branding/SynkazoMark';
 import { getPlatform } from '@/components/platform/platform';
 import { PlatformIcon } from '@/components/platform/PlatformIcon';
 import { cn } from '@/lib/utils';
@@ -104,9 +104,7 @@ const MiddlewareCard = forwardRef<HTMLDivElement>(
         className="middleware-card group/mw bg-card focus-visible:ring-primary/50 relative w-full max-w-[168px] shrink-0 rounded-lg border p-2.5 outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
       >
         <div className="flex items-center gap-2">
-          <div className="bg-primary text-primary-foreground flex size-7 shrink-0 items-center justify-center rounded-md">
-            <RefreshCw className="size-3.5" />
-          </div>
+          <SynkazoMark className="size-7 shrink-0 rounded-md" />
           <div className="min-w-0">
             <p className="truncate text-[13px] leading-tight font-semibold">
               Synkazo
