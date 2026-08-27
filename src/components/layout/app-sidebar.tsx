@@ -18,7 +18,7 @@ import {
 import * as React from 'react';
 import { Link } from 'react-router-dom';
 
-import { SynkazoMark } from '@/components/branding/SynkazoMark';
+import { SynkazoWordmark } from '@/components/branding/SynkazoMark';
 import { NavMain, type NavGroup } from '@/components/layout/nav-main';
 import {
   NavSecondary,
@@ -149,10 +149,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton asChild size="lg" tooltip="Synkazo">
               <Link to="/dashboard">
-                <SynkazoMark className="size-8 shrink-0" />
-                <span className="text-base font-bold tracking-tight">
-                  Synkazo
-                </span>
+                <SynkazoWordmark
+                  className="h-8! w-auto!"
+                  tone="light"
+                />
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
