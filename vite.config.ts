@@ -3,7 +3,7 @@ import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
 import { defineConfig } from "vitest/config"
 
-// SyncBridge dashboard frontend (React + Vite) — serves app.synkazo.com.
+// Synkazo dashboard frontend (React + Vite) — serves app.synkazo.com.
 // The app talks directly to the NestJS backend via VITE_API_BASE_URL
 // (see src/api/apiClient.ts), so no dev proxy is required.
 export default defineConfig({

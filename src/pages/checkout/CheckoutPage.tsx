@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { clearPendingPlan, savePendingPlan } from '@/lib/pendingPlan';
 import { stripePromise, isStripeConfigured } from '@/lib/stripe';
-import { useSBAuth } from '@/lib/syncbridgeAuth';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import {
   usePlansQuery,
   useRefreshPlanMutation,
@@ -34,7 +34,7 @@ export default function CheckoutPage() {
   // `isChangingPlan` (the new plan is already live) and flashes the brand-new-purchase form for a
   // moment before the navigate takes effect.
   const [isRedirecting, setIsRedirecting] = useState(false);
-  const { currentUser } = useSBAuth();
+  const { currentUser } = useSynkazoAuth();
   const refreshPlan = useRefreshPlanMutation();
   const subQuery = useSubscriptionQuery({ enabled: !!currentUser });
   const { theme } = useTheme();

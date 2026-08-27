@@ -16,7 +16,7 @@ import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { Spinner } from '@/components/ui/spinner';
 import { SetupWizardDialog } from '@/features/projects/components/setup';
 import SourceSetupDialog from '@/features/projects/components/setup/SourceSetupDialog';
-import { useSBAuth } from '@/lib/syncbridgeAuth';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { usePlanQuery } from '@/queries/useBilling';
 
 // Subscription states with no live billing relationship, or where renewal has fully failed
@@ -27,7 +27,7 @@ import { usePlanQuery } from '@/queries/useBilling';
 const PAYWALL_STATUSES = new Set(['none', 'canceled', 'incomplete', 'unpaid']);
 
 export default function AppLayout() {
-  const { currentUser, isLoading, hasRole } = useSBAuth();
+  const { currentUser, isLoading, hasRole } = useSynkazoAuth();
   const [showWelcome, setShowWelcome] = useState(false);
 
   // Platform operators are exempt from the paywall so they can't lock themselves out of

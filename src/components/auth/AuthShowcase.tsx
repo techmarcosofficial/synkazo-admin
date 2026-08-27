@@ -3,7 +3,7 @@ import { IntegrationMockup } from './IntegrationMockup';
 /**
  * Right-hand marketing panel for the auth pages — reuses the landing-page hero
  * mockup (Safari-glass browser, integration animation) with a vertical layout
- * (sources on top, SyncBridge in the middle, destination at the bottom), which
+ * (sources on top, Synkazo in the middle, destination at the bottom), which
  * suits this panel's tall/narrow proportions better than the horizontal hero.
  * The grid + purple glow backdrop lives here only — the form side stays plain.
  */

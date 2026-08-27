@@ -2,12 +2,12 @@ import { Home } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
-import { useSBAuth } from '@/lib/syncbridgeAuth';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 
 export default function PageNotFound() {
   const location = useLocation();
   const pageName = location.pathname.substring(1);
-  const { currentUser } = useSBAuth();
+  const { currentUser } = useSynkazoAuth();
   const isAdmin =
     currentUser?.role === 'super_admin' || currentUser?.role === 'org_admin';
 

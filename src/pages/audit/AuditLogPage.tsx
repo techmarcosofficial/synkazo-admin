@@ -38,7 +38,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useSBAuth } from '@/lib/syncbridgeAuth';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { cn } from '@/lib/utils';
 import { useAuditLogsQuery } from '@/queries/useAudit';
 import { useSystemLogsQuery } from '@/queries/useSystemLogs';
@@ -99,7 +99,7 @@ const SEVERITY_FILTER_OPTIONS: Array<{ value: string; label: string }> = [
 ];
 
 export default function AuditLogPage() {
-  const { currentUser } = useSBAuth();
+  const { currentUser } = useSynkazoAuth();
 
   // ── Audit Log tab state ──────────────────────────────────────────────────
   const [page, setPage] = useState(1);

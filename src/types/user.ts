@@ -43,8 +43,8 @@ export interface Organisation {
   updatedAt?: string;
 }
 
-/** Context value exposed by SyncBridgeAuthProvider */
-export interface SyncBridgeAuthContextValue {
+/** Context value exposed by SynkazoAuthProvider */
+export interface SynkazoAuthContextValue {
   currentUser: User | null;
   /** Alias for currentUser — kept for legacy consumers */
   demoUser: User | null;

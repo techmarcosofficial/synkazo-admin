@@ -15,7 +15,7 @@ import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { getPasswordError } from '@/lib/passwordValidation';
-import { useSBAuth } from '@/lib/syncbridgeAuth';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { showToast } from '@/lib/toast';
 import { usePlanQuery } from '@/queries/useBilling';
 import {
@@ -29,7 +29,7 @@ export default function ProfileSection({
 }: {
   onManageBilling: () => void;
 }) {
-  const { currentUser, hasRole, logout } = useSBAuth();
+  const { currentUser, hasRole, logout } = useSynkazoAuth();
   const navigate = useNavigate();
   const updateMeMutation = useUpdateMeMutation();
   const deleteMeMutation = useDeleteMeMutation();

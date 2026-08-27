@@ -37,7 +37,7 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { usePagination } from '@/hooks/usePagination';
 import { useSort } from '@/hooks/useSort';
 import { roleLabel } from '@/lib/permissions';
-import { useSBAuth } from '@/lib/syncbridgeAuth';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { showToast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
 import {
@@ -93,7 +93,7 @@ function compareInvitations(
 }
 
 export default function InvitationsPage() {
-  const { currentUser } = useSBAuth();
+  const { currentUser } = useSynkazoAuth();
   const invitationsQuery = useInvitationsQuery();
   const revokeMutation = useRevokeInvitationMutation();
   const usersQuery = useUsersQuery(currentUser?.organisationId);

@@ -6,7 +6,7 @@ import { BillingToggle } from '@/components/common/BillingToggle';
 import { PricingCard, type PricingCta } from '@/components/common/PricingCard';
 import { Button } from '@/components/ui/button';
 import { usePricingPlans } from '@/hooks/usePricingPlans';
-import { useSBAuth } from '@/lib/syncbridgeAuth';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import type { PricingPlan, PublicBillingInterval } from '@/types/pricing';
 
 // Kept local rather than a shared "site" module — the dashboard only ever needs this one
@@ -24,7 +24,7 @@ const SUPPORT_EMAIL = 'support@techmarcos.com';
 export default function SubscriptionPaywall() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout } = useSBAuth();
+  const { logout } = useSynkazoAuth();
   const { plans, isLoading: plansLoading } = usePricingPlans();
   const [interval, setInterval] = useState<PublicBillingInterval>('month');
 

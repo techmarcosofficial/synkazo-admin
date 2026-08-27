@@ -1,4 +1,4 @@
-// SyncBridge Mock Data — from 08_MOCK_DATA.md
+// Synkazo Mock Data — from 08_MOCK_DATA.md
 
 export const MOCK_USERS = [
   {
@@ -20,9 +20,9 @@ export const MOCK_USERS = [
   {
     id: 'user_super',
     fullName: 'Alex Rivera',
-    email: 'alex@syncbridge.io',
+    email: 'alex@synkazo.io',
     role: 'super_admin',
-    organisationId: 'org_syncbridge',
+    organisationId: 'org_synkazo',
     avatarInitials: 'AR',
   },
   {
@@ -53,7 +53,7 @@ export const MOCK_ORGS = [
     createdAt: '2025-02-15T11:00:00Z',
   },
   {
-    id: 'org_syncbridge',
+    id: 'org_synkazo',
     name: 'Synkazo Internal',
     plan: 'enterprise',
     memberCount: 5,

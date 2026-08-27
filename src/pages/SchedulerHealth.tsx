@@ -381,7 +381,7 @@ export default function SchedulerHealth() {
             {!queueStats.workerOnline && (
               <p className="text-destructive text-xs">
                 Sync jobs are queued but no worker is processing them. Run:{' '}
-                <code>pm2 start syncbridge-worker</code>
+                <code>pm2 start synkazo-worker</code>
               </p>
             )}
           </CardContent>

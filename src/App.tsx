@@ -9,7 +9,7 @@ import {
 
 import { Toaster } from '@/components/ui/sonner';
 import { queryClientInstance } from '@/lib/query-client';
-import { SyncBridgeAuthProvider, useSBAuth } from '@/lib/syncbridgeAuth';
+import { SynkazoAuthProvider, useSynkazoAuth } from '@/lib/synkazoAuth';
 
 // `/profile` and `/settings/billing` were merged into `/settings` (see SettingsPage's Tabs).
 // This keeps old bookmarks/links working by forwarding to the right tab, preserving any
@@ -80,7 +80,7 @@ import ProjectsPage from './pages/projects/ProjectsPage';
 // Preserves the query string so a HubSpot-error redirect (`?hubspot_error=...`)
 // landing on bare "/" doesn't lose it.
 function RootRedirect() {
-  const { currentUser, isLoading } = useSBAuth();
+  const { currentUser, isLoading } = useSynkazoAuth();
   const { search } = useLocation();
   if (isLoading) return null;
   return (
@@ -95,7 +95,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClientInstance}>
       <Router>
-        <SyncBridgeAuthProvider>
+        <SynkazoAuthProvider>
           <Routes>
             {/* Public — no layout */}
             <Route path="/" element={<RootRedirect />} />
@@ -200,7 +200,7 @@ function App() {
 
             <Route path="*" element={<PageNotFound />} />
           </Routes>
-        </SyncBridgeAuthProvider>
+        </SynkazoAuthProvider>
       </Router>
       <ConfirmDialog />
       <Toaster

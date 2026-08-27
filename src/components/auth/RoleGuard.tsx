@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 
-import { useSBAuth } from '@/lib/syncbridgeAuth';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { type UserRole, type Permission } from '@/types';
 
 /**
@@ -35,7 +35,7 @@ export default function RoleGuard({
   redirectTo = '/dashboard',
   fallback = null,
 }: RoleGuardProps) {
-  const { currentUser, isLoading, hasRole, hasPermission } = useSBAuth();
+  const { currentUser, isLoading, hasRole, hasPermission } = useSynkazoAuth();
 
   if (isLoading) return null;
 

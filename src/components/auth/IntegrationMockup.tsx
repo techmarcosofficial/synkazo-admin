@@ -92,7 +92,7 @@ const PlatformCard = forwardRef<
 /**
  * Compact by default — only the app mark, name, and "Middleware" label.
  * Capabilities live in a floating panel that reveals on hover/focus so the
- * default view stays focused on the Sources → SyncBridge → Destination flow.
+ * default view stays focused on the Sources → Synkazo → Destination flow.
  */
 const MiddlewareCard = forwardRef<HTMLDivElement>(
   function MiddlewareCard(_props, ref) {
@@ -436,15 +436,15 @@ function ConnectorOverlay({
 
 export interface IntegrationMockupProps {
   /**
-   * `horizontal` — sources stacked vertically, SyncBridge centered, destination on the
-   * right (the original layout). `vertical` — sources in a row on top, SyncBridge
+   * `horizontal` — sources stacked vertically, Synkazo centered, destination on the
+   * right (the original layout). `vertical` — sources in a row on top, Synkazo
    * centered below, destination centered at the bottom. Defaults to `horizontal`.
    */
   variant?: IntegrationMockupVariant;
 }
 
 /**
- * Sources → SyncBridge → Destination integration animation used on the marketing hero
+ * Sources → Synkazo → Destination integration animation used on the marketing hero
  * and reused verbatim (via `variant="vertical"`) on the auth pages. The parent decides
  * the layout by passing `variant`; the connector geometry and the dot animation adapt
  * automatically from the rendered card positions — there is no per-variant SVG or

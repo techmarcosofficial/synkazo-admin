@@ -20,7 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { getPasswordError } from '@/lib/passwordValidation';
 import { consumePendingPlan, savePendingPlan } from '@/lib/pendingPlan';
-import { useSBAuth } from '@/lib/syncbridgeAuth';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { showToast } from '@/lib/toast';
 
 type Step = 'form' | 'otp';
@@ -29,7 +29,7 @@ export default function Register() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const { register, verifyOtp, currentUser, isLoading } = useSBAuth();
+  const { register, verifyOtp, currentUser, isLoading } = useSynkazoAuth();
 
   // An unverified user redirected here from /login arrives straight on the code
   // step; we send them a fresh code on arrival since their original may have expired.

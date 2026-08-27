@@ -15,7 +15,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { useSBAuth } from '@/lib/syncbridgeAuth';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { cn } from '@/lib/utils';
 import type { UserRole } from '@/types';
 
@@ -41,7 +41,7 @@ export function NavMain({
   className?: string;
 }) {
   const location = useLocation();
-  const { hasRole } = useSBAuth();
+  const { hasRole } = useSynkazoAuth();
 
   const isActive = (path: string) =>
     location.pathname === path || location.pathname.startsWith(path + '/');

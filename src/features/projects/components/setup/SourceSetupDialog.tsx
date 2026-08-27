@@ -16,7 +16,7 @@ import {
   SyncModeField,
 } from '@/features/projects/components/create';
 import { usePlatforms } from '@/features/projects/hooks';
-import { useSBAuth } from '@/lib/syncbridgeAuth';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { showToast } from '@/lib/toast';
 import {
   useProjectsQuery,
@@ -36,7 +36,7 @@ import type { ProjectSyncMode } from '@/types/project';
  * Mounted once in AppLayout, alongside SetupWizardDialog.
  */
 export default function SourceSetupDialog() {
-  const { hasRole } = useSBAuth();
+  const { hasRole } = useSynkazoAuth();
   const navigate = useNavigate();
   const canManage = hasRole('org_admin');
 

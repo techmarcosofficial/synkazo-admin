@@ -16,15 +16,15 @@ import type {
   User,
   UserRole,
   Permission,
-  SyncBridgeAuthContextValue,
+  SynkazoAuthContextValue,
   RegisterFormData,
 } from '@/types';
 
-const SyncBridgeAuthContext = createContext<SyncBridgeAuthContextValue | null>(
+const SynkazoAuthContext = createContext<SynkazoAuthContextValue | null>(
   null,
 );
 
-export function SyncBridgeAuthProvider({ children }: { children: ReactNode }) {
+export function SynkazoAuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -137,7 +137,7 @@ export function SyncBridgeAuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <SyncBridgeAuthContext.Provider
+    <SynkazoAuthContext.Provider
       value={{
         currentUser,
         demoUser: currentUser,
@@ -152,13 +152,13 @@ export function SyncBridgeAuthProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
-    </SyncBridgeAuthContext.Provider>
+    </SynkazoAuthContext.Provider>
   );
 }
 
-export function useSBAuth(): SyncBridgeAuthContextValue {
-  const ctx = useContext(SyncBridgeAuthContext);
+export function useSynkazoAuth(): SynkazoAuthContextValue {
+  const ctx = useContext(SynkazoAuthContext);
   if (!ctx)
-    throw new Error('useSBAuth must be used inside SyncBridgeAuthProvider');
+    throw new Error('useSynkazoAuth must be used inside SynkazoAuthProvider');
   return ctx;
 }

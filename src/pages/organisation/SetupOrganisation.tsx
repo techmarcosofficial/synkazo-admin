@@ -9,11 +9,11 @@ import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
-import { useSBAuth } from '@/lib/syncbridgeAuth';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { useMyOrgQuery, useSetupOrgMutation } from '@/queries/useOrganisations';
 
 export default function SetupOrganisation() {
-  const { currentUser } = useSBAuth();
+  const { currentUser } = useSynkazoAuth();
   const navigate = useNavigate();
   const orgQuery = useMyOrgQuery();
   const setupOrgMutation = useSetupOrgMutation();

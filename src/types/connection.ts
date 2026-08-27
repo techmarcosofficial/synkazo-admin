@@ -84,7 +84,7 @@ export type WebhookEventStatus =
 export type WebhookSubscriptionStatus =
   'pending' | 'active' | 'inactive' | 'error';
 
-/** A HubSpot webhook subscription SyncBridge has registered (or tried to) for a connection. */
+/** A HubSpot webhook subscription Synkazo has registered (or tried to) for a connection. */
 export interface WebhookSubscription {
   id: string;
   projectId: string;

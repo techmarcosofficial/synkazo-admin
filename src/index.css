@@ -63,7 +63,7 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
 
-  /* SyncBridge semantic extensions: sync/job status colors */
+  /* Synkazo semantic extensions: sync/job status colors */
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-info: var(--info);
@@ -76,7 +76,7 @@
   --color-dataforma: var(--brand-dataforma);
   --color-texada: var(--brand-texada);
   --color-salesforce: var(--brand-salesforce);
-  --color-syncbridge: var(--primary);
+  --color-synkazo: var(--primary);
   /* Typography */
   --text-sm: 0.8225rem; /* 13px */
   --text-sm--line-height: 1.25rem; /* 20px */
@@ -99,7 +99,7 @@
   --brand-salesforce: #1798c1;
 
   --spacing: 0.26rem;
-  /* Base — SyncBridge theme source of truth: SyncBridge/SyncBridge.dc.html (light --bg/--text) */
+  /* Base — Synkazo theme source of truth: Synkazo/Synkazo.dc.html (light --bg/--text) */
   --background:
     #f5f6f9;
   --foreground:
@@ -120,7 +120,7 @@
 
   /* Primary */
   --primary:
-    #6552e8;
+    #F85508;
   --primary-foreground:
     #ffffff;
 
@@ -137,7 +137,7 @@
     #565c6b;
 
   /* Accent — kept as a neutral hover surface (same as muted), not the vivid
-     brand purple, so existing hover/selected states stay subtle. */
+     brand orange, so existing hover/selected states stay subtle. */
   --accent:
     #f1f2f6;
   --accent-foreground:
@@ -160,7 +160,7 @@
   --input:
     #e5e7ee;
   --ring:
-    rgba(101, 82, 232, 0.35);
+    rgba(248, 85, 8, 0.35);
 
   /* Charts */
   --chart-1:
@@ -185,7 +185,7 @@
     #14151b;
 
   --sidebar-primary:
-    #6552e8;
+    #F85508;
   --sidebar-primary-foreground:
     #ffffff;
 
@@ -197,11 +197,11 @@
   --sidebar-border:
     #e5e7ee;
   --sidebar-ring:
-    rgba(101, 82, 232, 0.35);
+    rgba(248, 85, 8, 0.35);
 
   /* Extra semantic tokens */
-  --primary-soft: rgba(101, 82, 232, 0.1);
-  --primary-soft2: rgba(101, 82, 232, 0.16);
+  --primary-soft: rgba(248, 85, 8, 0.1);
+  --primary-soft2: rgba(248, 85, 8, 0.16);
 
   --success-soft: rgba(31, 157, 85, 0.12);
   --warning-soft: rgba(199, 122, 10, 0.13);
@@ -214,7 +214,7 @@
 }
 
 .dark {
-  /* Base — SyncBridge theme source of truth: SyncBridge/SyncBridge.dc.html ([data-theme="dark"] --bg/--text) */
+  /* Base — Synkazo theme source of truth: Synkazo/Synkazo.dc.html ([data-theme="dark"] --bg/--text) */
   --background:
     #0b0c11;
   --foreground:
@@ -233,7 +233,7 @@
     #eceef4;
 
   --primary:
-    #7e6df2;
+    #F85508;
   --primary-foreground:
     #ffffff;
 
@@ -248,7 +248,7 @@
     #99a0b2;
 
   /* Accent — kept as a neutral hover surface (same as muted), not the vivid
-     brand purple, so existing hover/selected states stay subtle. */
+     brand orange, so existing hover/selected states stay subtle. */
   --accent:
     #1a1d28;
   --accent-foreground:
@@ -270,7 +270,7 @@
   --input:
     #262a37;
   --ring:
-    rgba(126, 109, 242, 0.45);
+    rgba(248, 85, 8, 0.45);
 
   --chart-1:
     oklch(0.811 0.111 293.571);
@@ -289,7 +289,7 @@
     #eceef4;
 
   --sidebar-primary:
-    #7e6df2;
+    #F85508;
   --sidebar-primary-foreground:
     #ffffff;
 
@@ -301,10 +301,10 @@
   --sidebar-border:
     #262a37;
   --sidebar-ring:
-    rgba(126, 109, 242, 0.45);
+    rgba(248, 85, 8, 0.45);
 
-  --primary-soft: rgba(126, 109, 242, 0.16);
-  --primary-soft2: rgba(126, 109, 242, 0.24);
+  --primary-soft: rgba(248, 85, 8, 0.16);
+  --primary-soft2: rgba(248, 85, 8, 0.24);
 
   --success-soft: rgba(52, 199, 123, 0.15);
   --warning-soft: rgba(224, 165, 60, 0.15);

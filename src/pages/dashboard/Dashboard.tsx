@@ -23,7 +23,7 @@ import {
   CreateProjectButton,
   CreateProjectDialog,
 } from '@/features/projects/components/create';
-import { useSBAuth } from '@/lib/syncbridgeAuth';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import {
   useDashboardSummaryQuery,
   useOrgSyncLogsQuery,
@@ -41,7 +41,7 @@ function getGreeting() {
 }
 
 export default function Dashboard() {
-  const { currentUser } = useSBAuth();
+  const { currentUser } = useSynkazoAuth();
   const isSuperAdmin = currentUser?.role === 'super_admin';
 
   const projectsQuery = useProjectsQuery();

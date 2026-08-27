@@ -21,12 +21,12 @@ import {
 } from '@/components/ui/sidebar';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { roleLabel } from '@/lib/permissions';
-import { useSBAuth } from '@/lib/syncbridgeAuth';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 interface UserMenuProps {
   variant?: 'sidebar' | 'avatar';
 }
 export function NavUser({ variant = 'sidebar' }: UserMenuProps) {
-  const { currentUser, logout } = useSBAuth();
+  const { currentUser, logout } = useSynkazoAuth();
   const navigate = useNavigate();
   const { isMobile } = useSidebar();
   const { confirm } = useConfirmDialog();

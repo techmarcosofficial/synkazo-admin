@@ -20,7 +20,7 @@ import { FieldLabel } from '@/components/ui/field';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { useSBAuth } from '@/lib/syncbridgeAuth';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { useUpdateMeMutation } from '@/queries/useUsers';
 import { useDisplayPreferencesStore } from '@/stores/useDisplayPreferencesStore';
 import type { User as UserType } from '@/types';
@@ -192,7 +192,7 @@ const SECTIONS = ['settings', 'profile', 'billing'] as const;
 type Section = (typeof SECTIONS)[number];
 
 export default function SettingsPage() {
-  const { currentUser, hasRole } = useSBAuth();
+  const { currentUser, hasRole } = useSynkazoAuth();
   const canBilling = hasRole('org_admin');
   const [searchParams, setSearchParams] = useSearchParams();
 

@@ -16,7 +16,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useSBAuth } from '@/lib/syncbridgeAuth';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { showToast } from '@/lib/toast';
 import type { ConnectionPermissions } from '@/types';
 
@@ -32,7 +32,7 @@ export default function ConnectionPermissionsDialog({
   onOpenChange,
 }: ConnectionPermissionsDialogProps) {
   const meta = PLATFORM_META[conn.platformId] ?? { label: conn.platformId };
-  const { currentUser } = useSBAuth();
+  const { currentUser } = useSynkazoAuth();
   const canManageWebhooks =
     currentUser?.role === 'org_admin' || currentUser?.role === 'super_admin';
   const [loading, setLoading] = useState(true);

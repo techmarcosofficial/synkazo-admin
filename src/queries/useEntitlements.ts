@@ -1,6 +1,6 @@
 import { usePlanQuery } from './useBilling';
 
-import { useSBAuth } from '@/lib/syncbridgeAuth';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import type {
   FieldMappingLevel,
   ObjectScope,
@@ -72,7 +72,7 @@ export interface Entitlements {
  * gates independently — the UI is affordance, not security.
  */
 export function useEntitlements(): Entitlements {
-  const { currentUser, hasRole } = useSBAuth();
+  const { currentUser, hasRole } = useSynkazoAuth();
   const isExempt = hasRole('super_admin');
   const planQuery = usePlanQuery({ enabled: !!currentUser && !isExempt });
 

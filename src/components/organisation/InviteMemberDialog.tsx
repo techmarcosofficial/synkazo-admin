@@ -21,7 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { roleLabel } from '@/lib/permissions';
-import { useSBAuth } from '@/lib/syncbridgeAuth';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { useCreateInvitationMutation } from '@/queries/useInvitations';
 import { useProjectsQuery } from '@/queries/useProjects';
 import type { UserRole } from '@/types';
@@ -37,7 +37,7 @@ export default function InviteMemberDialog({
   open,
   onOpenChange,
 }: InviteMemberDialogProps) {
-  const { currentUser } = useSBAuth();
+  const { currentUser } = useSynkazoAuth();
   const createMutation = useCreateInvitationMutation();
   const projectsQuery = useProjectsQuery();
   const projects = projectsQuery.data ?? [];

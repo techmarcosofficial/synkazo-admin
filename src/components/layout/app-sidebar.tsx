@@ -35,7 +35,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from '@/components/ui/sidebar';
-import { useSBAuth } from '@/lib/syncbridgeAuth';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 
 const NAV_GROUPS: NavGroup[] = [
   {
@@ -140,7 +140,7 @@ const ACCOUNT_ITEMS: NavSecondaryItem[] = [
 ];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { currentUser } = useSBAuth();
+  const { currentUser } = useSynkazoAuth();
 
   return (
     <Sidebar collapsible="icon" {...props}>

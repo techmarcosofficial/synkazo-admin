@@ -13,7 +13,7 @@ import {
   getPermissionsForRole,
   roleLabel,
 } from '@/lib/permissions';
-import { useSBAuth } from '@/lib/syncbridgeAuth';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { useUpdateUserMutation } from '@/queries/useUsers';
 import type { Permission, User, UserRole } from '@/types';
 
@@ -26,7 +26,7 @@ export default function EditPermissionsDialog({
   user,
   onClose,
 }: EditPermissionsDialogProps) {
-  const { currentUser } = useSBAuth();
+  const { currentUser } = useSynkazoAuth();
   const updateUserMutation = useUpdateUserMutation();
   const [editPerms, setEditPerms] = useState<Permission[]>([]);
   const [role, setRole] = useState<UserRole>('editor');

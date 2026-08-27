@@ -25,7 +25,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PERMISSION_GROUPS, roleLabel } from '@/lib/permissions';
-import { useSBAuth } from '@/lib/syncbridgeAuth';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { useInvitationsQuery } from '@/queries/useInvitations';
 import { useMyOrgQuery } from '@/queries/useOrganisations';
 import { useProjectsQuery } from '@/queries/useProjects';
@@ -68,7 +68,7 @@ function OrgAdminDashboardSkeleton() {
 }
 
 export default function OrgAdminDashboard() {
-  const { currentUser } = useSBAuth();
+  const { currentUser } = useSynkazoAuth();
   const projectsQuery = useProjectsQuery();
   const usersQuery = useUsersQuery(currentUser?.organisationId);
   const invitationsQuery = useInvitationsQuery();

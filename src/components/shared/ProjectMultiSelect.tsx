@@ -16,7 +16,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { useSBAuth } from '@/lib/syncbridgeAuth';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { cn } from '@/lib/utils';
 import { useProjectsQuery } from '@/queries/useProjects';
 
@@ -29,7 +29,7 @@ export default function ProjectMultiSelect({
   value,
   onChange,
 }: ProjectMultiSelectProps) {
-  const { currentUser } = useSBAuth();
+  const { currentUser } = useSynkazoAuth();
   const projectsQuery = useProjectsQuery();
   // GET /projects returns every org's projects for a super_admin (needed by the platform-wide
   // admin pages) — grants here must stay within the inviting admin's own organisation, which is

@@ -13,12 +13,12 @@ import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { consumePendingPlan, savePendingPlan } from '@/lib/pendingPlan';
-import { useSBAuth } from '@/lib/syncbridgeAuth';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { showToast } from '@/lib/toast';
 import { tokenStorage } from '@/lib/tokenStorage';
 
 export default function Login() {
-  const { login, currentUser, isLoading } = useSBAuth();
+  const { login, currentUser, isLoading } = useSynkazoAuth();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({

@@ -45,7 +45,7 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { usePagination } from '@/hooks/usePagination';
 import { useSort } from '@/hooks/useSort';
 import { roleLabel } from '@/lib/permissions';
-import { useSBAuth } from '@/lib/syncbridgeAuth';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { showToast } from '@/lib/toast';
 import { usePlanQuery } from '@/queries/useBilling';
 import {
@@ -262,7 +262,7 @@ function compareMembers(a: User, b: User, key: SortKey) {
 }
 
 function TeamMembersSection() {
-  const { currentUser } = useSBAuth();
+  const { currentUser } = useSynkazoAuth();
   const usersQuery = useUsersQuery(currentUser?.organisationId);
   const members = usersQuery.data ?? [];
   const [editingUser, setEditingUser] = useState<User | null>(null);

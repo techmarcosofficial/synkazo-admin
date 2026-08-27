@@ -21,7 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { OrgSyncLog } from '@/features/dashboard';
 import { PERMISSION_LABELS } from '@/lib/permissions';
-import { useSBAuth } from '@/lib/syncbridgeAuth';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { cn } from '@/lib/utils';
 import { useOrgSyncLogsQuery } from '@/queries/useDashboard';
 import { useJobsQuery } from '@/queries/useJobs';
@@ -58,7 +58,7 @@ function EditorDashboardSkeleton() {
 }
 
 export default function EditorDashboard() {
-  const { currentUser, hasPermission } = useSBAuth();
+  const { currentUser, hasPermission } = useSynkazoAuth();
   const projectsQuery = useProjectsQuery();
   const jobsQuery = useJobsQuery();
   const logsQuery = useOrgSyncLogsQuery(20);
