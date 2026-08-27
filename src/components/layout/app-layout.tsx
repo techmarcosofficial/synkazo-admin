@@ -1,7 +1,7 @@
 // Done
 
 import { useEffect, useState } from 'react';
-import { Navigate, Outlet } from 'react-router';
+import { Navigate, Outlet } from 'react-router-dom';
 
 import GlobalLoader from '../shared/GlobalLoader';
 import OverLimitBanner from '../shared/OverLimitBanner';
