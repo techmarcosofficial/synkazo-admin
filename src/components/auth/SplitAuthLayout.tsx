@@ -22,14 +22,14 @@ export default function SplitAuthLayout({ children }: SplitAuthLayoutProps) {
       <div className="flex flex-col gap-4 overflow-y-auto px-6 py-8 md:px-10">
         <div className="flex items-center justify-between gap-4">
           <a
-            href={import.meta.env.VITE_MARKETING_URL}
+            href={import.meta.env.VITE_FRONTEND_URL}
             aria-label="Synkazo — back to home"
             className="hover:opacity-80 transition-opacity"
           >
             <SynkazoWordmark className="h-6 w-auto" tone="light" />
           </a>
           <a
-            href={import.meta.env.VITE_MARKETING_URL}
+            href={import.meta.env.VITE_FRONTEND_URL}
             className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1.5 text-sm font-medium transition-colors"
           >
             <ArrowLeft className="size-3.5" />

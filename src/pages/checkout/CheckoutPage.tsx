@@ -159,7 +159,7 @@ export default function CheckoutPage() {
             variant="link"
             className="px-0"
             onClick={() => {
-              window.location.href = `${import.meta.env.VITE_MARKETING_URL}/pricing`;
+              window.location.href = `${import.meta.env.VITE_FRONTEND_URL}/pricing`;
             }}
           >
             Back to pricing
@@ -212,7 +212,7 @@ export default function CheckoutPage() {
         size="sm"
         className="text-muted-foreground mb-6 -ml-2"
         onClick={() => {
-          window.location.href = `${import.meta.env.VITE_MARKETING_URL}/pricing`;
+          window.location.href = `${import.meta.env.VITE_FRONTEND_URL}/pricing`;
         }}
       >
         <ArrowLeft className="h-4 w-4" /> Back to plans

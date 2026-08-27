@@ -42,7 +42,7 @@ export default function UpgradeRequiredDialog({
             Not now
           </Button>
           <Button asChild>
-            <a href={`${import.meta.env.VITE_MARKETING_URL}/pricing`}>
+            <a href={`${import.meta.env.VITE_FRONTEND_URL}/pricing`}>
               Upgrade plan
             </a>
           </Button>

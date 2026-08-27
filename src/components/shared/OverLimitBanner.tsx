@@ -34,7 +34,7 @@ export default function OverLimitBanner() {
           You currently have {parts.join(', ')}. New creation and syncing on the
           extra items are paused.{' '}
           <a
-            href={`${import.meta.env.VITE_MARKETING_URL}/pricing`}
+            href={`${import.meta.env.VITE_FRONTEND_URL}/pricing`}
             className="text-primary hover:underline"
           >
             Upgrade

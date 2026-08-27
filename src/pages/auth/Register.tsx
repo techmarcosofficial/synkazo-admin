@@ -355,14 +355,14 @@ export default function Register() {
           <p className="text-muted-foreground text-center text-xs">
             By creating an account you agree to our{' '}
             <a
-              href={`${import.meta.env.VITE_MARKETING_URL}/terms`}
+              href={`${import.meta.env.VITE_FRONTEND_URL}/terms`}
               className="text-primary hover:underline"
             >
               Terms
             </a>{' '}
             and{' '}
             <a
-              href={`${import.meta.env.VITE_MARKETING_URL}/privacy`}
+              href={`${import.meta.env.VITE_FRONTEND_URL}/privacy`}
               className="text-primary hover:underline"
             >
               Privacy Policy

@@ -114,7 +114,7 @@ export default function SubscriptionPaywall() {
 
         <footer className="text-muted-foreground flex flex-col items-center justify-center gap-4 text-sm sm:flex-row">
           <Button asChild variant="ghost" size="sm">
-            <a href={import.meta.env.VITE_MARKETING_URL}>Return to homepage</a>
+            <a href={import.meta.env.VITE_FRONTEND_URL}>Return to homepage</a>
           </Button>
           <span className="hidden sm:inline">·</span>
           <Button variant="ghost" size="sm" onClick={logout}>

@@ -56,7 +56,7 @@ export default function SubscriptionTab() {
         </CardHeader>
         <CardContent>
           <Button asChild>
-            <a href={`${import.meta.env.VITE_MARKETING_URL}/pricing`}>
+            <a href={`${import.meta.env.VITE_FRONTEND_URL}/pricing`}>
               View plans
             </a>
           </Button>
@@ -199,7 +199,7 @@ export default function SubscriptionTab() {
           </CardHeader>
           <CardContent>
             <Button asChild>
-              <a href={`${import.meta.env.VITE_MARKETING_URL}/pricing`}>
+              <a href={`${import.meta.env.VITE_FRONTEND_URL}/pricing`}>
                 Upgrade plan
               </a>
             </Button>
