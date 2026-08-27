@@ -1,0 +1,95 @@
+name: Deploy Admin — Dev
+
+on:
+  push:
+    branches:
+      - dev
+
+concurrency:
+  group: deploy-admin-dev
+  cancel-in-progress: true
+
+env:
+  DEPLOY_BASE_PATH: ${{ vars.DEPLOY_BASE_PATH }}
+
+jobs:
+  deploy:
+    name: Deploy Admin to Dev Server
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate required configuration
+        run: |
+          if [ -z "${DEPLOY_BASE_PATH}" ]; then
+            echo "::error::Repo/org variable DEPLOY_BASE_PATH is not set (Settings -> Secrets and variables -> Actions -> Variables). It must be the absolute path to the synkazo directory on the target server, e.g. /home/techmarcos/synkazo."
+            exit 1
+          fi
+
+      - name: Checkout Latest Code
+        uses: actions/checkout@v4
+
+      - name: Create Deployment Archive
+        run: |
+          tar \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='node_modules' \
+            --exclude='dist' \
+            --exclude='coverage' \
+            --exclude='.env' \
+            --exclude='.env.local' \
+            -czf /tmp/admin.tar.gz .
+          mv /tmp/admin.tar.gz admin.tar.gz
+
+      - name: Upload Archive via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEV_SSH_HOST }}
+          username: ${{ secrets.DEV_SSH_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          source: "admin.tar.gz"
+          target: "${{ vars.DEPLOY_BASE_PATH }}/"
+          overwrite: true
+
+      - name: Extract, Build & Deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEV_SSH_HOST }}
+          username: ${{ secrets.DEV_SSH_USER }}
+          key: ${{ secrets.DEV_SSH_KEY }}
+          envs: DEPLOY_BASE_PATH
+          script: |
+            set -e
+            cd "${DEPLOY_BASE_PATH}"
+
+            # Preserve .env.production across the fresh extract — Vite bakes
+            # VITE_* vars in at build time by reading this file directly, no
+            # Docker build ARGs involved (see synkazo-admin/Dockerfile).
+            cp synkazo-admin-dev/.env.production synkazo-admin-dev.env.production.bak 2>/dev/null || true
+
+            rm -rf synkazo-admin-dev
+            mkdir -p synkazo-admin-dev
+            tar -xzf admin.tar.gz -C synkazo-admin-dev
+            rm -f admin.tar.gz
+
+            [ -f synkazo-admin-dev.env.production.bak ] && mv synkazo-admin-dev.env.production.bak synkazo-admin-dev/.env.production || true
+
+            # Remove old / previously-named containers
+            for c in synkazo-admin synkazo_admin synkazo_dev_admin; do
+              docker stop $c 2>/dev/null || true
+              docker rm $c 2>/dev/null || true
+            done
+
+            docker compose build synkazo-admin
+            docker compose up -d --no-deps synkazo-admin
+
+            echo "Waiting for container to start..."
+            sleep 5
+            if ! docker ps | grep -q "synkazo_dev_admin"; then
+              echo "ERROR: synkazo_dev_admin failed to start"
+              docker logs --tail=50 synkazo_dev_admin || true
+              exit 1
+            fi
+            echo "Deploy successful"
+
+            docker image prune -f

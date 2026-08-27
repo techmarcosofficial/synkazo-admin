@@ -1,0 +1,38 @@
+# Example docker-compose service block for the PROD server.
+#
+# This is a FRAGMENT, not a standalone file. Merge the `synkazo-admin`
+# block below into the merged ~/synkazo/docker-compose.yml on the server
+# (same file the frontend and api examples merge into) — don't create a
+# second compose file.
+#
+# The GitHub Actions workflow (.github/workflows/deploy-prod.yml) runs
+# `docker compose build synkazo-admin` + `docker compose up -d` from
+# $DEPLOY_BASE_PATH (a repo/org Actions variable — see synkazo-docs), so
+# this fragment needs to live in the compose file there — NOT inside the
+# app directory.
+#
+# The workflow SCPs the app tarball to $DEPLOY_BASE_PATH/admin.tar.gz and
+# extracts it to $DEPLOY_BASE_PATH/synkazo-admin-prod/, which is what
+# `build.context` below points at. No env_file at runtime — this is a
+# static Vite SPA served by nginx; VITE_* vars are baked in at build time
+# from .env.production inside the build context (see Dockerfile), not
+# read at container start.
+
+services:
+  synkazo-admin:
+    container_name: synkazo_prod_admin
+    build:
+      context: ./synkazo-admin-prod
+      dockerfile: Dockerfile
+    image: synkazo/admin:prod
+    restart: always
+    ports:
+      # host:container — bind to loopback only; front with nginx / Caddy /
+      # Cloudflare Tunnel for public access. Change if 5000 collides with
+      # something else already running on this host.
+      - "127.0.0.1:5000:80"
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
