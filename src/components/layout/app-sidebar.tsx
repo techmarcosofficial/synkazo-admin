@@ -12,13 +12,13 @@ import {
   LayoutDashboard,
   Mail,
   Plug,
-  RefreshCw,
   Settings,
   Shield,
 } from 'lucide-react';
 import * as React from 'react';
 import { Link } from 'react-router-dom';
 
+import { SynkazoMark } from '@/components/branding/SynkazoMark';
 import { NavMain, type NavGroup } from '@/components/layout/nav-main';
 import {
   NavSecondary,
@@ -149,9 +149,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton asChild size="lg" tooltip="Synkazo">
               <Link to="/dashboard">
-                <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                  <RefreshCw className="size-4" />
-                </div>
+                <SynkazoMark className="size-8 shrink-0" />
                 <span className="text-base font-bold tracking-tight">
                   Synkazo
                 </span>
