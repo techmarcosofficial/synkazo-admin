@@ -328,6 +328,19 @@
   html {
     @apply font-sans;
   }
+  /* Tailwind v4 dropped the default `cursor: pointer` on <button>; restore it
+     for every interactive surface so buttons/menus/links behave like the app
+     did before the upgrade. Disabled elements keep the default cursor. */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  [role='menuitem']:not([aria-disabled='true']),
+  [role='menuitemcheckbox']:not([aria-disabled='true']),
+  [role='menuitemradio']:not([aria-disabled='true']),
+  [role='option']:not([aria-disabled='true']),
+  [role='tab']:not([aria-disabled='true']),
+  a[href] {
+    cursor: pointer;
+  }
 }
 
 @keyframes gradientShift {
