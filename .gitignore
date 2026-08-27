@@ -1,8 +1,8 @@
-# Nestjs specific
+# Vite / React specific
 /dist
+/dist-ssr
 /node_modules
-/build
-/tmp
+.vite
 
 # Logs
 logs
@@ -18,7 +18,22 @@ lerna-debug.log*
 .env.development
 .env.test
 .env.production
+!.env.example
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
 # temp directory
 .temp
 .tmp
+
+# coverage
+coverage

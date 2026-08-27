@@ -1,0 +1,482 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/plus-jakarta-sans";
+@import "@fontsource-variable/inter";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Square grid / dot backdrop textures used behind marketing hero & CTA sections. */
+@utility bg-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in oklch, var(--foreground) 11%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklch, var(--foreground) 11%, transparent) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
+
+@utility bg-dots {
+  background-image: radial-gradient(color-mix(in oklch, var(--foreground) 12%, transparent) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+@theme inline {
+  --font-sans: "Plus Jakarta Sans Variable", sans-serif;
+
+  --font-heading:
+    var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.8);
+  --radius-md: calc(var(--radius) * 1);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.2);
+  --radius-2xl: calc(var(--radius) * 2);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* SyncBridge semantic extensions: sync/job status colors */
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-paused: var(--paused);
+
+  /* Third-party platform brand colors (identity data, theme-independent) */
+  --color-hubspot: var(--brand-hubspot);
+  --color-servicetitan: var(--brand-servicetitan);
+  --color-servicetitan-tile: var(--brand-servicetitan-tile);
+  --color-dataforma: var(--brand-dataforma);
+  --color-texada: var(--brand-texada);
+  --color-salesforce: var(--brand-salesforce);
+  --color-syncbridge: var(--primary);
+  /* Typography */
+  --text-sm: 0.8225rem; /* 13px */
+  --text-sm--line-height: 1.25rem; /* 20px */
+
+  --color-footer: var(--footer);
+  --color-footer-foreground: var(--footer-foreground);
+  --color-f-border: var(--f-border);
+
+}
+/* Platform brand palette — constant across light/dark, referenced by
+   PlatformBadge / PlatformIcon only. Not part of the design theme. */
+
+:root {
+  /* Brand */
+  --brand-hubspot: #ff7a58;
+  --brand-servicetitan: #2e3340;
+  --brand-servicetitan-tile: #2e3340;
+  --brand-dataforma: #1a56db;
+  --brand-texada: #fccb30;
+  --brand-salesforce: #1798c1;
+
+  --spacing: 0.26rem;
+  /* Base — SyncBridge theme source of truth: SyncBridge/SyncBridge.dc.html (light --bg/--text) */
+  --background:
+    #f5f6f9;
+  --foreground:
+    #14151b;
+
+  --footer: #0b0c11;
+  --footer-foreground:#ffffff;
+
+  --card:
+    #ffffff;
+  --card-foreground:
+    #14151b;
+
+  --popover:
+    #ffffff;
+  --popover-foreground:
+    #14151b;
+
+  /* Primary */
+  --primary:
+    #6552e8;
+  --primary-foreground:
+    #ffffff;
+
+  /* Secondary surfaces */
+  --secondary:
+    #f1f2f6;
+  --secondary-foreground:
+    #14151b;
+
+  /* Muted */
+  --muted:
+    #f1f2f6;
+  --muted-foreground:
+    #565c6b;
+
+  /* Accent — kept as a neutral hover surface (same as muted), not the vivid
+     brand purple, so existing hover/selected states stay subtle. */
+  --accent:
+    #f1f2f6;
+  --accent-foreground:
+    #14151b;
+
+  /* States */
+  --destructive:
+    #db4437;
+  --destructive-foreground: #ffffff;
+
+  --success: #1f9d55;
+  --warning: #c77a0a;
+  --info: #2f74d0;
+  --paused: #7c5cd8;
+
+  /* Borders */
+  --border:
+    #e5e7ee;
+  --f-border: #262a37;
+  --input:
+    #e5e7ee;
+  --ring:
+    rgba(101, 82, 232, 0.35);
+
+  /* Charts */
+  --chart-1:
+    oklch(0.811 0.111 293.571);
+  --chart-2:
+    oklch(0.606 0.25 292.717);
+  --chart-3:
+    oklch(0.541 0.281 293.009);
+  --chart-4:
+    oklch(0.491 0.27 292.581);
+  --chart-5:
+    oklch(0.432 0.232 292.759);
+
+  /* Radius */
+  --radius:
+    0.35rem;
+
+  /* Sidebar */
+  --sidebar:
+    #ffffff;
+  --sidebar-foreground:
+    #14151b;
+
+  --sidebar-primary:
+    #6552e8;
+  --sidebar-primary-foreground:
+    #ffffff;
+
+  --sidebar-accent:
+    #f1f2f6;
+  --sidebar-accent-foreground:
+    #14151b;
+
+  --sidebar-border:
+    #e5e7ee;
+  --sidebar-ring:
+    rgba(101, 82, 232, 0.35);
+
+  /* Extra semantic tokens */
+  --primary-soft: rgba(101, 82, 232, 0.1);
+  --primary-soft2: rgba(101, 82, 232, 0.16);
+
+  --success-soft: rgba(31, 157, 85, 0.12);
+  --warning-soft: rgba(199, 122, 10, 0.13);
+  --info-soft: rgba(47, 116, 208, 0.12);
+  --paused-soft: rgba(124, 92, 216, 0.13);
+
+  --shadow-sm: 0 1px 2px rgba(20, 21, 40, 0.05);
+  --shadow-md: 0 4px 14px rgba(20, 21, 40, 0.07);
+  --shadow-lg: 0 14px 40px rgba(20, 21, 40, 0.12);
+}
+
+.dark {
+  /* Base — SyncBridge theme source of truth: SyncBridge/SyncBridge.dc.html ([data-theme="dark"] --bg/--text) */
+  --background:
+    #0b0c11;
+  --foreground:
+    #eceef4;
+  --card:
+    #14161f;
+  --card-foreground:
+    #eceef4;
+
+  --footer: #0b0c11;
+  --footer-foreground:#ffffff;
+
+  --popover:
+    #14161f;
+  --popover-foreground:
+    #eceef4;
+
+  --primary:
+    #7e6df2;
+  --primary-foreground:
+    #ffffff;
+
+  --secondary:
+    #1a1d28;
+  --secondary-foreground:
+    #eceef4;
+
+  --muted:
+    #1a1d28;
+  --muted-foreground:
+    #99a0b2;
+
+  /* Accent — kept as a neutral hover surface (same as muted), not the vivid
+     brand purple, so existing hover/selected states stay subtle. */
+  --accent:
+    #1a1d28;
+  --accent-foreground:
+    #eceef4;
+
+  --destructive:
+    #f0685c;
+  --destructive-foreground: #ffffff;
+
+  --success: #34c77b;
+  --warning: #e0a53c;
+  --info: #5b9bf0;
+  --paused: #a78bfa;
+
+  --border:
+    #262a37;
+  --f-border:#262a37;
+
+  --input:
+    #262a37;
+  --ring:
+    rgba(126, 109, 242, 0.45);
+
+  --chart-1:
+    oklch(0.811 0.111 293.571);
+  --chart-2:
+    oklch(0.606 0.25 292.717);
+  --chart-3:
+    oklch(0.541 0.281 293.009);
+  --chart-4:
+    oklch(0.491 0.27 292.581);
+  --chart-5:
+    oklch(0.432 0.232 292.759);
+
+  --sidebar:
+    #14161f;
+  --sidebar-foreground:
+    #eceef4;
+
+  --sidebar-primary:
+    #7e6df2;
+  --sidebar-primary-foreground:
+    #ffffff;
+
+  --sidebar-accent:
+    #1a1d28;
+  --sidebar-accent-foreground:
+    #eceef4;
+
+  --sidebar-border:
+    #262a37;
+  --sidebar-ring:
+    rgba(126, 109, 242, 0.45);
+
+  --primary-soft: rgba(126, 109, 242, 0.16);
+  --primary-soft2: rgba(126, 109, 242, 0.24);
+
+  --success-soft: rgba(52, 199, 123, 0.15);
+  --warning-soft: rgba(224, 165, 60, 0.15);
+  --info-soft: rgba(91, 155, 240, 0.15);
+  --paused-soft: rgba(167, 139, 250, 0.16);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.5);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes flow {
+  0% {
+    stroke-dashoffset: 200;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes flowdot {
+  0% {
+    transform: translateX(0);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(var(--flowdot-distance, 40px));
+    opacity: 0;
+  }
+}
+
+@keyframes sbpulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@keyframes sbprog {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.animate-fade-in-up  { animation: fadeInUp 0.4s ease-out forwards; }
+/* .animate-gradient    { background-size: 400% 400%; animation: gradientShift 8s ease infinite; }
+.animate-sb-pulse    { animation: sbpulse 2s ease-in-out infinite; } */
+
+/* ─── Global scrollbar — square, thin, modern ────────────────────────────── */
+/* 
+* {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.55 0.01 265 / 40%) transparent;
+} */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: oklch(0.55 0.01 265 / 35%);
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.55 0.01 265 / 60%);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: oklch(1 0 0 / 18%);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: oklch(1 0 0 / 35%);
+}
+
+/* Per-table horizontal scrollbars are hidden when a shared monday-style
+   scrollbar is mounted by the board page. Vertical scroll is unaffected. */
+.board-table-scroll {
+  scrollbar-width: none;
+}
+.board-table-scroll::-webkit-scrollbar:horizontal {
+  height: 0;
+  display: none;
+}
+
+.shared-scrollbar::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+.shared-scrollbar::-webkit-scrollbar-thumb {
+  background: oklch(0.55 0.01 265 / 55%);
+  border-radius: 0;
+}
+
+/* Board viewport — taller horizontal scrollbar for easier grab */
+.mb-viewport::-webkit-scrollbar:horizontal {
+  height: 14px;
+}
+.mb-viewport::-webkit-scrollbar-thumb {
+  background: oklch(0.55 0.01 265 / 50%);
+}
+.mb-viewport::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.45 0.01 265 / 75%);
+}
+.dark .mb-viewport::-webkit-scrollbar-thumb {
+  background: oklch(1 0 0 / 28%);
+}
+.dark .mb-viewport::-webkit-scrollbar-thumb:hover {
+  background: oklch(1 0 0 / 45%);
+}
+.recharts-cartesian-axis-tick-value,
+.recharts-text {
+  fill: var(--muted-foreground) !important;
+}
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: var(--border) !important;
+}
