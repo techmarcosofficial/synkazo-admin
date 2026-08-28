@@ -88,8 +88,8 @@ jobs:
               exit 1
             fi
 
-            docker compose -f "$COMPOSE_FILE" build synkazo-admin
-            docker compose -f "$COMPOSE_FILE" up -d --no-deps synkazo-admin
+            docker-compose -f "$COMPOSE_FILE" build synkazo-admin
+            docker-compose -f "$COMPOSE_FILE" up -d --no-deps synkazo-admin
 
             echo "Waiting for container to start..."
             sleep 5
