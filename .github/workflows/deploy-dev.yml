@@ -62,17 +62,21 @@ jobs:
             set -e
             cd "${DEPLOY_BASE_PATH}"
 
-            # Preserve .env.production across the fresh extract — Vite bakes
-            # VITE_* vars in at build time by reading this file directly, no
-            # Docker build ARGs involved (see synkazo-admin/Dockerfile).
-            cp synkazo-admin-dev/.env.production synkazo-admin-dev.env.production.bak 2>/dev/null || true
+            # Preserve every .env* file across the fresh extract — Vite bakes
+            # VITE_* vars in at build time by reading these directly, no
+            # Docker build ARGs involved (see synkazo-admin/Dockerfile). Backs
+            # up whatever's actually there (.env, .env.production, etc.)
+            # instead of naming one file, so nothing gets silently deleted.
+            ENV_BACKUP_DIR=$(mktemp -d)
+            cp synkazo-admin-dev/.env* "$ENV_BACKUP_DIR"/ 2>/dev/null || true
 
             rm -rf synkazo-admin-dev
             mkdir -p synkazo-admin-dev
             tar -xzf admin.tar.gz -C synkazo-admin-dev
             rm -f admin.tar.gz
 
-            [ -f synkazo-admin-dev.env.production.bak ] && mv synkazo-admin-dev.env.production.bak synkazo-admin-dev/.env.production || true
+            cp "$ENV_BACKUP_DIR"/.env* synkazo-admin-dev/ 2>/dev/null || true
+            rm -rf "$ENV_BACKUP_DIR"
 
             # Remove old / previously-named containers
             for c in synkazo-admin synkazo_admin synkazo_dev_admin; do
