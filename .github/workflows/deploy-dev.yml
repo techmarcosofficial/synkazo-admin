@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  DEPLOY_BASE_PATH: ${{ vars.DEPLOY_BASE_PATH }}
+  DEPLOY_BASE_PATH: ${{ vars.DEV_DEPLOY_BASE_PATH }}
 
 jobs:
   deploy:
@@ -21,7 +21,7 @@ jobs:
       - name: Validate required configuration
         run: |
           if [ -z "${DEPLOY_BASE_PATH}" ]; then
-            echo "::error::Repo/org variable DEPLOY_BASE_PATH is not set (Settings -> Secrets and variables -> Actions -> Variables). It must be the absolute path to the synkazo directory on the target server, e.g. /home/techmarcos/synkazo."
+            echo "::error::Repo/org variable DEV_DEPLOY_BASE_PATH is not set (Settings -> Secrets and variables -> Actions -> Variables). It must be the absolute path to the synkazo directory on the DEV server (separate from PROD_DEPLOY_BASE_PATH), e.g. /home/techmarcos/synkazo."
             exit 1
           fi
 
@@ -48,7 +48,7 @@ jobs:
           username: ${{ secrets.DEV_SSH_USER }}
           key: ${{ secrets.DEV_SSH_KEY }}
           source: "admin.tar.gz"
-          target: "${{ vars.DEPLOY_BASE_PATH }}/"
+          target: "${{ vars.DEV_DEPLOY_BASE_PATH }}/"
           overwrite: true
 
       - name: Extract, Build & Deploy
