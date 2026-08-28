@@ -33,6 +33,14 @@ function StatusBadge({ queueJob }: { queueJob: QueueJob }) {
   );
 }
 
+// Reflects Job.checkpointPage/syncAllPage — the same "still has pending work this cycle"
+// signal the backend's iteration draining reads (see baseline.util.ts:jobHasPendingWork).
+function hasPendingWork(queueJob: QueueJob): boolean {
+  return (
+    queueJob.job?.checkpointPage != null || queueJob.job?.syncAllPage != null
+  );
+}
+
 export default function QueueJobList({
   queueJobs,
   onReorderLocal,
@@ -97,6 +105,15 @@ export default function QueueJobList({
                           {queueJob.job?.name ?? 'Job'}
                         </span>
                         <StatusBadge queueJob={queueJob} />
+                        {hasPendingWork(queueJob) && (
+                          <Badge
+                            variant="outline"
+                            className="border-paused/40 text-paused"
+                            title="Has pending records from a previous iteration"
+                          >
+                            Pending records
+                          </Badge>
+                        )}
                       </div>
                       <div className="text-muted-foreground mt-0.5 flex items-center gap-1 truncate text-xs">
                         <span>{queueJob.job?.sourceObject}</span>

@@ -43,6 +43,8 @@ function normalizeMappings(
         : (m.transformConfig ?? null),
       isRequired: m.isRequired ?? false,
       isMatchField: m.matchDestKey === dk,
+      matchPriority: m.matchDestKey === dk ? (m.matchOrder ?? null) : null,
+      updatePolicy: m.destUpdatePolicy?.[dk] ?? 'always',
       onEmpty: m.destOnEmpty?.[dk] ?? 'none',
       defaultValue: m.destDefaults?.[dk] ?? null,
       reverseOnEmpty: m.destReverseOnEmpty?.[dk] ?? 'none',

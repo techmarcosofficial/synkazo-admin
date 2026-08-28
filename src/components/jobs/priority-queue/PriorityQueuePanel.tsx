@@ -1,6 +1,7 @@
 import { Plus, Save } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import AssociationQueueCard from './AssociationQueueCard';
 import QueueJobDrawer, { type QueueJobFormValues } from './QueueJobDrawer';
 import QueueJobList from './QueueJobList';
 import QueueScheduleCard from './QueueScheduleCard';
@@ -90,7 +91,7 @@ export default function PriorityQueuePanel({
 
   const handleDrawerSubmit = (values: QueueJobFormValues) => {
     const overrideSyncConfig = values.overrideEnabled
-      ? { fullSync: values.fullSync, batchSize: values.batchSize }
+      ? { batchSize: values.batchSize }
       : null;
 
     if (editing) {
@@ -101,6 +102,9 @@ export default function PriorityQueuePanel({
             executionWindowMinutes: values.executionWindowMinutes,
             enabled: values.enabled,
             overrideSyncConfig,
+            baselineMode: values.baselineMode,
+            baselineCustomAt: values.baselineCustomAt,
+            baselineTimezone: values.baselineTimezone,
           },
         },
         { onSuccess: () => setDrawerOpen(false) },
@@ -112,6 +116,9 @@ export default function PriorityQueuePanel({
           executionWindowMinutes: values.executionWindowMinutes,
           enabled: values.enabled,
           overrideSyncConfig: overrideSyncConfig ?? undefined,
+          baselineMode: values.baselineMode,
+          baselineCustomAt: values.baselineCustomAt,
+          baselineTimezone: values.baselineTimezone,
         },
         { onSuccess: () => setDrawerOpen(false) },
       );
@@ -125,9 +132,7 @@ export default function PriorityQueuePanel({
       <QueueScheduleCard
         queue={config.queue}
         saving={scheduleMutation.isPending}
-        onSave={(startTime, timezone) =>
-          scheduleMutation.mutate({ startTime, timezone })
-        }
+        onSave={(payload) => scheduleMutation.mutate(payload)}
       />
 
       <QueueStatusPanel
@@ -137,57 +142,86 @@ export default function PriorityQueuePanel({
         pausing={pauseMutation.isPending || resumeMutation.isPending}
       />
 
-      <Card>
-        <CardContent className="space-y-4 pt-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold">Priority Queue</p>
-              <p className="text-muted-foreground text-xs">
-                Drag jobs to change execution order. Top runs first.
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {dirty && (
-                <Button
-                  size="sm"
-                  className="bg-paused hover:bg-paused/90"
-                  onClick={saveOrder}
-                  disabled={reorderMutation.isPending}
-                >
-                  {reorderMutation.isPending ? <Spinner /> : <Save />}
-                  Save Changes
-                </Button>
-              )}
-              <Button size="sm" onClick={openAddDrawer}>
-                <Plus />
-                Add Job
-              </Button>
-            </div>
-          </div>
+      <div className="relative space-y-4 pl-9">
+        <div
+          className="bg-border absolute top-2 bottom-2 left-[15px] w-px"
+          aria-hidden
+        />
 
-          {localJobs.length === 0 ? (
-            <div className="py-10 text-center">
-              <p className="mb-1 text-sm font-medium">
-                No jobs have been added to the priority queue
-              </p>
-              <p className="text-muted-foreground text-xs">
-                Add jobs to create an execution sequence.
-              </p>
-            </div>
-          ) : (
-            <QueueJobList
-              queueJobs={localJobs}
-              onReorderLocal={handleReorderLocal}
-              onEdit={openEditDrawer}
-              onToggleEnabled={handleToggleEnabled}
-              onRetry={(id) => retryMutation.mutate(id)}
-              onRemove={(id) => removeJobMutation.mutate(id)}
-            />
-          )}
-        </CardContent>
-      </Card>
+        <div className="relative">
+          <div className="bg-paused text-primary-foreground absolute top-4 -left-9 flex size-6 items-center justify-center rounded-full text-xs font-bold">
+            1
+          </div>
+          <Card>
+            <CardContent className="space-y-4 pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold">Priority Queue</p>
+                  <p className="text-muted-foreground text-xs">
+                    Runs first — drag jobs to change execution order. Top runs
+                    first.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {dirty && (
+                    <Button
+                      size="sm"
+                      className="bg-paused hover:bg-paused/90"
+                      onClick={saveOrder}
+                      disabled={reorderMutation.isPending}
+                    >
+                      {reorderMutation.isPending ? <Spinner /> : <Save />}
+                      Save Changes
+                    </Button>
+                  )}
+                  <Button size="sm" onClick={openAddDrawer}>
+                    <Plus />
+                    Add Job
+                  </Button>
+                </div>
+              </div>
+
+              {localJobs.length === 0 ? (
+                <div className="py-10 text-center">
+                  <p className="mb-1 text-sm font-medium">
+                    No jobs have been added to the priority queue
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    Add jobs to create an execution sequence.
+                  </p>
+                </div>
+              ) : (
+                <QueueJobList
+                  queueJobs={localJobs}
+                  onReorderLocal={handleReorderLocal}
+                  onEdit={openEditDrawer}
+                  onToggleEnabled={handleToggleEnabled}
+                  onRetry={(id) => retryMutation.mutate(id)}
+                  onRemove={(id) => removeJobMutation.mutate(id)}
+                />
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="relative">
+          <div className="bg-paused text-primary-foreground absolute top-4 -left-9 flex size-6 items-center justify-center rounded-full text-xs font-bold">
+            2
+          </div>
+          <AssociationQueueCard
+            projectId={projectId}
+            queue={config.queue}
+            items={config.associationQueueItems}
+          />
+        </div>
+      </div>
 
       <QueueJobDrawer
+        // Remounts the form fresh whenever the target switches (a different queue job,
+        // or between Add/Edit) — the drawer's fields are seeded via useState initializers
+        // that only run once, so without this key they'd keep showing stale values from
+        // whichever job the drawer was first opened for in this session.
+        key={editing?.id ?? 'add'}
         projectId={projectId}
         open={drawerOpen}
         onOpenChange={setDrawerOpen}

@@ -12,15 +12,32 @@ import {
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
+import { BROWSER_TIMEZONE, TIMEZONES } from '@/lib/timezones';
 import { useProjectJobsQuery } from '@/queries/useJobs';
-import type { Job, QueueJob } from '@/types';
+import type { Job, QueueJob, QueueJobBaselineMode } from '@/types';
+
+const BASELINE_OPTIONS: {
+  value: QueueJobBaselineMode | 'default';
+  label: string;
+}[] = [
+  { value: 'default', label: "Use Job's Last Synced Time (default)" },
+  { value: 'from_now', label: 'From Now' },
+  { value: 'last_1_hour', label: 'Last 1 Hour' },
+  { value: 'last_6_hours', label: 'Last 6 Hours' },
+  { value: 'last_24_hours', label: 'Last 24 Hours' },
+  { value: 'last_7_days', label: 'Last 7 Days' },
+  { value: 'last_30_days', label: 'Last 30 Days' },
+  { value: 'custom', label: 'Custom Date and Time' },
+];
 
 export interface QueueJobFormValues {
   jobId: string;
   executionWindowMinutes: number;
   enabled: boolean;
+  baselineMode: QueueJobBaselineMode | null;
+  baselineCustomAt?: string;
+  baselineTimezone?: string;
   overrideEnabled: boolean;
-  fullSync: boolean;
   batchSize: number;
 }
 
@@ -49,10 +66,16 @@ export default function QueueJobDrawer({
     editing ? Math.round(editing.executionWindowSec / 60) : 30,
   );
   const [enabled, setEnabled] = useState(editing?.enabled ?? true);
-  const [overrideEnabled, setOverrideEnabled] = useState(!!initialOverride);
-  const [fullSync, setFullSync] = useState(
-    Boolean(initialOverride?.fullSync ?? false),
+  const [baselineSelection, setBaselineSelection] = useState<
+    QueueJobBaselineMode | 'default'
+  >(editing?.baselineMode ?? 'default');
+  const [baselineCustomAt, setBaselineCustomAt] = useState(
+    editing?.customBaselineAt ? editing.customBaselineAt.slice(0, 16) : '',
   );
+  const [baselineTimezone, setBaselineTimezone] = useState(
+    editing?.baselineTimezone ?? BROWSER_TIMEZONE,
+  );
+  const [overrideEnabled, setOverrideEnabled] = useState(!!initialOverride);
   const [batchSize, setBatchSize] = useState(
     Number(initialOverride?.batchSize ?? 100),
   );
@@ -61,7 +84,8 @@ export default function QueueJobDrawer({
     jobId !== (editing?.jobId ?? '') ||
     windowMinutes !==
       (editing ? Math.round(editing.executionWindowSec / 60) : 30) ||
-    enabled !== (editing?.enabled ?? true);
+    enabled !== (editing?.enabled ?? true) ||
+    baselineSelection !== (editing?.baselineMode ?? 'default');
 
   const availableJobs: Job[] = (jobsQuery.data ?? []).filter(
     (j) => j.id === editing?.jobId || !existingJobIds.includes(j.id),
@@ -69,12 +93,16 @@ export default function QueueJobDrawer({
 
   const handleSubmit = () => {
     if (!jobId || windowMinutes < 1) return;
+    if (baselineSelection === 'custom' && !baselineCustomAt) return;
     onSubmit({
       jobId,
       executionWindowMinutes: windowMinutes,
       enabled,
+      baselineMode: baselineSelection === 'default' ? null : baselineSelection,
+      ...(baselineSelection === 'custom'
+        ? { baselineCustomAt, baselineTimezone }
+        : {}),
       overrideEnabled,
-      fullSync,
       batchSize,
     });
   };
@@ -132,6 +160,68 @@ export default function QueueJobDrawer({
           </div>
         </div>
 
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">Record Baseline</label>
+          <p className="text-muted-foreground text-xs">
+            The lower bound used when fetching records for this job in the
+            priority queue. Relative options are calculated from the moment the
+            queue cycle starts, not from when this job's turn comes up.
+          </p>
+          <Select
+            value={baselineSelection}
+            onValueChange={(v) =>
+              setBaselineSelection(v as QueueJobBaselineMode | 'default')
+            }
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {BASELINE_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {baselineSelection === 'custom' && (
+            <div className="flex flex-wrap items-end gap-2 pt-1">
+              <div className="space-y-1.5">
+                <label className="text-muted-foreground text-xs">
+                  Date and Time
+                </label>
+                <Input
+                  type="datetime-local"
+                  value={baselineCustomAt}
+                  onChange={(e) => setBaselineCustomAt(e.target.value)}
+                  className="w-56"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-muted-foreground text-xs">
+                  Time Zone
+                </label>
+                <Select
+                  value={baselineTimezone}
+                  onValueChange={setBaselineTimezone}
+                >
+                  <SelectTrigger className="w-56">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TIMEZONES.map((tz) => (
+                      <SelectItem key={tz} value={tz}>
+                        {tz}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+        </div>
+
         <div className="flex items-center justify-between">
           <label className="text-sm font-medium">Status</label>
           <div className="flex items-center gap-2">
@@ -161,10 +251,6 @@ export default function QueueJobDrawer({
 
           {overrideEnabled && (
             <div className="mt-4 space-y-4">
-              <div className="flex items-center justify-between">
-                <label className="text-sm">All Records (full sync)</label>
-                <Switch checked={fullSync} onCheckedChange={setFullSync} />
-              </div>
               <div className="space-y-1.5">
                 <label className="text-sm">Records per Batch</label>
                 <Input

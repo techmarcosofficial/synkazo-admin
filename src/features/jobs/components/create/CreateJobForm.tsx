@@ -96,6 +96,9 @@ const withDirection = (
         ? { rules: m.destRules[destField] }
         : null,
       isMatchField: m.matchDestKey === destField,
+      matchPriority:
+        m.matchDestKey === destField ? (m.matchOrder ?? null) : null,
+      updatePolicy: m.destUpdatePolicy?.[destField] ?? 'always',
       onEmpty: m.destOnEmpty?.[destField] ?? 'none',
       defaultValue: m.destDefaults?.[destField] ?? null,
       reverseOnEmpty: m.destReverseOnEmpty?.[destField] ?? 'none',

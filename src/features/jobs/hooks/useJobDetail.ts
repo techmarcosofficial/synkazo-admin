@@ -10,6 +10,7 @@ import type {
   OnEmptyPolicy,
   Project,
   SyncRun,
+  UpdatePolicy,
 } from '@/types';
 
 export type ScheduleState =
@@ -66,6 +67,9 @@ export interface ConsolidatedMapping extends Omit<FieldMapping, 'destField'> {
    *  FieldMappingCanvas. */
   destReverseOnEmpty?: Record<string, OnEmptyPolicy>;
   destReverseDefaults?: Record<string, string>;
+  /** What happens to this destination's value on an update (not a create), keyed
+   *  per destination for the same fan-out reason as destOnEmpty. */
+  destUpdatePolicy?: Record<string, UpdatePolicy>;
   transformConfig?: unknown;
   isRequired?: boolean;
   /** Set by the canvas when the user waves off a type mismatch. Not persisted. */
@@ -76,6 +80,10 @@ export interface ConsolidatedMapping extends Omit<FieldMapping, 'destField'> {
    *  of them. Superseds the inherited `isMatchField`, which collapses to just the first DB row's
    *  value once consolidated and must not be read after this. */
   matchDestKey?: string | null;
+  /** Priority tier for matchDestKey when more than one source row is a match
+   *  field (lower tried first — OR mode). Null/unset on every match field
+   *  means AND mode (all must agree) instead — see FieldMappingCanvas. */
+  matchOrder?: number | null;
 }
 
 export function consolidateMappings(
@@ -87,10 +95,15 @@ export function consolidateMappings(
       transformConfig?: { rules?: unknown };
     };
     const matchDestKey = row.isMatchField ? row.destField : undefined;
+    const matchOrder = row.isMatchField ? (row.matchPriority ?? null) : null;
     const onEmpty = row.onEmpty && row.onEmpty !== 'none' ? row.onEmpty : null;
     const reverseOnEmpty =
       row.reverseOnEmpty && row.reverseOnEmpty !== 'none'
         ? row.reverseOnEmpty
+        : null;
+    const updatePolicy =
+      row.updatePolicy && row.updatePolicy !== 'always'
+        ? row.updatePolicy
         : null;
     if (map.has(row.sourceField)) {
       const existing = map.get(row.sourceField)!;
@@ -115,11 +128,19 @@ export function consolidateMappings(
         existing.destReverseDefaults[row.destField] =
           row.reverseDefaultValue ?? '';
       }
-      if (matchDestKey) existing.matchDestKey = matchDestKey;
+      if (matchDestKey) {
+        existing.matchDestKey = matchDestKey;
+        existing.matchOrder = matchOrder;
+      }
+      if (updatePolicy) {
+        existing.destUpdatePolicy = existing.destUpdatePolicy ?? {};
+        existing.destUpdatePolicy[row.destField] = updatePolicy;
+      }
     } else {
       map.set(row.sourceField, {
         ...row,
         matchDestKey,
+        matchOrder,
         destRules: rowWithTransform.transformConfig?.rules
           ? { [row.destField]: rowWithTransform.transformConfig.rules }
           : {},
@@ -133,6 +154,7 @@ export function consolidateMappings(
         destReverseDefaults: reverseOnEmpty
           ? { [row.destField]: row.reverseDefaultValue ?? '' }
           : {},
+        destUpdatePolicy: updatePolicy ? { [row.destField]: updatePolicy } : {},
       });
     }
   });

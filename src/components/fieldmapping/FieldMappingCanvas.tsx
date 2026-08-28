@@ -158,6 +158,9 @@ export interface FieldDef {
 
 export type OnEmptyPolicy = 'none' | 'default' | 'skip_record';
 
+/** What happens to an already-mapped field on an update (not a create). */
+export type MappingUpdatePolicy = 'always' | 'create_only' | 'fill_if_empty';
+
 export type MappingDirection =
   'forward_only' | 'reverse_only' | 'bidirectional';
 
@@ -176,8 +179,14 @@ export interface MappingRow {
   rules?: unknown[];
   /** Which of this row's (possibly several) destinations is the match/lookup field, if any.
    *  Per-destination rather than per-row because one source can fan out to multiple
-   *  destinations, and only one of them may be the match field. */
+   *  destinations, and only one of them may be the match field. Multiple rows across the
+   *  mapping can each have one set — see matchOrder for how they combine. */
   matchDestKey?: string | null;
+  /** Priority tier when more than one match field is set (lower tried first, first
+   *  unambiguous hit wins) — "OR" mode. Left null/unset on every match field means
+   *  "AND" mode: all match fields must agree on the same record (the original, and
+   *  still default, behaviour). Meaningless when matchDestKey isn't set. */
+  matchOrder?: number | null;
   dismissed?: boolean;
   destRules?: Record<string, unknown[]>;
   /** What happens when this destination's value comes out empty, keyed per destination
@@ -186,6 +195,10 @@ export interface MappingRow {
    *  is the write target) — the platform that "requires" it is the destination platform. */
   destOnEmpty?: Record<string, OnEmptyPolicy>;
   destDefaults?: Record<string, string>;
+  /** What happens to this destination's value on an update (not a create), keyed
+   *  per destination for the same fan-out reason as destOnEmpty. Missing/'always'
+   *  is the historical behaviour — write it every time. */
+  destUpdatePolicy?: Record<string, MappingUpdatePolicy>;
   /** Same shape as destOnEmpty/destDefaults, but for the reverse leg — the empty-value
    *  policy that applies when a bidirectional row writes back into the SOURCE platform
    *  (i.e. the source platform requires this field on its side). Kept separate from
@@ -277,6 +290,8 @@ function removeFrom(
     const { [destKey]: _rule, ...restRules } = m.destRules || {};
     const { [destKey]: _policy, ...restOnEmpty } = m.destOnEmpty || {};
     const { [destKey]: _default, ...restDefaults } = m.destDefaults || {};
+    const { [destKey]: _updatePolicy, ...restUpdatePolicy } =
+      m.destUpdatePolicy || {};
     return [
       {
         ...m,
@@ -284,7 +299,10 @@ function removeFrom(
         destRules: restRules,
         destOnEmpty: restOnEmpty,
         destDefaults: restDefaults,
-        ...(m.matchDestKey === destKey ? { matchDestKey: null } : {}),
+        destUpdatePolicy: restUpdatePolicy,
+        ...(m.matchDestKey === destKey
+          ? { matchDestKey: null, matchOrder: null }
+          : {}),
       },
     ];
   });
@@ -871,17 +889,38 @@ export default function FieldMappingCanvas({
 
   const naCount = needsAttention.length;
 
+  // A newly-surfaced attention item (e.g. a mapping edit reintroduces a type
+  // mismatch) needs a fresh review — only an *increase* resets it, so items
+  // resolving down doesn't spuriously re-block Next.
+  const prevNaCountRef = useRef(naCount);
+  useEffect(() => {
+    if (naCount > prevNaCountRef.current) setAttentionReviewed(false);
+    prevNaCountRef.current = naCount;
+  }, [naCount]);
+
   useEffect(() => {
     onAttentionReviewChange?.({ count: naCount, reviewed: attentionReviewed });
   }, [naCount, attentionReviewed, onAttentionReviewChange]);
 
   useEffect(() => {
     if (!scrollToAttentionSignal || naCount === 0) return;
+    // Forcing the section open (even if the user had collapsed it) and
+    // marking it reviewed here is what breaks the loop: the wizard's Next
+    // button blocks on `reviewed === false` and bumps this signal every time
+    // it does, so without this the section reopens but never counts as seen —
+    // Next stays blocked and the toast fires again on every click.
     setNaOpen(true);
-    attentionSectionRef.current?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'center',
+    setAttentionReviewed(true);
+    // Wait for the expanded content to paint before measuring where to
+    // scroll — scrolling in the same tick would center against the still-
+    // collapsed height.
+    const raf = requestAnimationFrame(() => {
+      attentionSectionRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
     });
+    return () => cancelAnimationFrame(raf);
   }, [scrollToAttentionSignal]);
 
   // The guided highlight is a nudge, not a modal — it gets out of the way on its
@@ -924,20 +963,98 @@ export default function FieldMappingCanvas({
       })
     : mappings;
 
-  /** Match field is global-exclusive (one destination across all rows) but must be recorded
-   *  per-destination, not per-row — a source fanned out to several destinations must be able
-   *  to have exactly one of them be the match field, not all of them at once. */
-  const toggleMatch = (sourceKey: string, destKey: string) =>
-    onMappingsChange(
-      mappings.map((m) =>
-        m.sourceField === sourceKey
-          ? { ...m, matchDestKey: m.matchDestKey === destKey ? null : destKey }
-          : { ...m, matchDestKey: null },
-      ),
+  /** Any number of destinations can be match fields at once — see matchOrder on
+   *  MappingRow for how AND ("must all agree") vs. OR ("try in order, first hit
+   *  wins") is decided. Toggling one on never disturbs the others; a newly added
+   *  field only gets an order number if the set is already in OR mode. */
+  const toggleMatch = (sourceKey: string, destKey: string) => {
+    const matchRows = mappings.filter((m) => m.matchDestKey);
+    const isOrMode = matchRows.some((m) => m.matchOrder != null);
+    const maxOrder = matchRows.reduce(
+      (mx, m) => Math.max(mx, m.matchOrder ?? 0),
+      0,
     );
+    onMappingsChange(
+      mappings.map((m) => {
+        if (m.sourceField !== sourceKey) return m;
+        if (m.matchDestKey === destKey) {
+          return { ...m, matchDestKey: null, matchOrder: null };
+        }
+        return {
+          ...m,
+          matchDestKey: destKey,
+          matchOrder: isOrMode ? maxOrder + 1 : null,
+        };
+      }),
+    );
+  };
+
+  /** Switches every currently-set match field between AND (matchOrder cleared
+   *  on all of them) and OR (sequential order assigned in current array order). */
+  const setMatchMode = (mode: 'and' | 'or') => {
+    let next = 0;
+    onMappingsChange(
+      mappings.map((m) => {
+        if (!m.matchDestKey) return m;
+        next += 1;
+        return { ...m, matchOrder: mode === 'or' ? next : null };
+      }),
+    );
+  };
+
+  /** Reorders one match field within OR mode by swapping matchOrder with its neighbour. */
+  const moveMatchOrder = (sourceKey: string, destKey: string, dir: -1 | 1) => {
+    const ordered = mappings
+      .filter((m) => m.matchDestKey)
+      .sort((a, b) => (a.matchOrder ?? 0) - (b.matchOrder ?? 0));
+    const idx = ordered.findIndex(
+      (m) => m.sourceField === sourceKey && m.matchDestKey === destKey,
+    );
+    const swapIdx = idx + dir;
+    if (idx < 0 || swapIdx < 0 || swapIdx >= ordered.length) return;
+    const a = ordered[idx];
+    const b = ordered[swapIdx];
+    const aOrder = a.matchOrder;
+    onMappingsChange(
+      mappings.map((m) => {
+        if (
+          m.sourceField === a.sourceField &&
+          m.matchDestKey === a.matchDestKey
+        ) {
+          return { ...m, matchOrder: b.matchOrder };
+        }
+        if (
+          m.sourceField === b.sourceField &&
+          m.matchDestKey === b.matchDestKey
+        ) {
+          return { ...m, matchOrder: aOrder };
+        }
+        return m;
+      }),
+    );
+  };
 
   const remove = (sourceKey: string, destKey: string) =>
     onMappingsChange(removeFrom(mappings, sourceKey, destKey));
+
+  const setUpdatePolicy = (
+    sourceKey: string,
+    destKey: string,
+    policy: MappingUpdatePolicy,
+  ) =>
+    onMappingsChange(
+      mappings.map((m) =>
+        m.sourceField === sourceKey
+          ? {
+              ...m,
+              destUpdatePolicy: {
+                ...(m.destUpdatePolicy || {}),
+                [destKey]: policy,
+              },
+            }
+          : m,
+      ),
+    );
 
   /**
    * Repoints an existing (source, dest) pair. Everything hanging off the old
@@ -953,6 +1070,8 @@ export default function FieldMappingCanvas({
       onEmpty: row.destOnEmpty?.[from.destKey],
       defaultValue: row.destDefaults?.[from.destKey],
       wasMatch: row.matchDestKey === from.destKey,
+      matchOrder: row.matchOrder,
+      updatePolicy: row.destUpdatePolicy?.[from.destKey],
       direction: row.direction,
     };
 
@@ -973,7 +1092,17 @@ export default function FieldMappingCanvas({
       m.sourceField === to.sourceField
         ? {
             ...m,
-            ...(carried.wasMatch ? { matchDestKey: to.destKey } : {}),
+            ...(carried.wasMatch
+              ? { matchDestKey: to.destKey, matchOrder: carried.matchOrder }
+              : {}),
+            ...(carried.updatePolicy
+              ? {
+                  destUpdatePolicy: {
+                    ...(m.destUpdatePolicy || {}),
+                    [to.destKey]: carried.updatePolicy,
+                  },
+                }
+              : {}),
             ...(carried.direction ? { direction: carried.direction } : {}),
           }
         : m,
@@ -1323,11 +1452,28 @@ export default function FieldMappingCanvas({
     const dests = Array.isArray(m.destField) ? m.destField : [m.destField];
     return dests.map((destKey) => ({ sourceField: m.sourceField, destKey }));
   });
-  const activeMatch = mappings.find((m) => m.matchDestKey);
-  const lookupValue =
-    activeMatch?.matchDestKey != null
-      ? `${activeMatch.sourceField}::${activeMatch.matchDestKey}`
-      : '';
+  // Every currently-selected match field, in evaluation order (OR mode only —
+  // meaningless but harmless in AND mode, where every field is required regardless).
+  const activeMatches = mappings
+    .filter((m) => m.matchDestKey)
+    .sort((a, b) => (a.matchOrder ?? 0) - (b.matchOrder ?? 0))
+    .map((m) => ({
+      sourceField: m.sourceField,
+      destKey: m.matchDestKey as string,
+      matchOrder: m.matchOrder ?? null,
+    }));
+  const matchMode: 'and' | 'or' = activeMatches.some(
+    (m) => m.matchOrder != null,
+  )
+    ? 'or'
+    : 'and';
+  // Options not already picked as a match field — what the "add" picker offers.
+  const addableMatchOptions = matchOptions.filter(
+    (o) =>
+      !activeMatches.some(
+        (m) => m.sourceField === o.sourceField && m.destKey === o.destKey,
+      ),
+  );
   const totalFields = Math.max(requiredDest.length, pairRows.length);
 
   return (
@@ -1373,14 +1519,102 @@ export default function FieldMappingCanvas({
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 border-l pl-4">
+          <div className="flex flex-wrap items-center gap-2.5 border-l pl-4">
             <KeyRound size={16} className="text-primary" />
             <span className="text-muted-foreground text-xs whitespace-nowrap">
               Matched by
             </span>
 
+            {activeMatches.map((am, idx) => {
+              const field = sourceFields.find((f) => f.key === am.sourceField);
+              const destF = destFields.find((f) => f.key === am.destKey);
+              const fansOut =
+                matchOptions.filter((o) => o.sourceField === am.sourceField)
+                  .length > 1;
+              return (
+                <Badge
+                  key={`${am.sourceField}::${am.destKey}`}
+                  variant="secondary"
+                  className="gap-1 whitespace-nowrap"
+                >
+                  {matchMode === 'or' && (
+                    <span className="font-mono text-[10px] opacity-70">
+                      {idx + 1}.
+                    </span>
+                  )}
+                  {field?.label ?? am.sourceField}
+                  {fansOut ? ` → ${destF?.label ?? am.destKey}` : ''}
+                  {matchMode === 'or' && activeMatches.length > 1 && (
+                    <span className="flex items-center">
+                      <button
+                        type="button"
+                        className="hover:text-foreground disabled:opacity-30"
+                        disabled={idx === 0}
+                        onClick={() =>
+                          moveMatchOrder(am.sourceField, am.destKey, -1)
+                        }
+                        aria-label="Try this field earlier"
+                      >
+                        <ChevronUp size={11} />
+                      </button>
+                      <button
+                        type="button"
+                        className="hover:text-foreground disabled:opacity-30"
+                        disabled={idx === activeMatches.length - 1}
+                        onClick={() =>
+                          moveMatchOrder(am.sourceField, am.destKey, 1)
+                        }
+                        aria-label="Try this field later"
+                      >
+                        <ChevronDown size={11} />
+                      </button>
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    className="hover:text-foreground"
+                    onClick={() => toggleMatch(am.sourceField, am.destKey)}
+                    aria-label="Remove match field"
+                  >
+                    <X size={11} />
+                  </button>
+                </Badge>
+              );
+            })}
+
+            {activeMatches.length >= 2 && (
+              <div className="bg-muted flex items-center gap-0.5 rounded-md p-0.5">
+                <button
+                  type="button"
+                  className={cn(
+                    'rounded px-1.5 py-0.5 text-[11px] font-medium',
+                    matchMode === 'and'
+                      ? 'bg-background shadow-sm'
+                      : 'text-muted-foreground',
+                  )}
+                  onClick={() => setMatchMode('and')}
+                  title="All match fields must agree on the same record"
+                >
+                  AND
+                </button>
+                <button
+                  type="button"
+                  className={cn(
+                    'rounded px-1.5 py-0.5 text-[11px] font-medium',
+                    matchMode === 'or'
+                      ? 'bg-background shadow-sm'
+                      : 'text-muted-foreground',
+                  )}
+                  onClick={() => setMatchMode('or')}
+                  title="Try each match field in order — first hit wins"
+                >
+                  OR
+                </button>
+              </div>
+            )}
+
             <Select
-              value={lookupValue}
+              value=""
               onValueChange={(v) => {
                 const sep = v.indexOf('::');
                 if (sep < 0) return;
@@ -1388,15 +1622,23 @@ export default function FieldMappingCanvas({
               }}
             >
               <SelectTrigger size="sm" className="h-8 w-44">
-                <SelectValue placeholder="Choose field" />
+                <SelectValue
+                  placeholder={
+                    activeMatches.length === 0
+                      ? 'Choose field'
+                      : '+ Add match field'
+                  }
+                />
               </SelectTrigger>
               <SelectContent align="start">
-                {matchOptions.length === 0 ? (
+                {addableMatchOptions.length === 0 ? (
                   <div className="text-muted-foreground px-2.5 py-1.5 text-xs">
-                    No fields mapped yet
+                    {matchOptions.length === 0
+                      ? 'No fields mapped yet'
+                      : 'All mapped fields already added'}
                   </div>
                 ) : (
-                  matchOptions.map(({ sourceField, destKey }) => {
+                  addableMatchOptions.map(({ sourceField, destKey }) => {
                     const field = sourceFields.find(
                       (f) => f.key === sourceField,
                     );
@@ -1785,6 +2027,8 @@ export default function FieldMappingCanvas({
                               ? glow.stage
                               : null;
                           const onEmpty = m.destOnEmpty?.[dk] ?? 'none';
+                          const updatePolicy =
+                            m.destUpdatePolicy?.[dk] ?? 'always';
                           return (
                             <TableRow
                               key={`${m.sourceField}-${dk}`}
@@ -1863,6 +2107,9 @@ export default function FieldMappingCanvas({
                                       <Badge className="bg-primary/10 text-primary shrink-0 gap-1 whitespace-nowrap">
                                         <KeyRound className="size-2.5" /> Match
                                         field
+                                        {matchMode === 'or' &&
+                                          m.matchOrder != null &&
+                                          ` · ${m.matchOrder}`}
                                       </Badge>
                                     )}
                                     {ruleCount > 0 && (
@@ -1883,6 +2130,16 @@ export default function FieldMappingCanvas({
                                         {onEmpty === 'skip_record'
                                           ? 'Skip if empty'
                                           : `Default: ${m.destDefaults?.[dk] || '—'}`}
+                                      </Badge>
+                                    )}
+                                    {updatePolicy !== 'always' && (
+                                      <Badge
+                                        variant="secondary"
+                                        className="shrink-0 gap-1 whitespace-nowrap"
+                                      >
+                                        {updatePolicy === 'create_only'
+                                          ? 'Create only'
+                                          : 'Fill if empty'}
                                       </Badge>
                                     )}
                                     <TypeChip type={df?.type} />
@@ -2013,6 +2270,35 @@ export default function FieldMappingCanvas({
                                           : 'Use this field to find existing records to update.'}
                                       </TooltipContent>
                                     </Tooltip>
+                                    <Select
+                                      value={updatePolicy}
+                                      onValueChange={(v) =>
+                                        setUpdatePolicy(
+                                          m.sourceField,
+                                          dk,
+                                          v as MappingUpdatePolicy,
+                                        )
+                                      }
+                                    >
+                                      <SelectTrigger
+                                        size="sm"
+                                        className="h-8 w-[9.5rem]"
+                                        title="What happens to this field on an update: always rewrite it, never touch it again after creation, or only fill it in if the destination is currently empty (logging a conflict otherwise)."
+                                      >
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent align="end">
+                                        <SelectItem value="always">
+                                          Always update
+                                        </SelectItem>
+                                        <SelectItem value="create_only">
+                                          Create only
+                                        </SelectItem>
+                                        <SelectItem value="fill_if_empty">
+                                          Fill if empty
+                                        </SelectItem>
+                                      </SelectContent>
+                                    </Select>
                                     <Tooltip>
                                       <TooltipTrigger asChild>
                                         <Button

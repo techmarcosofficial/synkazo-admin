@@ -94,6 +94,9 @@ export type FieldMappingDirection =
 /** What the sync does when a mapping's value comes out empty. */
 export type OnEmptyPolicy = 'none' | 'default' | 'skip_record';
 
+/** What happens to an already-mapped field on an update (not a create). */
+export type UpdatePolicy = 'always' | 'create_only' | 'fill_if_empty';
+
 export interface FieldMapping {
   id?: string;
   jobId?: string;
@@ -102,6 +105,14 @@ export interface FieldMapping {
   sourceField: string;
   destField: string;
   isMatchField?: boolean;
+  /** Priority tier when more than one field is flagged isMatchField (lower
+   *  tried first, e.g. email=1 falling back to customer_number=2). Leave
+   *  unset to AND all match fields together instead (default behaviour). */
+  matchPriority?: number | null;
+  /** What happens to this field on an update: always write it, never touch
+   *  it again after creation, or only fill it in if the destination's
+   *  current value is empty (logging a conflict otherwise). */
+  updatePolicy?: UpdatePolicy;
   transform?: string | null;
   enabled?: boolean;
   order?: number;

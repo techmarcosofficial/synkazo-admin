@@ -5,19 +5,31 @@ import { queryKeys } from './queryKeys';
 import {
   priorityQueueApi,
   type AddQueueJobPayload,
+  type UpdateAssociationQueuePayload,
   type UpdateQueueJobPayload,
+  type UpdateQueueSchedulePayload,
 } from '@/api/priorityQueue';
 
 // Polls faster while a job is actively running so the live status dashboard feels
 // real-time, and backs off to a light heartbeat otherwise — same refetchInterval
 // pattern as pages/sync/ActiveSyncs.tsx and this file's scheduler.queueStats sibling.
+const ACTIVE_CYCLE_STATUSES = new Set([
+  'running',
+  'awaiting_associations',
+  'running_associations',
+  'running_company_owner_sync',
+]);
+
 export function usePriorityQueueQuery(projectId: string) {
   return useQuery({
     queryKey: queryKeys.priorityQueue.detail(projectId),
     queryFn: () => priorityQueueApi.getConfig(projectId),
     enabled: !!projectId,
     refetchInterval: (query) =>
-      query.state.data?.currentExecution?.status === 'running' ? 5_000 : 20_000,
+      query.state.data?.activeCycle &&
+      ACTIVE_CYCLE_STATUSES.has(query.state.data.activeCycle.status)
+        ? 5_000
+        : 20_000,
   });
 }
 
@@ -41,13 +53,8 @@ export function useSetSchedulerModeMutation(projectId: string) {
 export function useUpdateQueueScheduleMutation(projectId: string) {
   const invalidate = useInvalidatePriorityQueue(projectId);
   return useMutation({
-    mutationFn: ({
-      startTime,
-      timezone,
-    }: {
-      startTime: string;
-      timezone: string;
-    }) => priorityQueueApi.updateSchedule(projectId, startTime, timezone),
+    mutationFn: (payload: UpdateQueueSchedulePayload) =>
+      priorityQueueApi.updateSchedule(projectId, payload),
     onSuccess: invalidate,
   });
 }
@@ -114,6 +121,35 @@ export function useResumeQueueMutation(projectId: string) {
   const invalidate = useInvalidatePriorityQueue(projectId);
   return useMutation({
     mutationFn: () => priorityQueueApi.resumeQueue(projectId),
+    onSuccess: invalidate,
+  });
+}
+
+export function useAssociationObjectOptionsQuery(projectId: string) {
+  return useQuery({
+    queryKey: [
+      ...queryKeys.priorityQueue.detail(projectId),
+      'association-options',
+    ],
+    queryFn: () => priorityQueueApi.getAssociationObjectOptions(projectId),
+    enabled: !!projectId,
+  });
+}
+
+export function useUpdateAssociationConfigMutation(projectId: string) {
+  const invalidate = useInvalidatePriorityQueue(projectId);
+  return useMutation({
+    mutationFn: (payload: UpdateAssociationQueuePayload) =>
+      priorityQueueApi.updateAssociationConfig(projectId, payload),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateCompanyOwnerSyncConfigMutation(projectId: string) {
+  const invalidate = useInvalidatePriorityQueue(projectId);
+  return useMutation({
+    mutationFn: (enabled: boolean) =>
+      priorityQueueApi.updateCompanyOwnerSyncConfig(projectId, enabled),
     onSuccess: invalidate,
   });
 }

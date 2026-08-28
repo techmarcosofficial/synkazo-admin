@@ -1,10 +1,13 @@
 import apiClient from './apiClient';
 
 import type {
+  AssociationQueueItem,
   PriorityQueueConfig,
   Project,
   ProjectQueue,
   QueueJob,
+  QueueJobBaselineMode,
+  QueueScheduleMode,
 } from '@/types';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -16,12 +19,41 @@ export interface AddQueueJobPayload {
   executionWindowMinutes: number;
   enabled?: boolean;
   overrideSyncConfig?: Record<string, unknown>;
+  baselineMode?: QueueJobBaselineMode | null;
+  /** Local "YYYY-MM-DDTHH:mm" — required when baselineMode === 'custom'. */
+  baselineCustomAt?: string;
+  baselineTimezone?: string;
 }
 
 export interface UpdateQueueJobPayload {
   executionWindowMinutes?: number;
   enabled?: boolean;
   overrideSyncConfig?: Record<string, unknown> | null;
+  baselineMode?: QueueJobBaselineMode | null;
+  baselineCustomAt?: string;
+  baselineTimezone?: string;
+}
+
+export interface UpdateQueueSchedulePayload {
+  scheduleMode: QueueScheduleMode;
+  scheduleTimes?: string[];
+  intervalMinutes?: number;
+  scheduleDays?: number[];
+  /** Local "YYYY-MM-DDTHH:mm" — required when scheduleMode === 'one_time'. */
+  oneTimeAt?: string;
+  timezone: string;
+}
+
+export interface AssociationQueueItemPayload {
+  objectName: string;
+  position: number;
+  enabled: boolean;
+}
+
+export interface UpdateAssociationQueuePayload {
+  enabled: boolean;
+  delayMinutes: number;
+  items: AssociationQueueItemPayload[];
 }
 
 export const priorityQueueApi = {
@@ -33,12 +65,9 @@ export const priorityQueueApi = {
 
   updateSchedule: (
     projectId: string,
-    startTime: string,
-    timezone: string,
+    payload: UpdateQueueSchedulePayload,
   ): Promise<ProjectQueue> =>
-    apiClient
-      .patch(`${p(projectId)}/schedule`, { startTime, timezone })
-      .then(d),
+    apiClient.patch(`${p(projectId)}/schedule`, payload).then(d),
 
   addJob: (projectId: string, payload: AddQueueJobPayload): Promise<QueueJob> =>
     apiClient.post(`${p(projectId)}/jobs`, payload).then(d),
@@ -67,4 +96,19 @@ export const priorityQueueApi = {
 
   resumeQueue: (projectId: string): Promise<ProjectQueue> =>
     apiClient.post(`${p(projectId)}/resume`).then(d),
+
+  getAssociationObjectOptions: (projectId: string): Promise<string[]> =>
+    apiClient.get(`${p(projectId)}/association-object-options`).then(d),
+
+  updateAssociationConfig: (
+    projectId: string,
+    payload: UpdateAssociationQueuePayload,
+  ): Promise<{ queue: ProjectQueue; items: AssociationQueueItem[] }> =>
+    apiClient.patch(`${p(projectId)}/associations`, payload).then(d),
+
+  updateCompanyOwnerSyncConfig: (
+    projectId: string,
+    enabled: boolean,
+  ): Promise<ProjectQueue> =>
+    apiClient.patch(`${p(projectId)}/company-owner-sync`, { enabled }).then(d),
 };

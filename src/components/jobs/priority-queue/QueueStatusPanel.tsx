@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Spinner } from '@/components/ui/spinner';
-import type { PriorityQueueConfig } from '@/types';
+import type { PriorityQueueConfig, StageOutcomeStatus } from '@/types';
 
 function formatSeconds(sec: number): string {
   const m = Math.floor(Math.max(0, sec) / 60);
@@ -15,10 +15,20 @@ function formatSeconds(sec: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-const STATUS_META: Record<string, { label: string; className: string }> = {
-  running: { label: 'Running', className: 'bg-primary/10 text-primary' },
-  idle: { label: 'Idle', className: 'bg-muted text-muted-foreground' },
-  paused: { label: 'Paused', className: 'bg-warning/10 text-warning' },
+const QUEUE_STATUS_META: Record<string, { className: string }> = {
+  running: { className: 'bg-primary/10 text-primary' },
+  idle: { className: 'bg-muted text-muted-foreground' },
+  paused: { className: 'bg-warning/10 text-warning' },
+};
+
+const STAGE_LABEL: Record<StageOutcomeStatus, string> = {
+  not_started: 'Not started',
+  waiting: 'Waiting',
+  running: 'Running',
+  completed: 'Completed',
+  partially_completed: 'Partially completed',
+  failed: 'Failed',
+  skipped: 'Skipped',
 };
 
 export default function QueueStatusPanel({
@@ -32,7 +42,8 @@ export default function QueueStatusPanel({
   onResume: () => void;
   pausing: boolean;
 }) {
-  const { queue, currentExecution, nextQueueJob } = config;
+  const { queue, activeCycle, currentExecution, nextQueueJob, displayStatus } =
+    config;
   const [, forceTick] = useState(0);
 
   // Re-render every second so the elapsed/window progress bar moves smoothly
@@ -45,7 +56,9 @@ export default function QueueStatusPanel({
 
   if (!queue) return null;
 
-  const statusMeta = STATUS_META[queue.status] ?? STATUS_META.idle;
+  const badgeClassName =
+    QUEUE_STATUS_META[queue.status]?.className ??
+    QUEUE_STATUS_META.idle.className;
 
   const elapsedSec = currentExecution
     ? differenceInSeconds(new Date(), new Date(currentExecution.startedAt))
@@ -60,7 +73,7 @@ export default function QueueStatusPanel({
     <Card>
       <CardHeader className="flex-row items-center justify-between">
         <CardTitle className="text-sm">Queue Status</CardTitle>
-        <Badge className={statusMeta.className}>{statusMeta.label}</Badge>
+        <Badge className={badgeClassName}>{displayStatus}</Badge>
       </CardHeader>
       <CardContent className="space-y-4">
         {queue.status === 'paused' && queue.pauseReason === 'PLAN_LIMIT' && (
@@ -71,13 +84,20 @@ export default function QueueStatusPanel({
 
         {currentExecution ? (
           <>
-            <div>
-              <p className="text-muted-foreground text-xs">Current Job</p>
-              <p className="flex items-center gap-1.5 text-sm font-medium">
-                {currentExecution.job?.sourceObject}
-                <ArrowRight size={13} />
-                {currentExecution.job?.destObject}
-              </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-muted-foreground text-xs">Current Job</p>
+                <p className="flex items-center gap-1.5 text-sm font-medium">
+                  {currentExecution.job?.sourceObject}
+                  <ArrowRight size={13} />
+                  {currentExecution.job?.destObject}
+                </p>
+              </div>
+              {activeCycle && (
+                <p className="text-muted-foreground text-xs">
+                  Iteration {activeCycle.currentIteration}
+                </p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -124,6 +144,45 @@ export default function QueueStatusPanel({
               <ArrowRight size={13} />
               {nextQueueJob.job?.destObject}
             </p>
+          </div>
+        )}
+
+        {activeCycle && queue.associationQueueEnabled && (
+          <div className="border-t pt-3">
+            <div className="flex items-center justify-between">
+              <p className="text-muted-foreground text-xs">Association Queue</p>
+              <span className="text-xs font-medium">
+                {STAGE_LABEL[activeCycle.associationsStatus]}
+              </span>
+            </div>
+            {activeCycle.associationsStatus === 'waiting' &&
+              activeCycle.associationsDelayUntil && (
+                <p className="text-muted-foreground mt-1 text-xs">
+                  Starts{' '}
+                  {new Date(
+                    activeCycle.associationsDelayUntil,
+                  ).toLocaleString()}
+                </p>
+              )}
+          </div>
+        )}
+
+        {activeCycle && queue.companyOwnerSyncEnabled && (
+          <div className="border-t pt-3">
+            <div className="flex items-center justify-between">
+              <p className="text-muted-foreground text-xs">
+                Company Owner Sync
+              </p>
+              <span className="text-xs font-medium">
+                {STAGE_LABEL[activeCycle.companyOwnerSyncStatus]}
+              </span>
+            </div>
+            {activeCycle.companyOwnerSyncErrorMessage &&
+              activeCycle.companyOwnerSyncStatus === 'failed' && (
+                <p className="text-destructive mt-1 text-xs">
+                  {activeCycle.companyOwnerSyncErrorMessage}
+                </p>
+              )}
           </div>
         )}
 
