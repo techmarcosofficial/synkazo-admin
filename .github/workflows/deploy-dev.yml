@@ -80,8 +80,16 @@ jobs:
               docker rm $c 2>/dev/null || true
             done
 
-            docker compose build synkazo-admin
-            docker compose up -d --no-deps synkazo-admin
+            # The live stack definition lives in synkazo-docs, not this repo —
+            # see synkazo-docs/docker-compose.dev.yml.
+            COMPOSE_FILE="${DEPLOY_BASE_PATH}/synkazo-docs/docker-compose.dev.yml"
+            if [ ! -f "$COMPOSE_FILE" ]; then
+              echo "::error::$COMPOSE_FILE not found — deploy synkazo-docs to dev first."
+              exit 1
+            fi
+
+            docker compose -f "$COMPOSE_FILE" build synkazo-admin
+            docker compose -f "$COMPOSE_FILE" up -d --no-deps synkazo-admin
 
             echo "Waiting for container to start..."
             sleep 5
