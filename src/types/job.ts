@@ -50,6 +50,10 @@ export interface Job {
   scheduleState?: string;
   destPipelineId?: string | null;
   statusMapping?: Record<string, string> | null;
+  /** When true, the raw source status is used directly as the HubSpot pipeline
+   *  stage label (created automatically if it doesn't already exist) instead
+   *  of consulting statusMapping. Default false keeps existing behavior. */
+  replicateSourceStatusToPipelineStage?: boolean;
   recordsSynced?: number;
   errorCount?: number;
   /** Dataforma customers only — see dataforma-customer-cursor.util.ts on the
