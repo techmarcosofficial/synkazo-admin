@@ -5,6 +5,7 @@ import {
   ChevronUp,
   Hourglass,
   Link2,
+  Pencil,
   Plus,
   Play,
   RefreshCw,
@@ -19,6 +20,7 @@ import { toast } from 'sonner';
 
 import CompanyOwnerSection from './CompanyOwnerSection';
 import CreateAssociationRuleModal from './CreateAssociationRuleModal';
+import EditAssociationRuleModal from './EditAssociationRuleModal';
 
 import {
   associationsApi,
@@ -379,6 +381,7 @@ function RuleCard({
 }) {
   const [stats, setStats] = useState<AssociationRuleStats | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const queryClient = useQueryClient();
 
   // Consolidating loading states for actions
@@ -555,6 +558,15 @@ function RuleCard({
 
                   <Button
                     variant="outline"
+                    size="icon-sm"
+                    onClick={() => setShowEditModal(true)}
+                    title="Edit Rule"
+                  >
+                    <Pencil className="size-4" />
+                  </Button>
+
+                  <Button
+                    variant="outline"
                     size="sm"
                     className="h-8"
                     onClick={handleToggle}
@@ -587,6 +599,17 @@ function RuleCard({
                   <span className="mx-0.5 opacity-40">.</span>
                   <span className="text-primary">{rule.targetMatchField}</span>
                 </div>
+                {rule.conditions != null && rule.conditions.length > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="ml-2 font-sans text-[10px]"
+                    title="This rule only fires when its conditions pass"
+                  >
+                    {rule.conditions.length} condition
+                    {rule.conditions.length > 1 ? 's' : ''} (
+                    {rule.conditionLogic ?? 'AND'})
+                  </Badge>
+                )}
               </div>
 
               <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -664,6 +687,14 @@ function RuleCard({
           </CollapsibleContent>
         </Collapsible>
       </CardContent>
+      {showEditModal && (
+        <EditAssociationRuleModal
+          projectId={projectId}
+          rule={rule}
+          onSaved={onRefresh}
+          onClose={() => setShowEditModal(false)}
+        />
+      )}
     </Card>
   );
 }
@@ -671,9 +702,11 @@ function RuleCard({
 export default function AssociationRulesList({
   projectId,
   showCompanyOwnerSection = true,
+  ownerSourcePlatform = 'servicetitan',
 }: {
   projectId: string;
   showCompanyOwnerSection?: boolean;
+  ownerSourcePlatform?: 'servicetitan' | 'dataforma' | null;
 }) {
   const [rules, setRules] = useState<AssociationRule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -708,7 +741,12 @@ export default function AssociationRulesList({
 
   return (
     <div className="space-y-6">
-      {showCompanyOwnerSection && <CompanyOwnerSection projectId={projectId} />}
+      {showCompanyOwnerSection && (
+        <CompanyOwnerSection
+          projectId={projectId}
+          sourcePlatform={ownerSourcePlatform ?? 'servicetitan'}
+        />
+      )}
 
       <div>
         <h3 className="text-sm font-semibold">Association Rules</h3>

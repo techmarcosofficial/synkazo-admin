@@ -29,10 +29,18 @@ export interface Rule {
   currency?: string;
   decimals?: string | number;
   action?: string;
-  /** value_map: source value → destination value lookup table. */
+  /** value_map / value_mapping: source value → destination value lookup table. */
   map?: Record<string, string>;
   /** value_map: used when a source value isn't in `map`. Blank = pass through. */
   fallback?: string;
+  /** value_mapping: used when the normalized input isn't in `map`, or is empty. */
+  defaultValue?: string;
+  /** value_mapping: applied to both the input and the map's keys before lookup. */
+  normalization?: {
+    trim?: boolean;
+    lowercase?: boolean;
+    replaceUnderscoreAndHyphenWithSpace?: boolean;
+  };
   [key: string]: unknown;
 }
 
@@ -444,6 +452,14 @@ export const RULE_DEFINITIONS: RuleDefinition[] = [
     description: 'Match each source value to an allowed destination value',
     params: ['map'],
   },
+  {
+    type: 'value_mapping',
+    category: 'conversion',
+    label: 'Map Values (Normalized)',
+    description:
+      'Match source values to destination values with optional trim/case/underscore normalization and a default fallback',
+    params: ['map', 'defaultValue'],
+  },
 ];
 
 /**
@@ -618,6 +634,26 @@ function applyRule(value: string, rule: Rule): string {
       return rule.fallback != null && rule.fallback !== ''
         ? String(rule.fallback)
         : v;
+    }
+    case 'value_mapping': {
+      const norm = rule.normalization ?? {};
+      const normalize = (s: string): string => {
+        let out = s;
+        if (norm.replaceUnderscoreAndHyphenWithSpace)
+          out = out.replace(/[_-]+/g, ' ');
+        if (norm.trim) out = out.trim();
+        if (norm.lowercase) out = out.toLowerCase();
+        return out;
+      };
+      const fallback = () =>
+        rule.defaultValue != null ? String(rule.defaultValue) : v;
+      const key = normalize(v);
+      if (key === '') return fallback();
+      const map = (rule.map ?? {}) as Record<string, string>;
+      const normalizedMap = new Map(
+        Object.entries(map).map(([k, val]) => [normalize(k), val]),
+      );
+      return normalizedMap.has(key) ? normalizedMap.get(key)! : fallback();
     }
     default:
       return v;

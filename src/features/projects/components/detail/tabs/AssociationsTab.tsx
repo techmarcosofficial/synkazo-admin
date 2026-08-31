@@ -7,9 +7,16 @@ import { useEntitlements } from '@/queries/useEntitlements';
 export default function AssociationsTab() {
   const { projectId, connections } = useProjectDetailContext();
   const { associationRules } = useEntitlements();
-  const hasServiceTitan = connections.some(
+  // Company-owner assignment supports ServiceTitan (CAM name-matching) and
+  // Dataforma (configurable field mappings) as distinct, isolated flows —
+  // see CompanyOwnerSection for the platform-specific UI each renders.
+  const ownerSourcePlatform = connections.some(
     (c) => c.platformId === 'servicetitan',
-  );
+  )
+    ? 'servicetitan'
+    : connections.some((c) => c.platformId === 'dataforma')
+      ? 'dataforma'
+      : null;
   return (
     <PlanFeatureGate
       allowed={associationRules}
@@ -18,7 +25,8 @@ export default function AssociationsTab() {
     >
       <AssociationRulesList
         projectId={projectId}
-        showCompanyOwnerSection={hasServiceTitan}
+        showCompanyOwnerSection={ownerSourcePlatform !== null}
+        ownerSourcePlatform={ownerSourcePlatform}
       />
     </PlanFeatureGate>
   );

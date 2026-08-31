@@ -16,6 +16,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 
 import { type CompanyOwnerRunLog } from '@/api/associations';
+import DataformaOwnerMappingsEditor from '@/components/associations/DataformaOwnerMappingsEditor';
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
 import ListRow from '@/components/shared/list/ListRow';
@@ -159,9 +160,12 @@ function RunLogRow({
 
 export default function CompanyOwnerSection({
   projectId,
+  sourcePlatform = 'servicetitan',
 }: {
   projectId: string;
+  sourcePlatform?: 'servicetitan' | 'dataforma';
 }) {
+  const isDataforma = sourcePlatform === 'dataforma';
   const { confirm } = useConfirmDialog();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -225,8 +229,9 @@ export default function CompanyOwnerSection({
         'This will process the available company records and assign matching HubSpot owners.',
       body: (
         <p className="text-muted-foreground text-sm">
-          Make sure the required ServiceTitan Sales Person / CAM field is
-          configured before running the association.
+          {isDataforma
+            ? 'Make sure at least one owner mapping is configured below before running the association.'
+            : 'Make sure the required ServiceTitan Sales Person / CAM field is configured before running the association.'}
         </p>
       ),
       confirmLabel: 'Associate Owners',
@@ -287,8 +292,9 @@ export default function CompanyOwnerSection({
               </Button>
             </div>
             <p className="text-muted-foreground mt-0.5 max-w-md text-xs">
-              Associate ServiceTitan customers with their matching HubSpot
-              company owners.
+              {isDataforma
+                ? 'Associate Dataforma customers with their matching HubSpot company owners, using your configured field mappings.'
+                : 'Associate ServiceTitan customers with their matching HubSpot company owners.'}
             </p>
 
             {runAllMutation.isPending ? (
@@ -337,12 +343,14 @@ export default function CompanyOwnerSection({
           <Alert>
             <Info />
             <AlertDescription>
-              Requires the appropriate Sales Person custom field to be
-              configured in ServiceTitan. Results may vary if the field is
-              missing or not configured correctly.
+              {isDataforma
+                ? 'Each mapping resolves a Dataforma field (already a real, matched email address) to an active HubSpot owner by email. A source email that has no active HubSpot owner is skipped, not treated as a failure.'
+                : 'Requires the appropriate Sales Person custom field to be configured in ServiceTitan. Results may vary if the field is missing or not configured correctly.'}
             </AlertDescription>
           </Alert>
         </div>
+
+        {isDataforma && <DataformaOwnerMappingsEditor projectId={projectId} />}
 
         <div className="flex items-center gap-2 px-4 pb-3">
           {associateOwnersButton}
@@ -514,7 +522,9 @@ export default function CompanyOwnerSection({
                             <TableRow>
                               <TableHead>HubSpot Company</TableHead>
                               <TableHead>HubSpot ID</TableHead>
-                              <TableHead>Sales Person / CAM Value</TableHead>
+                              <TableHead>
+                                {isDataforma ? 'Matched Value' : 'Sales Person / CAM Value'}
+                              </TableHead>
                               <TableHead>Owner Name</TableHead>
                               <TableHead>Owner Email</TableHead>
                               <TableHead>Status</TableHead>

@@ -2,6 +2,37 @@ import apiClient from './apiClient';
 
 import type { PaginatedResponse } from '@/types';
 
+export type ConditionOperator =
+  | 'equals'
+  | 'not_equals'
+  | 'is_empty'
+  | 'is_not_empty'
+  | 'contains'
+  | 'not_contains'
+  | 'starts_with'
+  | 'ends_with'
+  | 'in'
+  | 'not_in'
+  | 'gt'
+  | 'gte'
+  | 'lt'
+  | 'lte';
+
+export interface ConditionNormalization {
+  trim?: boolean;
+  lowercase?: boolean;
+  removeWhitespace?: boolean;
+}
+
+export interface AssociationCondition {
+  field: string;
+  operator: ConditionOperator;
+  value?: string | number | boolean | string[] | null;
+  normalization?: ConditionNormalization;
+}
+
+export type ConditionLogic = 'AND' | 'OR';
+
 export interface AssociationRule {
   id: string;
   projectId: string;
@@ -21,6 +52,20 @@ export interface AssociationRule {
   hsSourceObjectType?: string;
   hsTargetObjectType?: string;
   isEnabled?: boolean;
+  conditions?: AssociationCondition[] | null;
+  conditionLogic?: ConditionLogic;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CompanyOwnerMapping {
+  id: string;
+  projectId: string;
+  sourcePlatformId: string;
+  sourceObject: string;
+  sourceProperty: string;
+  targetHubspotProperty: string;
+  isEnabled: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -180,6 +225,40 @@ export const associationsApi = {
         `${base(projectId)}/objects/${encodeURIComponent(sourceObject)}/field-samples`,
         { params: { field, limit } },
       )
+      .then(d),
+
+  // Dataforma company-owner mapping config — {sourceProperty -> targetHubspotProperty}
+  // rows, isolated from ServiceTitan's CAM-matching flow below.
+  listCompanyOwnerMappings: (
+    projectId: string,
+  ): Promise<CompanyOwnerMapping[]> =>
+    apiClient.get(`${base(projectId)}/company-owner-mappings`).then(d),
+
+  createCompanyOwnerMapping: (
+    projectId: string,
+    data: { sourceProperty: string; targetHubspotProperty: string },
+  ): Promise<CompanyOwnerMapping> =>
+    apiClient.post(`${base(projectId)}/company-owner-mappings`, data).then(d),
+
+  updateCompanyOwnerMapping: (
+    projectId: string,
+    mappingId: string,
+    data: Partial<{
+      sourceProperty: string;
+      targetHubspotProperty: string;
+      isEnabled: boolean;
+    }>,
+  ): Promise<CompanyOwnerMapping> =>
+    apiClient
+      .patch(`${base(projectId)}/company-owner-mappings/${mappingId}`, data)
+      .then(d),
+
+  deleteCompanyOwnerMapping: (
+    projectId: string,
+    mappingId: string,
+  ): Promise<void> =>
+    apiClient
+      .delete(`${base(projectId)}/company-owner-mappings/${mappingId}`)
       .then(d),
 
   runAllCompanyOwners: (

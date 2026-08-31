@@ -95,6 +95,7 @@ const REQUIRED_PARAMS: Record<string, string[]> = {
   split_by_space: ['index'],
   split_by_delimiter: ['delimiter'],
   value_map: ['map'],
+  value_mapping: ['map'],
 };
 
 const NUMERIC_VALUE_RULES = new Set([
@@ -138,6 +139,7 @@ const PARAM_LABELS: Record<string, string> = {
   action: 'Action',
   map: 'Value mapping',
   fallback: 'If not listed',
+  defaultValue: 'Default value',
 };
 
 // Category identity colors — each rule category is a distinct visual "tag",
@@ -289,6 +291,146 @@ function ValueMapEditor({
   );
 }
 
+/**
+ * Editor for the Map Values (Normalized) rule: the same source/destination
+ * pair list as ValueMapEditor, plus normalization toggles applied to both
+ * the input and the map's own keys before lookup, and a default value used
+ * when nothing matches (including null/empty/whitespace-only input).
+ */
+function ValueMappingEditor({
+  rule,
+  destOptions,
+  onUpdate,
+}: {
+  rule: Rule;
+  destOptions?: { value: string; label: string }[];
+  onUpdate: (rule: Rule) => void;
+}) {
+  const map = (rule.map ?? {}) as Record<string, string>;
+  const entries = Object.entries(map);
+  const norm = rule.normalization ?? {};
+
+  const writeEntries = (next: [string, string][]) =>
+    onUpdate({ ...rule, map: Object.fromEntries(next) });
+
+  const renameKey = (index: number, key: string) => {
+    const next = entries.map((e, i) => (i === index ? [key, e[1]] : e)) as [
+      string,
+      string,
+    ][];
+    writeEntries(next);
+  };
+
+  const setValue = (index: number, value: string) => {
+    const next = entries.map((e, i) => (i === index ? [e[0], value] : e)) as [
+      string,
+      string,
+    ][];
+    writeEntries(next);
+  };
+
+  const setNorm = (patch: Partial<typeof norm>) =>
+    onUpdate({ ...rule, normalization: { ...norm, ...patch } });
+
+  return (
+    <div className="flex flex-col gap-2 px-14 pt-1 pb-3">
+      <div className="flex flex-wrap items-center gap-4 pb-1">
+        <label className="flex items-center gap-1.5">
+          <Switch
+            checked={!!norm.trim}
+            onCheckedChange={(v) => setNorm({ trim: v })}
+          />
+          <span className="text-muted-foreground text-xs">
+            Trim whitespace
+          </span>
+        </label>
+        <label className="flex items-center gap-1.5">
+          <Switch
+            checked={!!norm.lowercase}
+            onCheckedChange={(v) => setNorm({ lowercase: v })}
+          />
+          <span className="text-muted-foreground text-xs">Lowercase</span>
+        </label>
+        <label className="flex items-center gap-1.5">
+          <Switch
+            checked={!!norm.replaceUnderscoreAndHyphenWithSpace}
+            onCheckedChange={(v) =>
+              setNorm({ replaceUnderscoreAndHyphenWithSpace: v })
+            }
+          />
+          <span className="text-muted-foreground text-xs">
+            Treat _ / - as space
+          </span>
+        </label>
+      </div>
+      {entries.length === 0 && (
+        <p className="text-muted-foreground text-xs">
+          No values mapped yet — add one for each source value this field can
+          hold.
+        </p>
+      )}
+      {entries.map(([from, to], i) => (
+        <div key={i} className="flex items-center gap-2">
+          <Input
+            value={from}
+            onChange={(e) => renameKey(i, e.target.value)}
+            placeholder="Source value"
+            className="bg-muted h-9 flex-1 rounded-lg border-transparent font-mono text-xs shadow-none"
+          />
+          <ArrowRight className="text-muted-foreground size-3 shrink-0" />
+          {destOptions?.length ? (
+            <Select value={to} onValueChange={(v) => setValue(i, v)}>
+              <SelectTrigger
+                size="sm"
+                className="bg-muted h-9 flex-1 rounded-lg border-transparent shadow-none"
+              >
+                <SelectValue placeholder="Destination value" />
+              </SelectTrigger>
+              <SelectContent>
+                {destOptions.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label || o.value}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              value={to}
+              onChange={(e) => setValue(i, e.target.value)}
+              placeholder="Destination value"
+              className="bg-muted h-9 flex-1 rounded-lg border-transparent font-mono text-xs shadow-none"
+            />
+          )}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Remove value mapping"
+            className="text-muted-foreground hover:text-destructive"
+            onClick={() =>
+              writeEntries(
+                entries.filter((_, j) => j !== i) as [string, string][],
+              )
+            }
+          >
+            <Trash2 />
+          </Button>
+        </div>
+      ))}
+      <Button
+        variant="outline"
+        size="sm"
+        className="self-start"
+        onClick={() =>
+          writeEntries([...entries, ['', '']] as [string, string][])
+        }
+      >
+        <Plus /> Add value
+      </Button>
+    </div>
+  );
+}
+
 function ActiveRule({
   rule,
   index,
@@ -314,7 +456,8 @@ function ActiveRule({
   // `map` is a lookup table, not a scalar — it gets its own editor below the row.
   const inlineParams = (def?.params ?? []).filter((p) => p !== 'map');
   const isValueMap = rule.type === 'value_map';
-  const hasParams = inlineParams.length > 0 || isValueMap;
+  const isValueMapping = rule.type === 'value_mapping';
+  const hasParams = inlineParams.length > 0 || isValueMap || isValueMapping;
   const isEnabled = rule.enabled !== false;
   const catColor =
     CATEGORY_COLORS[def?.category as string] || DEFAULT_CAT_COLOR;
@@ -467,6 +610,14 @@ function ActiveRule({
 
       {isValueMap && isEnabled && (
         <ValueMapEditor
+          rule={rule}
+          destOptions={destOptions}
+          onUpdate={(next) => onUpdate(index, next)}
+        />
+      )}
+
+      {isValueMapping && isEnabled && (
+        <ValueMappingEditor
           rule={rule}
           destOptions={destOptions}
           onUpdate={(next) => onUpdate(index, next)}
