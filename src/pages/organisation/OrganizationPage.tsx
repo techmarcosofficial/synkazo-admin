@@ -204,7 +204,7 @@ function OrgInfoSection() {
                   setForm((f) => ({ ...f, description: e.target.value }))
                 }
                 rows={3}
-                placeholder="What does your organisation use Synkazo for?"
+                placeholder="What does your organisation use synkazo for?"
               />
             </Field>
             {org && (

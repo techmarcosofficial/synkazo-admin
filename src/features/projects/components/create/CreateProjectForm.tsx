@@ -119,7 +119,7 @@ const CreateProjectForm = forwardRef<
           </FieldContent>
 
           <FieldDescription>
-            This name is shown throughout Synkazo.
+            This name is shown throughout synkazo.
           </FieldDescription>
 
           <FieldError>{form.formState.errors.name?.message}</FieldError>

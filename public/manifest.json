@@ -1,6 +1,6 @@
 {
-  "name": "Synkazo",
-  "short_name": "Synkazo",
+  "name": "synkazo",
+  "short_name": "synkazo",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#080B12",

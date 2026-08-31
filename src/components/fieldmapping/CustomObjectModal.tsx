@@ -224,7 +224,7 @@ export default function CustomObjectModal({
             <p className="text-muted-foreground text-xs">
               {fixedSchemaLabel} objects are fixed by the platform. Custom
               objects must be created directly in your {fixedSchemaLabel}{' '}
-              account. Once created, they will appear automatically in Synkazo.
+              account. Once created, they will appear automatically in synkazo.
             </p>
           </div>
         </div>
@@ -299,7 +299,7 @@ export default function CustomObjectModal({
           </div>
           <div className="bg-muted/40 text-muted-foreground w-full rounded-xl border p-3 text-xs">
             If you've since upgraded your HubSpot plan, re-test your connection
-            in Synkazo to try again.
+            in synkazo to try again.
           </div>
         </div>
       </FormDialog>

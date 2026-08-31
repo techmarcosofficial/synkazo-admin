@@ -272,7 +272,7 @@ export default function OnboardingWizard({ onDismiss }: OnboardingWizardProps) {
 
   const sourceLabel = sourceSchema?.title ?? 'Source';
   const STEP_TITLES: Record<number, string> = {
-    1: 'Welcome to Synkazo',
+    1: 'Welcome to synkazo',
     2: 'Name your workspace',
     3: `Connect ${sourceLabel}`,
     4: 'Connect HubSpot',
@@ -303,7 +303,7 @@ export default function OnboardingWizard({ onDismiss }: OnboardingWizardProps) {
           </div>
           <div className="space-y-1.5">
             <p className="text-muted-foreground text-sm leading-relaxed">
-              Synkazo automatically keeps your field-service data updated in
+              synkazo automatically keeps your field-service data updated in
               HubSpot. Let's get you set up — it takes about 5 minutes.
             </p>
           </div>

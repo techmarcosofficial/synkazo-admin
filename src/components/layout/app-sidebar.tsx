@@ -147,7 +147,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild size="lg" tooltip="Synkazo">
+            <SidebarMenuButton asChild size="lg" tooltip="synkazo">
               <Link to="/dashboard">
                 <SynkazoWordmark
                   className="h-7! w-auto! text-foreground"
