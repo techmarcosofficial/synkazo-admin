@@ -52,6 +52,10 @@ export interface Job {
   statusMapping?: Record<string, string> | null;
   recordsSynced?: number;
   errorCount?: number;
+  /** Dataforma customers only — see dataforma-customer-cursor.util.ts on the
+   *  backend. Ignored for every other sourceObject/platform. */
+  dataformaStartingCustomerId?: number | null;
+  dataformaCustomerIdCursor?: number | null;
 }
 
 export interface DataCheckupResult {

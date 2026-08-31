@@ -8,7 +8,10 @@ import {
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
-import { associationsApi } from '@/api/associations';
+import { associationsApi, type AssociationCondition } from '@/api/associations';
+import AssociationConditionsEditor, {
+  validateConditions,
+} from '@/components/associations/AssociationConditionsEditor';
 import FormDialog from '@/components/form/FormDialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -51,11 +54,17 @@ interface FormErrors {
   sourceMatchField?: string;
   targetObject?: string;
   targetMatchField?: string;
+  conditions?: string;
   name?: string;
   hsAssociationTypeId?: string;
 }
 
-const STEPS = ['Source Object', 'Target Object', 'Association Type'];
+const STEPS = [
+  'Source Object',
+  'Target Object',
+  'Conditions',
+  'Association Type',
+];
 
 export default function CreateAssociationRuleModal({
   projectId,
@@ -88,6 +97,8 @@ export default function CreateAssociationRuleModal({
     hsAssociationLabel: '',
     cardinality: 'many_to_many',
   });
+  const [conditions, setConditions] = useState<AssociationCondition[]>([]);
+  const [conditionLogic, setConditionLogic] = useState<'AND' | 'OR'>('AND');
   const [errors, setErrors] = useState<FormErrors>({});
 
   // Dirty once the user has advanced past step 0 or filled in any field —
@@ -173,6 +184,10 @@ export default function CreateAssociationRuleModal({
         errs.targetObject = 'Source and target must be different objects';
     }
     if (step === 2) {
+      const condErr = validateConditions(conditions);
+      if (condErr) errs.conditions = condErr;
+    }
+    if (step === 3) {
       if (!form.name.trim()) errs.name = 'Name is required';
       if (!form.hsAssociationTypeId)
         errs.hsAssociationTypeId = 'Select an association type';
@@ -204,6 +219,8 @@ export default function CreateAssociationRuleModal({
         assocCategory: selectedType?.category ?? 'HUBSPOT_DEFINED',
         assocLabel: selectedType?.label ?? null,
         cardinality: form.cardinality,
+        conditions: conditions.length > 0 ? conditions : undefined,
+        conditionLogic,
       });
       toast.success('Association rule created');
       onCreated();
@@ -224,7 +241,7 @@ export default function CreateAssociationRuleModal({
       size="lg"
       isDirty={isDirty}
       currentStep={step + 1}
-      totalSteps={3}
+      totalSteps={4}
       stepLabels={STEPS}
       footer={(requestClose) => (
         <div className="flex w-full items-center justify-between">
@@ -241,7 +258,7 @@ export default function CreateAssociationRuleModal({
               </>
             )}
           </Button>
-          {step < 2 ? (
+          {step < 3 ? (
             <Button onClick={handleNext} disabled={projectObjects.length === 0}>
               Next <ArrowRight />
             </Button>
@@ -547,6 +564,18 @@ export default function CreateAssociationRuleModal({
             )}
 
             {step === 2 && (
+              <AssociationConditionsEditor
+                fields={sourceFields}
+                conditions={conditions}
+                conditionLogic={conditionLogic}
+                onChange={(next, logic) => {
+                  setConditions(next);
+                  setConditionLogic(logic);
+                }}
+              />
+            )}
+
+            {step === 3 && (
               <FieldGroup>
                 <Field data-invalid={!!errors.name}>
                   <FieldLabel htmlFor="rule-name" required>
