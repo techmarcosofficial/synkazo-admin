@@ -54,7 +54,7 @@ export const MOCK_ORGS = [
   },
   {
     id: 'org_synkazo',
-    name: 'Synkazo Internal',
+    name: 'synkazo Internal',
     plan: 'enterprise',
     memberCount: 5,
     projectCount: 10,

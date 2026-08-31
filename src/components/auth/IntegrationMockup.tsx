@@ -100,14 +100,14 @@ const MiddlewareCard = forwardRef<HTMLDivElement>(
       <div
         ref={ref}
         tabIndex={0}
-        aria-label="Synkazo middleware — hover to see capabilities"
+        aria-label="synkazo middleware — hover to see capabilities"
         className="middleware-card group/mw bg-card focus-visible:ring-primary/50 relative w-full max-w-[168px] shrink-0 rounded-lg border p-2.5 outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
       >
         <div className="flex items-center gap-2">
           <SynkazoMark className="size-7 shrink-0 rounded-md" />
           <div className="min-w-0">
             <p className="truncate text-[13px] leading-tight font-semibold">
-              Synkazo
+              synkazo
             </p>
             <p className="text-muted-foreground truncate text-[10px] leading-tight">
               Middleware

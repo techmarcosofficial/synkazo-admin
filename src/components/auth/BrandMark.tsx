@@ -13,7 +13,7 @@ export default function BrandMark({ className, inverse }: BrandMarkProps) {
       <span
         className={`text-lg font-bold tracking-tight ${inverse ? 'text-footer-foreground' : 'text-foreground'}`}
       >
-        Synkazo
+        synkazo
       </span>
     </div>
   );

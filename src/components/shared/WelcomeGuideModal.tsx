@@ -8,8 +8,8 @@ import { cn } from '@/lib/utils';
 const STEPS = [
   {
     icon: RefreshCw,
-    heading: 'Welcome to Synkazo',
-    body: 'Synkazo keeps your ServiceTitan and HubSpot data in sync automatically. No manual exports, no duplicate data entry — just clean, automated sync between your platforms.',
+    heading: 'Welcome to synkazo',
+    body: 'synkazo keeps your ServiceTitan and HubSpot data in sync automatically. No manual exports, no duplicate data entry — just clean, automated sync between your platforms.',
   },
   {
     icon: FolderOpen,
@@ -19,7 +19,7 @@ const STEPS = [
   {
     icon: Zap,
     heading: 'Jobs do the syncing',
-    body: 'Inside a project, Sync Jobs define what gets synced — for example, ServiceTitan Customers → HubSpot Contacts. Map your fields, set a schedule, and Synkazo handles the rest.',
+    body: 'Inside a project, Sync Jobs define what gets synced — for example, ServiceTitan Customers → HubSpot Contacts. Map your fields, set a schedule, and synkazo handles the rest.',
   },
   {
     icon: CheckCircle,

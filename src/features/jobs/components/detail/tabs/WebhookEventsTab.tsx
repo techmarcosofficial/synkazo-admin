@@ -57,7 +57,7 @@ const STATUS_CONFIG: Record<
     icon: SkipForward,
   },
   suppressed_echo: {
-    label: 'Skipped — changed by Synkazo',
+    label: 'Skipped — changed by synkazo',
     iconClassName: 'text-muted-foreground',
     icon: Radio,
   },
@@ -95,7 +95,7 @@ function formatPayload(
 // ('userId:82913505' for a person, an app id for an integration). Render the
 // part a human can act on.
 function describeSource(change: WebhookPropertyChange): string {
-  if (change.isOwnWrite) return 'Synkazo';
+  if (change.isOwnWrite) return 'synkazo';
   switch (change.sourceType) {
     case 'CRM_UI':
       return change.sourceId?.startsWith('userId:')
@@ -168,7 +168,7 @@ function statusLabel(event: WebhookEvent, fallback: string): string {
     (c) => c.sourceType !== null,
   );
   if (attributed.length > 0 && attributed.every((c) => c.isOwnWrite)) {
-    return 'Skipped — changed by Synkazo';
+    return 'Skipped — changed by synkazo';
   }
   return 'Already in sync';
 }
@@ -542,7 +542,7 @@ export default function WebhookEventsTab() {
           Every inbound HubSpot webhook event lands here — nothing is dropped.
           Expand a row to see exactly which properties changed, their previous
           and new values, and who made each change. "Processed" means it was
-          written to the other platform. "Skipped — changed by Synkazo" means
+          written to the other platform. "Skipped — changed by synkazo" means
           the change was this integration's own write coming back, so writing it
           again would just echo; "Already in sync" means the other platform
           already held these values. "Pending" events keep retrying

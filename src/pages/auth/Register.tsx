@@ -133,7 +133,7 @@ export default function Register() {
     try {
       // Auto-logs in and sets currentUser — the effect above handles redirect.
       await verifyOtp(form.email, value);
-      showToast.success('Email verified — welcome to Synkazo!');
+      showToast.success('Email verified — welcome to synkazo!');
     } catch (err) {
       const e = err as { response?: { data?: { message?: string } } };
       setOtpError(

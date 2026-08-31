@@ -57,7 +57,7 @@ export default function SubscriptionPaywall() {
       : {
           label: plan.ctaLabel ?? 'Contact us',
           onClick: () => {
-            window.location.href = `mailto:${SUPPORT_EMAIL}?subject=Synkazo ${plan.name}`;
+            window.location.href = `mailto:${SUPPORT_EMAIL}?subject=synkazo ${plan.name}`;
           },
         };
 
@@ -73,7 +73,7 @@ export default function SubscriptionPaywall() {
               Choose a plan to continue
             </h1>
             <p className="text-muted-foreground mx-auto max-w-xl text-sm sm:text-base">
-              Your Synkazo dashboard is locked until you start a plan. Pick one
+              Your synkazo dashboard is locked until you start a plan. Pick one
               below to unlock syncing.
             </p>
           </div>
@@ -87,7 +87,7 @@ export default function SubscriptionPaywall() {
           <p className="text-muted-foreground mx-auto max-w-xl text-center text-sm">
             No plans are available right now. Please{' '}
             <a
-              href={`mailto:${SUPPORT_EMAIL}?subject=Synkazo plan enquiry`}
+              href={`mailto:${SUPPORT_EMAIL}?subject=synkazo plan enquiry`}
               className="text-primary hover:underline"
             >
               contact support

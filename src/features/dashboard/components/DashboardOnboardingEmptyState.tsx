@@ -20,7 +20,7 @@ export default function DashboardOnboardingEmptyState() {
         <EmptyMedia variant="icon">
           <FolderPlus />
         </EmptyMedia>
-        <EmptyTitle>Welcome to Synkazo</EmptyTitle>
+        <EmptyTitle>Welcome to synkazo</EmptyTitle>
         <EmptyDescription>
           Create your first project to start syncing data between your
           platforms.

@@ -203,7 +203,7 @@ export default function PlatformAuditPage() {
     <PageHeader
       backTo={{ label: 'Back to Super Admin', to: '/super-admin' }}
       title="Platform Audit"
-      description="Platform-wide administrative, security, and organization activity across Synkazo"
+      description="Platform-wide administrative, security, and organization activity across synkazo"
       actions={
         <Button
           variant="outline"
@@ -295,7 +295,7 @@ export default function PlatformAuditPage() {
                           Review platform activity
                         </h3>
                         <p className="text-muted-foreground text-sm">
-                          What happened across Synkazo, and who did it
+                          What happened across synkazo, and who did it
                         </p>
                       </div>
                       <ManagementToolbar

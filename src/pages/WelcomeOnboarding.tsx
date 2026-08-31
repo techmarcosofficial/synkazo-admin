@@ -91,7 +91,7 @@ export default function WelcomeOnboarding() {
               icon={Mail}
               tone="danger"
               title="This link is invalid"
-              description="The onboarding link is missing or has expired. Please reinstall Synkazo from the HubSpot Marketplace, or log in if you already have an account."
+              description="The onboarding link is missing or has expired. Please reinstall synkazo from the HubSpot Marketplace, or log in if you already have an account."
             >
               <Button onClick={() => navigate('/login')} className="w-full">
                 Go to login
