@@ -9,14 +9,23 @@
 # `docker compose build synkazo-admin` + `docker compose up -d` from
 # $DEPLOY_BASE_PATH (a repo/org Actions variable — see synkazo-docs), so
 # this fragment needs to live in the compose file there — NOT inside the
-# app directory.
+# app directory. In this repo's real deploy stack that file is
+# synkazo-docs/docker-compose.prod.yml, which already has the equivalent
+# `synkazo-admin` service — this fragment exists for documentation/manual
+# use, not because it's wired into CI.
 #
 # The workflow SCPs the app tarball to $DEPLOY_BASE_PATH/admin.tar.gz and
 # extracts it to $DEPLOY_BASE_PATH/synkazo-admin-prod/, which is what
 # `build.context` below points at. No env_file at runtime — this is a
-# static Vite SPA served by nginx; VITE_* vars are baked in at build time
-# from .env.production inside the build context (see Dockerfile), not
-# read at container start.
+# static Vite SPA served by nginx.
+#
+# VITE_* values are baked into the client bundle at `vite build` time
+# (Vite exposes any process.env var prefixed with VITE_ via
+# import.meta.env), so they must be supplied via build.args below — not
+# env_file/environment, which only affect the (nonexistent, here) runtime
+# process and cannot change JS already compiled into /dist. Changing any
+# VITE_* value here requires rebuilding the image, not just restarting the
+# container. See synkazo-docs/docs/Admin_Environment_Variables.md.
 
 services:
   synkazo-admin:
@@ -24,6 +33,10 @@ services:
     build:
       context: ./synkazo-admin-prod
       dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-https://api.synkazo.com/api}
+        VITE_FRONTEND_URL: ${VITE_FRONTEND_URL:-https://synkazo.com}
+        VITE_STRIPE_PUBLISHABLE_KEY: ${VITE_STRIPE_PUBLISHABLE_KEY:-}
     image: synkazo/admin:prod
     restart: always
     ports:
