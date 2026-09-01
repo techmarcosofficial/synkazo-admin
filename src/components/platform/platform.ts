@@ -39,7 +39,7 @@ export const PLATFORMS: Record<string, Platform> = {
     color: '#0E76A8',
     status: 'live',
     category: 'roofing',
-    logoUrl: '/dataforma-logo.svg',
+    logoUrl: '/dataforma-logo.png',
   },
   texada: {
     id: 'texada',
@@ -47,7 +47,7 @@ export const PLATFORMS: Record<string, Platform> = {
     color: '#00ADEF',
     status: 'live',
     category: 'field_service',
-    logoUrl: '/texada-logo.svg',
+    logoUrl: '/texada-logo.png',
   },
   salesforce: {
     id: 'salesforce',

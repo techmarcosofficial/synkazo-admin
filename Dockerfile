@@ -22,7 +22,7 @@ COPY . .
 # wiring needed). Pass them as docker-compose build.args so the image is
 # deploy-ready. Defaults keep the image usable without any build args.
 ARG VITE_API_BASE_URL=http://localhost:3001/api
-ARG VITE_FRONTEND_URL=https://synkazo.com
+ARG VITE_FRONTEND_URL=http://localhost:5001
 ARG VITE_STRIPE_PUBLISHABLE_KEY
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 ENV VITE_FRONTEND_URL=$VITE_FRONTEND_URL
