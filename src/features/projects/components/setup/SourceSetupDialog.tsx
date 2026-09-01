@@ -100,7 +100,7 @@ export default function SourceSetupDialog() {
         <DialogHeader>
           <DialogTitle>Choose your source platform</DialogTitle>
           <DialogDescription>
-            HubSpot is connected as your destination. Pick the platform Synkazo
+            HubSpot is connected as your destination. Pick the platform synkazo
             should read records from to finish setting up{' '}
             <span className="text-foreground font-medium">
               {pendingProject.name}

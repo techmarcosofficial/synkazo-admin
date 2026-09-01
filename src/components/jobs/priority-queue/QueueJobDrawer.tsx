@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
+import { jobsApi } from '@/api/jobs';
 import FormDrawer from '@/components/form/FormDrawer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,8 +13,10 @@ import {
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
+import { showToast } from '@/lib/toast';
 import { BROWSER_TIMEZONE, TIMEZONES } from '@/lib/timezones';
 import { useProjectJobsQuery } from '@/queries/useJobs';
+import { useProjectQuery } from '@/queries/useProjects';
 import type { Job, QueueJob, QueueJobBaselineMode } from '@/types';
 
 const BASELINE_OPTIONS: {
@@ -59,6 +62,7 @@ export default function QueueJobDrawer({
   saving: boolean;
 }) {
   const jobsQuery = useProjectJobsQuery(projectId);
+  const projectQuery = useProjectQuery(projectId);
   const initialOverride = editing?.overrideSyncConfig ?? null;
 
   const [jobId, setJobId] = useState(editing?.jobId ?? '');
@@ -80,26 +84,74 @@ export default function QueueJobDrawer({
     Number(initialOverride?.batchSize ?? 100),
   );
 
+  const availableJobs: Job[] = (jobsQuery.data ?? []).filter(
+    (j) => j.id === editing?.jobId || !existingJobIds.includes(j.id),
+  );
+  const selectedJob = (jobsQuery.data ?? []).find((j) => j.id === jobId);
+
+  // Dataforma's Customers API has no create/modify-date filter — this job's
+  // real baseline is tracked by customer id (see dataforma-customer-cursor.util.ts
+  // on the backend and DataformaCustomerCursorCard on the job's own Settings
+  // tab), so the usual Date-based Record Baseline options here would be a
+  // silent no-op for it. Every other job/platform keeps the Date UI untouched.
+  const isDataformaCustomers =
+    projectQuery.data?.sourcePlatformId === 'dataforma' &&
+    selectedJob?.sourceObject === 'customers';
+
+  const [dataformaStartingId, setDataformaStartingId] = useState(
+    selectedJob?.dataformaStartingCustomerId ?? 0,
+  );
+  const [savingStartingId, setSavingStartingId] = useState(false);
+  // Only relevant pre-edit-lock (the Job select is disabled once editing an
+  // existing queue entry), so this only ever fires while adding a new one.
+  useEffect(() => {
+    setDataformaStartingId(selectedJob?.dataformaStartingCustomerId ?? 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobId]);
+
   const isDirty =
     jobId !== (editing?.jobId ?? '') ||
     windowMinutes !==
       (editing ? Math.round(editing.executionWindowSec / 60) : 30) ||
     enabled !== (editing?.enabled ?? true) ||
-    baselineSelection !== (editing?.baselineMode ?? 'default');
+    baselineSelection !== (editing?.baselineMode ?? 'default') ||
+    (isDataformaCustomers &&
+      dataformaStartingId !== (selectedJob?.dataformaStartingCustomerId ?? 0));
 
-  const availableJobs: Job[] = (jobsQuery.data ?? []).filter(
-    (j) => j.id === editing?.jobId || !existingJobIds.includes(j.id),
-  );
-
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!jobId || windowMinutes < 1) return;
-    if (baselineSelection === 'custom' && !baselineCustomAt) return;
+    if (!isDataformaCustomers && baselineSelection === 'custom' && !baselineCustomAt)
+      return;
+
+    if (isDataformaCustomers) {
+      setSavingStartingId(true);
+      try {
+        await jobsApi.updateJob(projectId, jobId, {
+          dataformaStartingCustomerId: dataformaStartingId,
+        });
+      } catch {
+        showToast.error(
+          'Failed to save the starting customer ID. Please try again.',
+        );
+        setSavingStartingId(false);
+        return;
+      }
+      setSavingStartingId(false);
+    }
+
     onSubmit({
       jobId,
       executionWindowMinutes: windowMinutes,
       enabled,
-      baselineMode: baselineSelection === 'default' ? null : baselineSelection,
-      ...(baselineSelection === 'custom'
+      // Date-based baseline is meaningless for a Dataforma customers job — its
+      // baseline is the id field saved above instead. Clear it rather than
+      // leave a stale/misleading value on the QueueJob row.
+      baselineMode: isDataformaCustomers
+        ? null
+        : baselineSelection === 'default'
+          ? null
+          : baselineSelection,
+      ...(!isDataformaCustomers && baselineSelection === 'custom'
         ? { baselineCustomAt, baselineTimezone }
         : {}),
       overrideEnabled,
@@ -118,8 +170,11 @@ export default function QueueJobDrawer({
           <Button variant="outline" onClick={requestClose} disabled={saving}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={saving || !jobId}>
-            {saving ? <Spinner /> : null}
+          <Button
+            onClick={handleSubmit}
+            disabled={saving || savingStartingId || !jobId}
+          >
+            {saving || savingStartingId ? <Spinner /> : null}
             {editing ? 'Save Changes' : 'Add Job'}
           </Button>
         </>
@@ -162,63 +217,102 @@ export default function QueueJobDrawer({
 
         <div className="space-y-1.5">
           <label className="text-sm font-medium">Record Baseline</label>
-          <p className="text-muted-foreground text-xs">
-            The lower bound used when fetching records for this job in the
-            priority queue. Relative options are calculated from the moment the
-            queue cycle starts, not from when this job's turn comes up.
-          </p>
-          <Select
-            value={baselineSelection}
-            onValueChange={(v) =>
-              setBaselineSelection(v as QueueJobBaselineMode | 'default')
-            }
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {BASELINE_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {isDataformaCustomers ? (
+            <>
+              <p className="text-muted-foreground text-xs">
+                Dataforma&apos;s Customers API has no date filter — every sync
+                fetches everything, then keeps only records at or above this
+                ID. The floor advances automatically to the highest customer
+                ID synced each cycle, the same as this job's own Settings tab.
+              </p>
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <div className="space-y-1.5">
+                  <label className="text-muted-foreground text-xs">
+                    Starting Customer ID
+                  </label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={dataformaStartingId}
+                    onChange={(e) =>
+                      setDataformaStartingId(
+                        Math.max(0, parseInt(e.target.value) || 0),
+                      )
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-muted-foreground text-xs">
+                    Currently Synced Through
+                  </label>
+                  <div className="bg-muted text-muted-foreground truncate rounded-3xl px-3 py-2 text-sm">
+                    {selectedJob?.dataformaCustomerIdCursor ?? '—'}
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-muted-foreground text-xs">
+                The lower bound used when fetching records for this job in the
+                priority queue. Relative options are calculated from the
+                moment the queue cycle starts, not from when this job's turn
+                comes up.
+              </p>
+              <Select
+                value={baselineSelection}
+                onValueChange={(v) =>
+                  setBaselineSelection(v as QueueJobBaselineMode | 'default')
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {BASELINE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-          {baselineSelection === 'custom' && (
-            <div className="flex flex-wrap items-end gap-2 pt-1">
-              <div className="space-y-1.5">
-                <label className="text-muted-foreground text-xs">
-                  Date and Time
-                </label>
-                <Input
-                  type="datetime-local"
-                  value={baselineCustomAt}
-                  onChange={(e) => setBaselineCustomAt(e.target.value)}
-                  className="w-56"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-muted-foreground text-xs">
-                  Time Zone
-                </label>
-                <Select
-                  value={baselineTimezone}
-                  onValueChange={setBaselineTimezone}
-                >
-                  <SelectTrigger className="w-56">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TIMEZONES.map((tz) => (
-                      <SelectItem key={tz} value={tz}>
-                        {tz}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+              {baselineSelection === 'custom' && (
+                <div className="flex flex-wrap items-end gap-2 pt-1">
+                  <div className="space-y-1.5">
+                    <label className="text-muted-foreground text-xs">
+                      Date and Time
+                    </label>
+                    <Input
+                      type="datetime-local"
+                      value={baselineCustomAt}
+                      onChange={(e) => setBaselineCustomAt(e.target.value)}
+                      className="w-56"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-muted-foreground text-xs">
+                      Time Zone
+                    </label>
+                    <Select
+                      value={baselineTimezone}
+                      onValueChange={setBaselineTimezone}
+                    >
+                      <SelectTrigger className="w-56">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TIMEZONES.map((tz) => (
+                          <SelectItem key={tz} value={tz}>
+                            {tz}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
 

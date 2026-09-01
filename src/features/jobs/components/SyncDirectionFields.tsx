@@ -261,7 +261,7 @@ export default function SyncDirectionFields({
                   Listen for HubSpot changes
                 </p>
                 <p className="text-muted-foreground text-xs">
-                  On by default for two-way jobs. Synkazo subscribes to HubSpot
+                  On by default for two-way jobs. synkazo subscribes to HubSpot
                   create/update events and writes those changes back to the
                   source. Turn it off to keep this job polling-only. Only takes
                   effect once the job is Active.

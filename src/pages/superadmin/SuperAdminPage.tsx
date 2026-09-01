@@ -122,7 +122,7 @@ export default function SuperAdminPage() {
     <PageHeader
       backTo={{ label: 'Back to Dashboard', to: '/dashboard' }}
       title="Super Admin Console"
-      description="Manage and monitor the Synkazo platform."
+      description="Manage and monitor the synkazo platform."
       actions={
         <Button variant="outline" onClick={refreshAll} disabled={isLoading}>
           <RefreshCw className={cn(isLoading && 'animate-spin')} />
@@ -359,7 +359,7 @@ export default function SuperAdminPage() {
         />
         <ModuleCard
           title="Platform Audit"
-          description="Review platform-wide administrative, security, and organization activity across Synkazo."
+          description="Review platform-wide administrative, security, and organization activity across synkazo."
           icon={ClipboardList}
           to="/super-admin/audit-log"
           tone="primary"

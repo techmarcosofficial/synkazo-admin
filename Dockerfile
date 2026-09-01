@@ -16,6 +16,18 @@ COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
 COPY . .
+
+# VITE_* values are baked into the client bundle at build time (Vite exposes
+# any process.env var prefixed with VITE_ via import.meta.env — no vite.config
+# wiring needed). Pass them as docker-compose build.args so the image is
+# deploy-ready. Defaults keep the image usable without any build args.
+ARG VITE_API_BASE_URL=http://localhost:3001/api
+ARG VITE_FRONTEND_URL=https://synkazo.com
+ARG VITE_STRIPE_PUBLISHABLE_KEY
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV VITE_FRONTEND_URL=$VITE_FRONTEND_URL
+ENV VITE_STRIPE_PUBLISHABLE_KEY=$VITE_STRIPE_PUBLISHABLE_KEY
+
 RUN pnpm build
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { useJobDetailContext } from '../context';
 import {
+  DataformaCustomerCursorCard,
   JobDangerZoneCard,
   JobGeneralCard,
   JobRetryCard,
@@ -13,7 +14,10 @@ import { showToast } from '@/lib/toast';
 
 export default function SettingsTab() {
   const navigate = useNavigate();
-  const { projectId, job, patchJob } = useJobDetailContext();
+  const { projectId, job, project, patchJob } = useJobDetailContext();
+  const showDataformaCustomerCursor =
+    project?.sourcePlatformId === 'dataforma' &&
+    job.sourceObject === 'customers';
 
   const handleDelete = async () => {
     try {
@@ -33,6 +37,13 @@ export default function SettingsTab() {
         <JobRetryCard projectId={projectId} job={job} onUpdated={patchJob} />
       </div>
       <JobSyncDirectionCard />
+      {showDataformaCustomerCursor && (
+        <DataformaCustomerCursorCard
+          projectId={projectId}
+          job={job}
+          onUpdated={patchJob}
+        />
+      )}
       <JobDangerZoneCard onDelete={handleDelete} />
     </div>
   );

@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
+import { Switch } from '@/components/ui/switch';
 import { showToast } from '@/lib/toast';
 import type { PipelineStatus } from '@/types';
 
@@ -30,6 +31,9 @@ export default function PipelineTab() {
   const [pipelineId, setPipelineId] = useState(job.destPipelineId ?? '');
   const [statusMapping, setStatusMapping] = useState<Record<string, string>>(
     job.statusMapping ?? {},
+  );
+  const [replicateStatus, setReplicateStatus] = useState(
+    job.replicateSourceStatusToPipelineStage ?? false,
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -95,6 +99,7 @@ export default function PipelineTab() {
       await jobsApi.updateJob(projectId, job.id, {
         destPipelineId: pipelineId || null,
         statusMapping: Object.keys(mapping).length > 0 ? mapping : null,
+        replicateSourceStatusToPipelineStage: replicateStatus,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -257,7 +262,44 @@ export default function PipelineTab() {
         </CardContent>
       </Card>
 
-      {pipelineId && stages.length > 0 && stStatuses.length > 0 && (
+      {pipelines.length > 0 && (
+        <Card>
+          <CardContent className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="font-semibold">
+                Replicate Source Status to HubSpot Pipeline Stage
+              </h3>
+              <p className="text-muted-foreground mt-1 text-xs">
+                When enabled, each synced{' '}
+                <strong className="text-foreground">{srcLabel}</strong> status
+                is used as-is for the HubSpot stage name — reusing a matching
+                stage if one already exists, or creating it automatically if
+                not. Bypasses the manual mapping below. When disabled, the
+                manual mapping is used (unchanged default behavior). A
+                missing/empty source status never creates or overrides a
+                stage.
+              </p>
+            </div>
+            <Switch
+              checked={replicateStatus}
+              onCheckedChange={setReplicateStatus}
+              className="shrink-0"
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {replicateStatus && pipelineId && (
+        <div className="bg-muted/40 flex items-center gap-2 rounded-xl px-4 py-3 text-xs">
+          <GitBranch className="size-3.5 shrink-0" />
+          <span>
+            Status replication is enabled — the manual status mapping below is
+            not used. Source statuses become HubSpot stage names directly.
+          </span>
+        </div>
+      )}
+
+      {!replicateStatus && pipelineId && stages.length > 0 && stStatuses.length > 0 && (
         <div className="overflow-hidden rounded-xl border">
           <div className="bg-muted/40 border-b px-6 py-4">
             <h3 className="font-semibold">Status → Stage Mapping</h3>
@@ -309,7 +351,7 @@ export default function PipelineTab() {
         </div>
       )}
 
-      {pipelineId && stStatuses.length === 0 && (
+      {!replicateStatus && pipelineId && stStatuses.length === 0 && (
         <div className="bg-warning/10 text-warning flex items-center gap-2 rounded-xl px-4 py-3 text-xs">
           <AlertTriangle className="size-3.5 shrink-0" />
           <span>
