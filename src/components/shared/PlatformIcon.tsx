@@ -3,8 +3,8 @@ import { cn } from '@/lib/utils';
 const PLATFORM_IMAGES: Record<string, string> = {
   hubspot: '/hubspot-logo.svg',
   servicetitan: '/servicetitan-logo.svg',
-  dataforma: '/dataforma-logo.svg',
-  texada: '/texada-logo.svg',
+  dataforma: '/dataforma-logo.png',
+  texada: '/texada-logo.png',
 };
 
 const PLATFORM_COLORS: Record<string, string> = {
