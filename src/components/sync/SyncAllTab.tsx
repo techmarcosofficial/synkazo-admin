@@ -234,14 +234,16 @@ export default function SyncAllTab({
                       <Button
                         variant="outline"
                         className={cn(
-                          'w-full justify-start font-normal',
+                          'min-w-0 flex-1 shrink justify-start overflow-hidden font-normal',
                           !startDate && 'text-muted-foreground',
                         )}
                       >
-                        <CalendarIcon />
-                        {startDate
-                          ? format(startDate, 'MMM d, yyyy')
-                          : 'Select date'}
+                        <CalendarIcon className="shrink-0" />
+                        <span className="truncate">
+                          {startDate
+                            ? format(startDate, 'MMM d, yyyy')
+                            : 'Select date'}
+                        </span>
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
@@ -277,12 +279,14 @@ export default function SyncAllTab({
                       <Button
                         variant="outline"
                         className={cn(
-                          'w-full justify-start font-normal',
+                          'min-w-0 flex-1 shrink justify-start overflow-hidden font-normal',
                           !endDateTouched && 'text-muted-foreground',
                         )}
                       >
-                        <CalendarIcon />
-                        {endDate ? format(endDate, 'MMM d, yyyy') : 'Today'}
+                        <CalendarIcon className="shrink-0" />
+                        <span className="truncate">
+                          {endDate ? format(endDate, 'MMM d, yyyy') : 'Today'}
+                        </span>
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
