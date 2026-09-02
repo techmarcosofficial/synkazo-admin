@@ -1,5 +1,5 @@
 import { differenceInSeconds } from 'date-fns';
-import { ArrowRight, Pause, Play } from 'lucide-react';
+import { ArrowRight, Pause, Play, RotateCcw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Spinner } from '@/components/ui/spinner';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import type { PriorityQueueConfig, StageOutcomeStatus } from '@/types';
 
 function formatSeconds(sec: number): string {
@@ -36,15 +37,31 @@ export default function QueueStatusPanel({
   onPause,
   onResume,
   pausing,
+  onClearAndRestart,
+  clearingAndRestarting,
 }: {
   config: PriorityQueueConfig;
   onPause: () => void;
   onResume: () => void;
   pausing: boolean;
+  onClearAndRestart: () => void | Promise<void>;
+  clearingAndRestarting: boolean;
 }) {
   const { queue, activeCycle, currentExecution, nextQueueJob, displayStatus } =
     config;
   const [, forceTick] = useState(0);
+  const { confirm } = useConfirmDialog();
+
+  const handleClearAndRestartClick = () => {
+    confirm({
+      variant: 'danger',
+      title: 'Clear & restart the priority scheduler?',
+      description:
+        'This clears all live run state — the current cycle, job failure/block counters, and execution lease — and restarts the scheduler from a fresh state. Your queued jobs, association queue, and schedule settings are not affected. This cannot be undone.',
+      confirmLabel: 'Clear & Restart',
+      onConfirm: onClearAndRestart,
+    });
+  };
 
   // Re-render every second so the elapsed/window progress bar moves smoothly
   // between the (5s-while-running) query refetches.
@@ -186,7 +203,7 @@ export default function QueueStatusPanel({
           </div>
         )}
 
-        <div className="border-t pt-3">
+        <div className="flex items-center gap-2 border-t pt-3">
           {queue.status === 'paused' ? (
             <Button
               size="sm"
@@ -208,6 +225,16 @@ export default function QueueStatusPanel({
               Pause Queue
             </Button>
           )}
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-destructive hover:text-destructive"
+            onClick={handleClearAndRestartClick}
+            disabled={clearingAndRestarting}
+          >
+            {clearingAndRestarting ? <Spinner /> : <RotateCcw />}
+            Clear & Restart Scheduler
+          </Button>
         </div>
       </CardContent>
     </Card>

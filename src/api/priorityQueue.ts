@@ -2,6 +2,7 @@ import apiClient from './apiClient';
 
 import type {
   AssociationQueueItem,
+  AssociationRuleOption,
   PriorityQueueConfig,
   Project,
   ProjectQueue,
@@ -45,7 +46,7 @@ export interface UpdateQueueSchedulePayload {
 }
 
 export interface AssociationQueueItemPayload {
-  objectName: string;
+  associationRuleId: string;
   position: number;
   enabled: boolean;
 }
@@ -97,8 +98,15 @@ export const priorityQueueApi = {
   resumeQueue: (projectId: string): Promise<ProjectQueue> =>
     apiClient.post(`${p(projectId)}/resume`).then(d),
 
-  getAssociationObjectOptions: (projectId: string): Promise<string[]> =>
-    apiClient.get(`${p(projectId)}/association-object-options`).then(d),
+  clearAndRestart: (
+    projectId: string,
+  ): Promise<{ queue: ProjectQueue; queueJobs: QueueJob[] }> =>
+    apiClient.post(`${p(projectId)}/clear-restart`).then(d),
+
+  getAssociationRuleOptions: (
+    projectId: string,
+  ): Promise<AssociationRuleOption[]> =>
+    apiClient.get(`${p(projectId)}/association-rule-options`).then(d),
 
   updateAssociationConfig: (
     projectId: string,
