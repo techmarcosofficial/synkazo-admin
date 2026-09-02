@@ -1,3 +1,5 @@
+import type { ExcludeCondition } from './conditions';
+
 export type JobStatus =
   'active' | 'paused' | 'error' | 'idle' | 'running' | 'draft';
 
@@ -60,6 +62,12 @@ export interface Job {
    *  backend. Ignored for every other sourceObject/platform. */
   dataformaStartingCustomerId?: number | null;
   dataformaCustomerIdCursor?: number | null;
+  /** Platform-agnostic record-level exclude filter, evaluated against the raw
+   *  source record before any mapping runs. Null/empty means no filtering. */
+  excludeConditions?: ExcludeCondition[] | null;
+  excludeConditionLogic?: 'AND' | 'OR';
+  /** When true, a matched record is left completely untouched, never updated. */
+  skipUpdateOnMatch?: boolean;
 }
 
 export interface DataCheckupResult {
@@ -132,6 +140,10 @@ export interface FieldMapping {
    *  BIDIRECTIONAL mappings when the sync writes back into the source platform. */
   reverseOnEmpty?: OnEmptyPolicy;
   reverseDefaultValue?: string | null;
+  /** Only meaningful with updatePolicy: 'fill_if_empty'. 'record' escalates a
+   *  genuine conflict on this field into discarding the whole record's write,
+   *  not just this field. Default 'field'. */
+  conflictScope?: 'field' | 'record' | null;
 }
 
 export interface SyncConflict {

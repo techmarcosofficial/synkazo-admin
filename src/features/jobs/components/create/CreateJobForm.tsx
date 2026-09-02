@@ -99,6 +99,7 @@ const withDirection = (
       matchPriority:
         m.matchDestKey === destField ? (m.matchOrder ?? null) : null,
       updatePolicy: m.destUpdatePolicy?.[destField] ?? 'always',
+      conflictScope: m.destConflictScope?.[destField] ?? 'field',
       onEmpty: m.destOnEmpty?.[destField] ?? 'none',
       defaultValue: m.destDefaults?.[destField] ?? null,
       reverseOnEmpty: m.destReverseOnEmpty?.[destField] ?? 'none',
@@ -206,6 +207,9 @@ export const CreateJobForm = forwardRef<
     syncTrigger: 'both',
     idMappingSourceField: 'id',
     idMappingDestField: 'hs_object_id',
+    excludeConditions: [],
+    excludeConditionLogic: 'AND',
+    skipUpdateOnMatch: false,
   });
   const [fieldMappings, setFieldMappings] = useState<MappingRow[]>([]);
   const [attentionInfo, setAttentionInfo] = useState({
@@ -553,6 +557,12 @@ export const CreateJobForm = forwardRef<
           syncTrigger: config.syncTrigger,
           idMappingSourceField: config.idMappingSourceField,
           idMappingDestField: config.idMappingDestField,
+          excludeConditions:
+            config.excludeConditions && config.excludeConditions.length > 0
+              ? config.excludeConditions
+              : null,
+          excludeConditionLogic: config.excludeConditionLogic,
+          skipUpdateOnMatch: config.skipUpdateOnMatch,
         };
         let savedId = draftJobId;
         if (!savedId) {
@@ -804,10 +814,20 @@ export const CreateJobForm = forwardRef<
             }
           : {};
 
+      const excludeAndSkipPayload = {
+        excludeConditions:
+          config.excludeConditions && config.excludeConditions.length > 0
+            ? config.excludeConditions
+            : null,
+        excludeConditionLogic: config.excludeConditionLogic,
+        skipUpdateOnMatch: config.skipUpdateOnMatch,
+      };
+
       if (jobId) {
         await jobsApi.updateJob(projectId, jobId, {
           ...schedPayload,
           ...pipelinePayload,
+          ...excludeAndSkipPayload,
         } as unknown as Parameters<typeof jobsApi.updateJob>[2]);
       } else {
         const job = await jobsApi.createJob(projectId, {
@@ -825,6 +845,7 @@ export const CreateJobForm = forwardRef<
           idMappingDestField: config.idMappingDestField,
           ...schedPayload,
           ...pipelinePayload,
+          ...excludeAndSkipPayload,
         } as unknown as Parameters<typeof jobsApi.createJob>[1]);
         jobId = job.id;
         if (fieldMappings.length > 0) {
@@ -1054,6 +1075,19 @@ export const CreateJobForm = forwardRef<
           showDirectionToggle={config.syncDirection === 'two_way'}
           onAttentionReviewChange={setAttentionInfo}
           scrollToAttentionSignal={attentionScrollSignal}
+          excludeConditions={config.excludeConditions ?? []}
+          excludeConditionLogic={config.excludeConditionLogic ?? 'AND'}
+          onExcludeConditionsChange={(conditions, logic) =>
+            setConfig((c) => ({
+              ...c,
+              excludeConditions: conditions,
+              excludeConditionLogic: logic,
+            }))
+          }
+          skipUpdateOnMatch={config.skipUpdateOnMatch ?? false}
+          onSkipUpdateOnMatchChange={(value) =>
+            setConfig((c) => ({ ...c, skipUpdateOnMatch: value }))
+          }
         />
       )}
 

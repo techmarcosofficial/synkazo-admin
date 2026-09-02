@@ -170,6 +170,49 @@ const DIRECTION_OPTIONS: Array<{ value: MappingDirection; label: string }> = [
   { value: 'bidirectional', label: 'Both Ways' },
 ];
 
+const UPDATE_POLICY_OPTIONS: Array<{
+  value: MappingUpdatePolicy;
+  label: string;
+  hint: string;
+}> = [
+  {
+    value: 'always',
+    label: 'Always update',
+    hint: 'Overwrite this field in the destination on every sync, even if it was changed there since the last run.',
+  },
+  {
+    value: 'create_only',
+    label: 'Create only',
+    hint: 'Set this field only when the record is first created. Later syncs never touch it again, so edits made directly in the destination are preserved.',
+  },
+  {
+    value: 'fill_if_empty',
+    label: 'Fill if empty',
+    hint: "Only write this field if it's currently blank in the destination. If the destination already has the same value, nothing changes. If the destination already has a different value — a genuine mismatch — nothing is overwritten; use \"On Conflict\" below to decide whether that mismatch skips just this field or the whole record.",
+  },
+];
+
+/** Only meaningful when updatePolicy is 'fill_if_empty' — decides what a genuine
+ *  mismatch (destination already holds a value that differs from the incoming
+ *  one — not simply empty) discards. Never triggers when the destination is
+ *  empty (that's a fill, not a mismatch) or when both sides already agree. */
+const CONFLICT_SCOPE_OPTIONS: Array<{
+  value: 'field' | 'record';
+  label: string;
+  hint: string;
+}> = [
+  {
+    value: 'field',
+    label: 'This field only',
+    hint: 'When both sides already have a value and they differ (a genuine mismatch — not just an empty destination), that mismatch is logged and only this field is skipped. The rest of the record still updates normally.',
+  },
+  {
+    value: 'record',
+    label: 'Skip Whole Record',
+    hint: 'When both sides already have a value and they differ (a genuine mismatch — not just an empty destination), the entire record\'s update is discarded, not just this field. Nothing on the record is written this sync.',
+  },
+];
+
 export interface MappingRow {
   sourceField: string;
   destField: string | string[];
@@ -199,6 +242,10 @@ export interface MappingRow {
    *  per destination for the same fan-out reason as destOnEmpty. Missing/'always'
    *  is the historical behaviour — write it every time. */
   destUpdatePolicy?: Record<string, MappingUpdatePolicy>;
+  /** Only meaningful when the matching destUpdatePolicy entry is 'fill_if_empty'. 'record'
+   *  escalates a genuine conflict on that destination into discarding the whole record's
+   *  write, not just this field. Missing/'field' is the default (existing) behaviour. */
+  destConflictScope?: Record<string, 'field' | 'record'>;
   /** Same shape as destOnEmpty/destDefaults, but for the reverse leg — the empty-value
    *  policy that applies when a bidirectional row writes back into the SOURCE platform
    *  (i.e. the source platform requires this field on its side). Kept separate from
@@ -292,6 +339,8 @@ function removeFrom(
     const { [destKey]: _default, ...restDefaults } = m.destDefaults || {};
     const { [destKey]: _updatePolicy, ...restUpdatePolicy } =
       m.destUpdatePolicy || {};
+    const { [destKey]: _conflictScope, ...restConflictScope } =
+      m.destConflictScope || {};
     return [
       {
         ...m,
@@ -300,6 +349,7 @@ function removeFrom(
         destOnEmpty: restOnEmpty,
         destDefaults: restDefaults,
         destUpdatePolicy: restUpdatePolicy,
+        destConflictScope: restConflictScope,
         ...(m.matchDestKey === destKey
           ? { matchDestKey: null, matchOrder: null }
           : {}),
@@ -1056,6 +1106,25 @@ export default function FieldMappingCanvas({
       ),
     );
 
+  const setConflictScope = (
+    sourceKey: string,
+    destKey: string,
+    scope: 'field' | 'record',
+  ) =>
+    onMappingsChange(
+      mappings.map((m) =>
+        m.sourceField === sourceKey
+          ? {
+              ...m,
+              destConflictScope: {
+                ...(m.destConflictScope || {}),
+                [destKey]: scope,
+              },
+            }
+          : m,
+      ),
+    );
+
   /**
    * Repoints an existing (source, dest) pair. Everything hanging off the old
    * destination key — its rules, empty-value policy and match-field flag — moves
@@ -1072,6 +1141,7 @@ export default function FieldMappingCanvas({
       wasMatch: row.matchDestKey === from.destKey,
       matchOrder: row.matchOrder,
       updatePolicy: row.destUpdatePolicy?.[from.destKey],
+      conflictScope: row.destConflictScope?.[from.destKey],
       direction: row.direction,
     };
 
@@ -1100,6 +1170,14 @@ export default function FieldMappingCanvas({
                   destUpdatePolicy: {
                     ...(m.destUpdatePolicy || {}),
                     [to.destKey]: carried.updatePolicy,
+                  },
+                }
+              : {}),
+            ...(carried.conflictScope
+              ? {
+                  destConflictScope: {
+                    ...(m.destConflictScope || {}),
+                    [to.destKey]: carried.conflictScope,
                   },
                 }
               : {}),
@@ -1985,6 +2063,13 @@ export default function FieldMappingCanvas({
                       {showDirectionToggle && (
                         <TableHead className="w-40">Direction</TableHead>
                       )}
+                      <TableHead className="w-20">Match</TableHead>
+                      <TableHead className="w-[9.5rem]">
+                        Update Policy
+                      </TableHead>
+                      <TableHead className="w-[8.5rem]">
+                        On Conflict
+                      </TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -2029,6 +2114,8 @@ export default function FieldMappingCanvas({
                           const onEmpty = m.destOnEmpty?.[dk] ?? 'none';
                           const updatePolicy =
                             m.destUpdatePolicy?.[dk] ?? 'always';
+                          const conflictScope =
+                            m.destConflictScope?.[dk] ?? 'field';
                           return (
                             <TableRow
                               key={`${m.sourceField}-${dk}`}
@@ -2142,6 +2229,15 @@ export default function FieldMappingCanvas({
                                           : 'Fill if empty'}
                                       </Badge>
                                     )}
+                                    {updatePolicy === 'fill_if_empty' &&
+                                      conflictScope === 'record' && (
+                                        <Badge
+                                          variant="secondary"
+                                          className="bg-warning/10 text-warning shrink-0 gap-1 whitespace-nowrap"
+                                        >
+                                          Skips whole record on mismatch
+                                        </Badge>
+                                      )}
                                     <TypeChip type={df?.type} />
                                   </div>
                                 )}
@@ -2195,8 +2291,8 @@ export default function FieldMappingCanvas({
                                   )}
                                 </TableCell>
                               )}
-                              <TableCell className="text-right">
-                                {isEditing ? (
+                              {isEditing ? (
+                                <TableCell colSpan={4} className="text-right">
                                   <div className="flex items-center justify-end gap-1.5">
                                     <Button
                                       type="button"
@@ -2243,8 +2339,10 @@ export default function FieldMappingCanvas({
                                       <X />
                                     </Button>
                                   </div>
-                                ) : (
-                                  <div className="flex items-center justify-end gap-3">
+                                </TableCell>
+                              ) : (
+                                <>
+                                  <TableCell>
                                     <Tooltip>
                                       <TooltipTrigger asChild>
                                         <label className="flex w-fit cursor-pointer items-center gap-2">
@@ -2270,6 +2368,8 @@ export default function FieldMappingCanvas({
                                           : 'Use this field to find existing records to update.'}
                                       </TooltipContent>
                                     </Tooltip>
+                                  </TableCell>
+                                  <TableCell>
                                     <Select
                                       value={updatePolicy}
                                       onValueChange={(v) =>
@@ -2283,118 +2383,164 @@ export default function FieldMappingCanvas({
                                       <SelectTrigger
                                         size="sm"
                                         className="h-8 w-[9.5rem]"
-                                        title="What happens to this field on an update: always rewrite it, never touch it again after creation, or only fill it in if the destination is currently empty (logging a conflict otherwise)."
                                       >
                                         <SelectValue />
                                       </SelectTrigger>
                                       <SelectContent align="end">
-                                        <SelectItem value="always">
-                                          Always update
-                                        </SelectItem>
-                                        <SelectItem value="create_only">
-                                          Create only
-                                        </SelectItem>
-                                        <SelectItem value="fill_if_empty">
-                                          Fill if empty
-                                        </SelectItem>
+                                        {UPDATE_POLICY_OPTIONS.map((o) => (
+                                          <Tooltip key={o.value}>
+                                            <TooltipTrigger asChild>
+                                              <SelectItem value={o.value}>
+                                                {o.label}
+                                              </SelectItem>
+                                            </TooltipTrigger>
+                                            <TooltipContent
+                                              side="right"
+                                              className="max-w-56"
+                                            >
+                                              {o.hint}
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        ))}
                                       </SelectContent>
                                     </Select>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          type="button"
-                                          variant={
-                                            ruleCount > 0
-                                              ? 'secondary'
-                                              : 'outline'
-                                          }
-                                          size="sm"
-                                          className={cn(
-                                            glowing === 'rule' && GLOW_CLASS,
-                                          )}
-                                          onClick={() => {
-                                            if (!canUseTransforms) {
-                                              promptUpgrade(
-                                                TRANSFORM_UPGRADE_MESSAGE,
-                                              );
-                                              return;
+                                  </TableCell>
+                                  <TableCell>
+                                    <Select
+                                      value={conflictScope}
+                                      disabled={updatePolicy !== 'fill_if_empty'}
+                                      onValueChange={(v) =>
+                                        setConflictScope(
+                                          m.sourceField,
+                                          dk,
+                                          v as 'field' | 'record',
+                                        )
+                                      }
+                                    >
+                                      <SelectTrigger
+                                        size="sm"
+                                        className="h-8 w-[8.5rem]"
+                                      >
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent align="end">
+                                        {CONFLICT_SCOPE_OPTIONS.map((o) => (
+                                          <Tooltip key={o.value}>
+                                            <TooltipTrigger asChild>
+                                              <SelectItem value={o.value}>
+                                                {o.label}
+                                              </SelectItem>
+                                            </TooltipTrigger>
+                                            <TooltipContent
+                                              side="right"
+                                              className="max-w-56"
+                                            >
+                                              {o.hint}
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <div className="flex items-center justify-end gap-3">
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            type="button"
+                                            variant={
+                                              ruleCount > 0
+                                                ? 'secondary'
+                                                : 'outline'
                                             }
-                                            if (glowing === 'rule')
-                                              setGlow(null);
-                                            openRulesModal(m.sourceField, dk);
-                                          }}
-                                        >
-                                          {!canUseTransforms ? (
-                                            <Lock />
-                                          ) : ruleCount > 0 ? (
-                                            <Zap />
-                                          ) : (
-                                            <Plus />
-                                          )}
-                                          {ruleCount > 0
-                                            ? `Edit Rule${ruleCount > 1 ? ` (${ruleCount})` : ''}`
-                                            : 'Add Rule'}
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent side="bottom">
-                                        {!canUseTransforms
-                                          ? "Field transform rules aren't available on your plan."
-                                          : glowing === 'rule'
-                                            ? 'This mapping just changed — check the rule still fits.'
-                                            : ruleCount > 0
-                                              ? 'Edit the transform rule applied before this field syncs.'
-                                              : 'Add a rule to transform the value before it syncs.'}
-                                      </TooltipContent>
-                                    </Tooltip>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          type="button"
-                                          variant="ghost"
-                                          size="icon-sm"
-                                          className="text-muted-foreground"
-                                          aria-label="Edit mapping"
-                                          onClick={() => {
-                                            setEditingPair({
-                                              sourceField: m.sourceField,
-                                              destKey: dk,
-                                            });
-                                            setEditDraft({
-                                              sourceField: m.sourceField,
-                                              destKey: dk,
-                                            });
-                                          }}
-                                        >
-                                          <Pencil />
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent side="bottom">
-                                        Change which fields this mapping
-                                        connects
-                                      </TooltipContent>
-                                    </Tooltip>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          type="button"
-                                          variant="ghost"
-                                          size="icon-sm"
-                                          className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                          aria-label="Remove mapping"
-                                          onClick={() =>
-                                            remove(m.sourceField, dk)
-                                          }
-                                        >
-                                          <X />
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent side="bottom">
-                                        Remove mapping
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </div>
-                                )}
-                              </TableCell>
+                                            size="sm"
+                                            className={cn(
+                                              glowing === 'rule' && GLOW_CLASS,
+                                            )}
+                                            onClick={() => {
+                                              if (!canUseTransforms) {
+                                                promptUpgrade(
+                                                  TRANSFORM_UPGRADE_MESSAGE,
+                                                );
+                                                return;
+                                              }
+                                              if (glowing === 'rule')
+                                                setGlow(null);
+                                              openRulesModal(m.sourceField, dk);
+                                            }}
+                                          >
+                                            {!canUseTransforms ? (
+                                              <Lock />
+                                            ) : ruleCount > 0 ? (
+                                              <Zap />
+                                            ) : (
+                                              <Plus />
+                                            )}
+                                            {ruleCount > 0
+                                              ? `Edit Rule${ruleCount > 1 ? ` (${ruleCount})` : ''}`
+                                              : 'Add Rule'}
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="bottom">
+                                          {!canUseTransforms
+                                            ? "Field transform rules aren't available on your plan."
+                                            : glowing === 'rule'
+                                              ? 'This mapping just changed — check the rule still fits.'
+                                              : ruleCount > 0
+                                                ? 'Edit the transform rule applied before this field syncs.'
+                                                : 'Add a rule to transform the value before it syncs.'}
+                                        </TooltipContent>
+                                      </Tooltip>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon-sm"
+                                            className="text-muted-foreground"
+                                            aria-label="Edit mapping"
+                                            onClick={() => {
+                                              setEditingPair({
+                                                sourceField: m.sourceField,
+                                                destKey: dk,
+                                              });
+                                              setEditDraft({
+                                                sourceField: m.sourceField,
+                                                destKey: dk,
+                                              });
+                                            }}
+                                          >
+                                            <Pencil />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="bottom">
+                                          Change which fields this mapping
+                                          connects
+                                        </TooltipContent>
+                                      </Tooltip>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon-sm"
+                                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                            aria-label="Remove mapping"
+                                            onClick={() =>
+                                              remove(m.sourceField, dk)
+                                            }
+                                          >
+                                            <X />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="bottom">
+                                          Remove mapping
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </div>
+                                  </TableCell>
+                                </>
+                              )}
                             </TableRow>
                           );
                         });
