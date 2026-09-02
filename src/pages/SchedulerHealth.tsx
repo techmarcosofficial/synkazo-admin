@@ -27,7 +27,7 @@ import SkeletonStatGrid from '@/components/shared/skeletons/SkeletonStatGrid';
 import SkeletonTable from '@/components/shared/skeletons/SkeletonTable';
 import SortableTableHead from '@/components/shared/SortableTableHead';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -204,9 +204,9 @@ interface ProjectGroup {
   jobs: SchedulerHealthJob[];
 }
 
-// Groups the current page's jobs project-wise, in first-seen order — the
-// jobs themselves stay in whatever order search/sort/pagination produced,
-// this just clusters them under a project heading instead of a flat list.
+// Groups the full sorted/filtered job list project-wise, in first-seen order.
+// Each group keeps every one of that project's jobs — pagination is applied
+// per group afterwards (see ProjectScheduledJobsTable), not here.
 function groupByProject(
   jobs: SchedulerHealthJob[],
   projectsById: Map<string, Project>,
@@ -345,6 +345,66 @@ function JobRow({
   );
 }
 
+// Fully self-contained per-project table: its own heading, its own sorted-and-paginated
+// slice of that project's jobs, and its own pagination footer. Sorting is shared (a single
+// sortKey/direction driven from the page, since it orders jobs the same way everywhere),
+// but paging is local `usePagination` state — changing "page" here never touches another
+// project's table.
+function ProjectScheduledJobsTable({
+  group,
+  sortKey,
+  direction,
+  toggleSort,
+}: {
+  group: ProjectGroup;
+  sortKey: SortKey | null;
+  direction: 'asc' | 'desc';
+  toggleSort: (key: SortKey) => void;
+}) {
+  const { page, setPage, pageSize, setPageSize, totalPages, pageItems, total } =
+    usePagination(group.jobs, 10);
+
+  return (
+    <div className="overflow-hidden rounded-4xl border">
+      <div className="bg-muted/30 flex items-center border-b px-4 py-3">
+        <Link
+          to={`/projects/${group.projectId}`}
+          className="hover:text-primary inline-flex items-center gap-2 text-sm font-semibold transition-colors"
+        >
+          <FolderKanban className="text-muted-foreground size-4" />
+          {group.projectName}
+        </Link>
+      </div>
+      <Table>
+        <JobsTableHeader
+          sortKey={sortKey}
+          direction={direction}
+          toggleSort={toggleSort}
+        />
+        <TableBody>
+          {pageItems.map((job) => (
+            <JobRow
+              key={job.id}
+              job={job}
+              prioritySchedulingEnabled={group.prioritySchedulingEnabled}
+            />
+          ))}
+        </TableBody>
+      </Table>
+      <div className="border-t p-4">
+        <PaginationBar
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
+      </div>
+    </div>
+  );
+}
+
 function SchedulerHealthSkeleton() {
   return (
     <div className="space-y-6">
@@ -404,12 +464,12 @@ export default function SchedulerHealth() {
     SortKey
   >(filteredJobs, compareJobs);
 
-  const { page, setPage, pageSize, setPageSize, totalPages, pageItems, total } =
-    usePagination(sorted, 10);
-
+  // Grouped from the full sorted/filtered set, not a paginated slice — each
+  // group below owns its own pagination independently (see
+  // ProjectScheduledJobsTable), so no page-level pagination applies here.
   const projectGroups = useMemo(
-    () => groupByProject(pageItems, projectsById),
-    [pageItems, projectsById],
+    () => groupByProject(sorted, projectsById),
+    [sorted, projectsById],
   );
 
   const header = (
@@ -571,51 +631,19 @@ export default function SchedulerHealth() {
               viewMode="table"
             />
           ) : (
-            <div className="space-y-8">
+            <div className="space-y-6">
               {projectGroups.map((group) => (
-                <div key={group.projectId} className="space-y-3">
-                  <Link
-                    to={`/projects/${group.projectId}`}
-                    className="hover:text-primary inline-flex items-center gap-2 text-sm font-semibold transition-colors"
-                  >
-                    <FolderKanban className="text-muted-foreground size-4" />
-                    {group.projectName}
-                  </Link>
-                  <div className="overflow-hidden rounded-4xl border">
-                    <Table>
-                      <JobsTableHeader
-                        sortKey={sortKey}
-                        direction={direction}
-                        toggleSort={toggleSort}
-                      />
-                      <TableBody>
-                        {group.jobs.map((job) => (
-                          <JobRow
-                            key={job.id}
-                            job={job}
-                            prioritySchedulingEnabled={
-                              group.prioritySchedulingEnabled
-                            }
-                          />
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
+                <ProjectScheduledJobsTable
+                  key={group.projectId}
+                  group={group}
+                  sortKey={sortKey}
+                  direction={direction}
+                  toggleSort={toggleSort}
+                />
               ))}
             </div>
           )}
         </CardContent>
-        <CardFooter>
-          <PaginationBar
-            page={page}
-            totalPages={totalPages}
-            total={total}
-            pageSize={pageSize}
-            onPageChange={setPage}
-            onPageSizeChange={setPageSize}
-          />
-        </CardFooter>
       </Card>
     </div>
   );
