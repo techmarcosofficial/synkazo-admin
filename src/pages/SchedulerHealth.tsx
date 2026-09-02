@@ -15,7 +15,7 @@ import {
   Wifi,
   WifiOff,
 } from 'lucide-react';
-import { Fragment, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import EmptyState from '@/components/shared/EmptyState';
@@ -229,6 +229,120 @@ function groupByProject(
     group.jobs.push(job);
   }
   return groups;
+}
+
+function JobsTableHeader({
+  sortKey,
+  direction,
+  toggleSort,
+}: {
+  sortKey: SortKey | null;
+  direction: 'asc' | 'desc';
+  toggleSort: (key: SortKey) => void;
+}) {
+  return (
+    <TableHeader>
+      <TableRow className="bg-muted hover:bg-muted/50">
+        <SortableTableHead
+          active={sortKey === 'name'}
+          direction={direction}
+          onClick={() => toggleSort('name')}
+        >
+          Job
+        </SortableTableHead>
+        <SortableTableHead
+          active={sortKey === 'state'}
+          direction={direction}
+          onClick={() => toggleSort('state')}
+        >
+          State
+        </SortableTableHead>
+        <SortableTableHead
+          active={sortKey === 'nextRun'}
+          direction={direction}
+          onClick={() => toggleSort('nextRun')}
+        >
+          Next run
+        </SortableTableHead>
+        <SortableTableHead
+          active={sortKey === 'lastRun'}
+          direction={direction}
+          onClick={() => toggleSort('lastRun')}
+        >
+          Last run
+        </SortableTableHead>
+        <TableHead className="text-right">View</TableHead>
+      </TableRow>
+    </TableHeader>
+  );
+}
+
+function JobRow({
+  job,
+  prioritySchedulingEnabled,
+}: {
+  job: SchedulerHealthJob;
+  prioritySchedulingEnabled: boolean;
+}) {
+  const cfg = bucketCfg(job.bucket);
+  const showIcon = !NO_ICON_BUCKETS.has(job.bucket);
+  const viewHref = prioritySchedulingEnabled
+    ? `/projects/${job.projectId}?tab=scheduler`
+    : `/projects/${job.projectId}/jobs/${job.id}?tab=schedule`;
+  return (
+    <TableRow>
+      <TableCell>
+        <Link
+          to={`/projects/${job.projectId}/jobs/${job.id}`}
+          className="hover:text-primary font-medium transition-colors"
+        >
+          {job.name}
+        </Link>
+        {job.dependsOnJobId && (
+          <span className="text-muted-foreground ml-2 inline-flex items-center gap-1 text-xs">
+            <GitBranch className="size-3" /> dependent
+          </span>
+        )}
+      </TableCell>
+      <TableCell>
+        <span
+          className={cn(
+            'inline-flex items-center gap-1.5 text-xs font-medium',
+            cfg.tone,
+          )}
+        >
+          {showIcon && <cfg.icon className="size-3.5" />}
+          {cfg.label}
+          {(job.retryCount ?? 0) > 0 && (
+            <span className="text-muted-foreground">
+              ({job.retryCount}/{job.maxRetries})
+            </span>
+          )}
+        </span>
+      </TableCell>
+      <TableCell className="text-muted-foreground">
+        {fmtNextRun(job.nextRunAt)}
+      </TableCell>
+      <TableCell className="text-muted-foreground">
+        {job.lastRun ? (
+          <span title={job.lastRun.errorMessage || ''}>
+            {job.lastRun.status} ·{' '}
+            {fmt(job.lastRun.finishedAt || job.lastRun.startedAt)}
+          </span>
+        ) : (
+          'never'
+        )}
+      </TableCell>
+      <TableCell className="text-right">
+        <Link
+          to={viewHref}
+          className="text-primary hover:text-primary/80 inline-flex items-center gap-1 text-sm font-medium"
+        >
+          <Eye className="size-3.5" /> View
+        </Link>
+      </TableCell>
+    </TableRow>
+  );
 }
 
 function SchedulerHealthSkeleton() {
@@ -457,123 +571,38 @@ export default function SchedulerHealth() {
               viewMode="table"
             />
           ) : (
-            <div className="overflow-hidden rounded-4xl border">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted hover:bg-muted/50">
-                    <SortableTableHead
-                      active={sortKey === 'name'}
-                      direction={direction}
-                      onClick={() => toggleSort('name')}
-                    >
-                      Job
-                    </SortableTableHead>
-                    <SortableTableHead
-                      active={sortKey === 'state'}
-                      direction={direction}
-                      onClick={() => toggleSort('state')}
-                    >
-                      State
-                    </SortableTableHead>
-                    <SortableTableHead
-                      active={sortKey === 'nextRun'}
-                      direction={direction}
-                      onClick={() => toggleSort('nextRun')}
-                    >
-                      Next run
-                    </SortableTableHead>
-                    <SortableTableHead
-                      active={sortKey === 'lastRun'}
-                      direction={direction}
-                      onClick={() => toggleSort('lastRun')}
-                    >
-                      Last run
-                    </SortableTableHead>
-                    <TableHead className="text-right">View</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {projectGroups.map((group) => (
-                    <Fragment key={group.projectId}>
-                      <TableRow className="bg-muted/40 hover:bg-muted/40">
-                        <TableCell colSpan={5} className="py-2">
-                          <Link
-                            to={`/projects/${group.projectId}`}
-                            className="text-muted-foreground hover:text-primary inline-flex items-center gap-1.5 text-xs font-semibold tracking-wide uppercase transition-colors"
-                          >
-                            <FolderKanban className="size-3.5" />
-                            {group.projectName}
-                          </Link>
-                        </TableCell>
-                      </TableRow>
-                      {group.jobs.map((job) => {
-                        const cfg = bucketCfg(job.bucket);
-                        const showIcon = !NO_ICON_BUCKETS.has(job.bucket);
-                        const viewHref = group.prioritySchedulingEnabled
-                          ? `/projects/${job.projectId}?tab=scheduler`
-                          : `/projects/${job.projectId}/jobs/${job.id}?tab=schedule`;
-                        return (
-                          <TableRow key={job.id}>
-                            <TableCell>
-                              <Link
-                                to={`/projects/${job.projectId}/jobs/${job.id}`}
-                                className="hover:text-primary font-medium transition-colors"
-                              >
-                                {job.name}
-                              </Link>
-                              {job.dependsOnJobId && (
-                                <span className="text-muted-foreground ml-2 inline-flex items-center gap-1 text-xs">
-                                  <GitBranch className="size-3" /> dependent
-                                </span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <span
-                                className={cn(
-                                  'inline-flex items-center gap-1.5 text-xs font-medium',
-                                  cfg.tone,
-                                )}
-                              >
-                                {showIcon && <cfg.icon className="size-3.5" />}
-                                {cfg.label}
-                                {(job.retryCount ?? 0) > 0 && (
-                                  <span className="text-muted-foreground">
-                                    ({job.retryCount}/{job.maxRetries})
-                                  </span>
-                                )}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-muted-foreground">
-                              {fmtNextRun(job.nextRunAt)}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground">
-                              {job.lastRun ? (
-                                <span title={job.lastRun.errorMessage || ''}>
-                                  {job.lastRun.status} ·{' '}
-                                  {fmt(
-                                    job.lastRun.finishedAt ||
-                                      job.lastRun.startedAt,
-                                  )}
-                                </span>
-                              ) : (
-                                'never'
-                              )}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Link
-                                to={viewHref}
-                                className="text-primary hover:text-primary/80 inline-flex items-center gap-1 text-sm font-medium"
-                              >
-                                <Eye className="size-3.5" /> View
-                              </Link>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </Fragment>
-                  ))}
-                </TableBody>
-              </Table>
+            <div className="space-y-8">
+              {projectGroups.map((group) => (
+                <div key={group.projectId} className="space-y-3">
+                  <Link
+                    to={`/projects/${group.projectId}`}
+                    className="hover:text-primary inline-flex items-center gap-2 text-sm font-semibold transition-colors"
+                  >
+                    <FolderKanban className="text-muted-foreground size-4" />
+                    {group.projectName}
+                  </Link>
+                  <div className="overflow-hidden rounded-4xl border">
+                    <Table>
+                      <JobsTableHeader
+                        sortKey={sortKey}
+                        direction={direction}
+                        toggleSort={toggleSort}
+                      />
+                      <TableBody>
+                        {group.jobs.map((job) => (
+                          <JobRow
+                            key={job.id}
+                            job={job}
+                            prioritySchedulingEnabled={
+                              group.prioritySchedulingEnabled
+                            }
+                          />
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </CardContent>
