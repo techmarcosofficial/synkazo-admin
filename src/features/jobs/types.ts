@@ -2,6 +2,8 @@
 // (Job Detail's composite-query types live in hooks/useJobDetail.ts, mirroring
 // how features/projects/hooks/useProjectDetail.ts owns ProjectExt/JobExt.)
 
+import type { ExcludeCondition } from '@/types/conditions';
+
 export interface MappingRow {
   sourceField: string;
   destField: string | string[];
@@ -20,6 +22,12 @@ export interface MappingRow {
    *  FieldMappingCanvas. */
   destReverseOnEmpty?: Record<string, 'none' | 'default' | 'skip_record'>;
   destReverseDefaults?: Record<string, string>;
+  /** What happens to this destination's value on an update — see MappingRow in
+   *  FieldMappingCanvas. */
+  destUpdatePolicy?: Record<string, 'always' | 'create_only' | 'fill_if_empty'>;
+  /** Only meaningful when the matching destUpdatePolicy entry is 'fill_if_empty' —
+   *  see MappingRow in FieldMappingCanvas. */
+  destConflictScope?: Record<string, 'field' | 'record'>;
   [k: string]: unknown;
 }
 
@@ -49,6 +57,9 @@ export interface JobConfig {
   syncTrigger: string;
   idMappingSourceField: string;
   idMappingDestField: string;
+  excludeConditions?: ExcludeCondition[];
+  excludeConditionLogic?: 'AND' | 'OR';
+  skipUpdateOnMatch?: boolean;
 }
 
 export interface SchedInterval {

@@ -167,7 +167,7 @@ export default function CompanyOwnerSection({
 }) {
   const isDataforma = sourcePlatform === 'dataforma';
   const { confirm } = useConfirmDialog();
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
 
   const [recentRunsPage, setRecentRunsPage] = useState(1);
   const [recentRunsPageSize, setRecentRunsPageSize] = useState(10);

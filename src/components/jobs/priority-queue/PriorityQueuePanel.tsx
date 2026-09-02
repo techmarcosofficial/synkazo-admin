@@ -12,6 +12,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import {
   useAddQueueJobMutation,
+  useClearAndRestartQueueMutation,
   usePauseQueueMutation,
   usePriorityQueueQuery,
   useRemoveQueueJobMutation,
@@ -37,6 +38,7 @@ export default function PriorityQueuePanel({
   const retryMutation = useRetryQueueJobMutation(projectId);
   const pauseMutation = usePauseQueueMutation(projectId);
   const resumeMutation = useResumeQueueMutation(projectId);
+  const clearAndRestartMutation = useClearAndRestartQueueMutation(projectId);
 
   const [localJobs, setLocalJobs] = useState<QueueJob[]>([]);
   const [dirty, setDirty] = useState(false);
@@ -140,6 +142,10 @@ export default function PriorityQueuePanel({
         onPause={() => pauseMutation.mutate()}
         onResume={() => resumeMutation.mutate()}
         pausing={pauseMutation.isPending || resumeMutation.isPending}
+        onClearAndRestart={async () => {
+          await clearAndRestartMutation.mutateAsync();
+        }}
+        clearingAndRestarting={clearAndRestartMutation.isPending}
       />
 
       <div className="relative space-y-4 pl-9">

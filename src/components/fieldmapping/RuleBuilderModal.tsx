@@ -115,7 +115,7 @@ const NUMERIC_VALUE_RULES = new Set([
 ]);
 
 const DEFAULT_TEST_BY_TYPE: Record<string, string> = {
-  string: 'Saurabh Sharma',
+  string: 'Etc etc',
   number: '42.5',
   boolean: 'true',
   date: '2024-01-15',

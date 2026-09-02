@@ -125,13 +125,21 @@ export function useResumeQueueMutation(projectId: string) {
   });
 }
 
-export function useAssociationObjectOptionsQuery(projectId: string) {
+export function useClearAndRestartQueueMutation(projectId: string) {
+  const invalidate = useInvalidatePriorityQueue(projectId);
+  return useMutation({
+    mutationFn: () => priorityQueueApi.clearAndRestart(projectId),
+    onSuccess: invalidate,
+  });
+}
+
+export function useAssociationRuleOptionsQuery(projectId: string) {
   return useQuery({
     queryKey: [
       ...queryKeys.priorityQueue.detail(projectId),
-      'association-options',
+      'association-rule-options',
     ],
-    queryFn: () => priorityQueueApi.getAssociationObjectOptions(projectId),
+    queryFn: () => priorityQueueApi.getAssociationRuleOptions(projectId),
     enabled: !!projectId,
   });
 }

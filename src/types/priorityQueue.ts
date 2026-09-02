@@ -44,10 +44,11 @@ export type StageOutcomeStatus =
   | 'skipped';
 
 export interface AssociationItemResult {
-  objectName: string;
+  associationRuleId: string;
+  ruleName: string;
   status: 'completed' | 'partially_completed' | 'failed';
-  rulesRun: number;
-  rulesFailed: number;
+  succeeded: number;
+  failed: number;
   error?: string;
 }
 
@@ -143,9 +144,16 @@ export interface QueueCycle {
 export interface AssociationQueueItem {
   id: string;
   queueId: string;
-  objectName: string;
+  associationRuleId: string;
   position: number;
   enabled: boolean;
+}
+
+export interface AssociationRuleOption {
+  id: string;
+  name: string;
+  sourceObject: string;
+  targetObject: string;
 }
 
 export interface PriorityQueueConfig {

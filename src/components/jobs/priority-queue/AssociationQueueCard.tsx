@@ -17,13 +17,13 @@ import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import {
-  useAssociationObjectOptionsQuery,
+  useAssociationRuleOptionsQuery,
   useUpdateAssociationConfigMutation,
 } from '@/queries/usePriorityQueue';
 import type { AssociationQueueItem, ProjectQueue } from '@/types';
 
 interface LocalItem {
-  objectName: string;
+  associationRuleId: string;
   enabled: boolean;
 }
 
@@ -36,7 +36,7 @@ export default function AssociationQueueCard({
   queue: ProjectQueue | null;
   items: AssociationQueueItem[];
 }) {
-  const optionsQuery = useAssociationObjectOptionsQuery(projectId);
+  const optionsQuery = useAssociationRuleOptionsQuery(projectId);
   const updateMutation = useUpdateAssociationConfigMutation(projectId);
 
   const [enabled, setEnabled] = useState(
@@ -47,23 +47,31 @@ export default function AssociationQueueCard({
   );
   const [delayUnit, setDelayUnit] = useState<'minutes' | 'hours'>('minutes');
   const [localItems, setLocalItems] = useState<LocalItem[]>(
-    items.map((i) => ({ objectName: i.objectName, enabled: i.enabled })),
+    items.map((i) => ({
+      associationRuleId: i.associationRuleId,
+      enabled: i.enabled,
+    })),
   );
   const [dirty, setDirty] = useState(false);
-  const [addingObject, setAddingObject] = useState('');
+  const [addingRuleId, setAddingRuleId] = useState('');
 
   useEffect(() => {
     if (dirty) return;
     setEnabled(queue?.associationQueueEnabled ?? false);
     setLocalItems(
-      items.map((i) => ({ objectName: i.objectName, enabled: i.enabled })),
+      items.map((i) => ({
+        associationRuleId: i.associationRuleId,
+        enabled: i.enabled,
+      })),
     );
   }, [queue, items]);
 
   const delayMinutes = delayUnit === 'hours' ? delayAmount * 60 : delayAmount;
 
-  const availableOptions = (optionsQuery.data ?? []).filter(
-    (obj) => !localItems.some((i) => i.objectName === obj),
+  const ruleOptions = optionsQuery.data ?? [];
+  const ruleById = new Map(ruleOptions.map((r) => [r.id, r]));
+  const availableOptions = ruleOptions.filter(
+    (r) => !localItems.some((i) => i.associationRuleId === r.id),
   );
 
   const markDirty = () => setDirty(true);
@@ -78,23 +86,30 @@ export default function AssociationQueueCard({
     markDirty();
   };
 
-  const addObject = (objectName: string) => {
-    if (!objectName || localItems.some((i) => i.objectName === objectName))
+  const addRule = (associationRuleId: string) => {
+    if (
+      !associationRuleId ||
+      localItems.some((i) => i.associationRuleId === associationRuleId)
+    )
       return;
-    setLocalItems((prev) => [...prev, { objectName, enabled: true }]);
-    setAddingObject('');
+    setLocalItems((prev) => [...prev, { associationRuleId, enabled: true }]);
+    setAddingRuleId('');
     markDirty();
   };
 
-  const removeObject = (objectName: string) => {
-    setLocalItems((prev) => prev.filter((i) => i.objectName !== objectName));
+  const removeRule = (associationRuleId: string) => {
+    setLocalItems((prev) =>
+      prev.filter((i) => i.associationRuleId !== associationRuleId),
+    );
     markDirty();
   };
 
-  const toggleObject = (objectName: string) => {
+  const toggleRule = (associationRuleId: string) => {
     setLocalItems((prev) =>
       prev.map((i) =>
-        i.objectName === objectName ? { ...i, enabled: !i.enabled } : i,
+        i.associationRuleId === associationRuleId
+          ? { ...i, enabled: !i.enabled }
+          : i,
       ),
     );
     markDirty();
@@ -106,7 +121,7 @@ export default function AssociationQueueCard({
         enabled,
         delayMinutes,
         items: localItems.map((i, index) => ({
-          objectName: i.objectName,
+          associationRuleId: i.associationRuleId,
           position: index,
           enabled: i.enabled,
         })),
@@ -121,8 +136,8 @@ export default function AssociationQueueCard({
         <div>
           <CardTitle className="text-sm">Association Queue</CardTitle>
           <p className="text-muted-foreground mt-0.5 text-xs">
-            Runs association processing sequentially, after every job in the
-            queue has finished its pending sync work.
+            Runs the selected association rules sequentially, after every job
+            in the queue has finished its pending sync work.
           </p>
         </div>
         <Switch
@@ -169,7 +184,7 @@ export default function AssociationQueueCard({
 
           {localItems.length === 0 ? (
             <p className="text-muted-foreground py-4 text-center text-xs">
-              No objects added to the association queue yet.
+              No association rules added to the queue yet.
             </p>
           ) : (
             <DragDropContext onDragEnd={onDragEnd}>
@@ -180,51 +195,63 @@ export default function AssociationQueueCard({
                     {...provided.droppableProps}
                     className="space-y-2"
                   >
-                    {localItems.map((item, index) => (
-                      <Draggable
-                        key={item.objectName}
-                        draggableId={item.objectName}
-                        index={index}
-                      >
-                        {(dragProvided, snapshot) => (
-                          <div
-                            ref={dragProvided.innerRef}
-                            {...dragProvided.draggableProps}
-                            style={dragProvided.draggableProps.style}
-                            className={cn(
-                              'bg-card flex items-center gap-3 rounded-lg border px-3 py-2',
-                              snapshot.isDragging && 'ring-paused/40 ring-2',
-                            )}
-                          >
+                    {localItems.map((item, index) => {
+                      const rule = ruleById.get(item.associationRuleId);
+                      return (
+                        <Draggable
+                          key={item.associationRuleId}
+                          draggableId={item.associationRuleId}
+                          index={index}
+                        >
+                          {(dragProvided, snapshot) => (
                             <div
-                              {...dragProvided.dragHandleProps}
-                              className="text-muted-foreground shrink-0 cursor-grab"
+                              ref={dragProvided.innerRef}
+                              {...dragProvided.draggableProps}
+                              style={dragProvided.draggableProps.style}
+                              className={cn(
+                                'bg-card flex items-center gap-3 rounded-lg border px-3 py-2',
+                                snapshot.isDragging && 'ring-paused/40 ring-2',
+                              )}
                             >
-                              <GripVertical className="size-4" />
+                              <div
+                                {...dragProvided.dragHandleProps}
+                                className="text-muted-foreground shrink-0 cursor-grab"
+                              >
+                                <GripVertical className="size-4" />
+                              </div>
+                              <div className="bg-muted text-muted-foreground flex size-6 shrink-0 items-center justify-center rounded-md text-xs font-bold">
+                                {index + 1}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm">
+                                  {rule?.name ?? item.associationRuleId}
+                                </p>
+                                {rule && (
+                                  <p className="text-muted-foreground truncate text-xs">
+                                    {rule.sourceObject} → {rule.targetObject}
+                                  </p>
+                                )}
+                              </div>
+                              <Switch
+                                checked={item.enabled}
+                                onCheckedChange={() =>
+                                  toggleRule(item.associationRuleId)
+                                }
+                              />
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                onClick={() =>
+                                  removeRule(item.associationRuleId)
+                                }
+                              >
+                                <X />
+                              </Button>
                             </div>
-                            <div className="bg-muted text-muted-foreground flex size-6 shrink-0 items-center justify-center rounded-md text-xs font-bold">
-                              {index + 1}
-                            </div>
-                            <span className="flex-1 truncate text-sm">
-                              {item.objectName}
-                            </span>
-                            <Switch
-                              checked={item.enabled}
-                              onCheckedChange={() =>
-                                toggleObject(item.objectName)
-                              }
-                            />
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              onClick={() => removeObject(item.objectName)}
-                            >
-                              <X />
-                            </Button>
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
+                          )}
+                        </Draggable>
+                      );
+                    })}
                     {provided.placeholder}
                   </div>
                 )}
@@ -233,14 +260,14 @@ export default function AssociationQueueCard({
           )}
 
           <div className="flex items-center gap-2">
-            <Select value={addingObject} onValueChange={addObject}>
-              <SelectTrigger className="w-56">
-                <SelectValue placeholder="Add an object…" />
+            <Select value={addingRuleId} onValueChange={addRule}>
+              <SelectTrigger className="w-72">
+                <SelectValue placeholder="Add an association rule…" />
               </SelectTrigger>
               <SelectContent>
-                {availableOptions.map((obj) => (
-                  <SelectItem key={obj} value={obj}>
-                    {obj}
+                {availableOptions.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.name} ({r.sourceObject} → {r.targetObject})
                   </SelectItem>
                 ))}
               </SelectContent>

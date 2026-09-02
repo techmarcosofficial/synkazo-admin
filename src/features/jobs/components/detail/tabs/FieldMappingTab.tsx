@@ -6,12 +6,16 @@ import { useJobDetailContext } from '../context';
 
 import { connectionsApi } from '@/api/connections';
 import { jobsApi } from '@/api/jobs';
+import ExcludeConditionsEditor, {
+  validateExcludeConditions,
+} from '@/components/fieldmapping/ExcludeConditionsEditor';
 import FieldMappingCanvas, {
   type FieldDef as CanvasFieldDef,
   type MappingRow as CanvasMappingRow,
 } from '@/components/fieldmapping/FieldMappingCanvas';
 import RequiredFieldDefaults from '@/components/fieldmapping/RequiredFieldDefaults';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import {
   consolidateMappings,
@@ -25,6 +29,7 @@ import {
 import { classifyTypePair } from '@/lib/fieldMatching';
 import { getRequiredFieldItems } from '@/lib/requiredFields';
 import type { Connection, FieldMapping } from '@/types';
+import type { ExcludeCondition } from '@/types/conditions';
 
 type ExtConnection = Connection & { connectionType?: string };
 
@@ -45,6 +50,7 @@ function normalizeMappings(
       isMatchField: m.matchDestKey === dk,
       matchPriority: m.matchDestKey === dk ? (m.matchOrder ?? null) : null,
       updatePolicy: m.destUpdatePolicy?.[dk] ?? 'always',
+      conflictScope: m.destConflictScope?.[dk] ?? 'field',
       onEmpty: m.destOnEmpty?.[dk] ?? 'none',
       defaultValue: m.destDefaults?.[dk] ?? null,
       reverseOnEmpty: m.destReverseOnEmpty?.[dk] ?? 'none',
@@ -61,11 +67,21 @@ const isConstant = (m: { sourceField: string; destField: string }) =>
   !m.sourceField || !m.destField;
 
 export default function FieldMappingTab() {
-  const { projectId, job, refetch } = useJobDetailContext();
+  const { projectId, job, refetch, patchJob } = useJobDetailContext();
   const [fieldMappings, setFieldMappings] = useState<ConsolidatedMapping[]>([]);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
+  // Exclude conditions live on the Job resource (PATCH /jobs/:id), a completely
+  // separate API call from the field-mappings PUT — kept in their own dirty flag
+  // so the shared Save button below can fire both calls when either changed.
+  const [excludeConditions, setExcludeConditions] = useState<
+    ExcludeCondition[]
+  >(job.excludeConditions ?? []);
+  const [excludeConditionLogic, setExcludeConditionLogic] = useState<
+    'AND' | 'OR'
+  >(job.excludeConditionLogic ?? 'AND');
+  const [conditionsDirty, setConditionsDirty] = useState(false);
   // Turns a blank "Use a default value" input red once a save was actually
   // attempted and blocked on it — see the missingValue check in
   // persistMappings and RequiredFieldDefaults' forceShowInvalid wiring.
@@ -125,6 +141,12 @@ export default function FieldMappingTab() {
     },
     [projectId, job.sourceObject, job.destObject],
   );
+
+  useEffect(() => {
+    setExcludeConditions(job.excludeConditions ?? []);
+    setExcludeConditionLogic(job.excludeConditionLogic ?? 'AND');
+    setConditionsDirty(false);
+  }, [job.id]);
 
   useEffect(() => {
     jobsApi
@@ -266,7 +288,52 @@ export default function FieldMappingTab() {
     }
   };
 
-  const handleSave = () => persistMappings(fieldMappings);
+  const handleExcludeConditionsChange = (
+    conditions: ExcludeCondition[],
+    logic: 'AND' | 'OR',
+  ) => {
+    setExcludeConditions(conditions);
+    setExcludeConditionLogic(logic);
+    setConditionsDirty(true);
+  };
+
+  // Own resource (PATCH /jobs/:id), own try/catch/toast — a failure here must
+  // never look like the field-mapping save also failed, and vice versa.
+  const persistExcludeConditions = async () => {
+    const error = validateExcludeConditions(excludeConditions);
+    if (error) {
+      toast.error(error);
+      return;
+    }
+    try {
+      const patch = {
+        excludeConditions:
+          excludeConditions.length > 0 ? excludeConditions : null,
+        excludeConditionLogic,
+      };
+      await jobsApi.updateJob(projectId, job.id, patch);
+      patchJob(patch);
+      setConditionsDirty(false);
+      toast.success('Exclude conditions saved.');
+    } catch (err) {
+      const e = err as { response?: { data?: { message?: string } } };
+      toast.error(
+        e.response?.data?.message ?? 'Failed to save exclude conditions.',
+      );
+    }
+  };
+
+  // Two independent resources, two independent calls — each fires only when its
+  // own state actually changed, and a failure in one must never hide the other.
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      if (dirty) await persistMappings(fieldMappings);
+      if (conditionsDirty) await persistExcludeConditions();
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (loadingMappings || fieldsLoading) {
     return (
@@ -278,7 +345,7 @@ export default function FieldMappingTab() {
 
   return (
     <div className="space-y-4">
-      {isActive && dirty && (
+      {isActive && (dirty || conditionsDirty) && (
         <div className="bg-warning/10 flex items-start gap-3 rounded-lg px-4 py-3">
           <AlertTriangle className="text-warning mt-0.5 size-4 shrink-0" />
           <p className="text-warning text-sm">
@@ -342,7 +409,23 @@ export default function FieldMappingTab() {
         showValidation={showDefaultsValidation}
       />
 
-      {dirty && (
+      <Card>
+        <CardContent>
+          <h3 className="mb-1 font-semibold">Skip Records</h3>
+          <p className="text-muted-foreground mb-4 text-xs">
+            Exclude source records from this job entirely — e.g. skip employee
+            accounts, test records, or anything matching a specific value.
+          </p>
+          <ExcludeConditionsEditor
+            sourceFields={sourceFields as unknown as CanvasFieldDef[]}
+            conditions={excludeConditions}
+            conditionLogic={excludeConditionLogic}
+            onChange={handleExcludeConditionsChange}
+          />
+        </CardContent>
+      </Card>
+
+      {(dirty || conditionsDirty) && (
         <div className="flex justify-end">
           <Button onClick={handleSave} disabled={saving}>
             {saving ? <Spinner /> : <Check />}

@@ -102,6 +102,7 @@ export const queryKeys = {
   users: {
     all: ['users'] as const,
     ownershipSummary: ['users', 'me', 'ownershipSummary'] as const,
+    projectAccess: (id: string) => ['users', id, 'projectAccess'] as const,
   },
   organisations: {
     all: ['organisations'] as const,

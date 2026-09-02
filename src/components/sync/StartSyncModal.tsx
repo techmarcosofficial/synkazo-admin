@@ -1,25 +1,23 @@
 import { format } from 'date-fns';
-import { RefreshCw, Square } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 
 import LimitSyncModal from '@/components/sync/LimitSyncModal';
-import RunConfirmModal from '@/components/sync/RunConfirmModal';
 import SyncAllTab from '@/components/sync/SyncAllTab';
-import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Spinner } from '@/components/ui/spinner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScheduleEnableToggle } from '@/features/jobs/components/schedule';
 import type {
   ExtJob,
   ScheduleTogglePayload,
 } from '@/features/jobs/hooks/useJobDetail';
 import { formatSchedule } from '@/features/jobs/utils';
-import { cn } from '@/lib/utils';
+import { usePriorityQueueQuery } from '@/queries/usePriorityQueue';
 
 interface StartSyncModalProps {
   projectId: string;
@@ -52,8 +50,10 @@ export default function StartSyncModal({
 }: StartSyncModalProps) {
   const [tab, setTab] = useState(hasBaseline ? 'schedule' : 'all');
 
-  const schedPaused = job.scheduleState === 'paused';
-  const schedLimitPaused = job.scheduleState === 'paused_limit_reached';
+  const priorityQueueQuery = usePriorityQueueQuery(projectId);
+  const priorityModeActive =
+    priorityQueueQuery.data?.schedulerMode === 'priority';
+
   const schedActive =
     job.syncEnabled &&
     (job.scheduleState === 'active' ||
@@ -133,49 +133,31 @@ export default function StartSyncModal({
                 </div>
               </div>
 
-              {schedActive ? (
-                <div className="space-y-4">
-                  <div className="overflow-hidden rounded-xl border">
-                    <div className="bg-muted/40 flex items-center gap-3 px-4 py-3">
-                      <div className="bg-success/10 flex size-8 items-center justify-center rounded-lg">
-                        <RefreshCw className="text-success size-4" />
-                      </div>
-                      <p className="text-sm font-semibold">
-                        Schedule is {scheduleStatusLabel.toLowerCase()}
-                      </p>
+              {schedActive && !priorityModeActive && (
+                <div className="overflow-hidden rounded-xl border">
+                  <div className="bg-muted/40 flex items-center gap-3 px-4 py-3">
+                    <div className="bg-success/10 flex size-8 items-center justify-center rounded-lg">
+                      <RefreshCw className="text-success size-4" />
                     </div>
+                    <p className="text-sm font-semibold">
+                      Schedule is {scheduleStatusLabel.toLowerCase()}
+                    </p>
                   </div>
-                  <Button
-                    variant="outline"
-                    onClick={() => onScheduleToggle()}
-                    disabled={scheduleToggling}
-                    className={cn(
-                      'w-full',
-                      'border-warning/30 text-warning bg-warning/5',
-                    )}
-                  >
-                    {scheduleToggling ? (
-                      <Spinner />
-                    ) : (
-                      <Square className="fill-current" />
-                    )}
-                    {scheduleToggling ? 'Disabling…' : 'Disable Schedule'}
-                  </Button>
                 </div>
-              ) : (
-                <RunConfirmModal
-                  embedded
-                  mode={schedPaused || schedLimitPaused ? 'resume' : 'run'}
-                  projectId={projectId}
-                  jobId={jobId}
-                  job={job}
-                  onConfirm={onScheduleToggle}
-                  onClose={onClose}
-                  pipelineRequired={pipelineRequired}
-                  pipelineConfigured={pipelineConfigured}
-                  onGoToPipeline={onGoToPipeline}
-                />
               )}
+
+              <ScheduleEnableToggle
+                confirmPresentation="inline"
+                projectId={projectId}
+                jobId={jobId}
+                job={job}
+                scheduleToggling={scheduleToggling}
+                pipelineRequired={pipelineRequired}
+                pipelineConfigured={pipelineConfigured}
+                onGoToPipeline={onGoToPipeline}
+                onScheduleToggle={onScheduleToggle}
+                onCancelInline={onClose}
+              />
             </TabsContent>
           </div>
         </Tabs>

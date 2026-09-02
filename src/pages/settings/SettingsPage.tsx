@@ -233,7 +233,7 @@ export default function SettingsPage() {
           )}
         </TabsList>
 
-        <TabsContent value="settings" className="max-w-xl pt-4">
+        <TabsContent value="settings" className="pt-4">
           <PreferencesSection currentUser={currentUser} />
         </TabsContent>
 

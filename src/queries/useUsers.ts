@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { queryKeys } from './queryKeys';
 
+import type { UpdateUserPayload } from '@/api/users';
 import { usersApi } from '@/api/users';
 import type { User } from '@/types';
 
@@ -23,11 +24,25 @@ export function useUsersQuery(organisationId?: string) {
 export function useUpdateUserMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<User> }) =>
+    mutationFn: ({ id, data }: { id: string; data: UpdateUserPayload }) =>
       usersApi.updateUser(id, data),
-    onSuccess: () => {
+    onSuccess: (_data, { id }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.users.projectAccess(id),
+      });
     },
+  });
+}
+
+export function useUserProjectAccessQuery(
+  userId: string | undefined,
+  options?: { enabled?: boolean },
+) {
+  return useQuery({
+    queryKey: queryKeys.users.projectAccess(userId ?? ''),
+    queryFn: () => usersApi.getUserProjectAccess(userId!),
+    enabled: !!userId && (options?.enabled ?? true),
   });
 }
 

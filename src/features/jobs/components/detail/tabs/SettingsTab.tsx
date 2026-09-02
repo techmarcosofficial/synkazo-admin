@@ -6,6 +6,7 @@ import {
   JobDangerZoneCard,
   JobGeneralCard,
   JobRetryCard,
+  JobSkipUpdateCard,
   JobSyncDirectionCard,
 } from '../settings';
 
@@ -37,6 +38,7 @@ export default function SettingsTab() {
         <JobRetryCard projectId={projectId} job={job} onUpdated={patchJob} />
       </div>
       <JobSyncDirectionCard />
+      <JobSkipUpdateCard projectId={projectId} job={job} onUpdated={patchJob} />
       {showDataformaCustomerCursor && (
         <DataformaCustomerCursorCard
           projectId={projectId}

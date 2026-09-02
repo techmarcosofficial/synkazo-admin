@@ -1,5 +1,6 @@
 import { AlertCircleIcon, RefreshCw, X } from 'lucide-react';
 
+import ExcludeConditionsEditor from '@/components/fieldmapping/ExcludeConditionsEditor';
 import FieldMappingCanvas, {
   type FieldDef as CanvasFieldDef,
   type MappingRow as CanvasMappingRow,
@@ -7,9 +8,13 @@ import FieldMappingCanvas, {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Field, FieldContent, FieldLabel } from '@/components/ui/field';
 import { Spinner } from '@/components/ui/spinner';
+import { Switch } from '@/components/ui/switch';
 import type { MappingRow } from '@/features/jobs/types';
 import type { CanvasField } from '@/features/jobs/utils';
+import type { ExcludeCondition } from '@/types/conditions';
 
 export default function FieldMappingStep({
   sourcePlatform,
@@ -34,6 +39,11 @@ export default function FieldMappingStep({
   showDirectionToggle = false,
   onAttentionReviewChange,
   scrollToAttentionSignal,
+  excludeConditions,
+  excludeConditionLogic,
+  onExcludeConditionsChange,
+  skipUpdateOnMatch,
+  onSkipUpdateOnMatchChange,
 }: {
   sourcePlatform: string;
   destPlatform: string;
@@ -60,6 +70,14 @@ export default function FieldMappingStep({
     reviewed: boolean;
   }) => void;
   scrollToAttentionSignal?: number;
+  excludeConditions: ExcludeCondition[];
+  excludeConditionLogic: 'AND' | 'OR';
+  onExcludeConditionsChange: (
+    conditions: ExcludeCondition[],
+    logic: 'AND' | 'OR',
+  ) => void;
+  skipUpdateOnMatch: boolean;
+  onSkipUpdateOnMatchChange: (value: boolean) => void;
 }) {
   const sourceFields = [...customSourceFields, ...apiSourceFields];
   const destFields = [...customDestFields, ...apiDestFields];
@@ -169,6 +187,44 @@ export default function FieldMappingStep({
           </div>
         </div>
       )}
+
+      <Card>
+        <CardContent>
+          <h3 className="mb-1 font-semibold">Skip Records</h3>
+          <p className="text-muted-foreground mb-4 text-xs">
+            Exclude source records from this job entirely — e.g. skip employee
+            accounts, test records, or anything matching a specific value.
+          </p>
+          <ExcludeConditionsEditor
+            sourceFields={sourceFields as unknown as CanvasFieldDef[]}
+            conditions={excludeConditions}
+            conditionLogic={excludeConditionLogic}
+            onChange={onExcludeConditionsChange}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent>
+          <Field orientation="horizontal">
+            <FieldContent>
+              <FieldLabel htmlFor="wizard-skip-update-on-match">
+                Never update matched records
+              </FieldLabel>
+              <p className="text-muted-foreground text-xs">
+                When a record already exists in the destination, leave it
+                completely untouched instead of updating it — only brand-new
+                records get written.
+              </p>
+            </FieldContent>
+            <Switch
+              id="wizard-skip-update-on-match"
+              checked={skipUpdateOnMatch}
+              onCheckedChange={onSkipUpdateOnMatchChange}
+            />
+          </Field>
+        </CardContent>
+      </Card>
     </div>
   );
 }

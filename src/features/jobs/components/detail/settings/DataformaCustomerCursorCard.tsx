@@ -53,10 +53,11 @@ export default function DataformaCustomerCursorCard({
       <CardContent>
         <h3 className="font-semibold">Dataforma Customer Sync Cursor</h3>
         <p className="text-muted-foreground mb-4 text-xs">
-          Dataforma&apos;s Customers API has no date filter — every sync
-          fetches everything, then keeps only records at or above this ID.
-          The floor advances automatically to the highest customer ID synced
-          each cycle.
+          Dataforma&apos;s Customers API has no date filter — each sync pages
+          through customers newest-first and stops as soon as it reaches this
+          ID, keeping only customers with an ID greater than it. The floor
+          advances automatically to the highest customer ID synced each
+          cycle.
         </p>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">

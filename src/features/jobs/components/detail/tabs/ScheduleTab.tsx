@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
+import ScheduleEnableToggle from '@/features/jobs/components/schedule/ScheduleEnableToggle';
 import {
   FrequencyPresetPicker,
   ScheduleModeCards,
@@ -37,7 +38,16 @@ interface IntervalConfig {
 }
 
 export default function ScheduleTab() {
-  const { projectId, job, refetch } = useJobDetailContext();
+  const {
+    projectId,
+    job,
+    refetch,
+    scheduleToggling,
+    handleScheduleToggle,
+    pipelineRequired,
+    pipelineConfigured,
+    handleTabChange,
+  } = useJobDetailContext();
 
   const initMode = () => job.scheduleMode || 'daily_time';
   const initTimes = () =>
@@ -147,27 +157,44 @@ export default function ScheduleTab() {
   // is running, so there's nothing to configure here — show a read-only notice
   // instead of the schedule editor. Starting/pausing it is still done via the
   // Run/Pause/Resume Schedule button above, same as one-way jobs.
+  const scheduleToggle = (
+    <ScheduleEnableToggle
+      projectId={projectId}
+      jobId={job.id}
+      job={job}
+      scheduleToggling={scheduleToggling}
+      pipelineRequired={pipelineRequired}
+      pipelineConfigured={pipelineConfigured}
+      onGoToPipeline={() => handleTabChange('pipeline')}
+      onScheduleToggle={handleScheduleToggle}
+    />
+  );
+
   if (job.syncDirection === 'two_way') {
     return (
-      <Card>
-        <CardContent className="text-muted-foreground flex items-start gap-3 py-6 text-sm">
-          <Info className="mt-0.5 size-4 shrink-0" />
-          <div className="space-y-1">
-            <p className="text-foreground font-medium">
-              Two-way sync has no interval to configure
-            </p>
-            <p>
-              {TWO_WAY_SCHEDULE_MESSAGE} Use Run/Resume Schedule above to start
-              it and Pause Schedule to stop it.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        {scheduleToggle}
+        <Card>
+          <CardContent className="text-muted-foreground flex items-start gap-3 py-6 text-sm">
+            <Info className="mt-0.5 size-4 shrink-0" />
+            <div className="space-y-1">
+              <p className="text-foreground font-medium">
+                Two-way sync has no interval to configure
+              </p>
+              <p>
+                {TWO_WAY_SCHEDULE_MESSAGE} Use Run/Resume Schedule above to
+                start it and Pause Schedule to stop it.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
     <div className="space-y-5">
+      {scheduleToggle}
       <Card>
         <CardContent className="space-y-4">
           <FrequencyPresetPicker value={frequency} onSelect={applyFrequency} />
