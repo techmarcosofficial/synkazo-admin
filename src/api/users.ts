@@ -1,5 +1,7 @@
 import apiClient from './apiClient';
 
+import type { ProjectAccessGrant } from './invitations';
+
 import type { User } from '@/types';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -11,6 +13,18 @@ export interface OwnershipSummary {
   totalRecordsSynced: number;
   runningJobsCount: number;
   scheduledJobsCount: number;
+}
+
+export interface UserProjectAccessRow extends ProjectAccessGrant {
+  id: string;
+  userId: string;
+  projectId: string;
+}
+
+export interface UpdateUserPayload extends Partial<User> {
+  // Editor-only per-project read/write grants — see UpdateUserDto on the API.
+  // Ignored by the server unless the effective role is editor.
+  projectAccess?: ProjectAccessGrant[];
 }
 
 export const usersApi = {
@@ -27,7 +41,9 @@ export const usersApi = {
       })
       .then(d),
   getUser: (id: string): Promise<User> => apiClient.get(`/users/${id}`).then(d),
-  updateUser: (id: string, data: Partial<User>): Promise<User> =>
+  getUserProjectAccess: (id: string): Promise<UserProjectAccessRow[]> =>
+    apiClient.get(`/users/${id}/project-access`).then(d),
+  updateUser: (id: string, data: UpdateUserPayload): Promise<User> =>
     apiClient.patch(`/users/${id}`, data).then(d),
   deleteUser: (id: string): Promise<void> =>
     apiClient.delete(`/users/${id}`).then(d),

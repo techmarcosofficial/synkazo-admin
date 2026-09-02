@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
+import type { ProjectAccessGrant } from '@/api/invitations';
 import FormDialog from '@/components/form/FormDialog';
+import ProjectMultiSelect from '@/components/shared/ProjectMultiSelect';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -14,13 +16,24 @@ import {
   roleLabel,
 } from '@/lib/permissions';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
-import { useUpdateUserMutation } from '@/queries/useUsers';
+import {
+  useUpdateUserMutation,
+  useUserProjectAccessQuery,
+} from '@/queries/useUsers';
 import type { Permission, User, UserRole } from '@/types';
 
 interface EditPermissionsDialogProps {
   user: User | null;
   onClose: () => void;
 }
+
+// Connections/Team/Logs are org-wide surfaces, not something this dialog needs to
+// gate per-user — dropped from the editable set here without touching the shared
+// PERMISSION_GROUPS constant, which the Org Admin Dashboard's read-only legend
+// still lists in full.
+const EDITABLE_PERMISSION_GROUPS = PERMISSION_GROUPS.filter(
+  (group) => !['Connections', 'Team', 'Logs'].includes(group.label),
+);
 
 export default function EditPermissionsDialog({
   user,
@@ -30,6 +43,7 @@ export default function EditPermissionsDialog({
   const updateUserMutation = useUpdateUserMutation();
   const [editPerms, setEditPerms] = useState<Permission[]>([]);
   const [role, setRole] = useState<UserRole>('editor');
+  const [projectIds, setProjectIds] = useState<string[]>([]);
 
   // Org admins can promote/demote between editor and org_admin; only a super admin
   // can grant the super_admin role itself.
@@ -37,7 +51,14 @@ export default function EditPermissionsDialog({
     currentUser?.role === 'super_admin'
       ? ['editor', 'org_admin', 'super_admin']
       : ['editor', 'org_admin'];
-  const isSuperAdminRole = role === 'super_admin';
+  // Both admin roles get unrestricted org access — granular checkboxes and the
+  // per-project scoping below would be no-ops for them, so hide both.
+  const hasFullAccess = role === 'org_admin' || role === 'super_admin';
+  const isEditorRole = role === 'editor';
+
+  const projectAccessQuery = useUserProjectAccessQuery(user?.id, {
+    enabled: !!user && user.role === 'editor',
+  });
 
   useEffect(() => {
     // A user with no explicit `permissions` row is running on the role's default set (see
@@ -48,6 +69,7 @@ export default function EditPermissionsDialog({
     if (!user) {
       setEditPerms([]);
       setRole('editor');
+      setProjectIds([]);
       return;
     }
     setEditPerms(
@@ -58,6 +80,12 @@ export default function EditPermissionsDialog({
     setRole(user.role);
   }, [user]);
 
+  useEffect(() => {
+    if (projectAccessQuery.data) {
+      setProjectIds(projectAccessQuery.data.map((grant) => grant.projectId));
+    }
+  }, [projectAccessQuery.data]);
+
   const togglePerm = (perm: Permission) =>
     setEditPerms((prev) =>
       prev.includes(perm) ? prev.filter((p) => p !== perm) : [...prev, perm],
@@ -65,12 +93,19 @@ export default function EditPermissionsDialog({
 
   const savePermissions = () => {
     if (!user) return;
+    const projectAccess: ProjectAccessGrant[] | undefined = isEditorRole
+      ? projectIds.map((projectId) => ({
+          projectId,
+          permissions: ['read', 'write'],
+        }))
+      : undefined;
     updateUserMutation.mutate(
       {
         id: user.id,
         data: {
           role,
-          permissions: isSuperAdminRole ? ALL_PERMISSIONS : editPerms,
+          permissions: hasFullAccess ? ALL_PERMISSIONS : editPerms,
+          projectAccess,
         },
       },
       {
@@ -129,38 +164,52 @@ export default function EditPermissionsDialog({
           </RadioGroup>
         </div>
 
-        {isSuperAdminRole ? (
+        {hasFullAccess ? (
           <p className="text-muted-foreground bg-muted rounded-md p-3 text-sm">
-            Super Admins have unrestricted access to all functionality —
-            granular permissions don't apply.
+            {role === 'super_admin'
+              ? "Super Admins have unrestricted access to all functionality — granular permissions don't apply."
+              : "Org Admins have full access to this organisation's functionality — granular permissions don't apply."}
           </p>
         ) : (
-          PERMISSION_GROUPS.map((group) => (
-            <div key={group.label}>
-              <p className="text-muted-foreground mb-2 text-xs font-semibold tracking-wider uppercase">
-                {group.label}
-              </p>
-              <div className="space-y-2">
-                {group.perms.map((perm) => (
-                  <Label
-                    key={perm}
-                    className="hover:bg-muted flex cursor-pointer items-center gap-3 rounded-md p-2 font-normal"
-                  >
-                    <Checkbox
-                      checked={editPerms.includes(perm as Permission)}
-                      onCheckedChange={() => togglePerm(perm as Permission)}
-                    />
-                    <span className="text-sm">
-                      {PERMISSION_LABELS[perm] || perm}
-                      <span className="text-muted-foreground ml-2 font-mono text-xs">
-                        {perm}
+          <>
+            {EDITABLE_PERMISSION_GROUPS.map((group) => (
+              <div key={group.label}>
+                <p className="text-muted-foreground mb-2 text-xs font-semibold tracking-wider uppercase">
+                  {group.label}
+                </p>
+                <div className="space-y-2">
+                  {group.perms.map((perm) => (
+                    <Label
+                      key={perm}
+                      className="hover:bg-muted flex cursor-pointer items-center gap-3 rounded-md p-2 font-normal"
+                    >
+                      <Checkbox
+                        checked={editPerms.includes(perm as Permission)}
+                        onCheckedChange={() => togglePerm(perm as Permission)}
+                      />
+                      <span className="text-sm">
+                        {PERMISSION_LABELS[perm] || perm}
+                        <span className="text-muted-foreground ml-2 font-mono text-xs">
+                          {perm}
+                        </span>
                       </span>
-                    </span>
-                  </Label>
-                ))}
+                    </Label>
+                  ))}
+                </div>
               </div>
+            ))}
+
+            <div>
+              <p className="text-muted-foreground mb-2 text-xs font-semibold tracking-wider uppercase">
+                Project Access
+              </p>
+              <ProjectMultiSelect value={projectIds} onChange={setProjectIds} />
+              <p className="text-muted-foreground mt-1.5 text-xs">
+                Only the selected projects will be visible to this team
+                member. Leave empty to grant no project access.
+              </p>
             </div>
-          ))
+          </>
         )}
       </div>
     </FormDialog>

@@ -2074,12 +2074,12 @@ export default function FieldMappingCanvas({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {[...filtered]
-                      .sort(
-                        (a, b) =>
-                          Number(b.matchDestKey != null) -
-                          Number(a.matchDestKey != null),
-                      )
+                    {filtered
+                      // Deliberately not sorted by match status: re-sorting on every
+                      // toggle relocates the row out from under the user right as they
+                      // pick a match key from the "Matched by" dropdown above, making the
+                      // switch look like it didn't flip. The "Matched by" summary already
+                      // surfaces which fields are matched, so keep table order stable.
                       .flatMap((m) => {
                         const sf = sourceFields.find(
                           (f) => f.key === m.sourceField,

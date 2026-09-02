@@ -37,8 +37,16 @@ export default function PaginationBar({
 }: PaginationBarProps) {
   if (total === 0) return null;
 
-  const start = (page - 1) * pageSize + 1;
-  const end = Math.min(page * pageSize, total);
+  // Callers that derive `page`/`totalPages` from a still-settling query (server-side
+  // pagination reading a count that starts at 0, or a page synced from URL state before
+  // the first render) can hand this component 0/NaN briefly on mount. Falling back here
+  // means the page number always renders something sane instead of going blank next to
+  // the "Rows per page" selector until the caller's own state catches up.
+  const safeTotalPages = totalPages > 0 ? totalPages : 1;
+  const safePage = page > 0 ? Math.min(page, safeTotalPages) : 1;
+
+  const start = (safePage - 1) * pageSize + 1;
+  const end = Math.min(safePage * pageSize, total);
 
   return (
     <div className="flex w-full flex-wrap items-center justify-between gap-3">
@@ -70,7 +78,7 @@ export default function PaginationBar({
         )}
 
         <span className="text-muted-foreground text-sm">
-          Page {page} of {totalPages}
+          Page {safePage} of {safeTotalPages}
         </span>
 
         <div className="flex items-center gap-1">
@@ -78,7 +86,7 @@ export default function PaginationBar({
             variant="outline"
             size="icon"
             onClick={() => onPageChange(1)}
-            disabled={disabled || page <= 1}
+            disabled={disabled || safePage <= 1}
             aria-label="First page"
           >
             <ChevronsLeft className="size-4" />
@@ -86,8 +94,8 @@ export default function PaginationBar({
           <Button
             variant="outline"
             size="icon"
-            onClick={() => onPageChange(page - 1)}
-            disabled={disabled || page <= 1}
+            onClick={() => onPageChange(safePage - 1)}
+            disabled={disabled || safePage <= 1}
             aria-label="Previous page"
           >
             <ChevronLeft className="size-4" />
@@ -95,8 +103,8 @@ export default function PaginationBar({
           <Button
             variant="outline"
             size="icon"
-            onClick={() => onPageChange(page + 1)}
-            disabled={disabled || page >= totalPages}
+            onClick={() => onPageChange(safePage + 1)}
+            disabled={disabled || safePage >= safeTotalPages}
             aria-label="Next page"
           >
             <ChevronRight className="size-4" />
@@ -104,8 +112,8 @@ export default function PaginationBar({
           <Button
             variant="outline"
             size="icon"
-            onClick={() => onPageChange(totalPages)}
-            disabled={disabled || page >= totalPages}
+            onClick={() => onPageChange(safeTotalPages)}
+            disabled={disabled || safePage >= safeTotalPages}
             aria-label="Last page"
           >
             <ChevronsRight className="size-4" />

@@ -4,22 +4,20 @@ import {
   AlertTriangle,
   CircleDot,
   Clock,
+  Eye,
+  FolderKanban,
   GitBranch,
   Layers,
   type LucideIcon,
   Pause,
-  Play,
   RefreshCw,
   RotateCcw,
   Wifi,
   WifiOff,
-  X,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { toast } from 'sonner';
 
-import type { QueueStats } from '@/api/notificationsApi';
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
 import ManagementToolbar from '@/components/shared/ManagementToolbar';
@@ -49,13 +47,10 @@ import {
 import { usePagination } from '@/hooks/usePagination';
 import { useSort } from '@/hooks/useSort';
 import { cn } from '@/lib/utils';
-import {
-  useCancelQueueJobMutation,
-  usePauseScheduleMutation,
-  useQueueStatsQuery,
-  useResumeScheduleMutation,
-  useSchedulerHealthQuery,
-} from '@/queries/useScheduler';
+import { useProjectsQuery } from '@/queries/useProjects';
+import { useQueueStatsQuery, useSchedulerHealthQuery } from '@/queries/useScheduler';
+import type { QueueStats } from '@/api/notificationsApi';
+import type { Project } from '@/types';
 
 interface SchedulerLastRun {
   status: string;
@@ -96,6 +91,12 @@ interface BucketConfig {
   icon: LucideIcon;
   tone: string;
 }
+
+// Idle and Paused both used the same two-bar Pause glyph, which read as
+// "this job is paused" either way — ambiguous since only one of them
+// actually means that. Rather than mount a per-state icon lookup, these two
+// simply render label-only (see the `showIcon` check below).
+const NO_ICON_BUCKETS = new Set(['idle', 'paused']);
 
 const BUCKETS: BucketConfig[] = [
   { id: 'running', label: 'Running', icon: Activity, tone: 'text-success' },
@@ -152,9 +153,18 @@ function fmt(date: string | null | undefined): string {
   }
 }
 
-function extractErrorMessage(err: unknown, fallback: string): string {
-  const e = err as { response?: { data?: { message?: string } } };
-  return e.response?.data?.message ?? fallback;
+// A job's `nextRunAt` isn't cleared once its slot passes — it only advances the
+// next time the scheduler recomputes it — so a job that's overdue, paused, or
+// between recomputations can carry a value that's actually in the past. Shown
+// as-is through `fmt`'s relative-time formatter, a past `nextRunAt` reads as
+// "3 minutes ago" right under the "Next run" header — indistinguishable from
+// (and easily mistaken for) the Last run column. Only ever show it when it's
+// genuinely still ahead of us.
+function fmtNextRun(date: string | null | undefined): string {
+  if (!date) return '—';
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime()) || parsed <= new Date()) return '—';
+  return formatDistanceToNow(parsed, { addSuffix: true });
 }
 
 type SortKey = 'name' | 'state' | 'nextRun' | 'lastRun';
@@ -187,6 +197,40 @@ function compareJobs(
   }
 }
 
+interface ProjectGroup {
+  projectId: string;
+  projectName: string;
+  prioritySchedulingEnabled: boolean;
+  jobs: SchedulerHealthJob[];
+}
+
+// Groups the current page's jobs project-wise, in first-seen order — the
+// jobs themselves stay in whatever order search/sort/pagination produced,
+// this just clusters them under a project heading instead of a flat list.
+function groupByProject(
+  jobs: SchedulerHealthJob[],
+  projectsById: Map<string, Project>,
+): ProjectGroup[] {
+  const groups: ProjectGroup[] = [];
+  const byId = new Map<string, ProjectGroup>();
+  for (const job of jobs) {
+    let group = byId.get(job.projectId);
+    if (!group) {
+      const project = projectsById.get(job.projectId);
+      group = {
+        projectId: job.projectId,
+        projectName: project?.name ?? 'Unknown project',
+        prioritySchedulingEnabled: project?.schedulerMode === 'priority',
+        jobs: [],
+      };
+      byId.set(job.projectId, group);
+      groups.push(group);
+    }
+    group.jobs.push(job);
+  }
+  return groups;
+}
+
 function SchedulerHealthSkeleton() {
   return (
     <div className="space-y-6">
@@ -212,9 +256,7 @@ function SchedulerHealthSkeleton() {
 export default function SchedulerHealth() {
   const healthQuery = useSchedulerHealthQuery();
   const queueStatsQuery = useQueueStatsQuery();
-  const pauseMutation = usePauseScheduleMutation();
-  const resumeMutation = useResumeScheduleMutation();
-  const cancelMutation = useCancelQueueJobMutation();
+  const projectsQuery = useProjectsQuery();
 
   const [search, setSearch] = useState('');
   const [stateFilter, setStateFilter] = useState('all');
@@ -227,6 +269,12 @@ export default function SchedulerHealth() {
   const queueStats: QueueStatsWithWorker | undefined =
     queueStatsRes?.data ??
     (queueStatsRes as unknown as QueueStatsWithWorker | undefined);
+
+  const projectsById = useMemo(() => {
+    const map = new Map<string, Project>();
+    (projectsQuery.data ?? []).forEach((p) => map.set(p.id, p));
+    return map;
+  }, [projectsQuery.data]);
 
   const filteredJobs = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -245,42 +293,10 @@ export default function SchedulerHealth() {
   const { page, setPage, pageSize, setPageSize, totalPages, pageItems, total } =
     usePagination(sorted, 10);
 
-  const cancelQueueJob = (job: SchedulerHealthJob) => {
-    if (!job.lastRun?.bullmqJobId) return;
-    cancelMutation.mutate(job.lastRun.bullmqJobId, {
-      onSuccess: () => toast.success(`Removed "${job.name}" from queue`),
-      onError: (err) => toast.error(extractErrorMessage(err, 'Cancel failed')),
-    });
-  };
-
-  const togglePause = (job: SchedulerHealthJob) => {
-    if (
-      job.scheduleState === 'paused' ||
-      job.scheduleState === 'paused_limit_reached'
-    ) {
-      resumeMutation.mutate(
-        { projectId: job.projectId, jobId: job.id },
-        {
-          onSuccess: () => toast.success(`Resumed "${job.name}"`),
-          onError: (err) =>
-            toast.error(extractErrorMessage(err, 'Action failed')),
-        },
-      );
-    } else {
-      pauseMutation.mutate(
-        { projectId: job.projectId, jobId: job.id },
-        {
-          onSuccess: () => toast.success(`Paused "${job.name}"`),
-          onError: (err) =>
-            toast.error(extractErrorMessage(err, 'Action failed')),
-        },
-      );
-    }
-  };
-
-  const isTogglingJob = (jobId: string) =>
-    (pauseMutation.isPending && pauseMutation.variables?.jobId === jobId) ||
-    (resumeMutation.isPending && resumeMutation.variables?.jobId === jobId);
+  const projectGroups = useMemo(
+    () => groupByProject(pageItems, projectsById),
+    [pageItems, projectsById],
+  );
 
   const header = (
     <PageHeader
@@ -393,7 +409,7 @@ export default function SchedulerHealth() {
           <Card key={b.id}>
             <CardContent className="space-y-1">
               <div className={cn('flex items-center gap-2', b.tone)}>
-                <b.icon className="size-4" />
+                {!NO_ICON_BUCKETS.has(b.id) && <b.icon className="size-4" />}
                 <span className="text-muted-foreground text-xs font-medium">
                   {b.label}
                 </span>
@@ -459,7 +475,6 @@ export default function SchedulerHealth() {
                     >
                       State
                     </SortableTableHead>
-                    <TableHead>Schedule</TableHead>
                     <SortableTableHead
                       active={sortKey === 'nextRun'}
                       direction={direction}
@@ -474,107 +489,89 @@ export default function SchedulerHealth() {
                     >
                       Last run
                     </SortableTableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="text-right">View</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {pageItems.map((job) => {
-                    const cfg = bucketCfg(job.bucket);
-                    const cancelling =
-                      cancelMutation.isPending &&
-                      cancelMutation.variables === job.lastRun?.bullmqJobId;
-                    return (
-                      <TableRow key={job.id}>
-                        <TableCell>
+                  {projectGroups.map((group) => (
+                    <Fragment key={group.projectId}>
+                      <TableRow className="bg-muted/40 hover:bg-muted/40">
+                        <TableCell colSpan={5} className="py-2">
                           <Link
-                            to={`/projects/${job.projectId}/jobs/${job.id}`}
-                            className="hover:text-primary font-medium transition-colors"
+                            to={`/projects/${group.projectId}`}
+                            className="text-muted-foreground hover:text-primary inline-flex items-center gap-1.5 text-xs font-semibold tracking-wide uppercase transition-colors"
                           >
-                            {job.name}
+                            <FolderKanban className="size-3.5" />
+                            {group.projectName}
                           </Link>
-                          {job.dependsOnJobId && (
-                            <span className="text-muted-foreground ml-2 inline-flex items-center gap-1 text-xs">
-                              <GitBranch className="size-3" /> dependent
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <span
-                            className={cn(
-                              'inline-flex items-center gap-1.5 text-xs font-medium',
-                              cfg.tone,
-                            )}
-                          >
-                            <cfg.icon className="size-3.5" /> {cfg.label}
-                            {(job.retryCount ?? 0) > 0 && (
-                              <span className="text-muted-foreground">
-                                ({job.retryCount}/{job.maxRetries})
-                              </span>
-                            )}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {job.cronExpression ? (
-                            <code className="text-xs">
-                              {job.cronExpression}
-                              {job.timezone ? ` · ${job.timezone}` : ''}
-                            </code>
-                          ) : (
-                            '—'
-                          )}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {fmt(job.nextRunAt)}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {job.lastRun ? (
-                            <span title={job.lastRun.errorMessage || ''}>
-                              {job.lastRun.status} ·{' '}
-                              {fmt(
-                                job.lastRun.finishedAt || job.lastRun.startedAt,
-                              )}
-                            </span>
-                          ) : (
-                            'never'
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center justify-end gap-2">
-                            {job.bucket === 'queued' &&
-                              job.lastRun?.bullmqJobId && (
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={() => cancelQueueJob(job)}
-                                  disabled={cancelling}
-                                >
-                                  <X /> Cancel
-                                </Button>
-                              )}
-                            {job.isEnabled !== false && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => togglePause(job)}
-                                disabled={isTogglingJob(job.id)}
-                              >
-                                {job.scheduleState === 'paused' ||
-                                job.scheduleState === 'paused_limit_reached' ? (
-                                  <>
-                                    <Play /> Resume
-                                  </>
-                                ) : (
-                                  <>
-                                    <Pause /> Pause
-                                  </>
-                                )}
-                              </Button>
-                            )}
-                          </div>
                         </TableCell>
                       </TableRow>
-                    );
-                  })}
+                      {group.jobs.map((job) => {
+                        const cfg = bucketCfg(job.bucket);
+                        const showIcon = !NO_ICON_BUCKETS.has(job.bucket);
+                        const viewHref = group.prioritySchedulingEnabled
+                          ? `/projects/${job.projectId}?tab=scheduler`
+                          : `/projects/${job.projectId}/jobs/${job.id}?tab=schedule`;
+                        return (
+                          <TableRow key={job.id}>
+                            <TableCell>
+                              <Link
+                                to={`/projects/${job.projectId}/jobs/${job.id}`}
+                                className="hover:text-primary font-medium transition-colors"
+                              >
+                                {job.name}
+                              </Link>
+                              {job.dependsOnJobId && (
+                                <span className="text-muted-foreground ml-2 inline-flex items-center gap-1 text-xs">
+                                  <GitBranch className="size-3" /> dependent
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <span
+                                className={cn(
+                                  'inline-flex items-center gap-1.5 text-xs font-medium',
+                                  cfg.tone,
+                                )}
+                              >
+                                {showIcon && <cfg.icon className="size-3.5" />}
+                                {cfg.label}
+                                {(job.retryCount ?? 0) > 0 && (
+                                  <span className="text-muted-foreground">
+                                    ({job.retryCount}/{job.maxRetries})
+                                  </span>
+                                )}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {fmtNextRun(job.nextRunAt)}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {job.lastRun ? (
+                                <span title={job.lastRun.errorMessage || ''}>
+                                  {job.lastRun.status} ·{' '}
+                                  {fmt(
+                                    job.lastRun.finishedAt ||
+                                      job.lastRun.startedAt,
+                                  )}
+                                </span>
+                              ) : (
+                                'never'
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Link
+                                to={viewHref}
+                                className="text-primary hover:text-primary/80 inline-flex items-center gap-1 text-sm font-medium"
+                              >
+                                <Eye className="size-3.5" /> View
+                              </Link>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </Fragment>
+                  ))}
                 </TableBody>
               </Table>
             </div>
