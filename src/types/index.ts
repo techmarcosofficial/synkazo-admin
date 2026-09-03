@@ -9,3 +9,4 @@ export type * from './forms';
 export type * from './billing';
 export type * from './audit';
 export type * from './systemLog';
+export type * from './blog';

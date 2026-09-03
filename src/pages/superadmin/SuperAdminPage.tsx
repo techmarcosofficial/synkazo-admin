@@ -1,6 +1,7 @@
 import {
   Activity,
   AlertTriangle,
+  BookOpen,
   Building2,
   CheckCircle2,
   ClipboardList,
@@ -41,6 +42,7 @@ import {
   useAdminDiscountSettingsQuery,
   useAdminPlansQuery,
 } from '@/queries/useBilling';
+import { useBlogsQuery } from '@/queries/useBlog';
 import { useOrgsQuery } from '@/queries/useOrganisations';
 import { useProjectsQuery } from '@/queries/useProjects';
 import { useSystemLogsQuery } from '@/queries/useSystemLogs';
@@ -85,6 +87,7 @@ export default function SuperAdminPage() {
   const discountRulesQuery = useAdminDiscountRulesQuery();
   const discountSettingsQuery = useAdminDiscountSettingsQuery();
   const twoWaySyncQuery = useTwoWaySyncIntervalsQuery();
+  const blogsQuery = useBlogsQuery({ limit: 1 });
 
   const isLoading =
     orgsQuery.isLoading ||
@@ -116,6 +119,7 @@ export default function SuperAdminPage() {
     discountRulesQuery.refetch();
     discountSettingsQuery.refetch();
     twoWaySyncQuery.refetch();
+    blogsQuery.refetch();
   };
 
   const header = (
@@ -356,6 +360,16 @@ export default function SuperAdminPage() {
           to="/super-admin/system"
           tone="paused"
           metrics={systemMetrics}
+        />
+        <ModuleCard
+          title="Blog"
+          description="Manage blog posts, tags, signatures, and CTAs."
+          icon={BookOpen}
+          to="/super-admin/blog"
+          tone="info"
+          metrics={[
+            { icon: BookOpen, label: `${blogsQuery.data?.total ?? 0} Posts` },
+          ]}
         />
         <ModuleCard
           title="Platform Audit"

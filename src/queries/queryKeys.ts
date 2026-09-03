@@ -1,4 +1,5 @@
 import type { AuditLogFilters } from '@/types/audit';
+import type { BlogQueryParams } from '@/types/blog';
 
 // Central query-key factory. Add a namespace here for each API domain as
 // it's migrated onto TanStack Query — keeps invalidation call sites
@@ -133,5 +134,14 @@ export const queryKeys = {
       ['billing', 'upgrade-preview', priceId] as const,
     checkoutPreview: (priceId: string, couponCode?: string) =>
       ['billing', 'checkout-preview', priceId, couponCode ?? 'none'] as const,
+  },
+  blog: {
+    list: (params?: BlogQueryParams) => ['blog', 'list', params] as const,
+    detail: (id: string) => ['blog', 'detail', id] as const,
+    search: (q: string) => ['blog', 'search', q] as const,
+    linkSuggestions: (id: string) => ['blog', 'link-suggestions', id] as const,
+    tags: ['blog', 'tags'] as const,
+    signatures: ['blog', 'signatures'] as const,
+    ctas: ['blog', 'ctas'] as const,
   },
 };

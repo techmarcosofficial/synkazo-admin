@@ -58,6 +58,11 @@ import ProjectConnections from '@/pages/projects/ProjectConnections';
 import ProjectDetail from '@/pages/projects/ProjectDetail';
 import SchedulerHealth from '@/pages/SchedulerHealth';
 import SettingsPage from '@/pages/settings/SettingsPage';
+import BlogCtasPage from '@/pages/superadmin/blog/BlogCtasPage';
+import BlogEditorPage from '@/pages/superadmin/blog/BlogEditorPage';
+import BlogListPage from '@/pages/superadmin/blog/BlogListPage';
+import BlogSignaturesPage from '@/pages/superadmin/blog/BlogSignaturesPage';
+import BlogTagsPage from '@/pages/superadmin/blog/BlogTagsPage';
 import OrganisationsPage from '@/pages/superadmin/OrganisationsPage';
 import PlatformAuditPage from '@/pages/superadmin/PlatformAuditPage';
 import SuperAdminProjectsPage from '@/pages/superadmin/ProjectsPage';
@@ -195,6 +200,15 @@ function App() {
                   path="/super-admin/audit-log"
                   element={<PlatformAuditPage />}
                 />
+                <Route path="/super-admin/blog" element={<BlogListPage />} />
+                <Route path="/super-admin/blog/new" element={<BlogEditorPage />} />
+                <Route path="/super-admin/blog/tags" element={<BlogTagsPage />} />
+                <Route
+                  path="/super-admin/blog/signatures"
+                  element={<BlogSignaturesPage />}
+                />
+                <Route path="/super-admin/blog/ctas" element={<BlogCtasPage />} />
+                <Route path="/super-admin/blog/:id" element={<BlogEditorPage />} />
               </Route>
             </Route>
 

@@ -1,0 +1,66 @@
+.blog-editor-prose {
+  font-size: 0.9375rem;
+  line-height: 1.7;
+}
+
+.blog-editor-prose h2 {
+  font-size: 1.375rem;
+  font-weight: 700;
+  margin: 1.25rem 0 0.5rem;
+}
+
+.blog-editor-prose h3 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin: 1rem 0 0.375rem;
+}
+
+.blog-editor-prose p {
+  margin: 0.5rem 0;
+}
+
+.blog-editor-prose ul,
+.blog-editor-prose ol {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.blog-editor-prose ul {
+  list-style: disc;
+}
+
+.blog-editor-prose ol {
+  list-style: decimal;
+}
+
+.blog-editor-prose blockquote {
+  border-left: 3px solid var(--border);
+  margin: 0.75rem 0;
+  padding-left: 1rem;
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+.blog-editor-prose img {
+  max-width: 100%;
+  border-radius: 0.75rem;
+  margin: 0.75rem 0;
+}
+
+.blog-editor-prose a.internal-link,
+.blog-editor-prose a {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.blog-editor-prose a.internal-link {
+  text-decoration-style: dashed;
+}
+
+.blog-editor-prose p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--muted-foreground);
+  pointer-events: none;
+  height: 0;
+}
