@@ -15,7 +15,7 @@ interface BrowserMockupProps {
  * ambient glow) so the hero preview and that section read as one design system.
  */
 export function BrowserMockup({
-  title = 'app.synkazo.io',
+  title = 'app.synkazo.com',
   children,
   className,
 }: BrowserMockupProps) {

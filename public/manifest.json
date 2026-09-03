@@ -3,7 +3,14 @@
   "short_name": "synkazo",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#080B12",
-  "theme_color": "#00E5FF",
-  "icons": []
+  "background_color": "#ffffff",
+  "theme_color": "#FF6B39",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    }
+  ]
 }
