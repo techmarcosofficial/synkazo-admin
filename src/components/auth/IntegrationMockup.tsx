@@ -178,7 +178,7 @@ function AnimatedPath({
       />
       {!reduceMotion &&
         Array.from({ length: dotCount }, (_, i) => (
-          <circle key={i} r="2.5" fill="var(--primary)">
+          <circle key={`fwd-${i}`} r="2.5" fill="var(--primary)">
             <animateMotion
               dur={`${duration}s`}
               begin={`${(i * duration) / dotCount}s`}
@@ -191,6 +191,31 @@ function AnimatedPath({
               keyTimes="0;0.08;0.92;1"
               dur={`${duration}s`}
               begin={`${(i * duration) / dotCount}s`}
+              repeatCount="indefinite"
+            />
+          </circle>
+        ))}
+      {/* Reverse-direction dots to signal two-way sync — same path traversed
+          end→start via SMIL's keyPoints="1;0" trick, staggered a half-interval
+          off the forward stream so the two flows don't overlap. Slightly
+          smaller + more transparent so the primary flow still reads first. */}
+      {!reduceMotion &&
+        Array.from({ length: dotCount }, (_, i) => (
+          <circle key={`rev-${i}`} r="2" fill="var(--primary)" opacity="0.55">
+            <animateMotion
+              dur={`${duration}s`}
+              begin={`${((i + 0.5) * duration) / dotCount}s`}
+              repeatCount="indefinite"
+              path={d}
+              keyPoints="1;0"
+              keyTimes="0;1"
+            />
+            <animate
+              attributeName="opacity"
+              values="0;0.55;0.55;0"
+              keyTimes="0;0.08;0.92;1"
+              dur={`${duration}s`}
+              begin={`${((i + 0.5) * duration) / dotCount}s`}
               repeatCount="indefinite"
             />
           </circle>

@@ -20,7 +20,7 @@ export const MOCK_USERS = [
   {
     id: 'user_super',
     fullName: 'Alex Rivera',
-    email: 'alex@synkazo.io',
+    email: 'alex@synkazo.com',
     role: 'super_admin',
     organisationId: 'org_synkazo',
     avatarInitials: 'AR',
