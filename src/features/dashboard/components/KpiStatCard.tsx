@@ -49,6 +49,7 @@ export interface KpiStatCardProps {
   chartData?: KpiSparklinePoint[];
 
   chartColor?: string; // CSS color/oklch value for the chart line + fill
+  chartLabel?: string;
 
   /** Makes the whole card a link to this route. */
   href?: string;
@@ -67,6 +68,7 @@ export default function KpiStatCard({
   trend,
   chartData,
   chartColor = 'var(--primary)',
+  chartLabel,
   href,
   secondaryStats,
 }: KpiStatCardProps) {
@@ -79,11 +81,11 @@ export default function KpiStatCard({
     () =>
       ({
         value: {
-          label,
+          label: chartLabel ?? label,
           color: chartColor,
         },
       }) satisfies ChartConfig,
-    [label, chartColor],
+    [label, chartColor, chartLabel],
   );
 
   const gradientId = `fill-${label.replace(/\s+/g, '-')}`;
@@ -161,7 +163,7 @@ export default function KpiStatCard({
             config={chartConfig}
             className="mt-2 aspect-auto h-[120px] w-full"
           >
-            <AreaChart data={chartData}>
+            <AreaChart accessibilityLayer data={chartData}>
               <defs>
                 <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
                   <stop

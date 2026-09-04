@@ -68,7 +68,6 @@ import UsersPage from '@/pages/superadmin/UsersPage';
 // App pages
 import ActiveSyncs from '@/pages/sync/ActiveSyncs';
 import LogsPage from '@/pages/sync/LogsPage';
-import MetricsPage from '@/pages/sync/MetricsPage';
 import WelcomeOnboarding from '@/pages/WelcomeOnboarding';
 import RoleGuard from '@/components/auth/RoleGuard';
 
@@ -120,7 +119,6 @@ function App() {
               <Route path="/active-syncs" element={<ActiveSyncs />} />
               <Route path="/scheduler" element={<SchedulerHealth />} />
               <Route path="/logs" element={<LogsPage />} />
-              <Route path="/metrics" element={<MetricsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route
                 path="/profile"

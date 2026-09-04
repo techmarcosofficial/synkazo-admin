@@ -2,7 +2,6 @@
 
 import {
   Activity,
-  BarChart2,
   Briefcase,
   Building2,
   CalendarClock,
@@ -45,12 +44,6 @@ const NAV_GROUPS: NavGroup[] = [
         title: 'Dashboard',
         url: '/dashboard',
         icon: LayoutDashboard,
-        minRole: 'editor',
-      },
-      {
-        title: 'Metrics',
-        url: '/metrics',
-        icon: BarChart2,
         minRole: 'editor',
       },
     ],
