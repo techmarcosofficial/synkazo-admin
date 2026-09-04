@@ -23,6 +23,24 @@ const jobGeneralSchema = z.object({
 
 type JobGeneralValues = z.infer<typeof jobGeneralSchema>;
 
+function formatLastSyncedAt(lastSyncedAt?: string | null) {
+  if (!lastSyncedAt) return 'Never synced';
+
+  // API responses are normally ISO timestamps, but support database-style UTC
+  // values too (for example, "2026-09-04 12:13:09.401").
+  const normalizedTimestamp = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(lastSyncedAt)
+    ? lastSyncedAt
+    : `${lastSyncedAt.replace(' ', 'T')}Z`;
+  const date = new Date(normalizedTimestamp);
+
+  if (Number.isNaN(date.getTime())) return 'Never synced';
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
+}
+
 export default function JobGeneralCard({
   projectId,
   job,
@@ -93,6 +111,17 @@ export default function JobGeneralCard({
               </div>
             </div>
           </FieldGroup>
+
+          <Field>
+            <FieldLabel htmlFor="last-synced-at">Last Synced Date</FieldLabel>
+            <FieldContent>
+              <Input
+                id="last-synced-at"
+                readOnly
+                value={formatLastSyncedAt(job.lastSyncedAt)}
+              />
+            </FieldContent>
+          </Field>
 
           <Button type="submit" disabled={saving || !form.formState.isDirty}>
             {saving
