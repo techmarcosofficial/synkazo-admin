@@ -96,6 +96,55 @@ const ACTION_CONFIG = {
   failed: { className: 'text-destructive', icon: XCircle, label: 'Failed' },
 };
 
+/**
+ * The right-hand cell of a record row: why it was skipped/failed, or where it
+ * landed. The reason badge names the category and the text is the one-line
+ * cause the API already narrowed to this record — the full destination
+ * response stays in the record log for anyone who needs it.
+ */
+function RecordReason({ rec }: { rec: SyncLogRecord }) {
+  const reason = rec.skipReason || rec.failReason;
+  const detail = rec.skipReasonDetail || rec.failReasonDetail;
+
+  if (!reason && !detail) {
+    return (
+      <span className="text-muted-foreground flex min-w-0 flex-1 items-center gap-1 truncate">
+        {rec.destRecordId ? (
+          <>
+            <ArrowRight className="size-3 shrink-0" /> {rec.destRecordId}
+          </>
+        ) : (
+          '—'
+        )}
+      </span>
+    );
+  }
+
+  return (
+    <span className="flex min-w-0 flex-1 items-center gap-2">
+      {reason && (
+        <Badge
+          variant="outline"
+          className={cn(
+            'shrink-0 border-transparent font-normal',
+            rec.action === 'failed'
+              ? 'bg-destructive/10 text-destructive'
+              : 'bg-muted text-muted-foreground',
+          )}
+        >
+          {enumLabel(reason)}
+        </Badge>
+      )}
+      <span
+        className="text-muted-foreground min-w-0 flex-1 truncate"
+        title={detail ?? undefined}
+      >
+        {detail || '—'}
+      </span>
+    </span>
+  );
+}
+
 const STAT_TONE = {
   success: 'bg-success/10 text-success',
   info: 'bg-info/10 text-info',
@@ -395,18 +444,7 @@ function PageRow({
                   >
                     {rec.sourceRecordId}
                   </span>
-                  <span className="text-muted-foreground flex min-w-0 flex-1 items-center gap-1 truncate">
-                    {rec.skipReasonDetail ||
-                      rec.failReasonDetail ||
-                      (rec.destRecordId ? (
-                        <>
-                          <ArrowRight className="size-3 shrink-0" />{' '}
-                          {rec.destRecordId}
-                        </>
-                      ) : (
-                        '—'
-                      ))}
-                  </span>
+                  <RecordReason rec={rec} />
                 </div>
               );
             })}
@@ -711,18 +749,7 @@ function FilteredRecordsList({
               >
                 {rec.sourceRecordId}
               </span>
-              <span className="text-muted-foreground flex min-w-0 flex-1 items-center gap-1 truncate">
-                {rec.skipReasonDetail ||
-                  rec.failReasonDetail ||
-                  (rec.destRecordId ? (
-                    <>
-                      <ArrowRight className="size-3 shrink-0" />{' '}
-                      {rec.destRecordId}
-                    </>
-                  ) : (
-                    '—'
-                  ))}
-              </span>
+              <RecordReason rec={rec} />
             </div>
           );
         })}
