@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { forwardRef, useImperativeHandle, useMemo } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 
 import type {
@@ -15,13 +15,11 @@ import SyncModeField from './SyncModeField';
 import {
   Field,
   FieldContent,
-  FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { useCreateProject, usePlatforms } from '@/features/projects/hooks';
 import { getUserFriendlyError } from '@/lib/errorMessages';
 import { showToast } from '@/lib/toast';
@@ -30,7 +28,7 @@ import { PlatformId } from '@/types/connection';
 const CreateProjectForm = forwardRef<
   CreateProjectFormRef,
   CreateProjectFormProps
->(({ onSuccess }, ref) => {
+>(({ onSuccess, onSelectionChange }, ref) => {
   const form = useForm<CreateProjectFormValues>({
     resolver: zodResolver(createProjectSchema),
     mode: 'onChange',
@@ -50,6 +48,13 @@ const CreateProjectForm = forwardRef<
   const destPlatformId = form.watch('destPlatformId') as '' | PlatformId;
   const syncMode = form.watch('syncMode') as
     '' | 'one_way' | 'two_way' | undefined;
+
+  useEffect(() => {
+    onSelectionChange?.({
+      sourcePlatformId,
+      syncMode: syncMode ?? '',
+    });
+  }, [onSelectionChange, sourcePlatformId, syncMode]);
 
   const submit = form.handleSubmit(async (values) => {
     try {
@@ -103,8 +108,8 @@ const CreateProjectForm = forwardRef<
   }, [platformOptions]);
 
   return (
-    <form onSubmit={submit} className="space-y-5">
-      <FieldGroup>
+    <form onSubmit={submit} className="space-y-6">
+      <FieldGroup className="grid gap-4 md:grid-cols-2">
         <Field>
           <FieldLabel htmlFor="name" required>
             Project Name
@@ -113,33 +118,24 @@ const CreateProjectForm = forwardRef<
           <FieldContent>
             <Input
               id="name"
-              placeholder="My Sync Project"
+              placeholder="This name is shown throughout synkazo."
               {...form.register('name')}
             />
           </FieldContent>
-
-          <FieldDescription>
-            This name is shown throughout synkazo.
-          </FieldDescription>
 
           <FieldError>{form.formState.errors.name?.message}</FieldError>
         </Field>
 
         <Field>
-          <FieldLabel htmlFor="description">Description</FieldLabel>
+          <FieldLabel htmlFor="description">Optional Note</FieldLabel>
 
           <FieldContent>
-            <Textarea
+            <Input
               id="description"
-              rows={4}
-              placeholder="Optional description..."
+              placeholder="Optional notes about this integration."
               {...form.register('description')}
             />
           </FieldContent>
-
-          <FieldDescription>
-            Optional notes about this integration.
-          </FieldDescription>
 
           <FieldError>{form.formState.errors.description?.message}</FieldError>
         </Field>

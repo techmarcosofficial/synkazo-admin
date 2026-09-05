@@ -66,6 +66,7 @@ export default function PlatformPairField({
     platforms.filter((p) => p.platformId !== sourceValue);
 
   const [rope, setRope] = useState<{
+    width: number;
     height: number;
     sourceY: number | null;
     destY: number | null;
@@ -91,6 +92,7 @@ export default function PlatformPairField({
       };
 
       setRope({
+        width: containerRect.width,
         height: containerRect.height,
         sourceY: sourceValue ? getCenterY(sourceRefs, sourceValue) : null,
         destY: destValue ? getCenterY(destRefs, destValue) : null,
@@ -119,14 +121,19 @@ export default function PlatformPairField({
           : rope.destY != null
             ? rope.destY
             : rope.height / 2;
+  const iconX = rope ? rope.width / 2 : null;
+  const iconLeft = iconX == null ? null : iconX - 22;
+  const iconRight = iconX == null ? null : iconX + 22;
 
   return (
-    <div className="relative grid grid-cols-[1fr_auto_1fr] items-stretch">
+    <div className="relative grid grid-cols-[20%_20%_20%_auto_25%] items-stretch">
       <PlatformSelector
+        className="col-span-3"
         label="Source Platform"
         description="Where records will be read from."
         value={sourceValue}
         platforms={sourcePlatforms}
+        cardClassName="min-w-0 flex-1"
         disabled={disabled || sourceDisabled}
         onChange={onSourceChange}
         registerItemRef={(platformId, el) => {
@@ -136,20 +143,20 @@ export default function PlatformPairField({
 
       {/* Rope connector between source and destination */}
       <div className="flex">
-        <div ref={connectorRef} className="relative h-full w-40">
+        <div ref={connectorRef} className="relative h-full min-w-20 flex-1">
           {rope &&
             rope.height > 0 &&
             (rope.destY != null || rope.sourceY != null) && (
               <svg
                 className="text-primary/40 pointer-events-none absolute inset-0 h-full w-full"
-                viewBox={`0 0 64 ${rope.height}`}
+                viewBox={`0 0 ${rope.width} ${rope.height}`}
                 preserveAspectRatio="none"
                 fill="none"
               >
                 {/* neutral state: nothing picked yet */}
                 {rope.sourceY == null && rope.destY == null && (
                   <path
-                    d={`M 32 0 L 32 ${rope.height}`}
+                    d={`M ${iconX} 0 L ${iconX} ${rope.height}`}
                     stroke="currentColor"
                     strokeWidth="2"
                     strokeDasharray="7 6"
@@ -159,9 +166,9 @@ export default function PlatformPairField({
                 )}
 
                 {/* source -> icon */}
-                {rope.sourceY != null && iconY != null && (
+                {rope.sourceY != null && iconY != null && iconLeft != null && (
                   <path
-                    d={`M 0 ${rope.sourceY} C 16 ${rope.sourceY}, 16 ${iconY}, 32 ${iconY}`}
+                    d={`M 0 ${rope.sourceY} C ${iconLeft / 2} ${rope.sourceY}, ${iconLeft / 2} ${iconY}, ${iconLeft} ${iconY}`}
                     stroke="currentColor"
                     strokeWidth="2"
                     strokeDasharray="7 6"
@@ -171,9 +178,9 @@ export default function PlatformPairField({
                 )}
 
                 {/* icon -> destination */}
-                {rope.destY != null && iconY != null && (
+                {rope.destY != null && iconY != null && iconRight != null && (
                   <path
-                    d={`M 32 ${iconY} C 48 ${iconY}, 48 ${rope.destY}, 64 ${rope.destY}`}
+                    d={`M ${iconRight} ${iconY} C ${iconRight + (rope.width - iconRight) / 2} ${iconY}, ${iconRight + (rope.width - iconRight) / 2} ${rope.destY}, ${rope.width} ${rope.destY}`}
                     stroke="currentColor"
                     strokeWidth="2"
                     strokeDasharray="7 6"
@@ -197,12 +204,14 @@ export default function PlatformPairField({
       </div>
 
       <PlatformSelector
+        className="col-start-5"
         label="Destination Platform"
         description="Where records will be synced to."
         value={destValue}
         platforms={destPlatforms}
         disabled={disabled || destDisabled}
         centerItems={destPlatformsOverride != null}
+        cardClassName="min-w-0 w-full"
         onChange={onDestChange}
         registerItemRef={(platformId, el) => {
           destRefs.current[platformId] = el;
@@ -210,7 +219,7 @@ export default function PlatformPairField({
       />
 
       {(sourceError || destError) && (
-        <div className="col-span-3 mt-4 space-y-2">
+        <div className="col-span-5 mt-4 space-y-2">
           {sourceError && (
             <p className="text-destructive text-sm">{sourceError}</p>
           )}

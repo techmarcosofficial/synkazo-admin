@@ -1,12 +1,13 @@
 // features/projects/components/CreateProjectDialog.tsx
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import type { CreateProjectFormRef } from '../../types';
+import type { CreateProjectFormRef, CreateProjectSelection } from '../../types';
 
 import { CreateProjectForm } from '.';
 
+import { PlatformPair } from '@/components/platform';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -25,6 +26,10 @@ export default function CreateProjectDialog() {
   const navigate = useNavigate();
 
   const formRef = useRef<CreateProjectFormRef>(null);
+  const [selection, setSelection] = useState<CreateProjectSelection>({
+    sourcePlatformId: '',
+    syncMode: '',
+  });
 
   const isOpen = useCreateProjectStore((state) => state.isOpen);
   const close = useCreateProjectStore((state) => state.close);
@@ -48,6 +53,7 @@ export default function CreateProjectDialog() {
         <div className="flex-1 overflow-y-auto px-6 py-5">
           <CreateProjectForm
             ref={formRef}
+            onSelectionChange={setSelection}
             onSuccess={(project) => {
               close();
 
@@ -57,14 +63,31 @@ export default function CreateProjectDialog() {
           />
         </div>
 
-        <DialogFooter className="bg-muted/40 shrink-0 flex-row items-center justify-end gap-2 border-t p-4">
-          <Button variant="outline" onClick={() => setOpen(false)}>
-            Cancel
-          </Button>
+        <DialogFooter className="bg-muted/40 shrink-0 flex-row items-center justify-between gap-2 border-t p-4">
+          {selection.sourcePlatformId && selection.syncMode && (
+            <div className="bg-background flex items-center gap-2 rounded-xl border px-3 py-2">
+              <PlatformPair
+                sourcePlatformId={selection.sourcePlatformId}
+                destPlatformId="hubspot"
+                variant="icon-text"
+                size="sm"
+                direction={selection.syncMode}
+              />
+              <span className="text-muted-foreground text-xs">
+                · {selection.syncMode === 'two_way' ? 'Two Way' : 'One Way'}
+              </span>
+            </div>
+          )}
 
-          <Button onClick={() => formRef.current?.submit()}>
-            Create Project
-          </Button>
+          <div className="ml-auto flex items-center gap-2">
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+
+            <Button onClick={() => formRef.current?.submit()}>
+              Create Project
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

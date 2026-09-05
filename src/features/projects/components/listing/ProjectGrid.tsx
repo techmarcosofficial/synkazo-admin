@@ -4,17 +4,13 @@ import type { ProjectExtended } from '@/features/projects/types';
 interface ProjectGridProps {
   projects: ProjectExtended[];
   jobCountsByProject: Record<string, number>;
-  onDuplicate?: (project: ProjectExtended) => void;
-  onDelete?: (project: ProjectExtended) => void;
-  onTogglePause?: (project: ProjectExtended) => void;
+  organisationNamesById?: Map<string, string>;
 }
 
 export default function ProjectGrid({
   projects,
   jobCountsByProject,
-  onDuplicate,
-  onDelete,
-  onTogglePause,
+  organisationNamesById,
 }: ProjectGridProps) {
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -23,9 +19,7 @@ export default function ProjectGrid({
           key={project.id}
           project={project}
           jobCount={jobCountsByProject[project.id] ?? 0}
-          onDuplicate={onDuplicate}
-          onDelete={onDelete}
-          onTogglePause={onTogglePause}
+          organisationName={organisationNamesById?.get(project.organisationId)}
         />
       ))}
     </div>

@@ -1,71 +1,18 @@
 import { formatDistanceToNow } from 'date-fns';
-import {
-  Clock,
-  Wand2,
-  ArrowRight,
-  ArrowLeftRight,
-  MoreVertical,
-  Copy,
-  Trash2,
-  Pause,
-  Play,
-  ExternalLink,
-} from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { ArrowRight, Clock } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
-import type { ProjectExtended } from '../../types';
+import ProjectPlatformPair from './ProjectPlatformPair';
 
-import { PlatformIcon } from '@/components/platform';
-import StatusBadge, {
-  statusBadge,
-  statusDot,
-  type Tone,
-} from '@/components/shared/StatusBadge';
+import StatusBadge from '@/components/shared/StatusBadge';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { useSetupWizardStore } from '@/features/projects/store';
-import { cn } from '@/lib/utils';
+import type { ProjectExtended } from '@/features/projects/types';
 
 interface ProjectCardProps {
   project: ProjectExtended;
   jobCount: number;
-  onDuplicate?: (project: ProjectExtended) => void;
-  onDelete?: (project: ProjectExtended) => void;
-  onTogglePause?: (project: ProjectExtended) => void;
-}
-
-// NOTE: assumption — your real environment values may differ from this set
-// (I've seen both "production"/"sandbox" and "staging"/"development"/"qa"
-// across your data). Unrecognized values fall back to a neutral gray pill
-// rather than guessing a color.
-const ENV_TONES: Record<string, Tone> = {
-  production: 'success',
-  sandbox: 'warning',
-};
-
-function EnvBadge({ environment }: { environment?: string }) {
-  if (!environment) return null;
-
-  const tone = ENV_TONES[environment.toLowerCase()] ?? 'muted';
-  return (
-    <Badge
-      className={cn(
-        'rounded-full font-semibold capitalize',
-        statusBadge({ tone, size: 'default' }),
-      )}
-    >
-      <span className={statusDot({ tone, size: 'default' })} />
-      {environment}
-    </Badge>
-  );
+  organisationName?: string;
 }
 
 function relativeTime(date: string | Date) {
@@ -75,185 +22,80 @@ function relativeTime(date: string | Date) {
   );
 }
 
-function formatCompact(n: number) {
-  return new Intl.NumberFormat('en', { notation: 'compact' }).format(n);
+function formatCompact(value: number) {
+  return new Intl.NumberFormat('en', { notation: 'compact' }).format(value);
 }
 
 export default function ProjectCard({
   project,
   jobCount,
-  onDuplicate,
-  onDelete,
-  onTogglePause,
+  organisationName,
 }: ProjectCardProps) {
-  const navigate = useNavigate();
-  const openSetupWizard = useSetupWizardStore((s) => s.open);
-
-  const setupComplete = !!project.setupCompletedAt;
-  const isConnected = project.status !== 'draft' || setupComplete;
-
-  const hasSynced =
-    setupComplete &&
-    (!!project.lastSyncedAt || (project.totalRecordsSynced ?? 0) > 0);
-
-  // NOTE: assumption — "paused" wasn't in the sample payload; swap for your
-  // real status string once you confirm it.
-  const isPaused = project.status === 'paused';
-
-  // NOTE: assumption — same draft/further-along split as before. Tighten if
-  // you have a more granular status enum.
-  const setupCta =
-    project.status === 'draft' ? 'Continue setup' : 'Finish setup';
-
+  const activityLabel = project.lastSyncedAt
+    ? `Synced ${relativeTime(project.lastSyncedAt)}`
+    : project.updatedAt
+      ? `Updated ${relativeTime(project.updatedAt)}`
+      : 'Not synced yet';
   return (
-    <Card>
-      <CardContent className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <PlatformIcon
-              variant="avatar"
-              size={'2xl'}
-              platformId={project.sourcePlatformId ?? ''}
-            />
-            <ArrowLeftRight className="text-muted-foreground/60 size-4" />
-            <PlatformIcon
-              variant="avatar"
-              size={'2xl'}
-              platformId={project.destPlatformId}
-            />
-          </div>
-
-          <div className="flex items-center gap-1">
-            <StatusBadge status={project.status} size="sm" />
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="-mr-2 size-8">
-                  <MoreVertical className="size-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={() => navigate(`/projects/${project.id}`)}
-                >
-                  <ExternalLink className="size-4" /> View Project
-                </DropdownMenuItem>
-
-                {!setupComplete && (
-                  <DropdownMenuItem onClick={() => openSetupWizard(project.id)}>
-                    <Wand2 className="size-4" /> {setupCta}
-                  </DropdownMenuItem>
-                )}
-
-                {onDuplicate && (
-                  <DropdownMenuItem onClick={() => onDuplicate(project)}>
-                    <Copy className="size-4" /> Duplicate
-                  </DropdownMenuItem>
-                )}
-
-                {onTogglePause && setupComplete && (
-                  <DropdownMenuItem onClick={() => onTogglePause(project)}>
-                    {isPaused ? (
-                      <>
-                        <Play className="size-4" /> Resume Sync
-                      </>
-                    ) : (
-                      <>
-                        <Pause className="size-4" /> Pause Sync
-                      </>
-                    )}
-                  </DropdownMenuItem>
-                )}
-
-                {onDelete && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() => onDelete(project)}
-                      className="text-destructive focus:text-destructive"
-                    >
-                      <Trash2 className="size-4" /> Delete
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+    <Card
+      size="sm"
+      className="hover:shadow-primary/5 h-full transition-all duration-200 ease-out focus-within:-translate-y-1 focus-within:shadow-md hover:-translate-y-1 hover:shadow-md"
+    >
+      <CardContent className="flex flex-1 flex-col gap-5">
+        <div className="flex items-start justify-between gap-3">
+          <ProjectPlatformPair
+            sourcePlatformId={project.sourcePlatformId}
+            destPlatformId={project.destPlatformId}
+            syncMode={project.syncMode}
+            size="2xl"
+          />
+          <StatusBadge status={project.status} size="sm" />
         </div>
 
         <div className="space-y-1">
           <Link
             to={`/projects/${project.id}`}
-            className="block truncate text-base font-bold hover:underline"
+            className="hover:text-primary focus-visible:ring-ring block truncate rounded-sm text-base font-semibold transition-colors outline-none focus-visible:ring-2"
           >
             {project.name}
           </Link>
-
-          {/* Only show the environment once it's actually been activated — a fresh
-              project defaults to "production" in the DB before any setup happens. */}
-          <EnvBadge
-            environment={
-              project.environmentActivatedAt
-                ? project.activeEnvironment
-                : undefined
-            }
-          />
+          {project.description && (
+            <p className="text-muted-foreground line-clamp-2 text-xs">
+              {project.description}
+            </p>
+          )}
+          {organisationName && (
+            <Badge variant="secondary" className="mt-1">
+              {organisationName}
+            </Badge>
+          )}
         </div>
-        <div className="border-t"></div>
-      </CardContent>
-      <CardFooter>
-        {hasSynced ? (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-6">
-              <div>
-                <div className="text-xl leading-none font-bold">
-                  {formatCompact(project.totalRecordsSynced ?? 0)}
-                </div>
-                <div className="text-muted-foreground mt-1 text-xs">
-                  Records
-                </div>
-              </div>
-              <div>
-                <div className="text-xl leading-none font-bold">{jobCount}</div>
-                <div className="text-muted-foreground mt-1 text-xs">
-                  Sync Jobs
-                </div>
-              </div>
-            </div>
-
-            {project.lastSyncedAt && (
-              <div className="text-muted-foreground flex items-center gap-1 text-sm">
-                <Clock className="h-3 w-3" />
-                Synced {relativeTime(project.lastSyncedAt)}
-              </div>
-            )}
+        <dl className="bg-muted/50 mt-auto grid grid-cols-2 gap-3 rounded-3xl p-3">
+          <div>
+            <dt className="text-muted-foreground text-xs">Records synced</dt>
+            <dd className="mt-1 text-lg font-semibold">
+              {formatCompact(project.totalRecordsSynced ?? 0)}
+            </dd>
           </div>
-        ) : (
-          <>
-            <div className="text-muted-foreground flex w-full flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs">
-              <span className="flex items-center gap-1 font-medium">
-                <Clock className="h-3 w-3" />
-                Updated{' '}
-                {project.updatedAt ? relativeTime(project.updatedAt) : '—'}
-              </span>
-              {setupComplete ? (
-                <Link
-                  to={`/projects/${project.id}`}
-                  className="text-primary flex items-center gap-1 text-sm font-medium hover:underline"
-                >
-                  View project <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
-              ) : (
-                <button
-                  onClick={() => openSetupWizard(project.id)}
-                  className="text-primary flex items-center gap-1 text-sm font-medium hover:underline"
-                >
-                  {setupCta} <ArrowRight className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-          </>
-        )}
+          <div>
+            <dt className="text-muted-foreground text-xs">Sync jobs</dt>
+            <dd className="mt-1 text-lg font-semibold">{jobCount}</dd>
+          </div>
+        </dl>
+      </CardContent>
+
+      <CardFooter className="justify-between gap-3">
+        <span className="text-muted-foreground flex min-w-0 items-center gap-1 text-xs">
+          <Clock className="size-3 shrink-0" aria-hidden="true" />
+          <span className="truncate">{activityLabel}</span>
+        </span>
+        <Link
+          to={`/projects/${project.id}`}
+          className="text-primary focus-visible:ring-ring inline-flex shrink-0 items-center gap-1 rounded-sm text-sm font-medium outline-none hover:underline focus-visible:ring-2"
+        >
+          View project
+          <ArrowRight className="size-3.5" aria-hidden="true" />
+        </Link>
       </CardFooter>
     </Card>
   );

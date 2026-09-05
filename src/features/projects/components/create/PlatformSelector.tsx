@@ -1,8 +1,15 @@
 // features/projects/components/PlatformSelector.tsx
 
+import { CircleHelp } from 'lucide-react';
+
 import { PlatformIcon } from '@/components/platform';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { PlatformId } from '@/types/connection';
 
@@ -12,6 +19,8 @@ export interface PlatformListItem {
 }
 
 interface PlatformSelectorProps {
+  className?: string;
+
   label: string;
   description?: string;
 
@@ -29,6 +38,8 @@ interface PlatformSelectorProps {
   // a single card doesn't look stranded against a taller sibling column.
   centerItems?: boolean;
 
+  cardClassName?: string;
+
   registerItemRef?: (
     platformId: PlatformId,
     element: HTMLDivElement | null,
@@ -36,6 +47,7 @@ interface PlatformSelectorProps {
 }
 
 export default function PlatformSelector({
+  className,
   label,
   description,
   value,
@@ -43,19 +55,37 @@ export default function PlatformSelector({
   platforms,
   disabled = false,
   centerItems = false,
+  cardClassName,
   registerItemRef,
 }: PlatformSelectorProps) {
   const groupPrefix = label.replace(/\s+/g, '-').toLowerCase();
 
   return (
-    <div className={cn('space-y-3', centerItems && 'flex h-full flex-col')}>
-      <div>
+    <div
+      className={cn(
+        'space-y-2',
+        centerItems && 'flex h-full flex-col',
+        className,
+      )}
+    >
+      <div className="flex items-center gap-1.5">
         <Label className="font-semibold" required>
           {label}
         </Label>
 
         {description && (
-          <p className="text-muted-foreground text-xs">{description}</p>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                className="text-muted-foreground hover:text-foreground rounded-full"
+                aria-label={`About ${label}`}
+              >
+                <CircleHelp className="size-3.5" aria-hidden="true" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{description}</TooltipContent>
+          </Tooltip>
         )}
       </div>
 
@@ -69,7 +99,7 @@ export default function PlatformSelector({
           onChange(v as PlatformId);
         }}
         className={cn(
-          'flex flex-col gap-2',
+          'flex w-full gap-2',
           centerItems && 'flex-1 justify-center',
         )}
         disabled={disabled}
@@ -94,19 +124,17 @@ export default function PlatformSelector({
                 if (!disabled) onChange(platform.platformId);
               }}
               className={cn(
-                'flex cursor-pointer items-center gap-3 rounded-xl border p-4 transition-all',
+                'border-muted-foreground/40 relative flex h-24 w-full min-w-30 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-3 text-center transition-all',
                 selected
-                  ? 'border-primary bg-primary/5 ring-primary/10 ring-2'
+                  ? 'border-primary bg-primary/5 ring-primary/10 border-solid ring-2'
                   : 'hover:border-primary/40 hover:bg-muted/40',
                 disabled && 'cursor-not-allowed opacity-60',
+                cardClassName,
               )}
             >
               <PlatformIcon platformId={platform.platformId} size={32} />
 
-              <Label
-                htmlFor={inputId}
-                className="flex-1 cursor-pointer font-medium"
-              >
+              <Label htmlFor={inputId} className="cursor-pointer font-medium">
                 {platform.label}
               </Label>
 
@@ -116,7 +144,7 @@ export default function PlatformSelector({
               <RadioGroupItem
                 value={platform.platformId}
                 id={inputId}
-                className="pointer-events-none"
+                className="pointer-events-none absolute top-3 right-3"
               />
             </div>
           );
