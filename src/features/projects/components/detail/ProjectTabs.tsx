@@ -14,22 +14,16 @@ export default function ProjectTabs({
   tabs: ProjectDetailTabView[];
 }) {
   return (
-    <TabsList variant={'line'}>
+    <TabsList variant="line" className="h-10 min-w-max p-0 overflow-hidden">
       {tabs.map((tab) => {
         const trigger = (
           <TabsTrigger
-            className="after:bg-primary"
             value={tab.id}
             disabled={tab.locked}
+            className="after:bg-primary px-3 py-2 font-semibold after:bottom-0! after:h-0.75! disabled:opacity-70"
           >
             {tab.label}
-            {tab.locked ? (
-              <Lock />
-            ) : tab.badge != null ? (
-              <span className="bg-muted text-muted-foreground flex h-4.5 w-4.5 items-center justify-center rounded-full text-xs font-semibold">
-                {tab.badge}
-              </span>
-            ) : null}
+            {tab.locked && <Lock />}
           </TabsTrigger>
         );
 

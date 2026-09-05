@@ -53,7 +53,6 @@ export default function JobDetailPage() {
 
   const { activeTab, tabs, handleTabChange } = useJobDetailTabs({
     pipelineRequired,
-    runLogCount: runLogs.length,
     isTwoWay: job?.syncDirection === 'two_way',
   });
 

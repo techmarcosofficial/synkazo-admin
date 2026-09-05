@@ -10,7 +10,6 @@ import {
 export interface JobDetailTabView {
   id: JobDetailTabId;
   label: string;
-  badge: number | null;
 }
 
 // Tab is the URL's source of truth (`?tab=...`) so it's bookmarkable/shareable
@@ -31,7 +30,6 @@ export function useJobDetailTabs(ctx: JobDetailTabContext) {
   const tabs: JobDetailTabView[] = visibleDefs.map((tab) => ({
     id: tab.id,
     label: tab.label,
-    badge: tab.badge ? tab.badge(ctx) : null,
   }));
 
   const handleTabChange = (

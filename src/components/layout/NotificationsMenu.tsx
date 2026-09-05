@@ -336,37 +336,11 @@ export default function NotificationsMenu() {
               )}
             </div>
           </SheetHeader>
-          <TabsList variant="line" className="grid w-full grid-cols-4 border-b">
-            <TabsTrigger
-              value="all"
-              className="data-active:text-primary after:bg-primary"
-            >
-              All{' '}
-              <span className="text-muted-foreground/70">
-                {notifications.length}
-              </span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="unread"
-              className="data-active:text-primary after:bg-primary"
-            >
-              Unread{' '}
-              <span className="text-muted-foreground/70">{unread.length}</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="sync"
-              className="data-active:text-primary after:bg-primary"
-            >
-              Sync{' '}
-              <span className="text-muted-foreground/70">{sync.length}</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="system"
-              className="data-active:text-primary after:bg-primary"
-            >
-              System{' '}
-              <span className="text-muted-foreground/70">{system.length}</span>
-            </TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="unread">Unread</TabsTrigger>
+            <TabsTrigger value="sync">Sync</TabsTrigger>
+            <TabsTrigger value="system">System</TabsTrigger>
           </TabsList>
 
           <ScrollArea className="min-h-0 flex-1">

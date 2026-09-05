@@ -219,18 +219,10 @@ export default function SettingsPage() {
       />
 
       <Tabs value={section} onValueChange={handleSectionChange}>
-        <TabsList variant="line">
-          <TabsTrigger className="after:bg-primary" value="settings">
-            Settings
-          </TabsTrigger>
-          <TabsTrigger className="after:bg-primary" value="profile">
-            Profile
-          </TabsTrigger>
-          {canBilling && (
-            <TabsTrigger className="after:bg-primary" value="billing">
-              Billing
-            </TabsTrigger>
-          )}
+        <TabsList>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
+          <TabsTrigger value="profile">Profile</TabsTrigger>
+          {canBilling && <TabsTrigger value="billing">Billing</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="settings" className="pt-4">

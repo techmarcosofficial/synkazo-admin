@@ -10,7 +10,6 @@ export type JobDetailTabId =
 
 export interface JobDetailTabContext {
   pipelineRequired: boolean;
-  runLogCount: number;
   isTwoWay: boolean;
 }
 
@@ -19,7 +18,6 @@ export interface JobDetailTabDef {
   label: string;
   /** Omitted entirely when false — unlike Projects' tabs, Job tabs are never shown-but-locked. */
   visible?: (ctx: JobDetailTabContext) => boolean;
-  badge?: (ctx: JobDetailTabContext) => number | null;
 }
 
 export const DEFAULT_TAB_ID: JobDetailTabId = 'overview';
@@ -33,11 +31,7 @@ export const TAB_DEFS: JobDetailTabDef[] = [
     visible: ({ pipelineRequired }) => pipelineRequired,
   },
   { id: 'schedule', label: 'Schedule' },
-  {
-    id: 'run-history',
-    label: 'Run History',
-    badge: ({ runLogCount }) => runLogCount || null,
-  },
+  { id: 'run-history', label: 'Run History' },
   { id: 'conflicts', label: 'Conflicts', visible: ({ isTwoWay }) => isTwoWay },
   {
     id: 'webhook-events',

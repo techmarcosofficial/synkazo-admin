@@ -5,14 +5,12 @@ import { Link } from 'react-router-dom';
 import ProjectPlatformPair from './ProjectPlatformPair';
 
 import StatusBadge from '@/components/shared/StatusBadge';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import type { ProjectExtended } from '@/features/projects/types';
 
 interface ProjectCardProps {
   project: ProjectExtended;
   jobCount: number;
-  organisationName?: string;
 }
 
 function relativeTime(date: string | Date) {
@@ -26,11 +24,7 @@ function formatCompact(value: number) {
   return new Intl.NumberFormat('en', { notation: 'compact' }).format(value);
 }
 
-export default function ProjectCard({
-  project,
-  jobCount,
-  organisationName,
-}: ProjectCardProps) {
+export default function ProjectCard({ project, jobCount }: ProjectCardProps) {
   const activityLabel = project.lastSyncedAt
     ? `Synced ${relativeTime(project.lastSyncedAt)}`
     : project.updatedAt
@@ -63,11 +57,6 @@ export default function ProjectCard({
             <p className="text-muted-foreground line-clamp-2 text-xs">
               {project.description}
             </p>
-          )}
-          {organisationName && (
-            <Badge variant="secondary" className="mt-1">
-              {organisationName}
-            </Badge>
           )}
         </div>
         <dl className="bg-muted/50 mt-auto grid grid-cols-2 gap-3 rounded-3xl p-3">

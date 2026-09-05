@@ -11,7 +11,7 @@ import ConnectionListView from '@/components/connections/ConnectionListView';
 import ConnectMethodModal from '@/components/connections/ConnectMethodModal';
 import CredentialsModal from '@/components/connections/CredentialsModal';
 import { useConnectionsManager } from '@/components/connections/useConnectionsManager';
-import { Badge } from '@/components/ui/badge';
+import StatusBadge from '@/components/shared/StatusBadge';
 import {
   Card,
   CardAction,
@@ -108,15 +108,10 @@ export default function ConnectionBoard({
               <CardTitle>Connections</CardTitle>
               {/* Env badge */}
               {activeEnv && (
-                <Badge className="bg-muted text-muted-foreground">
-                  <span
-                    className={cn(
-                      'size-2 rounded-full bg-current',
-                      activeEnv === 'sandbox' ? 'bg-warning' : 'bg-success',
-                    )}
-                  />
-                  {activeEnv}
-                </Badge>
+                <StatusBadge
+                  status={activeEnv === 'production' ? 'production' : 'sandbox'}
+                  size="sm"
+                />
               )}
             </div>
             <CardDescription>

@@ -25,11 +25,7 @@ describe('ProjectCard', () => {
   it('shows project context without linking to the setup wizard', () => {
     render(
       <MemoryRouter>
-        <ProjectCard
-          project={draftProject}
-          jobCount={3}
-          organisationName="Acme Services"
-        />
+        <ProjectCard project={draftProject} jobCount={3} />
       </MemoryRouter>,
     );
 
@@ -38,7 +34,6 @@ describe('ProjectCard', () => {
     expect(
       screen.getByRole('img', { name: /two-way sync/i }),
     ).toBeInTheDocument();
-    expect(screen.getByText('Acme Services')).toBeInTheDocument();
     expect(screen.getByText('1.2K')).toBeInTheDocument();
 
     const projectLinks = screen.getAllByRole('link');

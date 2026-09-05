@@ -58,10 +58,6 @@ export default function ProjectDetailPage() {
     loading,
     hasBothConnections,
     hasJobs,
-    jobs,
-    connections,
-    associationRules,
-    logs,
   });
 
   const envActivation = useProjectEnvironmentActivation({
@@ -160,9 +156,14 @@ export default function ProjectDetailPage() {
         onValueChange={(v) => handleTabChange(v as ProjectDetailTabId)}
         className="gap-6"
       >
-        <div className="bg-background sticky top-8 z-20 space-y-6 border-b">
-          <ProjectHeader />
-          <ProjectTabs tabs={tabs} />
+        <div className="space-y-3">
+          <BackLink label="Back to Projects" to="/projects" />
+          <Card className="gap-0 overflow-hidden py-0 space-y-3">
+            <ProjectHeader />
+            <div className="overflow-x-auto px-5">
+              <ProjectTabs tabs={tabs} />
+            </div>
+          </Card>
         </div>
 
         <SetupBanner

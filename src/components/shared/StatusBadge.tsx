@@ -1,4 +1,5 @@
 import { cva, type VariantProps } from 'class-variance-authority';
+import { ArrowLeftRight, ArrowRight, type LucideIcon } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -73,6 +74,7 @@ const STATUS_CONFIG: Record<
     tone: Tone;
     label: string;
     description?: string;
+    icon?: LucideIcon;
   }
 > = {
   active: {
@@ -103,6 +105,10 @@ const STATUS_CONFIG: Record<
 
   pending: { tone: 'warning', label: 'Pending' },
   partial: { tone: 'warning', label: 'Partial' },
+  sandbox: { tone: 'warning', label: 'Sandbox' },
+  production: { tone: 'success', label: 'Production' },
+  one_way: { tone: 'muted', label: 'One-way', icon: ArrowRight },
+  two_way: { tone: 'muted', label: 'Two-way', icon: ArrowLeftRight },
 
   failed: { tone: 'danger', label: 'Failed' },
   disconnected: { tone: 'danger', label: 'Disconnected' },
@@ -155,17 +161,22 @@ export default function StatusBadge({
     tone: 'muted' as Tone,
     label: status,
   };
+  const Icon = cfg.icon;
 
   if (variant === 'menu') {
     return (
       <div className="flex flex-col">
         <div className="flex items-center gap-2 font-medium">
-          <span
-            className={statusDot({
-              tone: cfg.tone,
-              size: 'md',
-            })}
-          />
+          {Icon ? (
+            <Icon className="size-3.5" aria-hidden="true" />
+          ) : (
+            <span
+              className={statusDot({
+                tone: cfg.tone,
+                size: 'md',
+              })}
+            />
+          )}
           {cfg.label}
         </div>
 
@@ -189,12 +200,16 @@ export default function StatusBadge({
         }),
       )}
     >
-      <span
-        className={statusDot({
-          tone: cfg.tone,
-          size,
-        })}
-      />
+      {Icon ? (
+        <Icon aria-hidden="true" />
+      ) : (
+        <span
+          className={statusDot({
+            tone: cfg.tone,
+            size,
+          })}
+        />
+      )}
       {cfg.label}
     </Badge>
   );

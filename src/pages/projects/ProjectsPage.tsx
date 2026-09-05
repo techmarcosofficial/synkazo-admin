@@ -11,7 +11,6 @@ import SkeletonCardGrid from '@/components/shared/skeletons/SkeletonCardGrid';
 import SkeletonTable from '@/components/shared/skeletons/SkeletonTable';
 import SortableTableHead from '@/components/shared/SortableTableHead';
 import StatusBadge from '@/components/shared/StatusBadge';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Select,
@@ -47,23 +46,15 @@ import { useSort, type SortDirection } from '@/hooks/useSort';
 import { useViewMode } from '@/hooks/useViewMode';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { useJobsQuery } from '@/queries/useJobs';
-import { useOrgsQuery } from '@/queries/useOrganisations';
 import { useProjectsQuery } from '@/queries/useProjects';
 import { useHeaderStore } from '@/stores/useHeaderStore';
 
 type ProjectWithMeta = ProjectExtended & {
   jobCount: number;
-  organisationName?: string;
 };
 
 type SortKey =
-  | 'name'
-  | 'organisation'
-  | 'records'
-  | 'rules'
-  | 'lastSynced'
-  | 'status'
-  | 'updatedAt';
+  'name' | 'records' | 'rules' | 'lastSynced' | 'status' | 'updatedAt';
 
 interface CardSortOption {
   value: string;
@@ -100,12 +91,6 @@ const CARD_SORT_OPTIONS: CardSortOption[] = [
     direction: 'desc',
   },
   { value: 'status-asc', label: 'Status', key: 'status', direction: 'asc' },
-  {
-    value: 'organisation-asc',
-    label: 'Organisation: A–Z',
-    key: 'organisation',
-    direction: 'asc',
-  },
 ];
 
 function timestamp(value?: string | null) {
@@ -116,8 +101,6 @@ function compareProjects(a: ProjectWithMeta, b: ProjectWithMeta, key: SortKey) {
   switch (key) {
     case 'name':
       return (a.name || '').localeCompare(b.name || '');
-    case 'organisation':
-      return (a.organisationName || '').localeCompare(b.organisationName || '');
     case 'records':
       return (a.totalRecordsSynced ?? 0) - (b.totalRecordsSynced ?? 0);
     case 'rules':
@@ -133,47 +116,19 @@ function compareProjects(a: ProjectWithMeta, b: ProjectWithMeta, key: SortKey) {
 
 export default function ProjectsPage() {
   const navigate = useNavigate();
-  const { currentUser, hasPermission } = useSynkazoAuth();
-  const showOrganisation = currentUser?.role === 'super_admin';
+  const { hasPermission } = useSynkazoAuth();
   const canCreateProject = hasPermission('project.create');
 
   const projectsQuery = useProjectsQuery();
   const jobsQuery = useJobsQuery();
-  const orgsQuery = useOrgsQuery({ enabled: showOrganisation });
 
-  const isLoading =
-    projectsQuery.isLoading ||
-    jobsQuery.isLoading ||
-    (showOrganisation && orgsQuery.isLoading);
-  const isError =
-    projectsQuery.isError ||
-    jobsQuery.isError ||
-    (showOrganisation && orgsQuery.isError);
+  const isLoading = projectsQuery.isLoading || jobsQuery.isLoading;
+  const isError = projectsQuery.isError || jobsQuery.isError;
   const projects = (projectsQuery.data ?? []) as ProjectExtended[];
   const jobs = jobsQuery.data ?? [];
 
-  const organisationNamesById = useMemo(
-    () =>
-      new Map((orgsQuery.data ?? []).map((org) => [org.id, org.name] as const)),
-    [orgsQuery.data],
-  );
-
-  const searchableProjects: Array<
-    ProjectExtended & { organisationName?: string }
-  > = useMemo(
-    () =>
-      projects.map((project) => ({
-        ...project,
-        organisationName: showOrganisation
-          ? organisationNamesById.get(project.organisationId)
-          : undefined,
-      })),
-    [projects, showOrganisation, organisationNamesById],
-  );
-
   const [viewMode, setViewMode] = useViewMode('projects', 'card');
-  const { filters, setFilters, filteredProjects } =
-    useProjectFilters(searchableProjects);
+  const { filters, setFilters, filteredProjects } = useProjectFilters(projects);
   const jobCountsByProject = useMemo(
     () => buildJobCountsByProject(jobs),
     [jobs],
@@ -295,10 +250,7 @@ export default function ProjectsPage() {
                         <SelectValue placeholder="Sort projects" />
                       </SelectTrigger>
                       <SelectContent>
-                        {CARD_SORT_OPTIONS.filter(
-                          (option) =>
-                            showOrganisation || option.key !== 'organisation',
-                        ).map((option) => (
+                        {CARD_SORT_OPTIONS.map((option) => (
                           <SelectItem key={option.value} value={option.value}>
                             {option.label}
                           </SelectItem>
@@ -314,7 +266,7 @@ export default function ProjectsPage() {
           {isLoading ? (
             viewMode === 'table' ? (
               <Card className="overflow-hidden py-0">
-                <SkeletonTable rows={6} columns={showOrganisation ? 7 : 6} />
+                <SkeletonTable rows={6} columns={6} />
               </Card>
             ) : (
               <SkeletonCardGrid count={6} />
@@ -324,7 +276,6 @@ export default function ProjectsPage() {
               onRetry={() => {
                 projectsQuery.refetch();
                 jobsQuery.refetch();
-                if (showOrganisation) orgsQuery.refetch();
               }}
             />
           ) : filteredProjects.length === 0 ? (
@@ -347,15 +298,6 @@ export default function ProjectsPage() {
                     >
                       Project
                     </SortableTableHead>
-                    {showOrganisation && (
-                      <SortableTableHead
-                        active={sortKey === 'organisation'}
-                        direction={direction}
-                        onClick={() => toggleSort('organisation')}
-                      >
-                        Organisation
-                      </SortableTableHead>
-                    )}
                     <SortableTableHead
                       active={sortKey === 'rules'}
                       direction={direction}
@@ -412,13 +354,6 @@ export default function ProjectsPage() {
                           </div>
                         </div>
                       </TableCell>
-                      {showOrganisation && (
-                        <TableCell>
-                          <Badge variant="secondary">
-                            {project.organisationName ?? 'Unknown organisation'}
-                          </Badge>
-                        </TableCell>
-                      )}
                       <TableCell className="text-muted-foreground text-sm">
                         {project.jobCount}
                       </TableCell>
@@ -460,9 +395,6 @@ export default function ProjectsPage() {
         <ProjectGrid
           projects={pageItems}
           jobCountsByProject={jobCountsByProject}
-          organisationNamesById={
-            showOrganisation ? organisationNamesById : undefined
-          }
         />
       )}
 
