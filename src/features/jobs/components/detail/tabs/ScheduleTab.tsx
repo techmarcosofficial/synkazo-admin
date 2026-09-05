@@ -348,15 +348,6 @@ export default function ScheduleTab() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-xl font-bold tracking-tight">
-          Sync &amp; Schedule
-        </h2>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Run this job manually or set up an automatic schedule.
-        </p>
-      </div>
-
       <Card className="gap-0 overflow-hidden py-0">
         <CardContent className="p-0">
           <div className="grid sm:grid-cols-2 xl:grid-cols-4">

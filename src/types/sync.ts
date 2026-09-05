@@ -26,6 +26,9 @@ export interface SyncRun {
   startedAt?: string;
   finishedAt?: string | null;
   durationMs?: number;
+  triggeredBy?: string;
+  executionStatus?:
+    SyncRunStatus | 'queued' | 'limit_reached' | 'time_limit_reached';
   checkpointPage?: number;
   errorMessage?: string | null;
   /** API-returned count fields (backend entity names) */
