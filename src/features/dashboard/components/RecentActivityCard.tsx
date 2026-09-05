@@ -38,58 +38,59 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 const STATUS_CONFIG: Record<
   ActivityStatus,
   {
     label: string;
     icon: typeof CircleCheck;
-    badgeVariant: 'outline' | 'destructive';
-    className?: string;
+    iconClassName: string;
   }
 > = {
   success: {
     label: 'Success',
     icon: CircleCheck,
-    badgeVariant: 'outline',
-    className: 'text-success',
+    iconClassName: 'text-success',
   },
   warning: {
     label: 'Warning',
     icon: TriangleAlert,
-    badgeVariant: 'outline',
-    className: 'text-warning',
+    iconClassName: 'text-warning',
   },
   failed: {
     label: 'Failed',
     icon: CircleX,
-    badgeVariant: 'destructive',
+    iconClassName: 'text-destructive',
   },
   running: {
     label: 'Running',
     icon: LoaderCircle,
-    badgeVariant: 'outline',
-    className: 'text-info',
+    iconClassName: 'text-info',
   },
   stopped: {
     label: 'Stopped',
     icon: PauseCircle,
-    badgeVariant: 'outline',
-    className: 'text-muted-foreground',
+    iconClassName: 'text-paused',
   },
   info: {
     label: 'Activity',
     icon: Info,
-    badgeVariant: 'outline',
-    className: 'text-info',
+    iconClassName: 'text-info',
   },
 };
 
@@ -146,117 +147,159 @@ function ActivityRow({ log }: { log: OrgSyncLog }) {
   const status = getActivityStatus(log);
   const statusConfig = STATUS_CONFIG[status];
   const StatusIcon = statusConfig.icon;
+
   const createdAt = log.createdAt ? new Date(log.createdAt) : null;
   const hasValidDate = createdAt && !Number.isNaN(createdAt.getTime());
+
   const projectName = log.metadata?.projectName;
   const jobName = log.metadata?.jobName;
   const contextName = projectName ?? jobName ?? 'Organization activity';
+
   const sourceObject = log.metadata?.sourceObject;
   const destObject = log.metadata?.destObject;
+
   const fullMessage = log.message?.trim();
   const shortMessage = shortenActivityMessage(fullMessage);
   const showMessage = status !== 'success' && !!shortMessage;
+
+  const recordsFailed = log.metadata?.recordsFailed;
+  const recordsProcessed = log.recordsProcessed;
+
   const runHref =
     log.projectId && log.jobId
       ? `/projects/${log.projectId}/jobs/${log.jobId}?tab=run-history`
       : undefined;
 
-  const rowContent = (
-    <>
-      <Badge
-        variant={statusConfig.badgeVariant}
-        className={statusConfig.className}
-      >
-        <StatusIcon />
-        {statusConfig.label}
-      </Badge>
+  const content = (
+    <div
+      className={cn(
+        'grid w-full min-w-0 items-center gap-x-5 gap-y-3',
+        'md:grid-cols-[110px_minmax(220px,1.6fr)_minmax(180px,1.2fr)_140px_90px_28px]',
+      )}
+    >
+      {/* Status */}
+      <div className="flex items-center">
+        <Badge variant="secondary" className="w-fit gap-1.5 whitespace-nowrap">
+          <StatusIcon className={cn('size-3.5', statusConfig.iconClassName)} />
+          {statusConfig.label}
+        </Badge>
+      </div>
 
-      <div className="min-w-0 flex-1 space-y-2">
-        <div className="flex items-start justify-between gap-3">
-          <p className="font-medium">{getActivityTitle(status)}</p>
-          {hasValidDate && (
-            <time
-              className="text-muted-foreground shrink-0 text-xs"
-              dateTime={createdAt.toISOString()}
-            >
-              {formatDistanceToNow(createdAt, { addSuffix: true })}
-            </time>
+      {/* Activity / Context */}
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium">
+          {getActivityTitle(status)}
+        </p>
+
+        {/* <div className="mt-1 flex min-w-0 items-center gap-1.5 text-xs">
+          <span className="text-foreground truncate">{contextName}</span>
+
+          {projectName && jobName && projectName !== jobName && (
+            <>
+              <span className="text-muted-foreground">·</span>
+              <span className="text-muted-foreground truncate">{jobName}</span>
+            </>
           )}
-        </div>
-
-        <div className="space-y-1.5">
-          <p className="text-muted-foreground text-sm">
-            <span className="text-foreground">{contextName}</span>
-            {projectName && jobName && projectName !== jobName
-              ? ` · ${jobName}`
-              : ''}
-          </p>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {log.metadata?.sourcePlatformId && log.metadata?.destPlatformId && (
-              <PlatformPair
-                sourcePlatformId={log.metadata.sourcePlatformId}
-                destPlatformId={log.metadata.destPlatformId}
-                variant="badge"
-                size="sm"
-              />
-            )}
-            {sourceObject && destObject && (
-              <Badge variant="outline">
-                {titleCase(sourceObject)} → {titleCase(destObject)}
-              </Badge>
-            )}
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          {typeof log.recordsProcessed === 'number' && (
-            <Badge variant="secondary">
-              {log.recordsProcessed.toLocaleString()} synced
-            </Badge>
-          )}
-          {typeof log.metadata?.recordsFailed === 'number' &&
-            log.metadata.recordsFailed > 0 && (
-              <Badge variant="destructive">
-                {log.metadata.recordsFailed.toLocaleString()} failed
-              </Badge>
-            )}
-        </div>
+        </div> */}
 
         {showMessage && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <p className="text-muted-foreground w-fit max-w-full text-sm">
+              <p className="text-muted-foreground mt-1.5 line-clamp-1 max-w-full text-xs">
                 {shortMessage}
               </p>
             </TooltipTrigger>
-            <TooltipContent>{fullMessage}</TooltipContent>
+
+            <TooltipContent className="max-w-sm">{fullMessage}</TooltipContent>
           </Tooltip>
         )}
+      </div>
 
-        {runHref && (
-          <span className="text-primary inline-flex items-center gap-1 text-xs font-medium">
-            View run <ArrowRight className="size-3" />
-          </span>
+      {/* Integration / Mapping */}
+      <div className="min-w-0 space-y-1.5">
+        {log.metadata?.sourcePlatformId && log.metadata?.destPlatformId && (
+          <PlatformPair
+            sourcePlatformId={log.metadata.sourcePlatformId}
+            destPlatformId={log.metadata.destPlatformId}
+            variant="icon-text"
+            size="sm"
+          />
+        )}
+
+        {sourceObject && destObject && (
+          <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
+            <span className="truncate">{titleCase(sourceObject)}</span>
+            <ArrowRight className="size-3 shrink-0" />
+            <span className="truncate">{titleCase(destObject)}</span>
+          </div>
         )}
       </div>
-    </>
+
+      {/* Records */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        {typeof recordsProcessed === 'number' && (
+          <span className="text-xs font-medium">
+            {recordsProcessed.toLocaleString()}
+            <span className="text-muted-foreground ml-1 font-normal">
+              synced
+            </span>
+          </span>
+        )}
+
+        {typeof recordsFailed === 'number' && recordsFailed > 0 && (
+          <Badge variant="destructive" className="h-5 px-1.5 text-[11px]">
+            {recordsFailed.toLocaleString()} failed
+          </Badge>
+        )}
+      </div>
+
+      {/* Time */}
+      <div className="md:text-right">
+        {hasValidDate && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <time
+                className="text-muted-foreground text-xs whitespace-nowrap"
+                dateTime={createdAt.toISOString()}
+              >
+                {formatDistanceToNow(createdAt, { addSuffix: true })}
+              </time>
+            </TooltipTrigger>
+
+            <TooltipContent>{createdAt.toLocaleString()}</TooltipContent>
+          </Tooltip>
+        )}
+      </div>
+
+      {/* Action */}
+      <div className="hidden justify-end md:flex">
+        {runHref && (
+          <ArrowRight className="text-muted-foreground group-hover:text-foreground size-4 transition-transform group-hover:translate-x-0.5" />
+        )}
+      </div>
+    </div>
   );
 
   if (runHref) {
     return (
-      <ListRow asChild className="items-start">
+      <ListRow
+        asChild
+        className={cn(
+          'group items-center',
+          'hover:bg-muted/40 transition-colors',
+        )}
+      >
         <Link
           to={runHref}
           aria-label={`${getActivityTitle(status)} for ${contextName}. View run history.`}
         >
-          {rowContent}
+          {content}
         </Link>
       </ListRow>
     );
   }
 
-  return <ListRow className="items-start">{rowContent}</ListRow>;
+  return <ListRow className="items-center">{content}</ListRow>;
 }
 
 export default function RecentActivityCard({
@@ -282,29 +325,27 @@ export default function RecentActivityCard({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <ToggleGroup
-            type="single"
+          <Select
             value={filter}
-            onValueChange={(value) => {
-              if (value) onFilterChange(value as ActivityFilter);
-            }}
-            variant="outline"
-            size="sm"
-            spacing={0}
-            aria-label="Filter recent activity"
+            onValueChange={(value) => onFilterChange(value as ActivityFilter)}
           >
-            {ACTIVITY_FILTERS.map((option) => (
-              <ToggleGroupItem
-                key={option.value}
-                value={option.value}
-                aria-label={`Show ${option.label.toLowerCase()} activity`}
-              >
-                {option.label}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
+            <SelectTrigger
+              size="sm"
+              aria-label="Filter recent activity"
+              className="bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)]"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent align="end">
+              {ACTIVITY_FILTERS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-          <Button asChild variant="ghost" size="sm">
+          <Button asChild variant="secondary" size="sm">
             <Link to="/logs">
               View all <ArrowRight />
             </Link>
@@ -328,13 +369,13 @@ export default function RecentActivityCard({
             </EmptyHeader>
           </Empty>
         ) : (
-          <div className="border rounded-4xl overflow-hidden">
+          <div className="overflow-hidden rounded-4xl border">
             {groupedLogs.map(({ group, logs: groupedActivity }, groupIndex) => (
-              <div key={group} className="space-y-2">
+              <div key={group}>
                 {groupIndex > 0 && <Separator />}
-                <p className="text-muted-foreground text-xs font-medium">
+                {/* <p className="text-muted-foreground text-xs font-medium">
                   {group}
-                </p>
+                </p> */}
                 <div>
                   {groupedActivity.map((log, index) => (
                     <ActivityRow

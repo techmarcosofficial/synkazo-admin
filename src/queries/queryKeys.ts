@@ -29,6 +29,20 @@ export const queryKeys = {
   dashboard: {
     summary: ['dashboard', 'summary'] as const,
     activeSyncs: ['dashboard', 'activeSyncs'] as const,
+    syncMetrics: (
+      period: string,
+      timezone: string,
+      start?: string,
+      end?: string,
+    ) =>
+      [
+        'dashboard',
+        'syncMetrics',
+        period,
+        timezone,
+        start ?? null,
+        end ?? null,
+      ] as const,
   },
   scheduler: {
     health: ['scheduler', 'health'] as const,

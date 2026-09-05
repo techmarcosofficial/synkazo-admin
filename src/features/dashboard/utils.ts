@@ -94,13 +94,21 @@ export function computeDashboardStats({
   projects,
   jobs,
   logs,
+  now = new Date(),
 }: {
   summary: DashboardSummary;
   projects?: Project[];
   jobs: Job[];
   logs: OrgSyncLog[];
+  now?: Date;
 }): DashboardStat[] {
   const enabledJobs = jobs.filter((job) => job.isEnabled === true);
+  const projectTrend = buildRecentCreationTrend(projects, now);
+  const activeJobTrend = buildRecentCreationTrend(enabledJobs, now);
+  const recordsTrend = buildRecentRecordsTrend(logs, now);
+  const projectCreations = sumTrend(projectTrend);
+  const activeJobCreations = sumTrend(activeJobTrend);
+  const syncedRecords = sumTrend(recordsTrend);
 
   return [
     {
@@ -112,9 +120,13 @@ export function computeDashboardStats({
       iconClassName: 'text-primary',
       iconBgClassName: 'bg-primary/10',
       href: '/projects',
-      chartData: buildRecentCreationTrend(projects),
+      chartData: projectTrend,
       chartColor: 'var(--primary)',
-      chartLabel: 'Projects created (last 7 days)',
+      chartLabel: 'Projects created · 7d',
+      chartSummary:
+        projectCreations === undefined
+          ? undefined
+          : `${projectCreations.toLocaleString()} ${projectCreations === 1 ? 'project' : 'projects'} created · 7d`,
     },
     {
       id: 'active-jobs',
@@ -125,9 +137,13 @@ export function computeDashboardStats({
       iconClassName: 'text-primary',
       iconBgClassName: 'bg-primary/10',
       href: '/jobs',
-      chartData: buildRecentCreationTrend(enabledJobs),
+      chartData: activeJobTrend,
       chartColor: 'var(--primary)',
-      chartLabel: 'Active jobs created (last 7 days)',
+      chartLabel: 'Active jobs created · 7d',
+      chartSummary:
+        activeJobCreations === undefined
+          ? undefined
+          : `${activeJobCreations.toLocaleString()} active ${activeJobCreations === 1 ? 'job' : 'jobs'} created · 7d`,
     },
     {
       id: 'records-synced',
@@ -138,9 +154,18 @@ export function computeDashboardStats({
       iconClassName: 'text-primary',
       iconBgClassName: 'bg-primary/10',
       href: '/logs',
-      chartData: buildRecentRecordsTrend(logs),
+      chartData: recordsTrend,
       chartColor: 'var(--primary)',
-      chartLabel: 'Records synced (last 7 days)',
+      chartLabel: 'Records synced · 7d',
+      chartSummary:
+        syncedRecords === undefined
+          ? undefined
+          : `${syncedRecords.toLocaleString()} ${syncedRecords === 1 ? 'record' : 'records'} synced · 7d`,
     },
   ];
+}
+
+function sumTrend(points: DashboardStat['chartData']): number | undefined {
+  if (!points) return undefined;
+  return points.reduce((total, point) => total + point.value, 0);
 }

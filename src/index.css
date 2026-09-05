@@ -118,9 +118,8 @@
   --popover-foreground:
     #14151b;
 
-  /* Primary — buttons/CTAs use rich black in the light theme so they read as
-     confident action rather than brand-orange noise; brand orange still shows
-     up on the mark, sidebar accents, and dark-mode primary. */
+  /* Primary — rich black in light mode; brand orange is reserved for focused
+     accents and the dark-mode primary. */
   --primary:
     #14151b;
   --primary-foreground:
@@ -164,17 +163,17 @@
   --ring:
     rgba(248, 85, 8, 0.35);
 
-  /* Charts */
+  /* Charts — neutral tones derived from the light theme's black primary. */
   --chart-1:
-    oklch(0.811 0.111 293.571);
+    #14151B;
   --chart-2:
-    oklch(0.606 0.25 292.717);
+    #3F4350;
   --chart-3:
-    oklch(0.541 0.281 293.009);
+    #626876;
   --chart-4:
-    oklch(0.491 0.27 292.581);
+    #8F95A3;
   --chart-5:
-    oklch(0.432 0.232 292.759);
+    #B8BDC8;
 
   /* Radius */
   --radius:
@@ -274,16 +273,17 @@
   --ring:
     rgba(248, 85, 8, 0.45);
 
+  /* Brighter orange tones retain separation against dark chart surfaces. */
   --chart-1:
-    oklch(0.811 0.111 293.571);
+    #FF6B24;
   --chart-2:
-    oklch(0.606 0.25 292.717);
+    #FF9A62;
   --chart-3:
-    oklch(0.541 0.281 293.009);
+    #E85D1C;
   --chart-4:
-    oklch(0.491 0.27 292.581);
+    #FFC09F;
   --chart-5:
-    oklch(0.432 0.232 292.759);
+    #C84A16;
 
   --sidebar:
     #14161f;

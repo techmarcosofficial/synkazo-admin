@@ -30,6 +30,7 @@ export interface DashboardStat {
   chartData?: KpiSparklinePoint[];
   chartColor?: string;
   chartLabel?: string;
+  chartSummary?: string;
   /** Where the whole card navigates to when clicked. */
   href?: string;
   /** Compact extra numbers shown under the main value, e.g. success rate + error count. */

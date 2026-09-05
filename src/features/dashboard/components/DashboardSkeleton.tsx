@@ -11,15 +11,19 @@ export default function DashboardSkeleton() {
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {Array.from({ length: 3 }).map((_, index) => (
-          <Card key={index}>
+          <Card key={index} size="sm">
             <CardContent>
-              <Skeleton className="size-9 rounded-lg" />
-              <Skeleton className="mt-4 h-10 w-20" />
-              <div className="mt-2 space-y-1">
-                <Skeleton className="h-5 w-28" />
-                <Skeleton className="h-4 w-20" />
+              <div className="space-y-4">
+                <Skeleton className="size-9 rounded-lg" />
+                <div className="space-y-1">
+                  <Skeleton className="h-10 w-20" />
+                  <Skeleton className="h-5 w-28" />
+                  <Skeleton className="h-4 w-20" />
+                </div>
+                <Skeleton className="h-px w-full" />
+                <Skeleton className="h-[88px] w-full" />
+                <Skeleton className="h-4 w-44 max-w-full" />
               </div>
-              <Skeleton className="mt-2 h-[120px] w-full" />
             </CardContent>
           </Card>
         ))}
@@ -34,20 +38,32 @@ export default function DashboardSkeleton() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-6 lg:grid-cols-2">
-            <Card className="border">
+            <Card size="sm" className="border">
               <CardHeader>
                 <Skeleton className="h-5 w-48" />
+                <Skeleton className="h-4 w-64 max-w-full" />
+                <div className="mt-3 flex items-end justify-between gap-4">
+                  <Skeleton className="h-9 w-24" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
               </CardHeader>
               <CardContent>
-                <Skeleton className="h-[280px] w-full" />
+                <Skeleton className="mb-4 h-4 w-40" />
+                <Skeleton className="h-[260px] w-full" />
               </CardContent>
             </Card>
-            <Card className="border">
+            <Card size="sm" className="border">
               <CardHeader>
                 <Skeleton className="h-5 w-56" />
+                <Skeleton className="h-4 w-64 max-w-full" />
+                <div className="mt-3 flex items-end justify-between gap-4">
+                  <Skeleton className="h-9 w-24" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
               </CardHeader>
               <CardContent>
-                <Skeleton className="h-[280px] w-full" />
+                <Skeleton className="mb-4 h-4 w-56 max-w-full" />
+                <Skeleton className="h-[260px] w-full" />
               </CardContent>
             </Card>
           </div>
