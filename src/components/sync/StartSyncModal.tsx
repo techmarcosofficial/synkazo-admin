@@ -1,166 +1,192 @@
-import { format } from 'date-fns';
-import { RefreshCw } from 'lucide-react';
+import { ChevronDown, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 
 import LimitSyncModal from '@/components/sync/LimitSyncModal';
+import RunConfirmModal from '@/components/sync/RunConfirmModal';
 import SyncAllTab from '@/components/sync/SyncAllTab';
+import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScheduleEnableToggle } from '@/features/jobs/components/schedule';
-import type {
-  ExtJob,
-  ScheduleTogglePayload,
-} from '@/features/jobs/hooks/useJobDetail';
-import { formatSchedule } from '@/features/jobs/utils';
-import { usePriorityQueueQuery } from '@/queries/usePriorityQueue';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import type { ExtJob } from '@/features/jobs/hooks/useJobDetail';
+import { cn } from '@/lib/utils';
 
 interface StartSyncModalProps {
   projectId: string;
   jobId: string;
   job: ExtJob;
   hasBaseline: boolean;
-  scheduleToggling: boolean;
   pipelineRequired?: boolean;
   pipelineConfigured?: boolean;
   onGoToPipeline: () => void;
   onClose: () => void;
+  onRunNow: () => void;
   onLimitSyncDone: () => void;
   onSyncAll: (range: { startDate?: string; endDate?: string }) => void;
-  onScheduleToggle: (payload?: ScheduleTogglePayload) => void;
+  disabled?: boolean;
+  /** Renders the same run workflow directly inside the Sync & Schedule page. */
+  embedded?: boolean;
 }
 
-export default function StartSyncModal({
+function ManualSyncContent({
   projectId,
   jobId,
   job,
   hasBaseline,
-  scheduleToggling,
   pipelineRequired = false,
   pipelineConfigured = true,
   onGoToPipeline,
   onClose,
+  onRunNow,
   onLimitSyncDone,
   onSyncAll,
-  onScheduleToggle,
+  disabled = false,
+  embedded = false,
 }: StartSyncModalProps) {
-  const [tab, setTab] = useState(hasBaseline ? 'schedule' : 'all');
-
-  const priorityQueueQuery = usePriorityQueueQuery(projectId);
-  const priorityModeActive =
-    priorityQueueQuery.data?.schedulerMode === 'priority';
-
-  const schedActive =
-    job.syncEnabled &&
-    (job.scheduleState === 'active' ||
-      job.scheduleState === 'retry_pending' ||
-      job.scheduleState === 'resume_pending');
-  const scheduleStatusLabel =
-    job.scheduleState === 'retry_pending'
-      ? 'Retrying after an interruption'
-      : job.scheduleState === 'resume_pending'
-        ? 'Catching up on missed changes'
-        : 'Active';
+  const [runType, setRunType] = useState<'all' | 'limited'>('all');
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [showIncrementalRun, setShowIncrementalRun] = useState(false);
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent size="lg" className="flex max-h-[85vh] flex-col">
-        <DialogHeader>
-          <DialogTitle>Start Sync</DialogTitle>
-        </DialogHeader>
-
-        <Tabs
-          value={tab}
-          onValueChange={setTab}
-          className="flex flex-1 flex-col overflow-hidden"
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <RadioGroup
+          value={runType}
+          onValueChange={(value) => setRunType(value as 'all' | 'limited')}
+          className="bg-muted/40 flex w-fit gap-1 rounded-xl border p-1"
         >
-          <TabsList>
-            <TabsTrigger value="custom">Custom Sync</TabsTrigger>
-            <TabsTrigger value="all">Sync All</TabsTrigger>
-            <TabsTrigger value="schedule">Schedule Sync</TabsTrigger>
-          </TabsList>
+          <Label
+            htmlFor="manual-run-all"
+            className="text-muted-foreground has-data-checked:bg-background has-data-checked:text-foreground flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium has-data-checked:shadow-sm"
+          >
+            <RadioGroupItem value="all" id="manual-run-all" />
+            All records
+          </Label>
+          <Label
+            htmlFor="manual-run-limited"
+            className="text-muted-foreground has-data-checked:bg-background has-data-checked:text-foreground flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium has-data-checked:shadow-sm"
+          >
+            <RadioGroupItem value="limited" id="manual-run-limited" />
+            Limited run
+          </Label>
+        </RadioGroup>
 
-          <div className="flex-1 space-y-6 overflow-y-auto pt-4">
-            <TabsContent value="custom" className="space-y-6">
-              <LimitSyncModal
-                embedded
-                projectId={projectId}
-                jobId={jobId}
-                job={job}
-                onClose={onClose}
-                onDone={onLimitSyncDone}
-                pipelineRequired={pipelineRequired}
-                pipelineConfigured={pipelineConfigured}
-                onGoToPipeline={onGoToPipeline}
-              />
-            </TabsContent>
+        {runType === 'all' && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground"
+            aria-expanded={advancedOpen}
+            onClick={() => setAdvancedOpen((open) => !open)}
+          >
+            Advanced options
+            <ChevronDown
+              className={cn(
+                'transition-transform',
+                advancedOpen && 'rotate-180',
+              )}
+            />
+          </Button>
+        )}
+      </div>
 
-            <TabsContent value="all" className="space-y-6">
-              <SyncAllTab
-                projectId={projectId}
-                jobId={jobId}
-                job={job}
-                onConfirm={onSyncAll}
-                pipelineRequired={pipelineRequired}
-                pipelineConfigured={pipelineConfigured}
-                onGoToPipeline={onGoToPipeline}
-              />
-            </TabsContent>
+      <div className="min-w-0 border-t pt-4">
+        {runType === 'all' ? (
+          <div className="space-y-4">
+            <SyncAllTab
+              projectId={projectId}
+              jobId={jobId}
+              job={job}
+              onConfirm={onSyncAll}
+              pipelineRequired={pipelineRequired}
+              pipelineConfigured={pipelineConfigured}
+              onGoToPipeline={onGoToPipeline}
+              disabled={disabled}
+            />
 
-            <TabsContent value="schedule" className="space-y-6">
-              <div className="overflow-hidden rounded-xl border">
-                <div className="bg-muted/40 flex items-center justify-between border-b px-4 py-3">
-                  <span className="text-muted-foreground text-xs">
-                    Current Schedule
-                  </span>
-                  <span className="text-sm font-semibold">
-                    Runs {formatSchedule(job)}
-                  </span>
-                </div>
-                <div className="bg-muted/40 flex items-center justify-between px-4 py-3">
-                  <span className="text-muted-foreground text-xs">
-                    Next Run
-                  </span>
-                  <span className="text-sm font-semibold">
-                    {job.nextRunAt
-                      ? format(new Date(job.nextRunAt), 'MMM d, yyyy · h:mm a')
-                      : 'Not yet scheduled'}
-                  </span>
-                </div>
-              </div>
-
-              {schedActive && !priorityModeActive && (
-                <div className="overflow-hidden rounded-xl border">
-                  <div className="bg-muted/40 flex items-center gap-3 px-4 py-3">
-                    <div className="bg-success/10 flex size-8 items-center justify-center rounded-lg">
-                      <RefreshCw className="text-success size-4" />
-                    </div>
-                    <p className="text-sm font-semibold">
-                      Schedule is {scheduleStatusLabel.toLowerCase()}
+            <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+              <CollapsibleContent className="pt-2">
+                <div className="bg-muted/30 flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">
+                      Sync only new or updated records
+                    </p>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      {hasBaseline
+                        ? 'Continue incrementally from the last successful sync.'
+                        : 'A full sync is recommended first to establish a baseline.'}
                     </p>
                   </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={() => setShowIncrementalRun(true)}
+                    disabled={disabled}
+                  >
+                    <RefreshCw /> Run changes only
+                  </Button>
                 </div>
-              )}
-
-              <ScheduleEnableToggle
-                confirmPresentation="inline"
-                projectId={projectId}
-                jobId={jobId}
-                job={job}
-                scheduleToggling={scheduleToggling}
-                pipelineRequired={pipelineRequired}
-                pipelineConfigured={pipelineConfigured}
-                onGoToPipeline={onGoToPipeline}
-                onScheduleToggle={onScheduleToggle}
-                onCancelInline={onClose}
-              />
-            </TabsContent>
+              </CollapsibleContent>
+            </Collapsible>
           </div>
-        </Tabs>
+        ) : (
+          <LimitSyncModal
+            embedded
+            compact
+            projectId={projectId}
+            jobId={jobId}
+            job={job}
+            onClose={embedded ? () => setRunType('all') : onClose}
+            onDone={onLimitSyncDone}
+            pipelineRequired={pipelineRequired}
+            pipelineConfigured={pipelineConfigured}
+            onGoToPipeline={onGoToPipeline}
+            disabled={disabled}
+          />
+        )}
+      </div>
+
+      {showIncrementalRun && (
+        <RunConfirmModal
+          mode="runNow"
+          projectId={projectId}
+          jobId={jobId}
+          job={job}
+          onClose={() => setShowIncrementalRun(false)}
+          onConfirm={() => {
+            setShowIncrementalRun(false);
+            onRunNow();
+          }}
+          pipelineRequired={pipelineRequired}
+          pipelineConfigured={pipelineConfigured}
+          onGoToPipeline={onGoToPipeline}
+        />
+      )}
+    </div>
+  );
+}
+
+export default function StartSyncModal(props: StartSyncModalProps) {
+  if (props.embedded) return <ManualSyncContent {...props} />;
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && props.onClose()}>
+      <DialogContent size="md" className="flex max-h-[85vh] flex-col">
+        <DialogHeader>
+          <DialogTitle>Run manually</DialogTitle>
+        </DialogHeader>
+        <div className="overflow-y-auto">
+          <ManualSyncContent {...props} />
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Field, FieldLabel } from '@/components/ui/field';
 import { RadioGroup } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
+import { cn } from '@/lib/utils';
 import type { Connection } from '@/types';
 
 export interface SyncDirectionFieldsProps {
@@ -44,11 +45,13 @@ export interface SyncDirectionFieldsProps {
    * `readOnly` (that branch already shows locked static text).
    */
   projectSyncMode?: 'one_way' | 'two_way' | null;
+  /** Reduces helper copy and spacing for the standalone create dialog. */
+  compact?: boolean;
 }
 
 const DIRECTION_LABELS: Record<string, string> = {
-  one_way: 'One Way',
-  two_way: 'Two Way',
+  one_way: 'One-way',
+  two_way: 'Two-way',
 };
 const DELETE_LABELS: Record<string, string> = {
   ignore: "Don't propagate",
@@ -97,15 +100,16 @@ export default function SyncDirectionFields({
   fieldMappingLocationLabel = 'the next step',
   readOnly = false,
   projectSyncMode = null,
+  compact = false,
 }: SyncDirectionFieldsProps) {
   const platformLabel = (platformId: string) =>
     availablePlatforms.find((p) => p.platformId === platformId)?.label ??
     platformId;
 
   return (
-    <div className="space-y-6">
+    <div className={cn(compact ? 'space-y-4' : 'space-y-6')}>
       {/* Creation-time warning — these settings lock permanently once the job exists. */}
-      {!readOnly && (
+      {!readOnly && !compact && (
         <Alert>
           <Lock />
           <AlertDescription>
@@ -115,7 +119,7 @@ export default function SyncDirectionFields({
       )}
 
       <Field>
-        <FieldLabel>Job Type</FieldLabel>
+        <FieldLabel>Sync Direction</FieldLabel>
         {readOnly ? (
           <LockedValue>
             {DIRECTION_LABELS[syncDirection] ?? syncDirection}
@@ -140,10 +144,13 @@ export default function SyncDirectionFields({
                 }
               />
             </RadioGroup>
-            <p className="text-muted-foreground text-xs">
-              This project is set to {DIRECTION_LABELS[projectSyncMode]} sync —
-              chosen when the project was created and fixed for every job in it.
-            </p>
+            {!compact && (
+              <p className="text-muted-foreground text-xs">
+                This project is set to {DIRECTION_LABELS[projectSyncMode]} sync
+                — chosen when the project was created and fixed for every job in
+                it.
+              </p>
+            )}
           </>
         ) : (
           <RadioGroup
@@ -154,13 +161,13 @@ export default function SyncDirectionFields({
             <ChoiceCardItem
               value="one_way"
               id="sync-direction-one_way"
-              title="One Way"
+              title="One-way"
               description="Source → Destination"
             />
             <ChoiceCardItem
               value="two_way"
               id="sync-direction-two_way"
-              title="Two Way"
+              title="Two-way"
               description="Bidirectional synchronization"
             />
           </RadioGroup>
@@ -168,17 +175,19 @@ export default function SyncDirectionFields({
       </Field>
 
       {syncDirection === 'two_way' && (
-        <div className="space-y-6">
-          <Alert>
-            <InfoIcon />
-            <AlertDescription>
-              In {fieldMappingLocationLabel}, each field mapping can be set to
-              sync forward only, reverse only, or both ways — new mappings
-              default to both ways. If the same field changes on both platforms
-              before the next sync, the source of truth below wins — the losing
-              value is always logged, never silently dropped.
-            </AlertDescription>
-          </Alert>
+        <div className={cn(compact ? 'space-y-4' : 'space-y-6')}>
+          {!compact && (
+            <Alert>
+              <InfoIcon />
+              <AlertDescription>
+                In {fieldMappingLocationLabel}, each field mapping can be set to
+                sync forward only, reverse only, or both ways — new mappings
+                default to both ways. If the same field changes on both
+                platforms before the next sync, the source of truth below wins —
+                the losing value is always logged, never silently dropped.
+              </AlertDescription>
+            </Alert>
+          )}
 
           <TwoWayAuthNotice
             projectId={projectId}
@@ -192,7 +201,9 @@ export default function SyncDirectionFields({
           />
 
           <Field>
-            <FieldLabel>Source of Truth</FieldLabel>
+            <FieldLabel>
+              {compact ? 'Platform used for conflicts' : 'Source of Truth'}
+            </FieldLabel>
             {readOnly ? (
               <LockedValue>{platformLabel(sourceOfTruth)}</LockedValue>
             ) : (
@@ -214,7 +225,9 @@ export default function SyncDirectionFields({
           </Field>
 
           <Field>
-            <FieldLabel>Deletes</FieldLabel>
+            <FieldLabel>
+              {compact ? 'When a record is deleted' : 'Deletes'}
+            </FieldLabel>
             {readOnly ? (
               <LockedValue>
                 {DELETE_LABELS[deleteHandling] ?? deleteHandling}
@@ -242,29 +255,37 @@ export default function SyncDirectionFields({
                     title="Delete on other side"
                   />
                 </RadioGroup>
-                <p className="text-muted-foreground text-xs">
-                  ServiceTitan has no generic delete API — only a few object
-                  types (e.g. Customers) support an equivalent (marking
-                  inactive). Unsupported objects are skipped regardless of this
-                  setting.
-                </p>
+                {!compact && (
+                  <p className="text-muted-foreground text-xs">
+                    ServiceTitan has no generic delete API — only a few object
+                    types (e.g. Customers) support an equivalent (marking
+                    inactive). Unsupported objects are skipped regardless of
+                    this setting.
+                  </p>
+                )}
               </>
             )}
           </Field>
 
           {/* Operational opt-in — editable even after creation. */}
           <Field>
-            <FieldLabel>Enable HubSpot Webhook</FieldLabel>
-            <div className="bg-card flex items-start justify-between gap-4 rounded-xl border p-4">
+            <FieldLabel>
+              {compact ? 'HubSpot change detection' : 'Enable HubSpot Webhook'}
+            </FieldLabel>
+            <div
+              className={cn(
+                'bg-card flex items-start justify-between gap-4 rounded-xl border',
+                compact ? 'p-3' : 'p-4',
+              )}
+            >
               <div className="space-y-1">
                 <p className="text-sm font-medium">
                   Listen for HubSpot changes
                 </p>
                 <p className="text-muted-foreground text-xs">
-                  On by default for two-way jobs. synkazo subscribes to HubSpot
-                  create/update events and writes those changes back to the
-                  source. Turn it off to keep this job polling-only. Only takes
-                  effect once the job is Active.
+                  {compact
+                    ? 'Receive HubSpot updates automatically when available.'
+                    : 'On by default for two-way jobs. synkazo subscribes to HubSpot create/update events and writes those changes back to the source. Turn it off to keep this job polling-only. Only takes effect once the job is Active.'}
                 </p>
               </div>
               <Switch
@@ -278,7 +299,7 @@ export default function SyncDirectionFields({
       )}
 
       <Field>
-        <FieldLabel>Job Behavior</FieldLabel>
+        <FieldLabel>{compact ? 'Records to sync' : 'Job Behavior'}</FieldLabel>
         {readOnly ? (
           <LockedValue>
             {TRIGGER_LABELS[syncTrigger] ?? syncTrigger}
@@ -293,19 +314,27 @@ export default function SyncDirectionFields({
               value="new"
               id="job-behavior-new"
               title="New Records"
-              description="Only records created after the job starts"
+              description={
+                compact
+                  ? undefined
+                  : 'Only records created after the job starts'
+              }
             />
             <ChoiceCardItem
               value="updated"
               id="job-behavior-updated"
               title="Updated Records"
-              description="Only records changed after the job starts"
+              description={
+                compact
+                  ? undefined
+                  : 'Only records changed after the job starts'
+              }
             />
             <ChoiceCardItem
               value="both"
               id="job-behavior-both"
               title="New & Updated"
-              description="Both new and changed records"
+              description={compact ? undefined : 'Both new and changed records'}
             />
           </RadioGroup>
         )}

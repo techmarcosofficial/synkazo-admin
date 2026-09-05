@@ -1,55 +1,23 @@
-import {
-  ArrowLeftRight,
-  ArrowRight,
-  Play,
-  RefreshCw,
-  RotateCcw,
-  Square,
-  X,
-} from 'lucide-react';
-import { useState } from 'react';
+import { formatDistanceToNow } from 'date-fns';
+import { ArrowLeftRight, ArrowRight } from 'lucide-react';
 
 import { useJobDetailContext } from './context';
 import JobStatusDropdown from './JobStatusDropdown';
 
-import { BackLink } from '@/components/shared/PageHeader';
+import { PlatformIcon } from '@/components/platform';
 import StatusBadge from '@/components/shared/StatusBadge';
-import UpgradeRequiredDialog from '@/components/shared/UpgradeRequiredDialog';
-import StartSyncModal from '@/components/sync/StartSyncModal';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { formatNum, formatSchedule } from '@/features/jobs/utils';
+import { formatEntityLabel } from '@/features/projects/lib/syncJobSummary';
 
 export default function JobHeader() {
   const {
-    projectId,
     job,
     project,
     jobFieldMappings,
     hasConnection,
-    runLogs,
-    pipelineRequired,
-    pipelineConfigured,
     isSyncing,
-    stopping,
     toggling,
-    scheduleToggling,
-    cancellingQueue,
-    retryingQueue,
-    activeRunLog,
-    upgradeDialog,
-    setUpgradeDialog,
     handleToggle,
-    handleStop,
-    handleCancelQueue,
-    handleRetryQueue,
-    handleScheduleToggle,
-    handleSyncAll,
-    beginTracking,
-    handleTabChange,
   } = useJobDetailContext();
-
-  const [showStartSync, setShowStartSync] = useState(false);
 
   const isActive = !!job.isEnabled;
   const hasMatchField = jobFieldMappings.some((m) => m.matchDestKey);
@@ -59,30 +27,49 @@ export default function JobHeader() {
     hasMatchField &&
     hasConnection &&
     isProjectActive;
-  // Whether an incremental sync has anything to filter against yet — an incremental run
-  // before any full sync has completed returns 0 records every time (see item 12), so the
-  // button is disabled and demoted until there's a baseline to sync "since".
-  const hasBaseline = !!job.lastSyncedAt;
   const schedPaused = job.scheduleState === 'paused';
   const schedLimitPaused = job.scheduleState === 'paused_limit_reached';
   const schedRetrying = job.scheduleState === 'retry_pending';
   const twoWay = job.syncDirection === 'two_way';
   const DirectionIcon = twoWay ? ArrowLeftRight : ArrowRight;
-  const scheduleLabel = twoWay ? 'Automatic sync' : formatSchedule(job);
+  const lastSyncedLabel = job.lastSyncedAt
+    ? formatDistanceToNow(new Date(job.lastSyncedAt), {
+        addSuffix: true,
+      }).replace('about ', '')
+    : 'Never synced';
+  const operationalStatus = isSyncing
+    ? 'running'
+    : schedLimitPaused
+      ? 'limit_reached'
+      : schedRetrying
+        ? 'retry_pending'
+        : schedPaused
+          ? 'schedule_paused'
+          : null;
 
   return (
-    <>
-      <BackLink
-        label="Back to Project"
-        to={`/projects/${projectId}`}
-        className="pt-3.5 pb-1.5"
-      />
-
-      <div className="flex flex-wrap items-center justify-between gap-4 pb-3">
-        <div>
-          <div className="mb-1 flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold">{job.name}</h1>
-
+    <div className="flex flex-col gap-5 px-6 py-5 lg:flex-row lg:items-start lg:justify-between">
+      <div className="flex min-w-0 items-center gap-4">
+        <div className="flex shrink-0 items-center gap-2">
+          <PlatformIcon
+            platformId={project?.sourcePlatformId ?? ''}
+            variant="avatar"
+            size="3xl"
+            className="size-12 rounded-2xl"
+          />
+          <DirectionIcon className="text-muted-foreground size-4 shrink-0" />
+          <PlatformIcon
+            platformId={project?.destPlatformId ?? ''}
+            variant="avatar"
+            size="3xl"
+            className="size-12 rounded-2xl"
+          />
+        </div>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1 className="truncate text-2xl font-bold tracking-tight">
+              {job.name}
+            </h1>
             <JobStatusDropdown
               isActive={isActive}
               canActivate={canActivate}
@@ -91,166 +78,34 @@ export default function JobHeader() {
               toggling={toggling}
               onToggle={handleToggle}
             />
-
-            <StatusBadge status={twoWay ? 'two_way' : 'one_way'} size="sm" />
-
-            {isSyncing && (
-              <Badge className="bg-muted text-muted-foreground gap-1.5 rounded-full font-semibold">
-                <RefreshCw className="text-info size-2.5 animate-spin" />
-                {stopping ? 'Stopping…' : 'Syncing…'}
-              </Badge>
-            )}
-            {schedPaused && !isSyncing && (
-              <Badge
-                className="bg-muted text-muted-foreground gap-1.5 rounded-full font-semibold"
-                title="Schedule is paused — automatic runs are disabled. Enable in Settings tab."
-              >
-                <span className="bg-paused size-1.5 rounded-full" />
-                Schedule paused
-              </Badge>
-            )}
-            {schedLimitPaused && !isSyncing && (
-              <Badge
-                className="bg-warning/10 text-warning gap-1.5 rounded-full font-semibold"
-                title="Schedule paused — this month's plan record limit was reached. Upgrade your plan to resume."
-              >
-                <span className="bg-warning size-1.5 rounded-full" />
-                Plan limit reached
-              </Badge>
-            )}
-            {schedRetrying && !isSyncing && (
-              <Badge
-                className="bg-muted text-muted-foreground gap-1.5 rounded-full font-semibold"
-                title="The last run was interrupted — it will automatically retry on the next scheduled tick."
-              >
-                <RefreshCw className="size-2.5" />
-                Retry pending
-              </Badge>
-            )}
-            {(activeRunLog?.status === 'running' || stopping) && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleStop}
-                disabled={stopping}
-                className="bg-warning/10 text-warning hover:bg-warning/20 h-6 rounded-full px-2.5 text-xs font-semibold"
-                title={
-                  stopping
-                    ? 'Waiting for batch to finish cleanly…'
-                    : 'Stop this sync run'
-                }
-              >
-                {stopping ? (
-                  <>
-                    <RefreshCw className="animate-spin" /> Stopping…
-                  </>
-                ) : (
-                  <>
-                    <Square /> Stop
-                  </>
-                )}
-              </Button>
-            )}
-            {runLogs[0]?.bullmqJobId &&
-              runLogs[0]?.status === 'queued' &&
-              !isSyncing && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleCancelQueue}
-                  disabled={cancellingQueue}
-                  className="bg-destructive/10 text-destructive hover:bg-destructive/20 h-6 rounded-full px-2.5 text-xs font-semibold"
-                >
-                  <X /> {cancellingQueue ? 'Cancelling…' : 'Cancel Queue'}
-                </Button>
-              )}
-            {runLogs[0]?.bullmqJobId &&
-              job.status === 'error' &&
-              !isSyncing && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleRetryQueue}
-                  disabled={retryingQueue}
-                  className="bg-info/10 text-info hover:bg-info/20 h-6 rounded-full px-2.5 text-xs font-semibold"
-                >
-                  <RotateCcw /> {retryingQueue ? 'Retrying…' : 'Retry Failed'}
-                </Button>
-              )}
           </div>
-          <p className="text-muted-foreground text-sm">
-            Sync job in{' '}
-            <strong className="text-foreground font-semibold">
-              {project?.name || '…'}
-            </strong>
-            {' · '}
-            <span className="inline-flex items-center gap-1 font-mono">
-              {job.sourceObject} <DirectionIcon className="size-3" />{' '}
-              {job.destObject}
+          <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-1.5 text-sm leading-5">
+            <span>{project?.name || 'Project'}</span>
+            <span aria-hidden="true">·</span>
+            <span className="inline-flex min-w-0 items-center gap-1">
+              <span className="truncate">
+                {formatEntityLabel(job.sourceObject)}
+              </span>
+              <DirectionIcon className="size-3 shrink-0" aria-hidden="true" />
+              <span className="truncate">
+                {formatEntityLabel(job.destObject)}
+              </span>
             </span>
-            {' · '}
-            <span>{scheduleLabel}</span>
-            {job.timezone && (
-              <>
-                {' · '}
-                <span>Timezone: {job.timezone.replace(/_/g, ' ')}</span>
-              </>
-            )}
-            {' · '}
-            <span>{formatNum(job.recordsSynced)} records synced</span>
-          </p>
-        </div>
-
-        <div className="flex shrink-0 items-center gap-2">
-          <Button
-            onClick={() => setShowStartSync(true)}
-            disabled={!isActive || isSyncing}
-            title={
-              !isActive
-                ? 'Set status to Active first'
-                : isSyncing
-                  ? 'A sync is already in progress'
-                  : 'Choose how to sync this job'
-            }
-          >
-            <Play /> Start Sync
-          </Button>
+            <span aria-hidden="true">·</span>
+            <span>{lastSyncedLabel}</span>
+          </div>
         </div>
       </div>
 
-      {showStartSync && (
-        <StartSyncModal
-          projectId={projectId}
-          jobId={job.id}
-          job={job}
-          hasBaseline={hasBaseline}
-          scheduleToggling={scheduleToggling}
-          pipelineRequired={pipelineRequired}
-          pipelineConfigured={pipelineConfigured}
-          onGoToPipeline={() => {
-            setShowStartSync(false);
-            handleTabChange('pipeline');
-          }}
-          onClose={() => setShowStartSync(false)}
-          onLimitSyncDone={() => {
-            beginTracking();
-          }}
-          onSyncAll={(range) => {
-            setShowStartSync(false);
-            handleSyncAll(() => handleTabChange('run-history'), range);
-          }}
-          onScheduleToggle={(payload) => {
-            setShowStartSync(false);
-            handleScheduleToggle(payload);
-          }}
-        />
-      )}
-
-      <UpgradeRequiredDialog
-        open={upgradeDialog.open}
-        onOpenChange={(open) => setUpgradeDialog({ ...upgradeDialog, open })}
-        message={upgradeDialog.message}
-      />
-    </>
+      <div className="ml-auto flex flex-wrap items-center justify-end gap-2.5">
+        <StatusBadge status={twoWay ? 'two_way' : 'one_way'} size="lg" />
+        {project?.active_environment && (
+          <StatusBadge status={project.active_environment} size="sm" />
+        )}
+        {operationalStatus && (
+          <StatusBadge status={operationalStatus} size="sm" />
+        )}
+      </div>
+    </div>
   );
 }

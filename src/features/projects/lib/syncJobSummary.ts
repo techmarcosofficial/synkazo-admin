@@ -18,7 +18,9 @@ export interface SyncJobSummary {
 export function deriveSyncJobSummary(
   job: Pick<Job, 'lastSyncedAt'>,
   runs: Array<
-    Pick<SyncRun, 'status' | 'durationMs' | 'finishedAt' | 'startedAt'>
+    Pick<SyncRun, 'durationMs' | 'finishedAt' | 'startedAt'> & {
+      status: string;
+    }
   >,
 ): SyncJobSummary {
   const finishedRuns = runs.filter(

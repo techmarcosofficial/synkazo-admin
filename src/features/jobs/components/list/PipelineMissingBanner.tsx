@@ -20,6 +20,10 @@ export default function PipelineMissingBanner({
       actions={
         <Link
           to={`/projects/${projectId}/jobs/${job.id}`}
+          state={{
+            jobBackTo: '/jobs',
+            jobBackLabel: 'Back to All Sync Jobs',
+          }}
           className="text-destructive hover:text-foreground flex shrink-0 items-center gap-1 text-xs font-semibold transition-colors"
         >
           <Settings className="size-3" /> Configure

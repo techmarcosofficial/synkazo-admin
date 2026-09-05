@@ -104,6 +104,8 @@ const STATUS_CONFIG: Record<
   completed: { tone: 'success', label: 'Completed' },
 
   pending: { tone: 'warning', label: 'Pending' },
+  retry_pending: { tone: 'warning', label: 'Retry pending' },
+  schedule_paused: { tone: 'paused', label: 'Schedule paused' },
   ready_to_connect: { tone: 'info', label: 'Ready to connect' },
   awaiting_connection: { tone: 'muted', label: 'Awaiting connection' },
   partial: { tone: 'warning', label: 'Partial' },
@@ -122,6 +124,7 @@ const STATUS_CONFIG: Record<
   idle: { tone: 'muted', label: 'Idle' },
   skipped: { tone: 'muted', label: 'Skipped' },
   inactive: { tone: 'muted', label: 'Inactive' },
+  disabled: { tone: 'muted', label: 'Disabled' },
 
   invited: { tone: 'info', label: 'Invited' },
 

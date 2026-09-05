@@ -1,12 +1,39 @@
-import { Check, Clock, Info, Plus } from 'lucide-react';
-import { useState } from 'react';
+import {
+  ChartNoAxesColumnIncreasing,
+  CalendarClock,
+  Check,
+  Clock,
+  Database,
+  Info,
+  Play,
+  RefreshCw,
+  RotateCcw,
+  Square,
+  Timer,
+  X,
+} from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { useJobDetailContext } from '../context';
 
 import { jobsApi } from '@/api/jobs';
+import StatusBadge from '@/components/shared/StatusBadge';
+import UpgradeRequiredDialog from '@/components/shared/UpgradeRequiredDialog';
+import StartSyncModal from '@/components/sync/StartSyncModal';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -15,6 +42,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import ScheduleEnableToggle from '@/features/jobs/components/schedule/ScheduleEnableToggle';
 import {
@@ -26,15 +54,48 @@ import {
   FREQUENCY_PRESET_ORDER,
   TWO_WAY_SCHEDULE_MESSAGE,
   WEEKDAYS,
+  formatSchedule,
   matchFrequency,
   type FrequencyPreset,
 } from '@/features/jobs/utils';
+import {
+  deriveSyncJobSummary,
+  formatDurationMs,
+} from '@/features/projects/lib/syncJobSummary';
+import { BROWSER_TIMEZONE } from '@/lib/timezones';
 import { showToast } from '@/lib/toast';
 import { useEntitlements } from '@/queries/useEntitlements';
+import { usePriorityQueueQuery } from '@/queries/usePriorityQueue';
 
 interface IntervalConfig {
   amount: number;
   unit: 'minutes' | 'hours';
+}
+
+interface ScheduleDraft {
+  mode: string;
+  times: string[];
+  days: number[];
+  interval: IntervalConfig;
+}
+
+function formatScheduledAt(value: string | null | undefined, timezone: string) {
+  if (!value) return 'Not scheduled';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Unavailable';
+
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      timeZone: timezone,
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    }).format(date);
+  } catch {
+    return date.toLocaleString();
+  }
 }
 
 export default function ScheduleTab() {
@@ -42,44 +103,80 @@ export default function ScheduleTab() {
     projectId,
     job,
     refetch,
+    isSyncing,
+    stopping,
     scheduleToggling,
-    handleScheduleToggle,
+    cancellingQueue,
+    retryingQueue,
+    activeRunLog,
+    liveProgress,
+    runLogs,
     pipelineRequired,
     pipelineConfigured,
+    upgradeDialog,
+    setUpgradeDialog,
+    handleRunNow,
+    handleSyncAll,
+    beginTracking,
+    handleStop,
+    handleCancelQueue,
+    handleRetryQueue,
+    handleScheduleToggle,
     handleTabChange,
   } = useJobDetailContext();
 
-  const initMode = () => job.scheduleMode || 'daily_time';
-  const initTimes = () =>
-    job.scheduleTimes?.length ? job.scheduleTimes : ['09:00'];
-  const initDays = () =>
-    job.scheduleDays?.length ? job.scheduleDays : [1, 2, 3, 4, 5];
-  const initInterval = (): IntervalConfig => {
-    const m = job.intervalMinutes;
-    if (!m) return { amount: 15, unit: 'minutes' };
-    if (m >= 60 && m % 60 === 0) return { amount: m / 60, unit: 'hours' };
-    return { amount: m, unit: 'minutes' };
+  const initialDraft: ScheduleDraft = {
+    mode: job.scheduleMode || 'daily_time',
+    times: job.scheduleTimes?.length ? job.scheduleTimes : ['09:00'],
+    days: job.scheduleDays?.length ? job.scheduleDays : [1, 2, 3, 4, 5],
+    interval: (() => {
+      const minutes = job.intervalMinutes;
+      if (!minutes) return { amount: 15, unit: 'minutes' as const };
+      return minutes >= 60 && minutes % 60 === 0
+        ? { amount: minutes / 60, unit: 'hours' as const }
+        : { amount: minutes, unit: 'minutes' as const };
+    })(),
   };
 
-  const [mode, setMode] = useState(initMode);
-  const [times, setTimes] = useState<string[]>(initTimes);
-  const [days, setDays] = useState<number[]>(initDays);
-  const [interval, setInterval] = useState<IntervalConfig>(initInterval);
+  const [mode, setMode] = useState(initialDraft.mode);
+  const [times, setTimes] = useState<string[]>(initialDraft.times);
+  const [days, setDays] = useState<number[]>(initialDraft.days);
+  const [interval, setInterval] = useState<IntervalConfig>(
+    initialDraft.interval,
+  );
+  const [savedSnapshot, setSavedSnapshot] = useState(() =>
+    JSON.stringify(initialDraft),
+  );
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   const getIntervalMinutes = () =>
     interval.unit === 'hours' ? interval.amount * 60 : interval.amount;
 
-  // Plan gating — same rules as the create-job wizard's Schedule step.
+  const currentDraft = useMemo<ScheduleDraft>(
+    () => ({ mode, times, days, interval }),
+    [mode, times, days, interval],
+  );
+  const currentSnapshot = JSON.stringify(currentDraft);
+  const isDirty = currentSnapshot !== savedSnapshot;
+
+  useEffect(() => {
+    if (!isDirty) return;
+    const preventUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+    };
+    window.addEventListener('beforeunload', preventUnload);
+    return () => window.removeEventListener('beforeunload', preventUnload);
+  }, [isDirty]);
+
   const entitlements = useEntitlements();
   const canCustomise = entitlements.frequency('custom');
-  const hasPresets = FREQUENCY_PRESET_ORDER.some((k) =>
-    entitlements.frequency(k),
+  const hasPresets = FREQUENCY_PRESET_ORDER.some((key) =>
+    entitlements.frequency(key),
   );
-  const [freqChoice, setFreqChoice] = useState<string | null>(null);
+  const [frequencyChoice, setFrequencyChoice] = useState<string | null>(null);
   const frequency =
-    freqChoice ?? matchFrequency(mode, getIntervalMinutes(), times);
+    frequencyChoice ?? matchFrequency(mode, getIntervalMinutes(), times);
   const showEditor = canCustomise && (!hasPresets || frequency === 'custom');
   const minIntervalMinutes = entitlements.minIntervalMinutes;
   const minIntervalAmount =
@@ -87,26 +184,125 @@ export default function ScheduleTab() {
       ? Math.max(1, Math.ceil(minIntervalMinutes / 60))
       : minIntervalMinutes;
 
+  const priorityQueueQuery = usePriorityQueueQuery(projectId);
+  const priorityModeActive =
+    priorityQueueQuery.data?.schedulerMode === 'priority';
+  const projectQueue = priorityQueueQuery.data?.queue;
+  const isTwoWay = job.syncDirection === 'two_way';
+  const queued = runLogs[0]?.status === 'queued';
+  const failedQueueJob = !!runLogs[0]?.bullmqJobId && job.status === 'error';
+  const scheduleActive =
+    job.syncEnabled &&
+    (job.scheduleState === 'active' ||
+      job.scheduleState === 'retry_pending' ||
+      job.scheduleState === 'resume_pending');
+
+  const scheduleStatus = priorityModeActive
+    ? projectQueue?.status === 'paused'
+      ? 'schedule_paused'
+      : 'active'
+    : job.scheduleState === 'paused_limit_reached'
+      ? 'limit_reached'
+      : job.scheduleState === 'retry_pending'
+        ? 'retry_pending'
+        : job.scheduleState === 'paused'
+          ? 'schedule_paused'
+          : scheduleActive
+            ? 'active'
+            : 'disabled';
+
+  const effectiveTimezone = BROWSER_TIMEZONE;
+  const nextRunAt = priorityModeActive
+    ? projectQueue?.nextStartAt
+    : job.nextRunAt;
+  const scheduleSummary = isTwoWay
+    ? 'Managed automatically'
+    : priorityModeActive && projectQueue
+      ? formatSchedule({
+          scheduleMode: projectQueue.scheduleMode ?? undefined,
+          intervalMinutes: projectQueue.intervalMinutes,
+          scheduleTimes: projectQueue.scheduleTimes ?? undefined,
+          scheduleDays: projectQueue.scheduleDays ?? undefined,
+          cronExpression: projectQueue.startCronExpression,
+        })
+      : formatSchedule(job);
+  const performance = deriveSyncJobSummary(job, runLogs);
+  const completedRunCount = runLogs.filter(
+    (run) => !['running', 'pending', 'queued', 'paused'].includes(run.status),
+  ).length;
+  const performanceMetrics = [
+    {
+      label: 'Records synced',
+      value: (job.recordsSynced ?? 0).toLocaleString(),
+      description: 'Total synced records',
+      icon: Database,
+    },
+    {
+      label: 'Avg duration',
+      value: formatDurationMs(performance.averageDurationMs),
+      description: completedRunCount
+        ? `Across ${completedRunCount} recent runs`
+        : 'No completed runs',
+      icon: Timer,
+    },
+    {
+      label: 'Last sync',
+      value: performance.lastSyncAt
+        ? formatScheduledAt(performance.lastSyncAt, effectiveTimezone)
+        : 'Never',
+      description: performance.lastSyncAt
+        ? 'Most recent completed run'
+        : 'Not synced yet',
+      icon: CalendarClock,
+    },
+    {
+      label: 'Success rate',
+      value:
+        performance.successRate == null
+          ? '—'
+          : `${performance.successRate.toFixed(performance.successRate % 1 === 0 ? 0 : 1)}%`,
+      description: completedRunCount ? 'Successful recent runs' : 'No run data',
+      icon: ChartNoAxesColumnIncreasing,
+    },
+  ];
+  const manualRunBlocked = !job.isEnabled || queued || isSyncing;
+
   const applyFrequency = (key: string, preset: FrequencyPreset | null) => {
-    setFreqChoice(key);
+    setFrequencyChoice(key);
     if (!preset) return;
     setMode(preset.mode);
-    if (preset.intervalMinutes != null)
+    if (preset.intervalMinutes != null) {
       setInterval({ amount: preset.intervalMinutes, unit: 'minutes' });
+    }
     if (preset.times) setTimes(preset.times);
   };
 
-  const addTime = () => setTimes((prev) => [...prev, '09:00']);
-  const updateTime = (i: number, v: string) =>
-    setTimes((prev) => prev.map((t, idx) => (idx === i ? v : t)));
-  const removeTime = (i: number) =>
-    setTimes((prev) => prev.filter((_, idx) => idx !== i));
-  const toggleDay = (d: number) =>
-    setDays((prev) =>
-      prev.includes(d)
-        ? prev.filter((x) => x !== d)
-        : [...prev, d].sort((a, b) => a - b),
+  const addTime = () => setTimes((current) => [...current, '09:00']);
+  const updateTime = (index: number, value: string) =>
+    setTimes((current) =>
+      current.map((time, currentIndex) =>
+        currentIndex === index ? value : time,
+      ),
     );
+  const removeTime = (index: number) =>
+    setTimes((current) =>
+      current.filter((_, currentIndex) => currentIndex !== index),
+    );
+  const toggleDay = (day: number) =>
+    setDays((current) =>
+      current.includes(day)
+        ? current.filter((value) => value !== day)
+        : [...current, day].sort((a, b) => a - b),
+    );
+
+  const resetChanges = () => {
+    const savedDraft = JSON.parse(savedSnapshot) as ScheduleDraft;
+    setMode(savedDraft.mode);
+    setTimes(savedDraft.times);
+    setDays(savedDraft.days);
+    setInterval(savedDraft.interval);
+    setFrequencyChoice(null);
+  };
 
   const handleSave = async () => {
     if (mode !== 'interval' && times.length === 0) {
@@ -123,6 +319,7 @@ export default function ScheduleTab() {
       );
       return;
     }
+
     setSaving(true);
     try {
       await jobsApi.updateJob(projectId, job.id, {
@@ -130,215 +327,454 @@ export default function ScheduleTab() {
         scheduleTimes: mode !== 'interval' ? times : null,
         scheduleDays: mode === 'day_specific' ? days : null,
         intervalMinutes: mode === 'interval' ? getIntervalMinutes() : null,
+        timezone: BROWSER_TIMEZONE,
         cronExpression: null,
       });
-      try {
-        await jobsApi.pauseSchedule(projectId, job.id);
-        await jobsApi.resumeSchedule(projectId, job.id);
-      } catch {
-        /* ignore — schedule is still saved */
-      }
+      setSavedSnapshot(currentSnapshot);
       setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-      showToast.success('Schedule saved!');
+      window.setTimeout(() => setSaved(false), 2000);
+      showToast.success('Schedule saved.');
       refetch();
-    } catch (err) {
-      const e = err as { response?: { data?: { message?: string } } };
+    } catch (error) {
+      const apiError = error as { response?: { data?: { message?: string } } };
       showToast.error(
-        e.response?.data?.message ?? 'Something went wrong. Please try again.',
+        apiError.response?.data?.message ??
+          'Something went wrong. Please try again.',
       );
     } finally {
       setSaving(false);
     }
   };
 
-  // Two-way sync has no user-configurable interval. Its forward + reverse legs
-  // run on a fixed system interval managed by a super admin when the schedule
-  // is running, so there's nothing to configure here — show a read-only notice
-  // instead of the schedule editor. Starting/pausing it is still done via the
-  // Run/Pause/Resume Schedule button above, same as one-way jobs.
-  const scheduleToggle = (
-    <ScheduleEnableToggle
-      projectId={projectId}
-      jobId={job.id}
-      job={job}
-      scheduleToggling={scheduleToggling}
-      pipelineRequired={pipelineRequired}
-      pipelineConfigured={pipelineConfigured}
-      onGoToPipeline={() => handleTabChange('pipeline')}
-      onScheduleToggle={handleScheduleToggle}
-    />
-  );
-
-  if (job.syncDirection === 'two_way') {
-    return (
-      <div className="space-y-4">
-        {scheduleToggle}
-        <Card>
-          <CardContent className="text-muted-foreground flex items-start gap-3 py-6 text-sm">
-            <Info className="mt-0.5 size-4 shrink-0" />
-            <div className="space-y-1">
-              <p className="text-foreground font-medium">
-                Two-way sync has no interval to configure
-              </p>
-              <p>
-                {TWO_WAY_SCHEDULE_MESSAGE} Use Run/Resume Schedule above to
-                start it and Pause Schedule to stop it.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-5">
-      {scheduleToggle}
-      <Card>
-        <CardContent className="space-y-4">
-          <FrequencyPresetPicker value={frequency} onSelect={applyFrequency} />
-          {showEditor && <ScheduleModeCards value={mode} onChange={setMode} />}
+      <div>
+        <h2 className="text-xl font-bold tracking-tight">
+          Sync &amp; Schedule
+        </h2>
+        <p className="text-muted-foreground mt-1 text-sm">
+          Run this job manually or set up an automatic schedule.
+        </p>
+      </div>
+
+      <Card className="gap-0 overflow-hidden py-0">
+        <CardContent className="p-0">
+          <div className="grid sm:grid-cols-2 xl:grid-cols-4">
+            {performanceMetrics.map((metric, index) => (
+              <div
+                key={metric.label}
+                className={`flex min-w-0 items-center gap-3 p-4 ${
+                  index < 3 ? 'border-b xl:border-r xl:border-b-0' : ''
+                } ${index === 0 ? 'sm:border-r' : ''} ${
+                  index === 1 ? 'xl:border-r' : ''
+                } ${index === 2 ? 'sm:border-r sm:border-b-0' : ''}`}
+              >
+                <span className="bg-muted text-muted-foreground flex size-10 shrink-0 items-center justify-center rounded-xl">
+                  <metric.icon className="size-4.5" aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-lg font-bold tracking-tight">
+                    {metric.value}
+                  </p>
+                  <p className="text-muted-foreground truncate text-xs font-medium">
+                    {metric.label}
+                  </p>
+                  <p className="text-muted-foreground truncate text-[11px]">
+                    {metric.description}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
 
-      <Card className={showEditor ? undefined : 'hidden'}>
-        <CardContent className="space-y-4">
-          {mode === 'daily_time' && (
-            <>
-              <div>
-                <h4 className="mb-1 text-sm font-semibold">Times of Day</h4>
-                <p className="text-muted-foreground text-xs">
-                  Job runs every day at each time listed below.
-                </p>
-              </div>
-              <div className="space-y-2">
-                {times.map((t, i) => (
-                  <TimeInput
-                    key={i}
-                    value={t}
-                    onChange={(v) => updateTime(i, v)}
-                    onRemove={() => removeTime(i)}
-                    canRemove={times.length > 1}
-                  />
-                ))}
-              </div>
+      <Card>
+        <CardHeader>
+          <div className="flex items-start gap-3">
+            <span className="bg-muted text-muted-foreground flex size-10 shrink-0 items-center justify-center rounded-xl">
+              <Play className="size-4.5" aria-hidden="true" />
+            </span>
+            <div className="space-y-1">
+              <CardTitle>Run manually</CardTitle>
+              <CardDescription>
+                Sync data now without changing the automatic schedule.
+              </CardDescription>
+            </div>
+          </div>
+          <CardAction className="flex flex-wrap items-center gap-2">
+            {isSyncing && (
               <Button
-                type="button"
-                variant="link"
+                variant="secondary"
                 size="sm"
-                className="h-auto p-0"
-                onClick={addTime}
+                onClick={handleStop}
+                disabled={stopping}
               >
-                <Plus /> Add another time
+                {stopping ? <RefreshCw className="animate-spin" /> : <Square />}
+                {stopping ? 'Stopping…' : 'Stop sync'}
               </Button>
-            </>
+            )}
+            {runLogs[0]?.bullmqJobId && queued && !isSyncing && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCancelQueue}
+                disabled={cancellingQueue}
+                className="text-destructive"
+              >
+                <X /> {cancellingQueue ? 'Cancelling…' : 'Cancel queue'}
+              </Button>
+            )}
+            {failedQueueJob && !isSyncing && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleRetryQueue}
+                disabled={retryingQueue}
+              >
+                <RotateCcw /> {retryingQueue ? 'Retrying…' : 'Retry'}
+              </Button>
+            )}
+          </CardAction>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {(activeRunLog?.status === 'running' || isSyncing) && (
+            <div className="bg-muted/30 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border px-4 py-3 text-xs">
+              <StatusBadge status="running" size="sm" />
+              <span className="text-muted-foreground">
+                {liveProgress?.recordsProcessed ?? 0} records processed
+              </span>
+              {liveProgress?.etaSeconds != null && (
+                <span className="text-muted-foreground">
+                  About {Math.max(1, Math.ceil(liveProgress.etaSeconds / 60))}{' '}
+                  min remaining
+                </span>
+              )}
+            </div>
           )}
 
-          {mode === 'interval' && (
-            <>
-              <div>
-                <h4 className="mb-1 text-sm font-semibold">Run Interval</h4>
-                <p className="text-muted-foreground text-xs">
-                  Job runs this long after each run completes — including manual
-                  runs.
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <Input
-                  type="number"
-                  min={minIntervalAmount}
-                  max={interval.unit === 'hours' ? 720 : 43200}
-                  value={interval.amount}
-                  onChange={(e) =>
-                    setInterval((prev) => ({
-                      ...prev,
-                      amount: Math.max(
-                        minIntervalAmount,
-                        parseInt(e.target.value) || minIntervalAmount,
-                      ),
-                    }))
-                  }
-                  className="w-24 font-mono"
+          {!job.isEnabled && !isSyncing && (
+            <Alert>
+              <Info />
+              <AlertDescription>
+                Set the job status to Active before starting a manual run.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {queued && !isSyncing && (
+            <Alert>
+              <Clock />
+              <AlertDescription>
+                This job is waiting in the queue. Cancel it before starting a
+                different manual run.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <StartSyncModal
+            embedded
+            projectId={projectId}
+            jobId={job.id}
+            job={job}
+            hasBaseline={!!job.lastSyncedAt}
+            pipelineRequired={pipelineRequired}
+            pipelineConfigured={pipelineConfigured}
+            disabled={manualRunBlocked}
+            onGoToPipeline={() => handleTabChange('pipeline')}
+            onClose={() => undefined}
+            onRunNow={() => void handleRunNow()}
+            onLimitSyncDone={() => void beginTracking()}
+            onSyncAll={(range) =>
+              void handleSyncAll(() => handleTabChange('run-history'), range)
+            }
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-start gap-3">
+            <span className="bg-muted text-muted-foreground flex size-10 shrink-0 items-center justify-center rounded-xl">
+              <CalendarClock className="size-4.5" aria-hidden="true" />
+            </span>
+            <div className="space-y-1">
+              <CardTitle>Automatic schedule</CardTitle>
+              <CardDescription>
+                Let Synkazo run this job automatically.
+              </CardDescription>
+            </div>
+          </div>
+          <CardAction>
+            {!priorityModeActive &&
+              !priorityQueueQuery.isLoading &&
+              !priorityQueueQuery.isError && (
+                <ScheduleEnableToggle
+                  projectId={projectId}
+                  jobId={job.id}
+                  job={job}
+                  scheduleToggling={scheduleToggling}
+                  pipelineRequired={pipelineRequired}
+                  pipelineConfigured={pipelineConfigured}
+                  onGoToPipeline={() => handleTabChange('pipeline')}
+                  onScheduleToggle={handleScheduleToggle}
+                  className="w-auto"
                 />
-                <Select
-                  value={interval.unit}
-                  onValueChange={(v) =>
-                    setInterval((prev) => ({
-                      ...prev,
-                      unit: v as 'minutes' | 'hours',
-                    }))
-                  }
-                >
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="minutes">minutes</SelectItem>
-                    <SelectItem value="hours">hours</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <p className="text-muted-foreground text-xs">
-                = {getIntervalMinutes()} minute
-                {getIntervalMinutes() !== 1 ? 's' : ''} between runs
-              </p>
-            </>
-          )}
+              )}
+          </CardAction>
+        </CardHeader>
 
-          {mode === 'day_specific' && (
-            <>
-              <div>
-                <h4 className="mb-1 text-sm font-semibold">Days of Week</h4>
-                <p className="text-muted-foreground text-xs">
-                  Job runs only on the selected days, at each time listed.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {WEEKDAYS.map((wd) => (
-                  <Button
-                    key={wd.value}
-                    type="button"
-                    variant={days.includes(wd.value) ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => toggleDay(wd.value)}
-                  >
-                    {wd.label}
-                  </Button>
-                ))}
-              </div>
-              <div>
-                <h4 className="mt-2 mb-2 text-sm font-semibold">Times</h4>
-                <div className="space-y-2">
-                  {times.map((t, i) => (
-                    <TimeInput
-                      key={i}
-                      value={t}
-                      onChange={(v) => updateTime(i, v)}
-                      onRemove={() => removeTime(i)}
-                      canRemove={times.length > 1}
-                    />
-                  ))}
-                </div>
+        <CardContent className="space-y-5">
+          {priorityQueueQuery.isLoading ? (
+            <Skeleton className="h-40 w-full rounded-2xl" />
+          ) : priorityQueueQuery.isError ? (
+            <Alert>
+              <Info />
+              <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+                <span>
+                  We could not determine which schedule controls this job.
+                </span>
                 <Button
-                  type="button"
-                  variant="link"
+                  variant="outline"
                   size="sm"
-                  className="mt-2 h-auto p-0"
-                  onClick={addTime}
+                  onClick={() => priorityQueueQuery.refetch()}
                 >
-                  <Plus /> Add another time
+                  Try again
+                </Button>
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <div className="flex flex-col gap-4">
+              <div className="order-last space-y-5 rounded-2xl border p-4">
+                {priorityModeActive ? (
+                  <Alert>
+                    <Info />
+                    <AlertDescription className="space-y-2">
+                      <p>
+                        This project uses Priority Scheduling, so its project
+                        queue controls when this job runs. Individual schedule
+                        settings are unavailable here.
+                      </p>
+                      <Button asChild variant="outline" size="sm">
+                        <Link to={`/projects/${projectId}?tab=scheduler`}>
+                          Open project schedule
+                        </Link>
+                      </Button>
+                    </AlertDescription>
+                  </Alert>
+                ) : isTwoWay ? (
+                  <Alert>
+                    <Info />
+                    <AlertDescription>
+                      {TWO_WAY_SCHEDULE_MESSAGE}
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <>
+                    <FrequencyPresetPicker
+                      value={frequency}
+                      onSelect={applyFrequency}
+                    />
+
+                    {showEditor && (
+                      <ScheduleModeCards value={mode} onChange={setMode} />
+                    )}
+
+                    {showEditor && mode === 'daily_time' && (
+                      <div className="space-y-3">
+                        <FieldLabel>Run times</FieldLabel>
+                        <div className="space-y-2">
+                          {times.map((time, index) => (
+                            <TimeInput
+                              key={index}
+                              value={time}
+                              onChange={(value) => updateTime(index, value)}
+                              onRemove={() => removeTime(index)}
+                              canRemove={times.length > 1}
+                            />
+                          ))}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="link"
+                          size="sm"
+                          className="h-auto p-0"
+                          onClick={addTime}
+                        >
+                          Add another time
+                        </Button>
+                      </div>
+                    )}
+
+                    {showEditor && mode === 'interval' && (
+                      <Field>
+                        <FieldLabel>Time between runs</FieldLabel>
+                        <div className="flex items-center gap-3">
+                          <Input
+                            type="number"
+                            min={minIntervalAmount}
+                            max={interval.unit === 'hours' ? 720 : 43200}
+                            value={interval.amount}
+                            onChange={(event) =>
+                              setInterval((current) => ({
+                                ...current,
+                                amount: Math.max(
+                                  minIntervalAmount,
+                                  Number.parseInt(event.target.value) ||
+                                    minIntervalAmount,
+                                ),
+                              }))
+                            }
+                            className="w-24 font-mono"
+                          />
+                          <Select
+                            value={interval.unit}
+                            onValueChange={(value) =>
+                              setInterval((current) => ({
+                                ...current,
+                                unit: value as 'minutes' | 'hours',
+                              }))
+                            }
+                          >
+                            <SelectTrigger className="w-32">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="minutes">Minutes</SelectItem>
+                              <SelectItem value="hours">Hours</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </Field>
+                    )}
+
+                    {showEditor && mode === 'day_specific' && (
+                      <div className="space-y-4">
+                        <Field>
+                          <FieldLabel>Days to run</FieldLabel>
+                          <div className="flex flex-wrap gap-2">
+                            {WEEKDAYS.map((weekday) => (
+                              <Button
+                                key={weekday.value}
+                                type="button"
+                                variant={
+                                  days.includes(weekday.value)
+                                    ? 'default'
+                                    : 'outline'
+                                }
+                                size="sm"
+                                onClick={() => toggleDay(weekday.value)}
+                              >
+                                {weekday.label}
+                              </Button>
+                            ))}
+                          </div>
+                        </Field>
+
+                        <div className="space-y-3">
+                          <FieldLabel>Run times</FieldLabel>
+                          <div className="space-y-2">
+                            {times.map((time, index) => (
+                              <TimeInput
+                                key={index}
+                                value={time}
+                                onChange={(value) => updateTime(index, value)}
+                                onRemove={() => removeTime(index)}
+                                canRemove={times.length > 1}
+                              />
+                            ))}
+                          </div>
+                          <Button
+                            type="button"
+                            variant="link"
+                            size="sm"
+                            className="h-auto p-0"
+                            onClick={addTime}
+                          >
+                            Add another time
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              <div className="order-first grid overflow-hidden rounded-2xl border text-xs sm:grid-cols-2 xl:grid-cols-4">
+                <div className="flex min-w-0 items-center justify-between gap-3 border-b p-3 sm:border-r xl:border-b-0">
+                  <span className="text-muted-foreground">Status</span>
+                  <StatusBadge status={scheduleStatus} size="sm" />
+                </div>
+                <div className="flex min-w-0 items-center justify-between gap-3 border-b p-3 xl:border-r xl:border-b-0">
+                  <span className="text-muted-foreground">Schedule</span>
+                  <span className="truncate text-right font-medium capitalize">
+                    {scheduleSummary}
+                  </span>
+                </div>
+                <div className="flex min-w-0 items-center justify-between gap-3 border-b p-3 sm:border-r sm:border-b-0 xl:border-r">
+                  <span className="text-muted-foreground">Next run</span>
+                  <span className="truncate text-right font-medium">
+                    {formatScheduledAt(nextRunAt, effectiveTimezone)}
+                  </span>
+                </div>
+                <div className="flex min-w-0 items-center justify-between gap-3 p-3">
+                  <span className="text-muted-foreground">Last synced</span>
+                  <span className="truncate text-right font-medium">
+                    {performance.lastSyncAt
+                      ? formatScheduledAt(
+                          performance.lastSyncAt,
+                          effectiveTimezone,
+                        )
+                      : 'Never'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+
+        {!isTwoWay &&
+          !priorityModeActive &&
+          !priorityQueueQuery.isLoading &&
+          !priorityQueueQuery.isError && (
+            <CardFooter className="justify-between gap-3 border-t">
+              <span className="text-muted-foreground text-xs">
+                {isDirty
+                  ? 'You have unsaved changes.'
+                  : 'Schedule is up to date.'}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={resetChanges}
+                  disabled={!isDirty || saving}
+                >
+                  Reset
+                </Button>
+                <Button onClick={handleSave} disabled={!isDirty || saving}>
+                  {saving ? <Spinner /> : saved ? <Check /> : <Clock />}
+                  {saving ? 'Saving…' : saved ? 'Saved' : 'Save schedule'}
                 </Button>
               </div>
-            </>
+            </CardFooter>
           )}
-        </CardContent>
       </Card>
 
-      <Button onClick={handleSave} disabled={saving}>
-        {saving ? <Spinner /> : saved ? <Check /> : <Clock />}
-        {saving ? 'Saving…' : saved ? 'Saved!' : 'Save Schedule'}
-      </Button>
+      <Alert>
+        <Info />
+        <AlertDescription>
+          <span className="text-foreground font-medium">Good to know. </span>
+          Automatic runs process records created or updated since the last
+          successful sync. Manual runs let you reprocess all records or a
+          controlled subset without changing this schedule.
+        </AlertDescription>
+      </Alert>
+
+      <UpgradeRequiredDialog
+        open={upgradeDialog.open}
+        onOpenChange={(open) => setUpgradeDialog({ ...upgradeDialog, open })}
+        message={upgradeDialog.message}
+      />
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { AlertCircle } from 'lucide-react';
 import {
   forwardRef,
@@ -25,6 +26,7 @@ import CustomObjectModal from '@/components/fieldmapping/CustomObjectModal';
 import EmptyState from '@/components/shared/EmptyState';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { hasBothConnections } from '@/features/projects/lib/projectSetupState';
 import {
   KNOWN_PIPELINE_OBJECTS,
   type JobConfig,
@@ -116,7 +118,7 @@ export interface CreateJobFormHandle {
   next: () => Promise<boolean>;
   /** Goes back one sub-step. No-op on the first sub-step. */
   back: () => void;
-  /** Saves and creates the job — only meaningful on the final (Schedule) step of the non-embedded flow. */
+  /** Creates the quick object-mapping job or saves the final legacy wizard step. */
   save: () => Promise<void>;
 }
 
@@ -137,6 +139,8 @@ interface CreateJobFormProps {
   onCreated?: (jobId: string) => void;
   /** When true, hides the form's own stepper — a host (e.g. the Project Setup Wizard) drives navigation via the ref instead. */
   embedded?: boolean;
+  /** Uses the complete Job Details step as a standalone creation form. */
+  detailsOnly?: boolean;
   onStateChange?: (state: CreateJobFormState) => void;
 }
 
@@ -148,11 +152,13 @@ export const CreateJobForm = forwardRef<
     projectId,
     onCreated = undefined,
     embedded = false,
+    detailsOnly = false,
     onStateChange = undefined,
   },
   ref,
 ) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [draftJobId, setDraftJobId] = useState<string | null>(null);
@@ -171,11 +177,12 @@ export const CreateJobForm = forwardRef<
   const platforms = platformsQuery.data ?? [];
   const connections: Connection[] = connectionsQuery.data ?? [];
   const projectPlatforms = connections.map((c) => c.platformId) as PlatformId[];
-  const hasConnection = connectionsQuery.isLoading
-    ? null
-    : connectionsQuery.isError
-      ? false
-      : connections.some((c) => c.status === 'connected');
+  const hasConnection =
+    connectionsQuery.isLoading || projectQuery.isLoading
+      ? null
+      : connectionsQuery.isError
+        ? false
+        : hasBothConnections(connections);
 
   const objectsByPlatformQuery = useObjectsByPlatformQuery(
     projectId,
@@ -259,6 +266,7 @@ export const CreateJobForm = forwardRef<
   const [pipelineError, setPipelineError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (detailsOnly) return;
     try {
       const raw = sessionStorage.getItem(DRAFT_KEY(projectId));
       if (!raw) return;
@@ -276,7 +284,7 @@ export const CreateJobForm = forwardRef<
     } catch {
       /* ignore */
     }
-  }, [projectId]);
+  }, [projectId, detailsOnly]);
 
   const persistDraft = useCallback(
     (
@@ -535,6 +543,8 @@ export const CreateJobForm = forwardRef<
   };
 
   const handleNext = async (): Promise<boolean> => {
+    if (detailsOnly) return false;
+
     if (step === 0) {
       const errs = validateStep0();
       if (Object.keys(errs).length) {
@@ -756,7 +766,73 @@ export const CreateJobForm = forwardRef<
       (c) => c.platformId === platformId && c.status === 'connected',
     );
 
+  const handleDetailsSave = async () => {
+    const errs = validateStep0();
+    if (Object.keys(errs).length) {
+      setErrors(errs);
+      return;
+    }
+
+    setErrors({});
+    setSaving(true);
+    try {
+      const syncDirection = projectSyncMode ?? config.syncDirection;
+      const job = await jobsApi.createJob(projectId, {
+        name: config.name.trim(),
+        sourceObject: config.sourceObject.toLowerCase(),
+        destObject: config.destObject.toLowerCase(),
+        syncDirection,
+        ...(syncDirection === 'two_way' && {
+          sourceOfTruth: config.sourceOfTruth,
+          deleteHandling: config.deleteHandling,
+          hubspotWebhookEnabled: config.hubspotWebhookEnabled,
+        }),
+        syncTrigger: config.syncTrigger,
+        idMappingSourceField: config.idMappingSourceField,
+        idMappingDestField: config.idMappingDestField,
+        excludeConditions:
+          config.excludeConditions && config.excludeConditions.length > 0
+            ? config.excludeConditions
+            : null,
+        excludeConditionLogic: config.excludeConditionLogic,
+        skipUpdateOnMatch: config.skipUpdateOnMatch,
+      });
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['jobs'] }),
+        queryClient.invalidateQueries({
+          queryKey: ['projects', 'detail-bundle', projectId],
+        }),
+      ]);
+
+      showToast.success('Sync job created successfully!');
+      if (onCreated) {
+        onCreated(job.id);
+      } else {
+        navigate(`/projects/${projectId}/jobs/${job.id}?tab=field-mapping`, {
+          state: {
+            jobBackTo: `/projects/${projectId}?tab=sync-rules`,
+            jobBackLabel: 'Back to Sync Jobs',
+          },
+        });
+      }
+    } catch (err) {
+      const e = err as { response?: { data?: { message?: string } } };
+      toast.error(
+        e?.response?.data?.message ??
+          'Failed to create sync job. Please try again.',
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSave = async () => {
+    if (detailsOnly) {
+      await handleDetailsSave();
+      return;
+    }
+
     if (pairMappings.length < 2) {
       toast.error('At least 2 field mappings are required before saving.');
       return;
@@ -870,7 +946,12 @@ export const CreateJobForm = forwardRef<
       if (onCreated) {
         onCreated(jobId!);
       } else {
-        navigate(`/projects/${projectId}/jobs/${jobId}`);
+        navigate(`/projects/${projectId}/jobs/${jobId}`, {
+          state: {
+            jobBackTo: `/projects/${projectId}?tab=sync-rules`,
+            jobBackLabel: 'Back to Sync Jobs',
+          },
+        });
       }
     } catch (err) {
       const e = err as { response?: { data?: { message?: string } } };
@@ -888,14 +969,14 @@ export const CreateJobForm = forwardRef<
   );
 
   useEffect(() => {
-    const activeSteps = getActiveSteps(
-      hasPipelineStep,
-      embedded,
-      hasDefaultsStep,
-    );
+    const activeSteps = detailsOnly
+      ? ['Job Details']
+      : getActiveSteps(hasPipelineStep, embedded, hasDefaultsStep);
     onStateChange?.({
-      canGoBack: step > 0,
-      isLastStep: step === (embedded ? scheduleStepIdx - 1 : scheduleStepIdx),
+      canGoBack: !detailsOnly && step > 0,
+      isLastStep:
+        detailsOnly ||
+        step === (embedded ? scheduleStepIdx - 1 : scheduleStepIdx),
       saving,
       isDirty:
         draftJobId !== null ||
@@ -903,12 +984,13 @@ export const CreateJobForm = forwardRef<
         config.sourceObject !== '' ||
         config.destObject !== '' ||
         fieldMappings.length > 0,
-      stepIndex: step,
+      stepIndex: detailsOnly ? 0 : step,
       totalSteps: activeSteps.length,
       stepLabels: activeSteps,
     });
   }, [
     embedded,
+    detailsOnly,
     step,
     fieldMappingStepIdx,
     scheduleStepIdx,
@@ -946,7 +1028,7 @@ export const CreateJobForm = forwardRef<
       <EmptyState
         icon={AlertCircle}
         title="Connection Required"
-        description="You must configure and connect at least one platform before creating jobs."
+        description="Connect both the source and destination platforms in the same environment before creating a sync."
       />
     );
   }
@@ -1006,6 +1088,7 @@ export const CreateJobForm = forwardRef<
             setShowCustomObjectModal(side === 'source' ? 'source' : 'dest')
           }
           projectId={projectId}
+          compact={detailsOnly}
         />
       )}
 

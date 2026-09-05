@@ -291,6 +291,10 @@ function ActivityRow({ log }: { log: OrgSyncLog }) {
       >
         <Link
           to={runHref}
+          state={{
+            jobBackTo: '/dashboard',
+            jobBackLabel: 'Back to Dashboard',
+          }}
           aria-label={`${getActivityTitle(status)} for ${contextName}. View run history.`}
         >
           {content}

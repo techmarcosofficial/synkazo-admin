@@ -12,12 +12,10 @@ import {
   Plus,
   Timer,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { toast } from 'sonner';
+import { Link, useNavigate } from 'react-router-dom';
 
 import { useProjectDetailContext } from '../context';
 
-import { projectsApi } from '@/api/projects';
 import EmptyState from '@/components/shared/EmptyState';
 import { usePlanUpgradePrompt } from '@/components/shared/PlanGate';
 import StatusBadge from '@/components/shared/StatusBadge';
@@ -44,11 +42,9 @@ import {
   formatEntityLabel,
 } from '@/features/projects/lib/syncJobSummary';
 import { formatNum, formatSchedule } from '@/features/projects/utils';
-import { useHeaderPrimaryAction } from '@/hooks/useHeaderPrimaryAction';
 import { cn } from '@/lib/utils';
 import { useEntitlements } from '@/queries/useEntitlements';
 import { useRunLogsQuery } from '@/queries/useJobs';
-import type { ProjectStatus } from '@/types';
 
 function formatLastSync(value: string | null): string {
   if (!value) return 'Never';
@@ -156,7 +152,13 @@ function SyncJobCard({ job, projectId }: { job: JobExt; projectId: string }) {
               className="h-6 data-vertical:self-center"
             />
             <Button asChild variant="ghost" size="sm">
-              <Link to={`/projects/${projectId}/jobs/${job.id}`}>
+              <Link
+                to={`/projects/${projectId}/jobs/${job.id}`}
+                state={{
+                  jobBackTo: `/projects/${projectId}?tab=sync-rules`,
+                  jobBackLabel: 'Back to Sync Jobs',
+                }}
+              >
                 View
                 <ArrowRight data-icon="inline-end" />
               </Link>
@@ -228,14 +230,9 @@ function SyncJobCard({ job, projectId }: { job: JobExt; projectId: string }) {
 }
 
 export default function SyncRulesTab() {
-  const {
-    project,
-    jobs,
-    showCreateJob,
-    setShowCreateJob,
-    patchProject,
-    refetch,
-  } = useProjectDetailContext();
+  const navigate = useNavigate();
+  const { project, jobs, showCreateJob, setShowCreateJob, refetch } =
+    useProjectDetailContext();
   // Explain the sync-job allowance up front rather than after a 403 from the create call.
   const { canAddJob } = useEntitlements();
   const { prompt, dialog: upgradeDialog } = usePlanUpgradePrompt();
@@ -246,24 +243,6 @@ export default function SyncRulesTab() {
           "You've reached the number of sync jobs your plan allows. Upgrade to add more.",
         );
 
-  useHeaderPrimaryAction({
-    label: 'New Sync Job',
-    icon: canAddJob ? Plus : Lock,
-    onClick: startCreateJob,
-  });
-
-  const handleActivateProject = async () => {
-    try {
-      await projectsApi.updateProject(project.id, {
-        status: 'active' as ProjectStatus,
-      });
-      patchProject({ status: 'active' as ProjectStatus });
-      toast.success('Project activated!');
-    } catch {
-      toast.error('Could not activate project — check connections first.');
-    }
-  };
-
   return (
     <div className="space-y-6">
       {upgradeDialog}
@@ -272,51 +251,54 @@ export default function SyncRulesTab() {
           projectId={project.id}
           open={showCreateJob}
           onClose={() => setShowCreateJob(false)}
-          onCreated={() => {
+          onCreated={(jobId) => {
             setShowCreateJob(false);
             refetch();
-            toast.success('Job created successfully', {
-              description: 'Activate your project to start syncing data.',
-              action:
-                project.status !== 'active'
-                  ? {
-                      label: 'Activate project',
-                      onClick: handleActivateProject,
-                    }
-                  : undefined,
-            });
+            navigate(
+              `/projects/${project.id}/jobs/${jobId}?tab=field-mapping`,
+              {
+                state: {
+                  jobBackTo: `/projects/${project.id}?tab=sync-rules`,
+                  jobBackLabel: 'Back to Sync Jobs',
+                },
+              },
+            );
           }}
         />
       )}
 
-      {jobs.length === 0 ? (
-        <EmptyState
-          icon={ArrowLeftRight}
-          title="No sync jobs yet"
-          description="Create your first sync job to start syncing data between platforms."
-          action={{
-            label: 'Create Sync Job',
-            icon: canAddJob ? Plus : Lock,
-            onClick: startCreateJob,
-          }}
-        />
-      ) : (
-        <Card>
-          <CardHeader className="gap-0 space-y-1">
+      <Card>
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 space-y-1">
             <CardTitle>Sync jobs</CardTitle>
             <CardDescription>
               View each data flow and expand a job to review its recent
               performance.
             </CardDescription>
-          </CardHeader>
+          </div>
+          <Button
+            className="shrink-0 self-start sm:self-auto"
+            onClick={startCreateJob}
+          >
+            {canAddJob ? <Plus /> : <Lock />}
+            Create Sync Job
+          </Button>
+        </CardHeader>
 
-          <CardContent className="space-y-3">
-            {jobs.map((job) => (
+        <CardContent className={jobs.length > 0 ? 'space-y-3' : undefined}>
+          {jobs.length === 0 ? (
+            <EmptyState
+              icon={ArrowLeftRight}
+              title="No sync jobs yet"
+              description="Create your first sync job to start syncing data between platforms."
+            />
+          ) : (
+            jobs.map((job) => (
               <SyncJobCard key={job.id} job={job} projectId={project.id} />
-            ))}
-          </CardContent>
-        </Card>
-      )}
+            ))
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

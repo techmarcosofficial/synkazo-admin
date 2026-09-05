@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 
 import type { JobDetailContextValue } from './context';
 import { JobDetailProvider } from './context';
@@ -26,6 +26,23 @@ export default function JobDetailPage() {
   }>();
   const projectId = projectIdParam!;
   const jobId = jobIdParam!;
+  const location = useLocation();
+  const navigationState = location.state as {
+    jobBackTo?: unknown;
+    jobBackLabel?: unknown;
+  } | null;
+  const fallbackBackTo = `/projects/${projectId}?tab=sync-rules`;
+  const stateBackTo = navigationState?.jobBackTo;
+  const backTo =
+    typeof stateBackTo === 'string' &&
+    stateBackTo.startsWith('/') &&
+    !stateBackTo.startsWith('//')
+      ? stateBackTo
+      : fallbackBackTo;
+  const backLabel =
+    typeof navigationState?.jobBackLabel === 'string'
+      ? navigationState.jobBackLabel
+      : 'Back to Sync Jobs';
 
   const detailQuery = useJobDetailQuery(projectId, jobId);
   const { patchJob } = useJobDetailCacheHelpers(projectId, jobId);
@@ -59,14 +76,24 @@ export default function JobDetailPage() {
   if (loading) {
     return (
       <div className="animate-fade-in-up space-y-6">
-        <div className="space-y-3 pb-3">
-          <Skeleton className="h-4 w-28" />
-          <Skeleton className="h-7 w-64" />
-          <div className="flex gap-1">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-8 w-24" />
-            ))}
-          </div>
+        <div className="space-y-2">
+          <BackLink label={backLabel} to={backTo} />
+          <Card className="gap-0 overflow-hidden py-0">
+            <CardContent className="space-y-5 px-6 py-5">
+              <div className="flex items-center gap-4">
+                <Skeleton className="h-12 w-28 rounded-2xl" />
+                <div className="space-y-2">
+                  <Skeleton className="h-7 w-64" />
+                  <Skeleton className="h-4 w-48" />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-8 w-24" />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
         <Card>
           <CardContent>
@@ -80,7 +107,7 @@ export default function JobDetailPage() {
   if (!job) {
     return (
       <div className="space-y-4">
-        <BackLink label="Back to Project" to={`/projects/${projectId}`} />
+        <BackLink label={backLabel} to={backTo} />
         <ErrorState onRetry={() => detailQuery.refetch()} />
       </div>
     );
@@ -109,9 +136,14 @@ export default function JobDetailPage() {
         onValueChange={(v) => handleTabChange(v as typeof activeTab)}
         className="gap-6"
       >
-        <div className="bg-background sticky top-8 z-20 space-y-6 border-b">
-          <JobHeader />
-          <JobTabs tabs={tabs} />
+        <div className="space-y-2">
+          <BackLink label={backLabel} to={backTo} />
+          <Card className="gap-0 space-y-3 overflow-hidden py-0">
+            <JobHeader />
+            <div className="overflow-x-auto px-5">
+              <JobTabs tabs={tabs} />
+            </div>
+          </Card>
         </div>
 
         <JobHeaderAlert />

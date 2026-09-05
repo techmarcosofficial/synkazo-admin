@@ -104,6 +104,14 @@ export default function ProjectRecentActivity({
                 <ListRow key={log.id} asChild className="px-3 py-2">
                   <Link
                     to={activityHref}
+                    state={
+                      log.jobId
+                        ? {
+                            jobBackTo: `/projects/${projectId}?tab=overview`,
+                            jobBackLabel: 'Back to Project Overview',
+                          }
+                        : undefined
+                    }
                     className="grid w-full grid-cols-[6.75rem_2.5rem_minmax(0,1fr)_auto] items-center gap-3 text-left"
                     aria-label={`Open activity details for ${mapping}`}
                   >

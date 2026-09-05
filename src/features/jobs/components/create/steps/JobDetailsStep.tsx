@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import SyncDirectionFields from '@/features/jobs/components/SyncDirectionFields';
 import { KNOWN_PIPELINE_OBJECTS, type JobConfig } from '@/features/jobs/types';
 import { supportsCustomObjects } from '@/lib/platformCapabilities';
+import { cn } from '@/lib/utils';
 import type { ObjectItem } from '@/queries/useConnections';
 import type { Connection } from '@/types';
 
@@ -47,6 +48,7 @@ export default function JobDetailsStep({
   onAddCustomObject,
   projectId,
   projectSyncMode = null,
+  compact = false,
 }: {
   config: JobConfig;
   setConfig: Dispatch<SetStateAction<JobConfig>>;
@@ -62,6 +64,8 @@ export default function JobDetailsStep({
   projectId: string;
   /** Project-level gate — locks the Job Type radio to the project's mode. Null = unrestricted. */
   projectSyncMode?: 'one_way' | 'two_way' | null;
+  /** Uses tighter spacing and concise copy in the standalone create dialog. */
+  compact?: boolean;
 }) {
   const sourceGating = customObjectGating(
     config.sourcePlatform,
@@ -97,14 +101,20 @@ export default function JobDetailsStep({
   };
 
   return (
-    <div className="space-y-6">
+    <div className={cn(compact ? 'space-y-4' : 'space-y-6')}>
       {/* Connection */}
-      <div className="space-y-3">
-        <h3 className="text-sm font-medium">Connection</h3>
+      <div className={cn(compact ? 'space-y-2' : 'space-y-3')}>
+        <div>
+          <h3 className="text-sm font-semibold">Objects to sync</h3>
+          {!compact && (
+            <p className="text-muted-foreground mt-1 text-sm">
+              Choose the source and destination records for this sync.
+            </p>
+          )}
+        </div>
 
-        <div className="grid grid-cols-1 items-end gap-4 md:grid-cols-[1fr_auto_1fr]">
-          <div className="space-y-3">
-            <FieldLabel required>Source</FieldLabel>
+        <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-[1fr_auto_1fr]">
+          <div>
             <PlatformObjectSelector
               label="Source"
               platformId={config.sourcePlatform}
@@ -144,8 +154,7 @@ export default function JobDetailsStep({
             <ArrowLeftRight />
           </Button>
 
-          <div className="space-y-3">
-            <FieldLabel required>Destination</FieldLabel>
+          <div>
             <PlatformObjectSelector
               label="Destination"
               platformId={config.destPlatform}
@@ -167,7 +176,8 @@ export default function JobDetailsStep({
           </div>
         </div>
 
-        {config.destObject &&
+        {!compact &&
+          config.destObject &&
           KNOWN_PIPELINE_OBJECTS.has(config.destObject.toLowerCase()) && (
             <Alert>
               <InfoIcon />
@@ -182,7 +192,15 @@ export default function JobDetailsStep({
       </div>
 
       {/* Job Details */}
-      <div className="space-y-3">
+      <div className={cn('space-y-3 border-t', compact ? 'pt-4' : 'pt-6')}>
+        <div>
+          <h3 className="text-sm font-semibold">Job details</h3>
+          {!compact && (
+            <p className="text-muted-foreground mt-1 text-sm">
+              Give this sync a clear name so it is easy to identify later.
+            </p>
+          )}
+        </div>
         <Field data-invalid={!!errors.name}>
           <FieldLabel htmlFor="job-name" required>
             Job Name
@@ -202,8 +220,15 @@ export default function JobDetailsStep({
       </div>
 
       {/* Sync Behaviour */}
-      <div className="space-y-3 border-t pt-6">
-        <h3 className="text-sm font-medium">Sync Behaviour</h3>
+      <div className={cn('space-y-3 border-t', compact ? 'pt-4' : 'pt-6')}>
+        <div>
+          <h3 className="text-sm font-semibold">Sync settings</h3>
+          {!compact && (
+            <p className="text-muted-foreground mt-1 text-sm">
+              Control which changes are included in this sync.
+            </p>
+          )}
+        </div>
 
         <SyncDirectionFields
           projectSyncMode={projectSyncMode}
@@ -231,6 +256,7 @@ export default function JobDetailsStep({
             setConfig({ ...config, hubspotWebhookEnabled: v })
           }
           onSyncTriggerChange={(v) => setConfig({ ...config, syncTrigger: v })}
+          compact={compact}
         />
       </div>
     </div>

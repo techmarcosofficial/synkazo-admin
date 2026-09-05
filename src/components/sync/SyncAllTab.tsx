@@ -69,6 +69,7 @@ interface SyncAllTabProps {
   pipelineRequired?: boolean;
   pipelineConfigured?: boolean;
   onGoToPipeline?: () => void;
+  disabled?: boolean;
 }
 
 export default function SyncAllTab({
@@ -79,6 +80,7 @@ export default function SyncAllTab({
   pipelineRequired = false,
   pipelineConfigured = true,
   onGoToPipeline,
+  disabled = false,
 }: SyncAllTabProps) {
   const pipelineBlocked = pipelineRequired && !pipelineConfigured;
   const isTwoWay = job?.syncDirection === 'two_way';
@@ -92,9 +94,8 @@ export default function SyncAllTab({
 
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [startTime, setStartTime] = useState('00:00');
-  const [endDate, setEndDate] = useState<Date | undefined>(new Date());
+  const [endDate, setEndDate] = useState<Date | undefined>();
   const [endTime, setEndTime] = useState(() => format(new Date(), 'HH:mm'));
-  const [endDateTouched, setEndDateTouched] = useState(false);
   const [estimate, setEstimate] = useState<SyncEstimate | null>(null);
   const [checking, setChecking] = useState(false);
   const [checkError, setCheckError] = useState(false);
@@ -113,12 +114,10 @@ export default function SyncAllTab({
   };
   const handleEndDateChange = (d?: Date) => {
     setEndDate(d);
-    setEndDateTouched(true);
     setAttempted(false);
   };
   const handleEndTimeChange = (t: string) => {
     setEndTime(t);
-    setEndDateTouched(true);
     setAttempted(false);
   };
 
@@ -153,8 +152,8 @@ export default function SyncAllTab({
         </Alert>
         <Button
           onClick={() => onConfirm({})}
-          disabled={pipelineBlocked}
-          className="bg-paused hover:bg-paused/90 w-full"
+          disabled={pipelineBlocked || disabled}
+          className="w-full sm:w-auto"
         >
           <RotateCcw /> Start Full Sync
         </Button>
@@ -216,16 +215,16 @@ export default function SyncAllTab({
           </Alert>
           <Button
             onClick={() => onConfirm({})}
-            disabled={pipelineBlocked}
-            className="bg-paused hover:bg-paused/90 w-full"
+            disabled={pipelineBlocked || disabled}
+            className="w-full sm:w-auto"
           >
             <RotateCcw /> Resume Full Sync
           </Button>
         </>
       ) : (
         <>
-          <FieldGroup>
-            <div className="grid grid-cols-2 gap-4">
+          <FieldGroup className="gap-4">
+            <div className="grid gap-4 md:grid-cols-2">
               <Field>
                 <FieldLabel>Start Date</FieldLabel>
                 <div className="flex gap-2">
@@ -242,7 +241,7 @@ export default function SyncAllTab({
                         <span className="truncate">
                           {startDate
                             ? format(startDate, 'MMM d, yyyy')
-                            : 'Select date'}
+                            : 'Start date'}
                         </span>
                       </Button>
                     </PopoverTrigger>
@@ -266,8 +265,7 @@ export default function SyncAllTab({
                   />
                 </div>
                 <p className="text-muted-foreground text-[10px]">
-                  Where to start syncing from — leave unset to sync all
-                  historical records up to the end date
+                  Leave empty to include all earlier records
                 </p>
               </Field>
 
@@ -280,12 +278,14 @@ export default function SyncAllTab({
                         variant="outline"
                         className={cn(
                           'min-w-0 flex-1 shrink justify-start overflow-hidden font-normal',
-                          !endDateTouched && 'text-muted-foreground',
+                          !endDate && 'text-muted-foreground',
                         )}
                       >
                         <CalendarIcon className="shrink-0" />
                         <span className="truncate">
-                          {endDate ? format(endDate, 'MMM d, yyyy') : 'Today'}
+                          {endDate
+                            ? format(endDate, 'MMM d, yyyy')
+                            : 'End date'}
                         </span>
                       </Button>
                     </PopoverTrigger>
@@ -309,22 +309,29 @@ export default function SyncAllTab({
                   />
                 </div>
                 <p className="text-muted-foreground text-[10px]">
-                  Defaults to right now — clear the date to sync up through the
-                  current moment
+                  Leave unset to sync through the current moment
                 </p>
               </Field>
             </div>
           </FieldGroup>
 
-          <Button
-            variant="outline"
-            onClick={handleCheck}
-            disabled={(!startDate && !endDate) || checking}
-            className="w-full"
-          >
-            {checking ? <Spinner /> : <Search />}
-            {checking ? 'Checking…' : 'Check Records'}
-          </Button>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button variant="outline" onClick={handleCheck} disabled={checking}>
+              {checking ? <Spinner /> : <Search />}
+              {checking ? 'Checking…' : 'Check records'}
+            </Button>
+            <Button
+              onClick={() =>
+                onConfirm({
+                  startDate: startDateTime?.toISOString(),
+                  endDate: endDateTime?.toISOString(),
+                })
+              }
+              disabled={pipelineBlocked || disabled}
+            >
+              <RotateCcw /> Run sync now
+            </Button>
+          </div>
 
           {attempted && (
             <>
@@ -379,19 +386,6 @@ export default function SyncAllTab({
                   </CardContent>
                 </Card>
               )}
-
-              <Button
-                onClick={() =>
-                  onConfirm({
-                    startDate: startDateTime?.toISOString(),
-                    endDate: endDateTime?.toISOString(),
-                  })
-                }
-                disabled={pipelineBlocked}
-                className="bg-paused hover:bg-paused/90 w-full"
-              >
-                <RotateCcw /> Start Sync
-              </Button>
             </>
           )}
         </>

@@ -28,7 +28,7 @@ export const TAB_DEFS: JobDetailTabDef[] = [
     label: 'Pipeline',
     visible: ({ pipelineRequired }) => pipelineRequired,
   },
-  { id: 'schedule', label: 'Schedule' },
+  { id: 'schedule', label: 'Sync & Schedule' },
   { id: 'run-history', label: 'Run History' },
   { id: 'conflicts', label: 'Conflicts', visible: ({ isTwoWay }) => isTwoWay },
   {

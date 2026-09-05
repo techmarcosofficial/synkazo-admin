@@ -2,6 +2,7 @@ import {
   AlertTriangle,
   ArrowRight,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
   Info,
   Play,
@@ -18,6 +19,11 @@ import UpgradeRequiredDialog from '@/components/shared/UpgradeRequiredDialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import {
   Dialog,
   DialogContent,
@@ -67,6 +73,9 @@ interface LimitSyncModalProps {
   onGoToPipeline?: () => void;
   /** Render as plain tab content (no Dialog/overlay/close button) — used inside StartSyncModal. */
   embedded?: boolean;
+  /** Uses the parent section heading and moves technical fields behind disclosure. */
+  compact?: boolean;
+  disabled?: boolean;
 }
 
 // DialogTitle requires Radix Dialog context — swap for a plain equivalent when embedded.
@@ -106,7 +115,7 @@ function Frame({
   children: ReactNode;
 }) {
   if (embedded) {
-    return <div className="flex max-h-[70vh] flex-col gap-4">{children}</div>;
+    return <div className="flex flex-col gap-4">{children}</div>;
   }
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -132,6 +141,8 @@ export default function LimitSyncModal({
   pipelineConfigured = true,
   onGoToPipeline,
   embedded = false,
+  compact = false,
+  disabled = false,
 }: LimitSyncModalProps) {
   const pipelineBlocked = pipelineRequired && !pipelineConfigured;
   const [step, setStep] = useState('config');
@@ -149,6 +160,7 @@ export default function LimitSyncModal({
     open: boolean;
     message: string;
   }>({ open: false, message: '' });
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollCount = useRef(0);
@@ -339,20 +351,22 @@ export default function LimitSyncModal({
       <Frame embedded={embedded} onClose={onClose}>
         {step === 'config' && (
           <>
-            <DialogHeader>
-              <Title embedded={embedded} className="flex items-center gap-3">
-                <div className="bg-primary/10 flex size-8 items-center justify-center rounded-lg">
-                  <Sliders className="text-primary size-4" />
-                </div>
-                <div>
-                  <div>Custom Sync</div>
-                  <p className="text-muted-foreground flex items-center gap-1 text-xs font-normal">
-                    {job?.sourceObject} <ArrowRight className="size-3" />{' '}
-                    {job?.destObject}
-                  </p>
-                </div>
-              </Title>
-            </DialogHeader>
+            {!compact && (
+              <DialogHeader>
+                <Title embedded={embedded} className="flex items-center gap-3">
+                  <div className="bg-primary/10 flex size-8 items-center justify-center rounded-lg">
+                    <Sliders className="text-primary size-4" />
+                  </div>
+                  <div>
+                    <div>Limited run</div>
+                    <p className="text-muted-foreground flex items-center gap-1 text-xs font-normal">
+                      {job?.sourceObject} <ArrowRight className="size-3" />{' '}
+                      {job?.destObject}
+                    </p>
+                  </div>
+                </Title>
+              </DialogHeader>
+            )}
 
             <div className="flex-1 space-y-5 overflow-y-auto">
               {pipelineBlocked && (
@@ -406,55 +420,82 @@ export default function LimitSyncModal({
                   </p>
                 </Field>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <Field data-invalid={!!errors.startPage}>
-                    <FieldLabel htmlFor="start-page">Starting Page</FieldLabel>
-                    <Input
-                      id="start-page"
-                      type="number"
-                      min={1}
-                      value={startPage}
-                      onChange={(e) =>
-                        setStartPage(parseInt(e.target.value) || 1)
-                      }
-                      placeholder="1"
-                      aria-invalid={!!errors.startPage}
-                    />
-                    {errors.startPage && (
-                      <p className="text-destructive text-xs">
-                        {errors.startPage}
+                <Collapsible
+                  open={!compact || advancedOpen}
+                  onOpenChange={setAdvancedOpen}
+                >
+                  {compact && (
+                    <div className="flex justify-end">
+                      <CollapsibleTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-muted-foreground mb-2"
+                        >
+                          Advanced options
+                          <ChevronDown
+                            className={cn(
+                              'transition-transform',
+                              advancedOpen && 'rotate-180',
+                            )}
+                          />
+                        </Button>
+                      </CollapsibleTrigger>
+                    </div>
+                  )}
+                  <CollapsibleContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <Field data-invalid={!!errors.startPage}>
+                      <FieldLabel htmlFor="start-page">
+                        Starting Page
+                      </FieldLabel>
+                      <Input
+                        id="start-page"
+                        type="number"
+                        min={1}
+                        value={startPage}
+                        onChange={(e) =>
+                          setStartPage(parseInt(e.target.value) || 1)
+                        }
+                        placeholder="1"
+                        aria-invalid={!!errors.startPage}
+                      />
+                      {errors.startPage && (
+                        <p className="text-destructive text-xs">
+                          {errors.startPage}
+                        </p>
+                      )}
+                      <p className="text-muted-foreground text-[10px]">
+                        Source API page to start from
                       </p>
-                    )}
-                    <p className="text-muted-foreground text-[10px]">
-                      Source API page to start from
-                    </p>
-                  </Field>
-                  <Field data-invalid={!!errors.batchSize}>
-                    <FieldLabel htmlFor="batch-size">
-                      Records per Batch
-                    </FieldLabel>
-                    <Input
-                      id="batch-size"
-                      type="number"
-                      min={10}
-                      max={500}
-                      value={batchSize}
-                      onChange={(e) =>
-                        setBatchSize(parseInt(e.target.value) || 100)
-                      }
-                      placeholder="100"
-                      aria-invalid={!!errors.batchSize}
-                    />
-                    {errors.batchSize && (
-                      <p className="text-destructive text-xs">
-                        {errors.batchSize}
+                    </Field>
+                    <Field data-invalid={!!errors.batchSize}>
+                      <FieldLabel htmlFor="batch-size">
+                        Records per Batch
+                      </FieldLabel>
+                      <Input
+                        id="batch-size"
+                        type="number"
+                        min={10}
+                        max={500}
+                        value={batchSize}
+                        onChange={(e) =>
+                          setBatchSize(parseInt(e.target.value) || 100)
+                        }
+                        placeholder="100"
+                        aria-invalid={!!errors.batchSize}
+                      />
+                      {errors.batchSize && (
+                        <p className="text-destructive text-xs">
+                          {errors.batchSize}
+                        </p>
+                      )}
+                      <p className="text-muted-foreground text-[10px]">
+                        Records per processing batch
                       </p>
-                    )}
-                    <p className="text-muted-foreground text-[10px]">
-                      Records per processing batch
-                    </p>
-                  </Field>
-                </div>
+                    </Field>
+                  </CollapsibleContent>
+                </Collapsible>
               </FieldGroup>
 
               <Card className="py-0">
@@ -509,13 +550,15 @@ export default function LimitSyncModal({
             </div>
 
             <DialogFooter>
-              <Button variant="outline" onClick={onClose} className="flex-1">
-                Cancel
-              </Button>
+              {!compact && (
+                <Button variant="outline" onClick={onClose} className="flex-1">
+                  Cancel
+                </Button>
+              )}
               <Button
                 onClick={handleStart}
-                disabled={pipelineBlocked}
-                className="flex-1"
+                disabled={pipelineBlocked || disabled}
+                className={compact ? undefined : 'flex-1'}
               >
                 <Play /> Start Sync
               </Button>
@@ -632,7 +675,7 @@ export default function LimitSyncModal({
                   <div className="capitalize">
                     {timedOut
                       ? 'Run timed out'
-                      : `Custom Sync ${runLog?.status ?? 'done'}`}
+                      : `Limited run ${runLog?.status ?? 'done'}`}
                   </div>
                   <p className="text-muted-foreground text-xs font-normal">
                     {safeLimit.toLocaleString()} records · page {safeStart}

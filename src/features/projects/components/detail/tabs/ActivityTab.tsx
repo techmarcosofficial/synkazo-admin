@@ -220,6 +220,10 @@ export default function ActivityTab() {
                       <Button variant="ghost" size="sm" asChild>
                         <Link
                           to={`/projects/${projectId}/jobs/${log.jobId}?tab=run-history`}
+                          state={{
+                            jobBackTo: `/projects/${projectId}?tab=activity`,
+                            jobBackLabel: 'Back to Project Activity',
+                          }}
                         >
                           View <ArrowUpRight />
                         </Link>

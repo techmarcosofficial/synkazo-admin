@@ -187,6 +187,14 @@ function NotificationItem({
     >
       <Link
         to={notificationLink(notification)}
+        state={
+          notification.data?.jobId && notification.data?.projectId
+            ? {
+                jobBackTo: `/projects/${notification.data.projectId}?tab=sync-rules`,
+                jobBackLabel: 'Back to Sync Jobs',
+              }
+            : undefined
+        }
         onClick={() => {
           if (isUnread) onRead(notification.id);
           onNavigate();
