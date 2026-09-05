@@ -1,5 +1,4 @@
 export type JobDetailTabId =
-  | 'overview'
   | 'field-mapping'
   | 'pipeline'
   | 'schedule'
@@ -20,10 +19,9 @@ export interface JobDetailTabDef {
   visible?: (ctx: JobDetailTabContext) => boolean;
 }
 
-export const DEFAULT_TAB_ID: JobDetailTabId = 'overview';
+export const DEFAULT_TAB_ID: JobDetailTabId = 'field-mapping';
 
 export const TAB_DEFS: JobDetailTabDef[] = [
-  { id: 'overview', label: 'Overview' },
   { id: 'field-mapping', label: 'Field Mapping' },
   {
     id: 'pipeline',

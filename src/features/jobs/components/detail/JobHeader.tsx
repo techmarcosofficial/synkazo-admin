@@ -1,4 +1,5 @@
 import {
+  ArrowLeftRight,
   ArrowRight,
   Play,
   RefreshCw,
@@ -12,11 +13,12 @@ import { useJobDetailContext } from './context';
 import JobStatusDropdown from './JobStatusDropdown';
 
 import { BackLink } from '@/components/shared/PageHeader';
+import StatusBadge from '@/components/shared/StatusBadge';
 import UpgradeRequiredDialog from '@/components/shared/UpgradeRequiredDialog';
 import StartSyncModal from '@/components/sync/StartSyncModal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { formatSchedule } from '@/features/jobs/utils';
+import { formatNum, formatSchedule } from '@/features/jobs/utils';
 
 export default function JobHeader() {
   const {
@@ -64,6 +66,9 @@ export default function JobHeader() {
   const schedPaused = job.scheduleState === 'paused';
   const schedLimitPaused = job.scheduleState === 'paused_limit_reached';
   const schedRetrying = job.scheduleState === 'retry_pending';
+  const twoWay = job.syncDirection === 'two_way';
+  const DirectionIcon = twoWay ? ArrowLeftRight : ArrowRight;
+  const scheduleLabel = twoWay ? 'Automatic sync' : formatSchedule(job);
 
   return (
     <>
@@ -86,6 +91,8 @@ export default function JobHeader() {
               toggling={toggling}
               onToggle={handleToggle}
             />
+
+            <StatusBadge status={twoWay ? 'two_way' : 'one_way'} size="sm" />
 
             {isSyncing && (
               <Badge className="bg-muted text-muted-foreground gap-1.5 rounded-full font-semibold">
@@ -178,11 +185,19 @@ export default function JobHeader() {
             </strong>
             {' · '}
             <span className="inline-flex items-center gap-1 font-mono">
-              {job.sourceObject} <ArrowRight className="size-3" />{' '}
+              {job.sourceObject} <DirectionIcon className="size-3" />{' '}
               {job.destObject}
             </span>
             {' · '}
-            <span className="font-mono">{formatSchedule(job)}</span>
+            <span>{scheduleLabel}</span>
+            {job.timezone && (
+              <>
+                {' · '}
+                <span>Timezone: {job.timezone.replace(/_/g, ' ')}</span>
+              </>
+            )}
+            {' · '}
+            <span>{formatNum(job.recordsSynced)} records synced</span>
           </p>
         </div>
 

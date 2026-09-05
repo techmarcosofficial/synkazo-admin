@@ -4,11 +4,7 @@ import SetupProgress from './SetupProgress';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import type {
-  ConnectionExt,
-  JobExt,
-  ProjectExt,
-} from '@/features/projects/hooks';
+import type { ConnectionExt, ProjectExt } from '@/features/projects/hooks';
 import {
   deriveProjectSetupState,
   type ProjectSetupState,
@@ -18,7 +14,6 @@ import { useAlertDismissStore } from '@/stores/useAlertDismissStore';
 interface SetupBannerProps {
   project: ProjectExt;
   connections: ConnectionExt[];
-  jobs: JobExt[];
   onOpenSetup: () => void;
 }
 
@@ -37,10 +32,7 @@ interface StepContent {
   buttonLabel: string;
 }
 
-const STEP_CONTENT: Record<
-  Exclude<ProjectSetupState, 'Live' | 'AttentionRequired'>,
-  StepContent
-> = {
+const STEP_CONTENT: Record<Exclude<ProjectSetupState, 'Live'>, StepContent> = {
   Draft: {
     stepNumber: 1,
     percent: 0,
@@ -74,10 +66,9 @@ function dismissIdFor(projectId: string, state: ProjectSetupState) {
 export default function SetupBanner({
   project,
   connections,
-  jobs,
   onOpenSetup,
 }: SetupBannerProps) {
-  const state = deriveProjectSetupState({ project, connections, jobs });
+  const state = deriveProjectSetupState({ project, connections });
   const dismissId = dismissIdFor(project.id, state);
   const dismissedMap = useAlertDismissStore((s) => s.dismissed);
   const dismiss = useAlertDismissStore((s) => s.dismiss);
@@ -85,12 +76,7 @@ export default function SetupBanner({
   // Dismissal is session-only (in-memory store, no localStorage) and keyed by
   // state — a banner dismissed at "NeedsConnections" reappears once progress
   // (or regression) moves the project into a different state.
-  if (
-    state === 'Live' ||
-    state === 'AttentionRequired' ||
-    dismissedMap[dismissId]
-  )
-    return null;
+  if (state === 'Live' || dismissedMap[dismissId]) return null;
 
   const step = STEP_CONTENT[state];
 
@@ -107,7 +93,7 @@ export default function SetupBanner({
           <X className="h-4 w-4" />
         </Button>
 
-        <div className="flex items-center gap-4 pr-5">
+        <div className="flex flex-col gap-4 pr-5 sm:flex-row sm:items-center">
           <div className="bg-primary/10 flex size-9 shrink-0 items-center justify-center rounded-full">
             <Zap className="text-primary size-4" />
           </div>
@@ -125,7 +111,9 @@ export default function SetupBanner({
             </div>
           </div>
 
-          <Button onClick={onOpenSetup}>{step.buttonLabel}</Button>
+          <Button className="w-full sm:w-auto" onClick={onOpenSetup}>
+            {step.buttonLabel}
+          </Button>
         </div>
       </CardContent>
     </Card>

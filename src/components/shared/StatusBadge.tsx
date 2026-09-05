@@ -104,13 +104,19 @@ const STATUS_CONFIG: Record<
   completed: { tone: 'success', label: 'Completed' },
 
   pending: { tone: 'warning', label: 'Pending' },
+  ready_to_connect: { tone: 'info', label: 'Ready to connect' },
+  awaiting_connection: { tone: 'muted', label: 'Awaiting connection' },
   partial: { tone: 'warning', label: 'Partial' },
+  scheduled: { tone: 'info', label: 'Scheduled' },
   sandbox: { tone: 'warning', label: 'Sandbox' },
   production: { tone: 'success', label: 'Production' },
   one_way: { tone: 'muted', label: 'One-way', icon: ArrowRight },
   two_way: { tone: 'muted', label: 'Two-way', icon: ArrowLeftRight },
 
   failed: { tone: 'danger', label: 'Failed' },
+  cancelled: { tone: 'danger', label: 'Cancelled' },
+  limit_reached: { tone: 'muted', label: 'Limit reached' },
+  time_limit_reached: { tone: 'warning', label: 'Time limit reached' },
   disconnected: { tone: 'danger', label: 'Disconnected' },
 
   idle: { tone: 'muted', label: 'Idle' },

@@ -18,7 +18,7 @@ const ListRow = forwardRef<
     <Comp
       ref={ref}
       className={cn(
-        'hover:bg-muted/50 flex items-center gap-3 border-b px-5 py-3 transition-colors last:border-b-0',
+        'hover:bg-muted/50 flex items-center gap-3 border-b px-3 py-1 transition-colors last:border-b-0',
         className,
       )}
       {...props}

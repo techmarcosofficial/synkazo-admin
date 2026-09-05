@@ -17,10 +17,13 @@ import { PLATFORM_META } from '@/components/connections/platformMeta';
 import type { ExtConnection } from '@/components/connections/types';
 import { useConnectionTestAndDisconnect } from '@/components/connections/useConnectionTestAndDisconnect';
 import { PlatformIcon } from '@/components/platform';
-import StatusBadge from '@/components/shared/StatusBadge';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { cn } from '@/lib/utils';
 
@@ -28,12 +31,16 @@ interface PlatformCardProps {
   conn: ExtConnection;
   onConnect: (conn: ExtConnection) => void;
   onUpdated: (updated: ExtConnection | null) => void;
+  nextRequired?: boolean;
+  connectDisabled?: boolean;
 }
 
 export default function PlatformCard({
   conn,
   onConnect,
   onUpdated,
+  nextRequired = false,
+  connectDisabled = false,
 }: PlatformCardProps) {
   const meta = PLATFORM_META[conn.platformId] ?? { label: conn.platformId };
   const envLabel = conn.environment === 'sandbox' ? 'Sandbox' : 'Production';
@@ -45,107 +52,153 @@ export default function PlatformCard({
   const [showPermissions, setShowPermissions] = useState(false);
 
   return (
-    <Card
-      className={cn(
-        'border shadow-none',
-        conn.status === 'error' && 'border-destructive/40',
-      )}
-    >
-      <CardContent className="space-y-6">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-3">
+    <>
+      <div className="space-y-2 px-4 py-3">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center">
+          <div className="flex min-w-0 items-center gap-3">
             <PlatformIcon
               platformId={conn.platformId}
-              size={40}
-              className={cn(isSlot && 'opacity-50')}
+              size={36}
+              className={cn(isSlot && 'opacity-60')}
             />
-            <div>
-              <div
+            <div className="min-w-0">
+              <p
                 className={cn(
-                  'text-sm font-semibold',
+                  'truncate text-sm font-semibold',
                   isSlot && 'text-muted-foreground',
                 )}
               >
                 {meta.label}
-              </div>
-              {/* Description */}
-              <div className={cn('text-xs', isSlot && 'text-muted-foreground')}>
-                {isSlot ? 'Not connected' : envLabel}
-              </div>
+              </p>
+              <p className="text-muted-foreground truncate text-xs">
+                {envLabel}
+                {!isSlot && conn.accountName ? ` · ${conn.accountName}` : ''}
+              </p>
             </div>
           </div>
-          {testing ? (
-            <Badge variant="secondary" className="gap-1">
-              <RefreshCw className="size-3 animate-spin" /> Connecting
-            </Badge>
+
+          {isSlot ? (
+            <Button
+              variant={nextRequired ? 'default' : 'secondary'}
+              size="sm"
+              className="w-full md:ml-auto md:w-auto"
+              onClick={() => onConnect(conn)}
+              disabled={connectDisabled}
+            >
+              <PlugZap />
+              {connectDisabled
+                ? 'Connect source first'
+                : `Connect ${meta.label}`}
+            </Button>
           ) : (
-            <StatusBadge
-              status={isSlot ? 'disconnected' : conn.status}
-              size="md"
-            />
+            <>
+              <Separator className="md:hidden" />
+              <Separator
+                orientation="vertical"
+                className="hidden h-7 data-vertical:self-center md:ml-auto md:block"
+              />
+              <div className="bg-muted/60 flex w-fit items-center rounded-3xl p-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={handleTest}
+                      disabled={testing}
+                      aria-label={
+                        testing
+                          ? `Testing ${meta.label}`
+                          : `${conn.status === 'connected' ? 'Retest' : 'Test'} ${meta.label}`
+                      }
+                    >
+                      {testing ? (
+                        <RefreshCw className="animate-spin" />
+                      ) : (
+                        <Wifi />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    {testing
+                      ? 'Testing connection'
+                      : conn.status === 'connected'
+                        ? 'Retest connection'
+                        : 'Test connection'}
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => onConnect(conn)}
+                      aria-label={`Edit ${meta.label} connection`}
+                    >
+                      <Settings />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">Edit connection</TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => setShowPermissions(true)}
+                      aria-label={`View ${meta.label} permissions`}
+                    >
+                      <ShieldCheck />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">View permissions</TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="text-destructive hover:bg-destructive/10"
+                      aria-label={`Disconnect ${meta.label}`}
+                      onClick={() =>
+                        confirm({
+                          variant: 'danger',
+                          title: `Disconnect ${meta.label}?`,
+                          description: `${envLabel} environment — this will remove the stored credentials.`,
+                          body: (
+                            <DisconnectImpactBody projectId={conn.projectId} />
+                          ),
+                          confirmLabel: 'Yes, Disconnect',
+                          onConfirm: handleDisconnect,
+                        })
+                      }
+                    >
+                      <Trash2 />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    Disconnect platform
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </>
           )}
         </div>
 
         {testResult && (
-          <div className="bg-muted text-muted-foreground flex items-center gap-2 rounded-lg px-3 py-2 text-xs">
+          <div className="bg-muted text-muted-foreground flex items-center gap-2 rounded-xl px-3 py-2 text-xs">
             {testResult.ok ? (
-              <Check className="text-success size-3" />
+              <Check className="text-success size-3.5" />
             ) : (
-              <AlertCircle className="text-destructive size-3" />
+              <AlertCircle className="text-destructive size-3.5" />
             )}
             {testResult.msg}
           </div>
         )}
+      </div>
 
-        {isSlot ? (
-          <Button
-            variant="outline"
-            className="border-primary text-primary w-full"
-            onClick={() => onConnect(conn)}
-          >
-            <PlugZap /> Connect
-          </Button>
-        ) : (
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleTest}
-              disabled={testing}
-            >
-              {testing ? <RefreshCw className="animate-spin" /> : <Wifi />}
-              {conn.status === 'connected' ? 'Retest' : 'Test'}
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => onConnect(conn)}>
-              <Settings /> Edit
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowPermissions(true)}
-            >
-              <ShieldCheck /> Permissions
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-destructive hover:bg-destructive/10 ml-auto"
-              onClick={() =>
-                confirm({
-                  variant: 'danger',
-                  title: `Disconnect ${meta.label}?`,
-                  description: `${envLabel} environment — this will remove the stored credentials.`,
-                  body: <DisconnectImpactBody projectId={conn.projectId} />,
-                  confirmLabel: 'Yes, Disconnect',
-                  onConfirm: handleDisconnect,
-                })
-              }
-            >
-              <Trash2 />
-            </Button>
-          </div>
-        )}
-      </CardContent>
       {!isSlot && (
         <ConnectionPermissionsDialog
           conn={conn}
@@ -153,6 +206,6 @@ export default function PlatformCard({
           onOpenChange={setShowPermissions}
         />
       )}
-    </Card>
+    </>
   );
 }

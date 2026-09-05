@@ -14,13 +14,13 @@ export default function ProjectTabs({
   tabs: ProjectDetailTabView[];
 }) {
   return (
-    <TabsList variant="line" className="h-10 min-w-max p-0 overflow-hidden">
+    <TabsList variant="line" className="h-10 min-w-max overflow-hidden p-0">
       {tabs.map((tab) => {
         const trigger = (
           <TabsTrigger
             value={tab.id}
             disabled={tab.locked}
-            className="after:bg-primary px-3 py-2 font-semibold after:bottom-0! after:h-0.75! disabled:opacity-70"
+            className="after:bg-primary py-2 font-semibold after:bottom-0! after:h-1! disabled:opacity-70"
           >
             {tab.label}
             {tab.locked && <Lock />}

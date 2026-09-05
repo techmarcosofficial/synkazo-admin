@@ -68,16 +68,11 @@ export default function JobDetailPage() {
             ))}
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Card key={i}>
-              <CardContent className="space-y-2 p-4">
-                <Skeleton className="h-6 w-14" />
-                <Skeleton className="h-4 w-20" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <Card>
+          <CardContent>
+            <Skeleton className="h-72 w-full" />
+          </CardContent>
+        </Card>
       </div>
     );
   }

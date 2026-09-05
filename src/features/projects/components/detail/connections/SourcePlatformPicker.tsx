@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 
 import { PlatformIcon } from '@/components/platform';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -55,60 +54,56 @@ export default function SourcePlatformPicker({
   };
 
   return (
-    <Card className="border-dashed shadow-none">
-      <CardContent className="space-y-4">
-        <div className="flex items-center gap-3">
-          <PlatformIcon
-            platformId={selected || 'hubspot'}
-            size={40}
-            className={selected ? '' : 'opacity-40'}
-          />
-          <div>
-            <div className="text-sm font-semibold">
-              Choose a source platform
-            </div>
-            <div className="text-muted-foreground text-xs">
-              Pick which platform feeds this project. This is a one-time choice.
-            </div>
+    <div className="space-y-4 px-4 py-3">
+      <div className="flex items-center gap-3">
+        <PlatformIcon
+          platformId={selected || 'hubspot'}
+          size={40}
+          className={selected ? '' : 'opacity-40'}
+        />
+        <div>
+          <div className="text-sm font-semibold">Choose a source platform</div>
+          <div className="text-muted-foreground text-xs">
+            Pick which platform feeds this project. This is a one-time choice.
           </div>
         </div>
+      </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="source-platform" required>
-            Source platform
-          </Label>
-          <Select
-            value={selected}
-            onValueChange={(v) => setSelected(v as PlatformId)}
-            disabled={isLoading || updateProject.isPending}
-          >
-            <SelectTrigger id="source-platform" className="w-full">
-              <SelectValue placeholder="Select a platform" />
-            </SelectTrigger>
-            <SelectContent>
-              {sourcePlatforms.map((p) => (
-                <SelectItem key={p.platformId} value={p.platformId}>
-                  {p.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <SyncModeField
-          value={syncMode}
-          onChange={setSyncMode}
+      <div className="space-y-2">
+        <Label htmlFor="source-platform" required>
+          Source platform
+        </Label>
+        <Select
+          value={selected}
+          onValueChange={(v) => setSelected(v as PlatformId)}
           disabled={isLoading || updateProject.isPending}
-        />
-
-        <Button
-          className="w-full"
-          onClick={handleSave}
-          disabled={!selected || !syncMode || updateProject.isPending}
         >
-          {updateProject.isPending ? 'Saving…' : 'Set source'}
-        </Button>
-      </CardContent>
-    </Card>
+          <SelectTrigger id="source-platform" className="w-full">
+            <SelectValue placeholder="Select a platform" />
+          </SelectTrigger>
+          <SelectContent>
+            {sourcePlatforms.map((p) => (
+              <SelectItem key={p.platformId} value={p.platformId}>
+                {p.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <SyncModeField
+        value={syncMode}
+        onChange={setSyncMode}
+        disabled={isLoading || updateProject.isPending}
+      />
+
+      <Button
+        className="w-full"
+        onClick={handleSave}
+        disabled={!selected || !syncMode || updateProject.isPending}
+      >
+        {updateProject.isPending ? 'Saving…' : 'Set source'}
+      </Button>
+    </div>
   );
 }

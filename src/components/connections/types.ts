@@ -10,8 +10,3 @@ export interface TestResult {
   ok: boolean;
   msg: string;
 }
-
-export interface MissingSlot {
-  platformId: string;
-  connectionType: 'source' | 'destination';
-}

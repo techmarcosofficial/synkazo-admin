@@ -65,11 +65,11 @@ export function useProjectSetupState(
     (!!primaryJob?.id &&
       (fieldMappingsQuery.isLoading || testRunQuery.isLoading));
 
-  // primaryJobFieldMappings/latestTestRun aren't part of SetupStateInput today —
-  // deriveProjectSetupState only reads project/connections/jobs. Exposed below
-  // as separate hook fields for step components that want them directly.
+  // Jobs, field mappings, and the latest test run are exposed separately for
+  // wizard steps. The banner state itself is derived from persisted project
+  // completion and connection data, so it remains stable after a reload.
   const state: ProjectSetupState = project
-    ? deriveProjectSetupState({ project, connections, jobs })
+    ? deriveProjectSetupState({ project, connections })
     : 'Draft';
 
   return {

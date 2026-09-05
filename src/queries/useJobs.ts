@@ -39,11 +39,12 @@ export function useRunLogsQuery(
   jobId: string,
   page: number,
   limit = 20,
+  enabled = true,
 ) {
   return useQuery({
     queryKey: queryKeys.jobs.runLogs(projectId, jobId, page, limit),
     queryFn: () => syncLogsApi.listRunLogs(projectId, jobId, { page, limit }),
-    enabled: !!projectId && !!jobId,
+    enabled: enabled && !!projectId && !!jobId,
     placeholderData: keepPreviousData,
   });
 }

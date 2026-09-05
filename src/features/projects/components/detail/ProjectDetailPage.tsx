@@ -8,7 +8,6 @@ import {
 import ProjectHeader from './ProjectHeader';
 import ProjectTabContent from './ProjectTabContent';
 import ProjectTabs from './ProjectTabs';
-import { PageContextAlert } from './shared';
 
 import ActivationConfirmModal from '@/components/connections/ActivationConfirmModal';
 import ErrorState from '@/components/shared/ErrorState';
@@ -27,15 +26,11 @@ import {
 import type { ProjectDetailTabId } from '@/features/projects/lib/projectDetailTabs';
 import { hasBothConnections as computeHasBothConnections } from '@/features/projects/lib/projectSetupState';
 import { useSetupWizardStore } from '@/features/projects/store';
-import { useAlertDismissStore } from '@/stores/useAlertDismissStore';
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const projectId = id!;
   const openSetupWizard = useSetupWizardStore((s) => s.open);
-  const dismissedMap = useAlertDismissStore((s) => s.dismissed);
-  const dismiss = useAlertDismissStore((s) => s.dismiss);
-  const envAlertId = `project-detail:${projectId}:env-not-activated`;
 
   const detailQuery = useProjectDetailQuery(projectId);
   const { patchProject, setConnections: setConnectionsCache } =
@@ -47,7 +42,6 @@ export default function ProjectDetailPage() {
   const jobs = detailQuery.data?.jobs ?? [];
   const connections = detailQuery.data?.connections ?? [];
   const logs = detailQuery.data?.logs ?? [];
-  const associationRules = detailQuery.data?.associationRules ?? [];
 
   const [showCreateJob, setShowCreateJob] = useState(false);
 
@@ -110,26 +104,14 @@ export default function ProjectDetailPage() {
     );
   }
 
-  const totalRecordsSynced =
-    (project.totalRecordsSynced ?? 0) > 0
-      ? project.totalRecordsSynced!
-      : jobs.reduce((s, j) => s + (j.recordsSynced || 0), 0);
-  const totalErrors =
-    (project.totalErrorCount ?? 0) > 0
-      ? project.totalErrorCount!
-      : jobs.reduce((s, j) => s + (j.errorCount || 0), 0);
-
   const contextValue: ProjectDetailContextValue = {
     projectId,
     project,
     jobs,
     connections,
     logs,
-    associationRules,
     hasBothConnections,
     hasJobs,
-    totalRecordsSynced,
-    totalErrors,
     patchProject,
     setConnectionsCache,
     refetch,
@@ -156,9 +138,9 @@ export default function ProjectDetailPage() {
         onValueChange={(v) => handleTabChange(v as ProjectDetailTabId)}
         className="gap-6"
       >
-        <div className="space-y-3">
+        <div className="space-y-2">
           <BackLink label="Back to Projects" to="/projects" />
-          <Card className="gap-0 overflow-hidden py-0 space-y-3">
+          <Card className="gap-0 space-y-3 overflow-hidden py-0">
             <ProjectHeader />
             <div className="overflow-x-auto px-5">
               <ProjectTabs tabs={tabs} />
@@ -169,27 +151,8 @@ export default function ProjectDetailPage() {
         <SetupBanner
           project={project}
           connections={connections}
-          jobs={jobs}
           onOpenSetup={() => openSetupWizard(project.id)}
         />
-
-        {hasBothConnections &&
-          !envActivation.projectActiveEnv &&
-          !dismissedMap[envAlertId] && (
-            <PageContextAlert
-              variant="info"
-              title="Connections ready — activate to start syncing"
-              description={
-                <>
-                  Both connections are verified. Use the{' '}
-                  <strong>Sandbox</strong> / <strong>Production</strong> toggle
-                  above to activate an environment and enable scheduled syncs.
-                </>
-              }
-              dismissible
-              onDismiss={() => dismiss(envAlertId)}
-            />
-          )}
 
         <ProjectTabContent />
       </Tabs>
