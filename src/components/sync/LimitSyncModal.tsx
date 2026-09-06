@@ -45,7 +45,7 @@ function Stat({
   tone?: string;
 }) {
   return (
-    <div className="bg-muted/40 flex min-w-[72px] flex-col items-center gap-0.5 rounded-lg border px-3 py-2">
+    <div className="bg-muted/40 flex min-w-[72px] flex-col items-center gap-0.5 rounded-4xl border px-3 py-2">
       <span className={cn('text-base font-bold', tone ?? 'text-foreground')}>
         {value ?? 0}
       </span>

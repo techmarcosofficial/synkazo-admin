@@ -1,5 +1,5 @@
 import { Check, Plus, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import EmptyValuePolicy, {
   isValidDefaultValue,
@@ -18,7 +18,6 @@ import {
 import { PlatformIcon } from '@/components/platform';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -54,6 +53,13 @@ export interface RequiredFieldDefaultsProps {
    *  staying unstyled, so leaving one empty has a visible consequence at the
    *  moment it actually matters rather than nagging while the user is mid-edit. */
   showValidation?: boolean;
+  /** The surrounding page can provide the section heading when this editor is
+   *  placed inside a collapsible section. */
+  showHeader?: boolean;
+  searchQuery?: string;
+  unresolvedOnly?: boolean;
+  addRequestSignal?: number;
+  showAddButton?: boolean;
 }
 
 /**
@@ -79,6 +85,11 @@ export default function RequiredFieldDefaults({
   scope,
   onResolvedChange,
   showValidation = false,
+  showHeader = true,
+  searchQuery = '',
+  unresolvedOnly = false,
+  addRequestSignal,
+  showAddButton = true,
 }: RequiredFieldDefaultsProps) {
   const includeSource = scope === 'two_way';
   const requiredItems = getRequiredFieldItems(
@@ -196,6 +207,18 @@ export default function RequiredFieldDefaults({
     'dest',
   );
   const [extraDraftKey, setExtraDraftKey] = useState('');
+  const lastAddRequestRef = useRef(addRequestSignal);
+
+  useEffect(() => {
+    if (
+      addRequestSignal === undefined ||
+      addRequestSignal === lastAddRequestRef.current
+    ) {
+      return;
+    }
+    lastAddRequestRef.current = addRequestSignal;
+    setAddingExtra(true);
+  }, [addRequestSignal]);
 
   const requiredKeys = {
     source: new Set(sourceFields.filter((f) => f.required).map((f) => f.key)),
@@ -234,49 +257,48 @@ export default function RequiredFieldDefaults({
         ]
       : [];
     return (
-      <Card
+      <div
         key={itemKey(item)}
-        className="ring-border gap-3 py-4 shadow-none ring-1"
+        className="border-border grid min-w-0 gap-3 border-t px-4 py-3 lg:grid-cols-[minmax(12rem,0.8fr)_minmax(11rem,0.65fr)_minmax(25rem,1.7fr)_minmax(7rem,0.45fr)] lg:items-center"
       >
-        <CardContent className="flex flex-col gap-3 px-4">
-          <div className="flex items-center gap-2">
-            <PlatformIcon
-              platformId={item.side === 'dest' ? destPlatform : sourcePlatform}
-              size={16}
-            />
-            <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+        <div className="min-w-0">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="truncate text-sm font-semibold">
               {item.field.label || item.field.key}
-              {item.field.required && (
-                <span className="text-destructive ml-0.5">*</span>
-              )}
             </span>
-            {isResolved(item) && (
-              <Badge variant="secondary" className="gap-1">
-                <Check className="size-3" /> Resolved
-              </Badge>
-            )}
-            {removable && (
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Remove"
-                className="text-muted-foreground hover:text-destructive"
-                onClick={() => {
-                  commit(item, { onEmpty: 'none', defaultValue: '' });
-                  setExtraFields((prev) =>
-                    prev.filter(
-                      (e) =>
-                        !(e.side === item.side && e.key === item.field.key),
-                    ),
-                  );
-                }}
-              >
-                <X />
-              </Button>
-            )}
+            <Badge variant="outline" className="shrink-0 font-normal">
+              {item.field.type || 'Text'}
+            </Badge>
           </div>
+          <p className="text-muted-foreground mt-0.5 truncate text-xs">
+            {item.field.key}
+          </p>
+        </div>
+
+        <div className="min-w-0">
+          <p className="text-muted-foreground mb-1 text-[11px] font-semibold tracking-wide uppercase lg:hidden">
+            Requirement
+          </p>
+          <p className="text-xs font-medium">
+            {item.field.required ? 'Required field' : 'Optional default'}
+          </p>
+          <p className="text-muted-foreground mt-0.5 text-xs">
+            {item.side === 'dest'
+              ? `When writing to ${platformLabel}`
+              : `On write-back to ${platformLabel}`}
+          </p>
+        </div>
+
+        <div className="min-w-0">
+          <p className="text-muted-foreground mb-1 text-[11px] font-semibold tracking-wide uppercase lg:hidden">
+            Empty value handling
+          </p>
           <EmptyValuePolicy
+            compact
             reasons={reasons}
+            fieldType={item.field.type}
+            fieldOptions={item.field.options}
+            fieldLabel={item.field.label || item.field.key}
             forceShowInvalid={showValidation}
             value={{
               onEmpty: item.currentOnEmpty,
@@ -284,104 +306,212 @@ export default function RequiredFieldDefaults({
             }}
             onChange={(v) => commit(item, v)}
           />
-        </CardContent>
-      </Card>
+        </div>
+
+        <div className="flex items-center justify-between gap-2 lg:justify-end">
+          <Badge
+            variant="secondary"
+            className={cn(
+              'gap-1 whitespace-nowrap',
+              isResolved(item)
+                ? 'bg-success/10 text-success'
+                : 'bg-warning/10 text-warning',
+            )}
+          >
+            {isResolved(item) && <Check className="size-3" />}
+            {isResolved(item) ? 'Resolved' : 'Needs action'}
+          </Badge>
+          {removable && (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`Remove default for ${item.field.label || item.field.key}`}
+              className="text-muted-foreground hover:text-destructive"
+              onClick={() => {
+                commit(item, { onEmpty: 'none', defaultValue: '' });
+                setExtraFields((prev) =>
+                  prev.filter(
+                    (e) => !(e.side === item.side && e.key === item.field.key),
+                  ),
+                );
+              }}
+            >
+              <X />
+            </Button>
+          )}
+        </div>
+      </div>
     );
   };
 
   // Required-only — "Also set" (optional, user-picked) fields get their own section
   // above this one instead of being mixed in, so this column only ever shows what
   // the platform actually requires, same as the asterisk already implies.
-  const sourceItems = requiredItems.filter((i) => i.side === 'source');
-  const destItems = requiredItems.filter((i) => i.side === 'dest');
-  const showSourceColumn = includeSource && sourceFields.length > 0;
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const isVisible = (item: RequiredFieldItem) => {
+    const matchesSearch =
+      !normalizedSearch ||
+      (item.field.label || '').toLowerCase().includes(normalizedSearch) ||
+      item.field.key.toLowerCase().includes(normalizedSearch);
+    return matchesSearch && (!unresolvedOnly || !isResolved(item));
+  };
+  const visibleExtraItems = extraItems.filter(isVisible);
+  const sourceItems = requiredItems.filter(
+    (i) => i.side === 'source' && isVisible(i),
+  );
+  const destItems = requiredItems.filter(
+    (i) => i.side === 'dest' && isVisible(i),
+  );
+
+  const renderGroup = ({
+    title,
+    description,
+    platformId,
+    items,
+    removable = false,
+  }: {
+    title: string;
+    description: string;
+    platformId?: string;
+    items: RequiredFieldItem[];
+    removable?: boolean;
+  }) => (
+    <section className="border-border bg-card overflow-hidden rounded-4xl border">
+      <div className="bg-muted/30 flex items-center justify-between gap-3 px-4 py-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          {platformId ? (
+            <PlatformIcon platformId={platformId} size={18} />
+          ) : (
+            <span className="bg-background flex size-7 shrink-0 items-center justify-center rounded-md border">
+              <Plus className="text-muted-foreground size-3.5" />
+            </span>
+          )}
+          <div className="min-w-0">
+            <h4 className="truncate text-sm font-semibold">{title}</h4>
+            <p className="text-muted-foreground truncate text-xs">
+              {description}
+            </p>
+          </div>
+        </div>
+        <Badge variant="secondary" className="shrink-0 font-normal">
+          {items.length} {items.length === 1 ? 'field' : 'fields'}
+        </Badge>
+      </div>
+
+      <div className="bg-muted/15 text-muted-foreground hidden grid-cols-[minmax(12rem,0.8fr)_minmax(11rem,0.65fr)_minmax(25rem,1.7fr)_minmax(7rem,0.45fr)] gap-3 border-t px-4 py-2 text-[11px] font-semibold tracking-wide uppercase lg:grid">
+        <span>Field</span>
+        <span>Requirement</span>
+        <span>Empty value handling</span>
+        <span className="text-right">Status</span>
+      </div>
+      <div>{items.map((item) => renderItem(item, removable))}</div>
+    </section>
+  );
 
   const addExtraControl = (
-    <div className="flex flex-wrap items-center gap-2">
-      {includeSource && (
-        <Select
-          value={extraDraftSide}
-          onValueChange={(v) => {
-            setExtraDraftSide(v as 'source' | 'dest');
+    <div className="border-border bg-muted/20 rounded-4xl border p-4">
+      <div className="mb-3">
+        <p className="text-sm font-semibold">Add an optional default</p>
+        <p className="text-muted-foreground text-xs">
+          Choose a field that should receive a fallback even though the platform
+          does not require it.
+        </p>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-[11rem_minmax(14rem,1fr)_auto_auto]">
+        {includeSource ? (
+          <Select
+            value={extraDraftSide}
+            onValueChange={(v) => {
+              setExtraDraftSide(v as 'source' | 'dest');
+              setExtraDraftKey('');
+            }}
+          >
+            <SelectTrigger size="sm" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="source">
+                {PLATFORM_LABEL[sourcePlatform] ?? sourcePlatform}
+              </SelectItem>
+              <SelectItem value="dest">
+                {PLATFORM_LABEL[destPlatform] ?? destPlatform}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        ) : (
+          <div className="bg-background flex h-9 items-center gap-2 rounded-3xl border px-3 text-sm">
+            <PlatformIcon platformId={destPlatform} size={16} />
+            <span className="truncate">
+              {PLATFORM_LABEL[destPlatform] ?? destPlatform}
+            </span>
+          </div>
+        )}
+        <div className="min-w-0">
+          <FieldSelect
+            fields={extraCandidateFields}
+            value={extraDraftKey}
+            onChange={setExtraDraftKey}
+            placeholder="Field to set a default for…"
+            highlightRequired={false}
+          />
+        </div>
+        <Button
+          size="sm"
+          disabled={!extraDraftKey}
+          onClick={() => {
+            // Unshift, not push — the field the user just picked shows up first in
+            // "Also set" (right below this control), not appended after everything
+            // else where they'd have to scroll to find and fill it in.
+            setExtraFields((prev) => [
+              { side: extraDraftSide, key: extraDraftKey },
+              ...prev,
+            ]);
             setExtraDraftKey('');
+            setAddingExtra(false);
           }}
         >
-          <SelectTrigger size="sm" className="w-44">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="source">
-              {PLATFORM_LABEL[sourcePlatform] ?? sourcePlatform}
-            </SelectItem>
-            <SelectItem value="dest">
-              {PLATFORM_LABEL[destPlatform] ?? destPlatform}
-            </SelectItem>
-          </SelectContent>
-        </Select>
-      )}
-      <div className="min-w-56 flex-1">
-        <FieldSelect
-          fields={extraCandidateFields}
-          value={extraDraftKey}
-          onChange={setExtraDraftKey}
-          placeholder="Field to set a default for…"
-          highlightRequired={false}
-        />
+          <Plus /> Add
+        </Button>
+        <Button
+          variant="outline"
+          size="icon-sm"
+          aria-label="Cancel adding a default"
+          onClick={() => setAddingExtra(false)}
+        >
+          <X />
+        </Button>
       </div>
-      <Button
-        size="sm"
-        disabled={!extraDraftKey}
-        onClick={() => {
-          // Unshift, not push — the field the user just picked shows up first in
-          // "Also set" (right below this control), not appended after everything
-          // else where they'd have to scroll to find and fill it in.
-          setExtraFields((prev) => [
-            { side: extraDraftSide, key: extraDraftKey },
-            ...prev,
-          ]);
-          setExtraDraftKey('');
-          setAddingExtra(false);
-        }}
-      >
-        <Plus /> Add
-      </Button>
-      <Button
-        variant="outline"
-        size="icon-sm"
-        aria-label="Cancel"
-        onClick={() => setAddingExtra(false)}
-      >
-        <X />
-      </Button>
     </div>
   );
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-bold">Default values</h3>
-          <p className="text-muted-foreground text-xs">
-            Every field a connected platform requires needs a default value or a
-            skip rule before the sync can run.
-          </p>
+      {showHeader && (
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-bold">Default values</h3>
+            <p className="text-muted-foreground text-xs">
+              Every field a connected platform requires needs a default value or
+              a skip rule before the sync can run.
+            </p>
+          </div>
+          {requiredItems.length > 0 && (
+            <Badge
+              variant="secondary"
+              className={cn(
+                'gap-1.5',
+                fullyResolved && 'bg-success/10 text-success',
+              )}
+            >
+              {resolvedCount} of {requiredItems.length} resolved
+            </Badge>
+          )}
         </div>
-        {requiredItems.length > 0 && (
-          <Badge
-            variant="secondary"
-            className={cn(
-              'gap-1.5',
-              fullyResolved && 'bg-success/10 text-success',
-            )}
-          >
-            {resolvedCount} of {requiredItems.length} resolved
-          </Badge>
-        )}
-      </div>
+      )}
 
       {addingExtra ? (
         addExtraControl
-      ) : (
+      ) : showAddButton ? (
         <Button
           variant="outline"
           size="sm"
@@ -390,15 +520,17 @@ export default function RequiredFieldDefaults({
         >
           <Plus /> Add another default value
         </Button>
-      )}
+      ) : null}
 
-      {extraItems.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <p className="text-muted-foreground text-xs font-bold tracking-wide uppercase">
-            Also set
-          </p>
-          {extraItems.map((i) => renderItem(i, true))}
-        </div>
+      {visibleExtraItems.length > 0 && (
+        <>
+          {renderGroup({
+            title: 'Additional defaults',
+            description: 'Optional fallback values you chose to configure.',
+            items: visibleExtraItems,
+            removable: true,
+          })}
+        </>
       )}
 
       {requiredItems.length === 0 ? (
@@ -406,35 +538,30 @@ export default function RequiredFieldDefaults({
           Nothing required here — every field either has a match or isn't
           required by either platform.
         </p>
+      ) : sourceItems.length === 0 &&
+        destItems.length === 0 &&
+        visibleExtraItems.length === 0 ? (
+        <p className="text-muted-foreground py-8 text-center text-sm">
+          No default fields match the current search or filter.
+        </p>
       ) : (
-        <div className="max-h-[560px] overflow-y-auto pr-1">
-          <div
-            className={cn(
-              'grid grid-cols-1 gap-4',
-              showSourceColumn &&
-                sourceItems.length > 0 &&
-                destItems.length > 0 &&
-                'md:grid-cols-2',
-            )}
-          >
-            {showSourceColumn && sourceItems.length > 0 && (
-              <div className="flex flex-col gap-2">
-                <p className="text-muted-foreground text-xs font-bold tracking-wide uppercase">
-                  {PLATFORM_LABEL[sourcePlatform] ?? sourcePlatform} (source)
-                </p>
-                {sourceItems.map((i) => renderItem(i, false))}
-              </div>
-            )}
+        <div className="flex max-h-[620px] flex-col gap-4 overflow-y-auto pr-1">
+          {destItems.length > 0 &&
+            renderGroup({
+              title: `${PLATFORM_LABEL[destPlatform] ?? destPlatform} destination fields`,
+              description: `Applied when records are written to ${PLATFORM_LABEL[destPlatform] ?? destPlatform}.`,
+              platformId: destPlatform,
+              items: destItems,
+            })}
 
-            {destItems.length > 0 && (
-              <div className="flex flex-col gap-2">
-                <p className="text-muted-foreground text-xs font-bold tracking-wide uppercase">
-                  {PLATFORM_LABEL[destPlatform] ?? destPlatform} (destination)
-                </p>
-                {destItems.map((i) => renderItem(i, false))}
-              </div>
-            )}
-          </div>
+          {includeSource &&
+            sourceItems.length > 0 &&
+            renderGroup({
+              title: `${PLATFORM_LABEL[sourcePlatform] ?? sourcePlatform} write-back fields`,
+              description: `Applied only when this two-way sync writes back to ${PLATFORM_LABEL[sourcePlatform] ?? sourcePlatform}.`,
+              platformId: sourcePlatform,
+              items: sourceItems,
+            })}
         </div>
       )}
     </div>

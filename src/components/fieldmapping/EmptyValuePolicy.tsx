@@ -107,6 +107,10 @@ export default function EmptyValuePolicy({
   onChange,
   className,
   forceShowInvalid = false,
+  compact = false,
+  fieldType: fieldTypeOverride,
+  fieldOptions,
+  fieldLabel: fieldLabelOverride,
 }: {
   reasons: RequiredReason[];
   value: EmptyValuePolicyValue;
@@ -118,23 +122,148 @@ export default function EmptyValuePolicy({
    *  caller flips this to true once a save was actually attempted and blocked
    *  on this field, so leaving it blank has a visible consequence. */
   forceShowInvalid?: boolean;
+  /** Uses the compact policy/value layout in the default-mapping grid. The
+   *  expanded radio treatment remains the default for mapping dialogs. */
+  compact?: boolean;
+  /** Field metadata can be supplied separately for optional defaults, which do
+   *  not have a required reason but still need type-aware input and validation. */
+  fieldType?: string;
+  fieldOptions?: { value: string; label: string }[];
+  fieldLabel?: string;
 }) {
   // Whichever side actually publishes an option list/type drives the default-value
   // picker — dest is tried first since requiredReasons() orders [dest, source].
-  const options = reasons.find((r) => r.options?.length)?.options ?? [];
-  const fieldType = reasons.find((r) => r.fieldType)?.fieldType;
+  const options =
+    fieldOptions ?? reasons.find((r) => r.options?.length)?.options ?? [];
+  const fieldType =
+    fieldTypeOverride ?? reasons.find((r) => r.fieldType)?.fieldType;
   const fieldLabel =
-    reasons.length === 1 ? reasons[0].fieldLabel : 'this field';
+    fieldLabelOverride ??
+    (reasons.length === 1 ? reasons[0].fieldLabel : 'this field');
   const showInvalid =
     value.onEmpty === 'default' &&
     options.length === 0 &&
     !isValidDefaultValue(fieldType, value.defaultValue) &&
     (value.defaultValue.trim() !== '' || forceShowInvalid);
 
+  const defaultValueControl =
+    options.length > 0 ? (
+      <Select
+        value={value.defaultValue}
+        onValueChange={(v) => onChange({ ...value, defaultValue: v })}
+      >
+        <SelectTrigger
+          size="sm"
+          className="w-full"
+          aria-label={`Default value for ${fieldLabel}`}
+        >
+          <SelectValue placeholder="Choose a value…" />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label || opt.value}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    ) : BOOLEAN_TYPES.has((fieldType || '').toLowerCase()) ? (
+      <Select
+        value={value.defaultValue}
+        onValueChange={(v) => onChange({ ...value, defaultValue: v })}
+      >
+        <SelectTrigger
+          size="sm"
+          className="w-full"
+          aria-label={`Default value for ${fieldLabel}`}
+        >
+          <SelectValue placeholder="Choose a value…" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="true">True</SelectItem>
+          <SelectItem value="false">False</SelectItem>
+        </SelectContent>
+      </Select>
+    ) : (
+      <Input
+        type={
+          NUMBER_TYPES.has((fieldType || '').toLowerCase())
+            ? 'number'
+            : DATE_TYPES.has((fieldType || '').toLowerCase())
+              ? 'date'
+              : 'text'
+        }
+        value={value.defaultValue}
+        onChange={(e) => onChange({ ...value, defaultValue: e.target.value })}
+        placeholder={`Default value for ${fieldLabel}`}
+        aria-label={`Default value for ${fieldLabel}`}
+        aria-invalid={showInvalid}
+        className="h-9 text-xs"
+      />
+    );
+
+  const invalidMessage = showInvalid ? (
+    <p className="text-destructive mt-1 text-xs">
+      {NUMBER_TYPES.has((fieldType || '').toLowerCase())
+        ? 'Enter a number.'
+        : DATE_TYPES.has((fieldType || '').toLowerCase())
+          ? 'Enter a valid date.'
+          : 'Enter a value.'}
+    </p>
+  ) : null;
+
+  if (compact) {
+    return (
+      <div
+        className={cn(
+          'grid min-w-0 gap-2 sm:grid-cols-[minmax(11rem,0.75fr)_minmax(12rem,1fr)]',
+          className,
+        )}
+      >
+        <Select
+          value={value.onEmpty === 'none' ? undefined : value.onEmpty}
+          onValueChange={(next) =>
+            onChange({ ...value, onEmpty: next as OnEmptyPolicy })
+          }
+        >
+          <SelectTrigger
+            size="sm"
+            className="w-full"
+            aria-label={`Empty value action for ${fieldLabel}`}
+          >
+            <SelectValue placeholder="Choose an action…" />
+          </SelectTrigger>
+          <SelectContent>
+            {OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <div className="min-w-0">
+          {value.onEmpty === 'default' ? (
+            <>
+              {defaultValueControl}
+              {invalidMessage}
+            </>
+          ) : (
+            <p className="text-muted-foreground flex h-9 items-center text-xs">
+              {value.onEmpty === 'skip_record'
+                ? 'Records missing this value will be skipped.'
+                : 'Select how empty values should be handled.'}
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={cn('flex flex-col gap-3', className)}>
       {reasons.length > 0 && (
-        <div className="bg-warning/10 flex flex-col gap-1.5 rounded-lg px-3 py-2.5">
+        <div className="bg-warning/10 flex flex-col gap-1.5 rounded-4xl px-3 py-2.5">
           {reasons.map((r) => (
             <div
               key={`${r.context}-${r.platformLabel}-${r.fieldLabel}`}
@@ -198,66 +327,8 @@ export default function EmptyValuePolicy({
 
               {o.value === 'default' && value.onEmpty === 'default' && (
                 <div className="mt-0.5">
-                  {options.length > 0 ? (
-                    <Select
-                      value={value.defaultValue}
-                      onValueChange={(v) =>
-                        onChange({ ...value, defaultValue: v })
-                      }
-                    >
-                      <SelectTrigger size="sm" className="w-full">
-                        <SelectValue placeholder="Choose a value…" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {options.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label || opt.value}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : BOOLEAN_TYPES.has((fieldType || '').toLowerCase()) ? (
-                    <Select
-                      value={value.defaultValue}
-                      onValueChange={(v) =>
-                        onChange({ ...value, defaultValue: v })
-                      }
-                    >
-                      <SelectTrigger size="sm" className="w-full">
-                        <SelectValue placeholder="Choose a value…" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="true">True</SelectItem>
-                        <SelectItem value="false">False</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Input
-                      type={
-                        NUMBER_TYPES.has((fieldType || '').toLowerCase())
-                          ? 'number'
-                          : DATE_TYPES.has((fieldType || '').toLowerCase())
-                            ? 'date'
-                            : 'text'
-                      }
-                      value={value.defaultValue}
-                      onChange={(e) =>
-                        onChange({ ...value, defaultValue: e.target.value })
-                      }
-                      placeholder={`Default value for ${fieldLabel}`}
-                      aria-invalid={showInvalid}
-                      className="h-9 text-xs"
-                    />
-                  )}
-                  {showInvalid && (
-                    <p className="text-destructive mt-1 text-xs">
-                      {NUMBER_TYPES.has((fieldType || '').toLowerCase())
-                        ? 'Enter a number.'
-                        : DATE_TYPES.has((fieldType || '').toLowerCase())
-                          ? 'Enter a valid date.'
-                          : 'Enter a value.'}
-                    </p>
-                  )}
+                  {defaultValueControl}
+                  {invalidMessage}
                 </div>
               )}
             </div>

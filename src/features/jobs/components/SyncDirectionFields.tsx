@@ -274,7 +274,7 @@ export default function SyncDirectionFields({
             </FieldLabel>
             <div
               className={cn(
-                'bg-card flex items-start justify-between gap-4 rounded-xl border',
+                'bg-card flex items-start justify-between gap-4 rounded-3xl border',
                 compact ? 'p-3' : 'p-4',
               )}
             >

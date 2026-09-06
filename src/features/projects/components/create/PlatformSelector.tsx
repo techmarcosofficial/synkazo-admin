@@ -124,7 +124,7 @@ export default function PlatformSelector({
                 if (!disabled) onChange(platform.platformId);
               }}
               className={cn(
-                'border-muted-foreground/40 relative flex h-24 w-full min-w-30 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-3 text-center transition-all',
+                'border-muted-foreground/40 relative flex h-24 w-full min-w-30 cursor-pointer flex-col items-center justify-center gap-2 rounded-3xl border-2 border-dashed p-3 text-center transition-all',
                 selected
                   ? 'border-primary bg-primary/5 ring-primary/10 border-solid ring-2'
                   : 'hover:border-primary/40 hover:bg-muted/40',

@@ -157,7 +157,7 @@ export default function PipelineTab() {
           {pipelines.length === 0 ? (
             <div className="space-y-3">
               {scopeError ? (
-                <div className="bg-destructive/10 flex items-start gap-3 rounded-xl px-4 py-3 text-xs">
+                <div className="bg-destructive/10 flex items-start gap-3 rounded-4xl px-4 py-3 text-xs">
                   <AlertTriangle className="text-destructive mt-0.5 size-3.5 shrink-0" />
                   <div className="space-y-2">
                     <p className="text-destructive font-semibold">
@@ -202,7 +202,7 @@ export default function PipelineTab() {
                 </div>
               ) : (
                 <>
-                  <div className="bg-warning/10 flex items-start gap-3 rounded-xl px-4 py-3 text-xs">
+                  <div className="bg-warning/10 flex items-start gap-3 rounded-4xl px-4 py-3 text-xs">
                     <AlertTriangle className="text-warning mt-0.5 size-3.5 shrink-0" />
                     <div className="space-y-1">
                       <p className="text-warning font-medium">
@@ -276,8 +276,7 @@ export default function PipelineTab() {
                 stage if one already exists, or creating it automatically if
                 not. Bypasses the manual mapping below. When disabled, the
                 manual mapping is used (unchanged default behavior). A
-                missing/empty source status never creates or overrides a
-                stage.
+                missing/empty source status never creates or overrides a stage.
               </p>
             </div>
             <Switch
@@ -290,7 +289,7 @@ export default function PipelineTab() {
       )}
 
       {replicateStatus && pipelineId && (
-        <div className="bg-muted/40 flex items-center gap-2 rounded-xl px-4 py-3 text-xs">
+        <div className="bg-muted/40 flex items-center gap-2 rounded-4xl px-4 py-3 text-xs">
           <GitBranch className="size-3.5 shrink-0" />
           <span>
             Status replication is enabled — the manual status mapping below is
@@ -299,60 +298,64 @@ export default function PipelineTab() {
         </div>
       )}
 
-      {!replicateStatus && pipelineId && stages.length > 0 && stStatuses.length > 0 && (
-        <div className="overflow-hidden rounded-xl border">
-          <div className="bg-muted/40 border-b px-6 py-4">
-            <h3 className="font-semibold">Status → Stage Mapping</h3>
-            <p className="text-muted-foreground mt-0.5 text-xs">
-              Map each source{' '}
-              <strong className="text-foreground">{srcLabel}</strong> status to
-              a HubSpot pipeline stage.
-            </p>
-          </div>
-          <div className="bg-muted/40 text-muted-foreground grid grid-cols-2 border-b px-6 py-2 text-xs font-semibold tracking-wider uppercase">
-            <span>Source Status</span>
-            <span>HubSpot Stage</span>
-          </div>
-          <div className="divide-y">
-            {stStatuses.map((status) => (
-              <div
-                key={status}
-                className="grid grid-cols-2 items-center gap-4 px-6 py-3"
-              >
-                <span className="text-sm font-medium">{status}</span>
-                <Select
-                  value={statusMapping[status] ?? '__unmapped'}
-                  onValueChange={(v) =>
-                    setStatusMapping((prev) => ({
-                      ...prev,
-                      [status]: v === '__unmapped' ? '' : v,
-                    }))
-                  }
+      {!replicateStatus &&
+        pipelineId &&
+        stages.length > 0 &&
+        stStatuses.length > 0 && (
+          <div className="overflow-hidden rounded-4xl border">
+            <div className="bg-muted/40 border-b px-6 py-4">
+              <h3 className="font-semibold">Status → Stage Mapping</h3>
+              <p className="text-muted-foreground mt-0.5 text-xs">
+                Map each source{' '}
+                <strong className="text-foreground">{srcLabel}</strong> status
+                to a HubSpot pipeline stage.
+              </p>
+            </div>
+            <div className="bg-muted/40 text-muted-foreground grid grid-cols-2 border-b px-6 py-2 text-xs font-semibold tracking-wider uppercase">
+              <span>Source Status</span>
+              <span>HubSpot Stage</span>
+            </div>
+            <div className="divide-y">
+              {stStatuses.map((status) => (
+                <div
+                  key={status}
+                  className="grid grid-cols-2 items-center gap-4 px-6 py-3"
                 >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__unmapped">— Not mapped —</SelectItem>
-                    {stages
-                      .sort(
-                        (a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0),
-                      )
-                      .map((s) => (
-                        <SelectItem key={s.id} value={s.id}>
-                          {s.label}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            ))}
+                  <span className="text-sm font-medium">{status}</span>
+                  <Select
+                    value={statusMapping[status] ?? '__unmapped'}
+                    onValueChange={(v) =>
+                      setStatusMapping((prev) => ({
+                        ...prev,
+                        [status]: v === '__unmapped' ? '' : v,
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__unmapped">— Not mapped —</SelectItem>
+                      {stages
+                        .sort(
+                          (a, b) =>
+                            (a.displayOrder ?? 0) - (b.displayOrder ?? 0),
+                        )
+                        .map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.label}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {!replicateStatus && pipelineId && stStatuses.length === 0 && (
-        <div className="bg-warning/10 text-warning flex items-center gap-2 rounded-xl px-4 py-3 text-xs">
+        <div className="bg-warning/10 text-warning flex items-center gap-2 rounded-4xl px-4 py-3 text-xs">
           <AlertTriangle className="size-3.5 shrink-0" />
           <span>
             Could not load source statuses. Pipeline will be set but stage

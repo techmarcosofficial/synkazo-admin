@@ -136,8 +136,8 @@ export default function AssociationQueueCard({
         <div>
           <CardTitle className="text-sm">Association Queue</CardTitle>
           <p className="text-muted-foreground mt-0.5 text-xs">
-            Runs the selected association rules sequentially, after every job
-            in the queue has finished its pending sync work.
+            Runs the selected association rules sequentially, after every job in
+            the queue has finished its pending sync work.
           </p>
         </div>
         <Switch
@@ -209,7 +209,7 @@ export default function AssociationQueueCard({
                               {...dragProvided.draggableProps}
                               style={dragProvided.draggableProps.style}
                               className={cn(
-                                'bg-card flex items-center gap-3 rounded-lg border px-3 py-2',
+                                'bg-card flex items-center gap-3 rounded-4xl border px-3 py-2',
                                 snapshot.isDragging && 'ring-paused/40 ring-2',
                               )}
                             >

@@ -34,7 +34,7 @@ export default function StepConnectPlatforms({
         className="p-6"
       />
 
-      <div className="flex items-center gap-2 rounded-xl border px-5 py-4 text-sm">
+      <div className="flex items-center gap-2 rounded-4xl border px-5 py-4 text-sm">
         {bothConnected ? (
           <>
             <Check className="text-success size-4" />

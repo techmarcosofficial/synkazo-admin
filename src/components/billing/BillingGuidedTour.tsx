@@ -281,7 +281,7 @@ export default function BillingGuidedTour({
       )}
 
       <div
-        className="bg-popover text-popover-foreground border-border fixed z-[10000] w-[340px] rounded-xl border p-5 shadow-lg"
+        className="bg-popover text-popover-foreground border-border fixed z-[10000] w-[340px] rounded-4xl border p-5 shadow-lg"
         style={tooltipStyle}
       >
         <div className="mb-3 flex items-start justify-between gap-2">

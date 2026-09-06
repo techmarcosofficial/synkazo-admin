@@ -73,7 +73,7 @@ export default function PageContextAlert({
       role={role}
       aria-live={role === 'alert' ? 'assertive' : 'polite'}
       className={cn(
-        'rounded-2xl border-none',
+        'rounded-4xl',
         dismissible && 'pr-12',
         VARIANT_CLASSES[variant],
         className,

@@ -33,7 +33,7 @@ export default function ProjectCard({ project, jobCount }: ProjectCardProps) {
   return (
     <Card
       size="sm"
-      className="hover:shadow-primary/5 h-full transition-all duration-200 ease-out focus-within:-translate-y-1 focus-within:shadow-md hover:-translate-y-1 hover:shadow-md"
+      className="hover:border-foreground/20 focus-within:border-foreground/20 h-full transition-all duration-200 ease-out focus-within:-translate-y-1 hover:-translate-y-1"
     >
       <CardContent className="flex flex-1 flex-col gap-5">
         <div className="flex items-start justify-between gap-3">

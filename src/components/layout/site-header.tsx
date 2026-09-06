@@ -17,7 +17,7 @@ export default function SiteHeader() {
     <header className="bg-card sticky top-0 z-30 flex h-16 items-center border-b px-6">
       {/* Left */}
       <div className="flex flex-1 items-center gap-4">
-        <SidebarTrigger className="h-9 w-9 rounded-lg" />
+        <SidebarTrigger className="h-9 w-9 rounded-3xl" />
 
         <div className="max-w-xl flex-1">
           <GlobalSearch />

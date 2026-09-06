@@ -252,7 +252,7 @@ export default function InviteMemberDialog({
             const project = projects.find((p) => p.id === projectId);
             const perms = projectPerms[projectId];
             return (
-              <div key={projectId} className="rounded-xl border p-3">
+              <div key={projectId} className="rounded-4xl border p-3">
                 <p className="mb-2 text-sm font-medium">
                   {project?.name ?? projectId}
                 </p>

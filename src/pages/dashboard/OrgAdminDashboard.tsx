@@ -173,7 +173,7 @@ export default function OrgAdminDashboard() {
           </div>
 
           <Card className="gap-0 py-0">
-            <CardHeader className="bg-muted/40 flex flex-row items-center justify-between border-b py-3!">
+            <CardHeader className="bg-muted flex flex-row items-center justify-between py-3!">
               <CardTitle>Projects</CardTitle>
               <Button asChild variant="secondary" size="sm">
                 <Link to="/projects?new=1">
@@ -227,7 +227,7 @@ export default function OrgAdminDashboard() {
             />
           ) : (
             <Card className="gap-0 py-0">
-              <CardHeader className="bg-muted/40 border-b py-3!">
+              <CardHeader className="bg-muted py-3!">
                 <CardTitle>Members ({orgMembers.length})</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
@@ -279,7 +279,7 @@ export default function OrgAdminDashboard() {
 
           {invitations.length > 0 && (
             <Card className="gap-0 py-0">
-              <CardHeader className="bg-muted/40 border-b py-3!">
+              <CardHeader className="bg-muted py-3!">
                 <CardTitle className="text-warning">
                   Pending Invitations ({invitations.length})
                 </CardTitle>

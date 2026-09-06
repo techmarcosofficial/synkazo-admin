@@ -24,7 +24,7 @@ export function BillingHistoryViewToggle({
         aria-pressed={value === 'table'}
         onClick={() => onChange('table')}
         className={cn(
-          'h-7 rounded-2xl p-0',
+          'h-7 rounded-3xl p-0',
           value === 'table' ? 'bg-primary text-white' : 'bg-muted',
         )}
       >
@@ -38,7 +38,7 @@ export function BillingHistoryViewToggle({
         aria-pressed={value === 'timeline'}
         onClick={() => onChange('timeline')}
         className={cn(
-          'h-7 rounded-2xl p-0',
+          'h-7 rounded-3xl p-0',
           value === 'timeline' ? 'bg-primary text-white' : 'bg-muted',
         )}
       >

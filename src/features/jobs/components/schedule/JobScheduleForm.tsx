@@ -46,13 +46,13 @@ function JobScheduleSkeleton() {
     <div className="space-y-5">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="rounded-xl border p-3">
+          <div key={i} className="rounded-4xl border p-3">
             <Skeleton className="mb-2 h-4 w-20" />
             <Skeleton className="h-3 w-32" />
           </div>
         ))}
       </div>
-      <Skeleton className="h-40 w-full rounded-xl" />
+      <Skeleton className="h-40 w-full rounded-4xl" />
     </div>
   );
 }

@@ -230,7 +230,7 @@ export default function ConnectionPermissionsDialog({
                     {data.webhookHealth.subscriptions.map((sub) => (
                       <div
                         key={sub.id}
-                        className="space-y-1 rounded-lg border px-2.5 py-2"
+                        className="space-y-1 rounded-4xl border px-2.5 py-2"
                       >
                         <div className="flex items-center justify-between gap-2">
                           <span className="truncate font-mono text-xs">

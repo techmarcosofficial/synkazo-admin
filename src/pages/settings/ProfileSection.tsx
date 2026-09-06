@@ -186,7 +186,7 @@ export default function ProfileSection({
       description: 'This cannot be undone.',
       body: (
         <div className="space-y-3 text-sm">
-          <div className="bg-muted overflow-hidden rounded-lg">
+          <div className="bg-muted overflow-hidden rounded-4xl border">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-border/60 border-b text-left">
@@ -216,7 +216,7 @@ export default function ProfileSection({
               </tbody>
             </table>
           </div>
-          <div className="bg-muted overflow-hidden rounded-lg">
+          <div className="bg-muted overflow-hidden rounded-4xl border">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-border/60 border-b text-left">

@@ -20,10 +20,10 @@ export function BrowserMockup({
   className,
 }: BrowserMockupProps) {
   return (
-    <div className={cn('bg-card rounded-[22px]', className)}>
+    <div className={cn('bg-card rounded-4xl', className)}>
       {/* Soft top-down sheen for glass depth. */}
       {/* <div
-          className="from-foreground/[0.07] pointer-events-none absolute inset-0 rounded-[22px] bg-linear-to-b to-transparent"
+          className="from-foreground/[0.07] pointer-events-none absolute inset-0 rounded-4xl bg-linear-to-b to-transparent"
           aria-hidden="true"
         /> */}
 

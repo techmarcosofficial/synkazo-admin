@@ -8,6 +8,7 @@ import {
   ChevronsUpDown,
   ChevronUp,
   HelpCircle,
+  ListFilter,
   Pencil,
   KeyRound,
   Lock,
@@ -19,6 +20,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 
 import {
@@ -43,7 +45,6 @@ import RuleBuilderModal from './RuleBuilderModal';
 import { associationsApi } from '@/api/associations';
 import { PlatformIcon } from '@/components/platform';
 import { usePlanUpgradePrompt } from '@/components/shared/PlanGate';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -66,6 +67,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -83,7 +85,6 @@ import {
 } from '@/components/ui/tooltip';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import {
-  areTypesCompatible,
   classifyTypePair,
   matchFields,
   matchValueToOption,
@@ -93,7 +94,7 @@ import { suggestCastRule, type Rule } from '@/lib/ruleEngine';
 import { cn } from '@/lib/utils';
 import { useEntitlements } from '@/queries/useEntitlements';
 
-function IconLegend() {
+function IconLegend({ size = 'icon-sm' }: { size?: 'icon-sm' | 'icon' }) {
   const items: Array<{ icon: React.ReactNode; label: string }> = [
     {
       icon: <KeyRound className="size-3.5" />,
@@ -124,7 +125,7 @@ function IconLegend() {
       <TooltipTrigger asChild>
         <Button
           variant="outline"
-          size="icon-sm"
+          size={size}
           type="button"
           aria-label="What do these icons mean?"
         >
@@ -188,7 +189,7 @@ const UPDATE_POLICY_OPTIONS: Array<{
   {
     value: 'fill_if_empty',
     label: 'Fill if empty',
-    hint: "Only write this field if it's currently blank in the destination. If the destination already has the same value, nothing changes. If the destination already has a different value — a genuine mismatch — nothing is overwritten; use \"On Conflict\" below to decide whether that mismatch skips just this field or the whole record.",
+    hint: 'Only write this field if it\'s currently blank in the destination. If the destination already has the same value, nothing changes. If the destination already has a different value — a genuine mismatch — nothing is overwritten; use "On Conflict" below to decide whether that mismatch skips just this field or the whole record.',
   },
 ];
 
@@ -209,7 +210,7 @@ const CONFLICT_SCOPE_OPTIONS: Array<{
   {
     value: 'record',
     label: 'Skip Whole Record',
-    hint: 'When both sides already have a value and they differ (a genuine mismatch — not just an empty destination), the entire record\'s update is discarded, not just this field. Nothing on the record is written this sync.',
+    hint: "When both sides already have a value and they differ (a genuine mismatch — not just an empty destination), the entire record's update is discarded, not just this field. Nothing on the record is written this sync.",
   },
 ];
 
@@ -793,6 +794,12 @@ interface FieldMappingCanvasProps {
    * that section can be scrolled out of view in a long field list.
    */
   scrollToAttentionSignal?: number;
+  /** Hide the repeated canvas heading when a parent workspace already provides it. */
+  showHeading?: boolean;
+  /** Optional host for rendering the canvas toolbar in a parent workspace header. */
+  toolbarContainer?: HTMLElement | null;
+  /** Control height for a toolbar rendered outside the canvas. */
+  toolbarControlSize?: 'sm' | 'default';
 }
 
 export default function FieldMappingCanvas({
@@ -815,6 +822,9 @@ export default function FieldMappingCanvas({
   directionReadOnly = false,
   onAttentionReviewChange,
   scrollToAttentionSignal,
+  showHeading = true,
+  toolbarContainer,
+  toolbarControlSize = 'sm',
 }: FieldMappingCanvasProps) {
   const attentionSectionRef = useRef<HTMLDivElement>(null);
   const [showComposer, setShowComposer] = useState(false);
@@ -981,18 +991,28 @@ export default function FieldMappingCanvas({
     return () => clearTimeout(timer);
   }, [glow]);
 
-  const readyCount = pairRows.filter((m) => {
+  const pairCount = pairRows.reduce((count, mapping) => {
+    const dests = Array.isArray(mapping.destField)
+      ? mapping.destField
+      : [mapping.destField];
+    return count + dests.length;
+  }, 0);
+  const readyCount = pairRows.reduce((count, m) => {
     const dests = Array.isArray(m.destField) ? m.destField : [m.destField];
-    return dests.every(
-      (dk) =>
-        !readOnlyKeys.has(dk) &&
-        areTypesCompatible(
-          sourceTypeOf(m),
-          destFields.find((f) => f.key === dk)?.type,
-        ),
+    return (
+      count +
+      dests.filter(
+        (dk) =>
+          !readOnlyKeys.has(dk) &&
+          !typeIssues.some(
+            (issue) =>
+              issue.mapping.sourceField === m.sourceField &&
+              issue.destKey === dk,
+          ),
+      ).length
     );
-  }).length;
-  const totalRef = Math.max(requiredDest.length, pairRows.length, 1);
+  }, 0);
+  const totalRef = Math.max(requiredDest.length, pairCount, 1);
   const progress = Math.min(100, Math.round((readyCount / totalRef) * 100));
 
   const filtered = mapSearch
@@ -1011,7 +1031,7 @@ export default function FieldMappingCanvas({
           dl.includes(mapSearch.toLowerCase())
         );
       })
-    : mappings;
+    : pairRows;
 
   /** Any number of destinations can be match fields at once — see matchOrder on
    *  MappingRow for how AND ("must all agree") vs. OR ("try in order, first hit
@@ -1552,14 +1572,104 @@ export default function FieldMappingCanvas({
         (m) => m.sourceField === o.sourceField && m.destKey === o.destKey,
       ),
   );
-  const totalFields = Math.max(requiredDest.length, pairRows.length);
+  const totalFields = Math.max(requiredDest.length, pairCount);
+  const toolbarIconSize = toolbarControlSize === 'default' ? 'icon' : 'icon-sm';
+  const mappingToolbar = (
+    <div className="flex flex-wrap items-center gap-2">
+      <IconLegend size={toolbarIconSize} />
+
+      <InputGroup className="min-w-52 flex-1 sm:w-64 sm:flex-none">
+        <InputGroupAddon>
+          <Search />
+        </InputGroupAddon>
+        <InputGroupInput
+          value={mapSearch}
+          onChange={(e) => setMapSearch(e.target.value)}
+          placeholder="Search fields…"
+        />
+      </InputGroup>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant={showReadOnly ? 'secondary' : 'outline'}
+            size={toolbarIconSize}
+            onClick={() => {
+              if (readOnlyDestFields.length > 0) setShowReadOnly((p) => !p);
+            }}
+            className="shrink-0"
+            aria-label="Filter read-only fields"
+            aria-disabled={readOnlyDestFields.length === 0}
+          >
+            <ListFilter />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          {readOnlyDestFields.length === 0
+            ? 'No read-only destination fields'
+            : `${showReadOnly ? 'Hide' : 'Show'} the ${readOnlyDestFields.length} destination field${readOnlyDestFields.length !== 1 ? 's' : ''} that can't be mapped to.`}
+        </TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="outline"
+            size={toolbarIconSize}
+            className="text-destructive hover:bg-destructive/10 shrink-0"
+            disabled={mappings.length === 0}
+            onClick={() =>
+              confirm({
+                variant: 'danger',
+                title: 'Clear all mappings?',
+                description:
+                  "This removes every field mapping below. This can't be undone.",
+                confirmLabel: 'Clear all',
+                onConfirm: () => onMappingsChange([]),
+              })
+            }
+          >
+            <Trash2 />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Clear all mappings</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="default"
+            size={toolbarControlSize}
+            onClick={() => {
+              if (!canManualMap) {
+                promptUpgrade(MANUAL_MAPPING_UPGRADE_MESSAGE);
+                return;
+              }
+              setComposerPrefill(null);
+              setShowComposer((p) => !p);
+            }}
+            className={cn(
+              'shrink-0',
+              !canManualMap && 'text-muted-foreground cursor-not-allowed',
+            )}
+          >
+            {canManualMap ? <Plus /> : <Lock />} Add mapping
+          </Button>
+        </TooltipTrigger>
+        {!canManualMap && (
+          <TooltipContent side="top">
+            Your plan uses auto-mapped presets only — upgrade to add mappings by
+            hand
+          </TooltipContent>
+        )}
+      </Tooltip>
+    </div>
+  );
 
   return (
     <div className="flex flex-col gap-4">
-      <Card>
-        <CardContent className="flex flex-wrap items-center gap-4">
-          <div className="flex min-w-60 flex-1 flex-col gap-2">
-            <div className="flex items-center gap-2.5">
+      {toolbarContainer && createPortal(mappingToolbar, toolbarContainer)}
+      <Card className="gap-0 py-0">
+        <CardContent className="flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-center">
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            <div className="flex flex-wrap items-center gap-2.5">
               <h3 className="text-sm font-bold">
                 <span
                   className={cn(
@@ -1573,7 +1683,10 @@ export default function FieldMappingCanvas({
                   of {totalFields} fields ready
                 </span>
               </h3>
-              <Progress value={progress} className="h-1.5 max-w-xs" />
+              <Progress
+                value={progress}
+                className="h-1.5 max-w-xs min-w-24 flex-1"
+              />
 
               {naCount > 0 ? (
                 <Badge
@@ -1597,7 +1710,9 @@ export default function FieldMappingCanvas({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5 border-l pl-4">
+          <Separator className="hidden lg:block" orientation="vertical" />
+
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2.5">
             <KeyRound size={16} className="text-primary" />
             <span className="text-muted-foreground text-xs whitespace-nowrap">
               Matched by
@@ -1661,11 +1776,11 @@ export default function FieldMappingCanvas({
             })}
 
             {activeMatches.length >= 2 && (
-              <div className="bg-muted flex items-center gap-0.5 rounded-md p-0.5">
+              <div className="bg-muted flex items-center gap-0.5 rounded-3xl p-0.5">
                 <button
                   type="button"
                   className={cn(
-                    'rounded px-1.5 py-0.5 text-[11px] font-medium',
+                    'rounded-3xl px-1.5 py-0.5 text-[11px] font-medium',
                     matchMode === 'and'
                       ? 'bg-background shadow-sm'
                       : 'text-muted-foreground',
@@ -1678,7 +1793,7 @@ export default function FieldMappingCanvas({
                 <button
                   type="button"
                   className={cn(
-                    'rounded px-1.5 py-0.5 text-[11px] font-medium',
+                    'rounded-3xl px-1.5 py-0.5 text-[11px] font-medium',
                     matchMode === 'or'
                       ? 'bg-background shadow-sm'
                       : 'text-muted-foreground',
@@ -1699,7 +1814,7 @@ export default function FieldMappingCanvas({
                 toggleMatch(v.slice(0, sep), v.slice(sep + 1));
               }}
             >
-              <SelectTrigger size="sm" className="h-8 w-44">
+              <SelectTrigger size="sm" className="h-8 w-44 max-w-full">
                 <SelectValue
                   placeholder={
                     activeMatches.length === 0
@@ -1744,7 +1859,7 @@ export default function FieldMappingCanvas({
           <Button
             onClick={handleAutoMapClick}
             size="sm"
-            className="ml-auto"
+            className="shrink-0 lg:ml-auto"
             disabled={
               autoMapping ||
               sourceFields.length === 0 ||
@@ -1757,101 +1872,26 @@ export default function FieldMappingCanvas({
         </CardContent>
       </Card>
       <Card className="gap-0 overflow-hidden py-0">
-        <CardContent className="space-y-3">
-          <div className="flex items-center justify-between px-4 py-3.5">
-            <div>
-              <div className="flex">
-                <h3 className="text-xl font-semibold">Manage your fields</h3>
-              </div>
-              <span className="mr-1 text-xs">Field mappings</span>
-            </div>
-            <div className="flex items-center gap-2.5">
-              <IconLegend />
-
-              <InputGroup>
-                <InputGroupAddon>
-                  <Search />
-                </InputGroupAddon>
-                <InputGroupInput
-                  value={mapSearch}
-                  onChange={(e) => setMapSearch(e.target.value)}
-                  placeholder="Search fields…"
-                />
-              </InputGroup>
-              {readOnlyDestFields.length > 0 && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant={showReadOnly ? 'secondary' : 'outline'}
-                      onClick={() => setShowReadOnly((p) => !p)}
-                      className="shrink-0"
-                    >
-                      Read-only fields
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    {showReadOnly ? 'Hide' : 'Show'} the{' '}
-                    {readOnlyDestFields.length} destination field
-                    {readOnlyDestFields.length !== 1 ? 's' : ''} that can't be
-                    mapped to.
-                  </TooltipContent>
-                </Tooltip>
+        <CardContent className="p-0">
+          {toolbarContainer === undefined && (
+            <div
+              className={cn(
+                'flex flex-col gap-4 border-b px-5 py-4 xl:flex-row xl:items-center xl:justify-between',
+                !showHeading && 'xl:justify-end',
               )}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="text-destructive hover:bg-destructive/10 shrink-0"
-                    disabled={mappings.length === 0}
-                    onClick={() =>
-                      confirm({
-                        variant: 'danger',
-                        title: 'Clear all mappings?',
-                        description:
-                          "This removes every field mapping below. This can't be undone.",
-                        confirmLabel: 'Clear all',
-                        onConfirm: () => onMappingsChange([]),
-                      })
-                    }
-                  >
-                    <Trash2 />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  Clear all mappings
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant={showComposer ? 'secondary' : 'outline'}
-                    onClick={() => {
-                      if (!canManualMap) {
-                        promptUpgrade(MANUAL_MAPPING_UPGRADE_MESSAGE);
-                        return;
-                      }
-                      setComposerPrefill(null);
-                      setShowComposer((p) => !p);
-                    }}
-                    className={cn(
-                      'shrink-0',
-                      !canManualMap &&
-                        'text-muted-foreground cursor-not-allowed',
-                    )}
-                  >
-                    {canManualMap ? <Plus /> : <Lock />} Add mapping
-                  </Button>
-                </TooltipTrigger>
-                {!canManualMap && (
-                  <TooltipContent side="top">
-                    Your plan uses auto-mapped presets only — upgrade to add
-                    mappings by hand
-                  </TooltipContent>
-                )}
-              </Tooltip>
+            >
+              {showHeading && (
+                <div className="min-w-0">
+                  <h2 className="text-lg font-semibold">Field mappings</h2>
+                  <p className="text-muted-foreground mt-0.5 text-xs">
+                    Map fields between your connected platforms to keep data in
+                    sync.
+                  </p>
+                </div>
+              )}
+              {mappingToolbar}
             </div>
-          </div>
+          )}
 
           {showReadOnly && readOnlyDestFields.length > 0 && (
             <div className="bg-muted/30 border-b px-4 py-3">
@@ -1894,9 +1934,9 @@ export default function FieldMappingCanvas({
             sourceObject={sourceObject}
             jobId={jobId}
           />
-          <div className="overflow-hidden rounded-4xl border">
-            <div className="bg-input flex items-center gap-2 border-b px-4 py-2.5">
-              <div className="text-muted-foreground flex flex-1 items-center gap-2 text-[11px] font-bold tracking-wide">
+          <div className="overflow-hidden">
+            <div className="bg-muted/30 flex items-center gap-2 border-b px-4 py-3">
+              <div className="text-muted-foreground flex min-w-0 flex-1 items-center gap-2 text-[11px] font-bold tracking-wide">
                 <PlatformTile platformId={sourcePlatform} size={18} />
                 {(
                   PLATFORM_LABEL[sourcePlatform] ?? sourcePlatform
@@ -1915,7 +1955,8 @@ export default function FieldMappingCanvas({
                   />
                 )}
               </div>
-              <div className="text-muted-foreground flex flex-1 items-center gap-2 text-[11px] font-bold tracking-wide">
+              <ArrowRight className="text-muted-foreground size-4 shrink-0" />
+              <div className="text-muted-foreground flex min-w-0 flex-1 items-center gap-2 text-[11px] font-bold tracking-wide">
                 <PlatformTile platformId={destPlatform} size={18} />
                 {(PLATFORM_LABEL[destPlatform] ?? destPlatform).toUpperCase()}
                 {destObject && (
@@ -1934,23 +1975,13 @@ export default function FieldMappingCanvas({
               </div>
             </div>
 
-            <div className="max-h-150 overflow-y-auto">
+            <div className="max-h-150 overflow-auto">
               {autoMapping && (
                 <div className="text-muted-foreground flex items-center justify-center gap-3 border-b py-10 text-sm">
                   <Spinner />
                   Waiting for all fields to load, then matching them
                   automatically…
                 </div>
-              )}
-
-              {naCount === 0 && pairRows.length > 0 && !mapSearch && (
-                <Alert className="bg-success/10 rounded-none border-x-0 border-t-0">
-                  <Check className="text-success" />
-                  <AlertDescription className="text-foreground">
-                    <span className="font-bold">You're all set</span> — every
-                    field is mapped and ready to sync.
-                  </AlertDescription>
-                </Alert>
               )}
 
               {naCount > 0 && !mapSearch && (
@@ -2054,12 +2085,13 @@ export default function FieldMappingCanvas({
               )}
 
               {filtered.length > 0 && (
-                <Table>
+                <Table className="min-w-[1080px]">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Source</TableHead>
-                      <TableHead className="w-8" />
-                      <TableHead>Destination</TableHead>
+                      <TableHead className="w-[22%]">Source field</TableHead>
+                      <TableHead className="w-[22%]">
+                        Destination field
+                      </TableHead>
                       {showDirectionToggle && (
                         <TableHead className="w-40">Direction</TableHead>
                       )}
@@ -2068,7 +2100,7 @@ export default function FieldMappingCanvas({
                         Update Policy
                       </TableHead>
                       <TableHead className="w-[8.5rem]">
-                        On Conflict
+                        Conflict handling
                       </TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -2094,9 +2126,10 @@ export default function FieldMappingCanvas({
                             (r: unknown) =>
                               (r as Record<string, unknown>).enabled !== false,
                           ).length;
-                          const compatible = areTypesCompatible(
-                            sourceTypeOf(m),
-                            df?.type,
+                          const needsTypeAttention = typeIssues.some(
+                            (issue) =>
+                              issue.mapping.sourceField === m.sourceField &&
+                              issue.destKey === dk,
                           );
                           const direction = m.direction ?? 'bidirectional';
                           const rowDirectionReadOnly =
@@ -2119,51 +2152,55 @@ export default function FieldMappingCanvas({
                           return (
                             <TableRow
                               key={`${m.sourceField}-${dk}`}
-                              className={cn(!compatible && 'bg-warning/5')}
+                              className={cn(
+                                needsTypeAttention && 'bg-warning/5',
+                              )}
                             >
                               <TableCell className="min-w-0">
-                                {isEditing ? (
-                                  <FieldSelect
-                                    fields={sourceFields}
-                                    value={editDraft?.sourceField ?? ''}
-                                    onChange={(v) =>
-                                      setEditDraft((prev) =>
-                                        prev
-                                          ? { ...prev, sourceField: v }
-                                          : prev,
-                                      )
+                                <div className="flex min-w-0 items-center gap-3">
+                                  <div className="min-w-0 flex-1">
+                                    {isEditing ? (
+                                      <FieldSelect
+                                        fields={sourceFields}
+                                        value={editDraft?.sourceField ?? ''}
+                                        onChange={(v) =>
+                                          setEditDraft((prev) =>
+                                            prev
+                                              ? { ...prev, sourceField: v }
+                                              : prev,
+                                          )
+                                        }
+                                        placeholder="Source field…"
+                                        highlightRequired={sourceRequiredActive}
+                                      />
+                                    ) : (
+                                      <>
+                                        <div className="flex min-w-0 items-center gap-2">
+                                          <span className="truncate text-sm font-semibold">
+                                            {sf?.label ?? m.sourceField}
+                                            {sourceRequiredActive &&
+                                              sf?.required && (
+                                                <span className="text-destructive ml-0.5">
+                                                  *
+                                                </span>
+                                              )}
+                                          </span>
+                                          <TypeChip type={sf?.type} />
+                                        </div>
+                                        <div className="text-muted-foreground truncate font-mono text-[10px]">
+                                          {m.sourceField}
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                  <DirectionArrow
+                                    direction={
+                                      showDirectionToggle
+                                        ? direction
+                                        : 'forward_only'
                                     }
-                                    placeholder="Source field…"
-                                    highlightRequired={sourceRequiredActive}
                                   />
-                                ) : (
-                                  <>
-                                    <div className="flex min-w-0 items-center gap-2">
-                                      <span className="truncate text-sm font-semibold">
-                                        {sf?.label ?? m.sourceField}
-                                        {sourceRequiredActive &&
-                                          sf?.required && (
-                                            <span className="text-destructive ml-0.5">
-                                              *
-                                            </span>
-                                          )}
-                                      </span>
-                                      <TypeChip type={sf?.type} />
-                                    </div>
-                                    <div className="text-muted-foreground mt-0 truncate font-mono text-[10px]">
-                                      {m.sourceField}
-                                    </div>
-                                  </>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-muted-foreground">
-                                <DirectionArrow
-                                  direction={
-                                    showDirectionToggle
-                                      ? direction
-                                      : 'forward_only'
-                                  }
-                                />
+                                </div>
                               </TableCell>
                               <TableCell className="min-w-0">
                                 {isEditing ? (
@@ -2408,7 +2445,9 @@ export default function FieldMappingCanvas({
                                   <TableCell>
                                     <Select
                                       value={conflictScope}
-                                      disabled={updatePolicy !== 'fill_if_empty'}
+                                      disabled={
+                                        updatePolicy !== 'fill_if_empty'
+                                      }
                                       onValueChange={(v) =>
                                         setConflictScope(
                                           m.sourceField,
@@ -2586,7 +2625,7 @@ export default function FieldMappingCanvas({
 
           <div className="flex items-center justify-between border-t px-4 py-3">
             <span className="text-muted-foreground text-xs">
-              {pairRows.length} field{pairRows.length !== 1 ? 's' : ''} mapped
+              {pairCount} field{pairCount !== 1 ? 's' : ''} mapped
             </span>
             <span className="text-muted-foreground text-xs">
               Scroll or search to find a field

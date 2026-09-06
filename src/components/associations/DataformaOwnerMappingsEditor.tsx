@@ -74,7 +74,11 @@ export default function DataformaOwnerMappingsEditor({
 
     connectionsApi
       .getProperties(projectId, 'hubspot', 'companies')
-      .then((props) => setHubspotProperties(props.map((p) => ({ name: p.name, label: p.label }))))
+      .then((props) =>
+        setHubspotProperties(
+          props.map((p) => ({ name: p.name, label: p.label })),
+        ),
+      )
       .catch(() => setHubspotProperties([]));
   }, [projectId]);
 
@@ -170,7 +174,7 @@ export default function DataformaOwnerMappingsEditor({
           <Spinner className="size-3.5" /> Loading mappings…
         </div>
       ) : mappings.length === 0 && !adding ? (
-        <p className="text-muted-foreground rounded-lg border border-dashed p-3 text-xs">
+        <p className="text-muted-foreground rounded-4xl border border-dashed p-3 text-xs">
           No mappings configured — defaults to{' '}
           <code className="text-primary">df_sales_email</code> →{' '}
           <code className="text-primary">hubspot_owner_id</code>. Add a mapping
@@ -197,7 +201,7 @@ export default function DataformaOwnerMappingsEditor({
             ) : (
               <div
                 key={m.id}
-                className="bg-muted/30 flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs"
+                className="bg-muted/30 flex items-center justify-between gap-2 rounded-4xl border px-3 py-2 text-xs"
               >
                 <span className="font-mono">
                   {m.sourceProperty}{' '}
@@ -270,7 +274,7 @@ function MappingDraftRow({
   onCancel: () => void;
 }) {
   return (
-    <div className="bg-muted/30 space-y-1.5 rounded-lg border p-2">
+    <div className="bg-muted/30 space-y-1.5 rounded-4xl border p-2">
       <div className="flex items-center gap-2">
         <Select value={draftSource} onValueChange={setDraftSource}>
           <SelectTrigger className="h-8 flex-1 font-mono text-xs">
@@ -286,7 +290,10 @@ function MappingDraftRow({
         </Select>
         <span className="text-muted-foreground text-xs">→</span>
         <Select value={draftTarget} onValueChange={setDraftTarget}>
-          <SelectTrigger className="h-8 flex-1 text-xs" aria-invalid={duplicateTarget}>
+          <SelectTrigger
+            className="h-8 flex-1 text-xs"
+            aria-invalid={duplicateTarget}
+          >
             <SelectValue placeholder="HubSpot owner property…" />
           </SelectTrigger>
           <SelectContent>
@@ -297,7 +304,12 @@ function MappingDraftRow({
             ))}
           </SelectContent>
         </Select>
-        <Button variant="ghost" size="icon-sm" onClick={onCancel} title="Cancel">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={onCancel}
+          title="Cancel"
+        >
           <X className="size-4" />
         </Button>
       </div>

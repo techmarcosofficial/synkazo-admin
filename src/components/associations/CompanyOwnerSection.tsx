@@ -120,7 +120,7 @@ function RunLogRow({
     <ListRow
       onClick={onClick}
       className={cn(
-        'cursor-pointer gap-3 rounded-md px-2 py-2 text-xs',
+        'cursor-pointer gap-3 rounded-3xl px-2 py-2 text-xs',
         selected && 'bg-primary/5 ring-primary/30 ring-1',
       )}
     >
@@ -403,7 +403,7 @@ export default function CompanyOwnerSection({
                       { label: 'Skipped', value: latestLog?.hsSkippedCount },
                       { label: 'Failed', value: latestLog?.hsFailedCount },
                     ].map((s) => (
-                      <div key={s.label} className="rounded-lg border p-3">
+                      <div key={s.label} className="rounded-4xl border p-3">
                         <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
                           {s.label}
                         </p>
@@ -516,14 +516,16 @@ export default function CompanyOwnerSection({
                     />
                   ) : (
                     <>
-                      <div className="overflow-x-auto rounded-md border">
+                      <div className="overflow-x-auto rounded-4xl border">
                         <Table>
                           <TableHeader>
                             <TableRow>
                               <TableHead>HubSpot Company</TableHead>
                               <TableHead>HubSpot ID</TableHead>
                               <TableHead>
-                                {isDataforma ? 'Matched Value' : 'Sales Person / CAM Value'}
+                                {isDataforma
+                                  ? 'Matched Value'
+                                  : 'Sales Person / CAM Value'}
                               </TableHead>
                               <TableHead>Owner Name</TableHead>
                               <TableHead>Owner Email</TableHead>

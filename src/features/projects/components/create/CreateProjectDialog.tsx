@@ -65,7 +65,7 @@ export default function CreateProjectDialog() {
 
         <DialogFooter className="bg-muted/40 shrink-0 flex-row items-center justify-between gap-2 border-t p-4">
           {selection.sourcePlatformId && selection.syncMode && (
-            <div className="bg-background flex items-center gap-2 rounded-xl border px-3 py-2">
+            <div className="bg-background flex items-center gap-2 rounded-4xl border px-3 py-2">
               <PlatformPair
                 sourcePlatformId={selection.sourcePlatformId}
                 destPlatformId="hubspot"

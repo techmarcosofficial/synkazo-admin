@@ -109,7 +109,7 @@ export default function KpiStatCard({
       className={cn(
         'h-full transition-all duration-200 ease-out',
         href &&
-          'hover:shadow-primary/5 cursor-pointer hover:-translate-y-1 hover:shadow-md',
+          'hover:border-foreground/20 cursor-pointer hover:-translate-y-1',
       )}
     >
       <CardContent>

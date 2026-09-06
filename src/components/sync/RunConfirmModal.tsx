@@ -242,7 +242,7 @@ export default function RunConfirmModal({
     <div className="space-y-4">
       {pipelineAlert}
 
-      <div className="overflow-hidden rounded-xl border">
+      <div className="overflow-hidden rounded-4xl border">
         <div className="bg-muted/40 flex items-center gap-3 border-b px-4 py-3">
           <Clock className="text-muted-foreground size-3.5 shrink-0" />
           <span className="text-muted-foreground text-xs">Last synced</span>

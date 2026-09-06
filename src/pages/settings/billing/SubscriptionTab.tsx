@@ -108,7 +108,7 @@ export default function SubscriptionTab() {
         </CardHeader>
         <CardContent className="space-y-4">
           {pendingCancel ? (
-            <div className="border-warning/30 bg-warning/10 flex items-center justify-between rounded-lg border p-4">
+            <div className="border-warning/30 bg-warning/10 flex items-center justify-between rounded-4xl border p-4">
               <p className="text-warning text-sm">
                 Your subscription is scheduled to cancel at the period end.
               </p>

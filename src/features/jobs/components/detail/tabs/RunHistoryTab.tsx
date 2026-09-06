@@ -442,7 +442,7 @@ function PageRow({
       open={open}
       onOpenChange={handleOpenChange}
       className={cn(
-        'bg-card overflow-hidden rounded-lg border',
+        'bg-card overflow-hidden rounded-4xl border',
         hasFailed && 'border-destructive/30',
       )}
     >
@@ -828,7 +828,7 @@ function FilteredRecordsList({
       <p className="text-muted-foreground mb-2 text-xs">
         {total} matching record{total !== 1 ? 's' : ''}
       </p>
-      <div className="overflow-hidden rounded-lg border">
+      <div className="overflow-hidden rounded-4xl border">
         {records.map((rec, i) => {
           const ac =
             ACTION_CONFIG[rec.action as keyof typeof ACTION_CONFIG] ||
@@ -1095,10 +1095,10 @@ function RunLogRow({
                 index > 1 && 'max-sm:border-t',
               )}
             >
-              <div className="bg-card rounded-2xl px-3 py-2 space-y-1">
+              <div className="bg-card space-y-1 rounded-4xl border px-3 py-2">
                 <p
                   className={cn(
-                    'mt-0.5 text-md font-semibold',
+                    'text-md mt-0.5 font-semibold',
                     label === 'Failed' &&
                       Number(value) > 0 &&
                       'text-destructive',
@@ -1115,7 +1115,7 @@ function RunLogRow({
         {runMessage && (
           <div
             className={cn(
-              'mx-5 mt-4 rounded-lg border px-4 py-3 text-sm',
+              'mx-5 mt-4 rounded-4xl border px-4 py-3 text-sm',
               displayStatus === 'failed'
                 ? 'border-destructive/20 bg-destructive/5 text-destructive'
                 : 'border-warning/20 bg-warning/5 text-foreground',
@@ -1428,7 +1428,7 @@ export default function RunHistoryTab() {
         ) : runLogsQuery.isLoading ? (
           <div className="space-y-3" aria-label="Loading run history">
             {Array.from({ length: 3 }).map((_, index) => (
-              <Skeleton key={index} className="h-20 w-full rounded-xl" />
+              <Skeleton key={index} className="h-20 w-full rounded-4xl" />
             ))}
           </div>
         ) : runLogs.length === 0 ? (

@@ -90,7 +90,7 @@ function ScheduleOverviewItem({
   children: ReactNode;
 }) {
   return (
-    <div className="bg-muted/40 flex min-w-0 items-center gap-3 rounded-xl border p-3">
+    <div className="bg-muted/40 flex min-w-0 items-center gap-3 rounded-4xl border p-3">
       <span className="bg-background text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-lg border">
         <Icon className="size-4" aria-hidden="true" />
       </span>
@@ -490,7 +490,7 @@ export default function ScheduleTab() {
           </CardHeader>
           <CardContent className="space-y-4">
             {(activeRunLog?.status === 'running' || isSyncing) && (
-              <div className="bg-muted/30 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border px-4 py-3 text-xs">
+              <div className="bg-muted/30 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-4xl border px-4 py-3 text-xs">
                 <StatusBadge status="running" size="sm" />
                 <span className="text-muted-foreground">
                   {liveProgress?.recordsProcessed ?? 0} records processed
@@ -585,7 +585,7 @@ export default function ScheduleTab() {
 
           <CardContent className="space-y-5">
             {priorityQueueQuery.isLoading ? (
-              <Skeleton className="h-40 w-full rounded-2xl" />
+              <Skeleton className="h-40 w-full rounded-4xl" />
             ) : priorityQueueQuery.isError ? (
               <Alert>
                 <Info />
@@ -603,7 +603,7 @@ export default function ScheduleTab() {
                 </AlertDescription>
               </Alert>
             ) : (
-              <div className="space-y-5 rounded-2xl border p-4">
+              <div className="space-y-5 rounded-4xl border p-4">
                 {priorityModeActive ? (
                   <Alert>
                     <Info />

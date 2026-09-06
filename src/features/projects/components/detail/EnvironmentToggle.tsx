@@ -65,7 +65,7 @@ export default function EnvironmentToggle({
             variant="secondary"
             size="sm"
             disabled={isBusy}
-            className="rounded-2xl"
+            className="rounded-3xl"
           >
             {isBusy ? (
               <Spinner className="size-3" />

@@ -113,7 +113,7 @@ function ManualSyncContent({
 
             <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
               <CollapsibleContent className="pt-2">
-                <div className="bg-muted/30 flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="bg-muted/30 flex flex-col gap-3 rounded-4xl border p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
                     <p className="text-sm font-medium">
                       Sync only new or updated records

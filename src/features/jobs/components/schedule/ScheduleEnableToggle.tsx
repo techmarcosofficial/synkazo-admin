@@ -56,7 +56,7 @@ export default function ScheduleEnableToggle({
 
   if (priorityModeActive) {
     return (
-      <p className="text-muted-foreground bg-muted/40 rounded-lg px-4 py-3 text-sm">
+      <p className="text-muted-foreground bg-muted/40 rounded-4xl border px-4 py-3 text-sm">
         Priority scheduling is enabled.
       </p>
     );

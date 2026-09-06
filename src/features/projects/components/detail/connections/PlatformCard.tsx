@@ -188,7 +188,7 @@ export default function PlatformCard({
         </div>
 
         {testResult && (
-          <div className="bg-muted text-muted-foreground flex items-center gap-2 rounded-xl px-3 py-2 text-xs">
+          <div className="bg-muted text-muted-foreground flex items-center gap-2 rounded-4xl border px-3 py-2 text-xs">
             {testResult.ok ? (
               <Check className="text-success size-3.5" />
             ) : (

@@ -368,7 +368,7 @@ export default function RecentActivityCard({
           </Empty>
         ) : (
           <div className="overflow-hidden rounded-4xl border">
-            <div className="bg-muted/30 text-muted-foreground hidden grid-cols-[110px_minmax(220px,1.45fr)_minmax(190px,1.1fr)_130px_110px_24px] items-center gap-x-5 border-b px-5 py-2 text-xs font-medium xl:grid">
+            <div className="bg-muted text-muted-foreground hidden grid-cols-[110px_minmax(220px,1.45fr)_minmax(190px,1.1fr)_130px_110px_24px] items-center gap-x-5 px-5 py-2 text-xs font-medium xl:grid">
               <span>Status</span>
               <span>Project and run</span>
               <span>Data flow</span>

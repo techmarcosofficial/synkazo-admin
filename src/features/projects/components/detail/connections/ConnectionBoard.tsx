@@ -97,7 +97,7 @@ function ConnectionStep({
 
       <section
         className={cn(
-          'border-primary/20 overflow-hidden rounded-3xl border',
+          'border-primary/20 bg-card overflow-hidden rounded-4xl border shadow-none',
           !complete && 'border-dashed',
         )}
       >
@@ -179,7 +179,7 @@ export default function ConnectionBoard({
       <Card size="sm" className="w-full">
         <CardHeader className="gap-1">
           <div className="flex items-center gap-2">
-            <CardTitle>Connections</CardTitle>
+            <CardTitle className="font-semibold">Connections</CardTitle>
             <StatusBadge
               status={activeEnv === 'production' ? 'production' : 'sandbox'}
               size="sm"
@@ -200,53 +200,52 @@ export default function ConnectionBoard({
             </CardAction>
           )}
         </CardHeader>
-
-        <CardContent className={cn('space-y-5', className)}>
-          <ConnectionStep
-            number={1}
-            title="Connect source"
-            description="First, connect the platform your records come from."
-            complete={sourceComplete}
-            hasConnection={Boolean(sourceConn)}
-            nextRequired={nextRequired === 'source'}
-          >
-            {sourcePlatformId ? (
-              <PlatformCard
-                conn={sourceConn ?? makeSlotConn(sourcePlatformId, 'source')}
-                onConnect={openConnect}
-                onUpdated={handleRowUpdated}
-                nextRequired={nextRequired === 'source'}
-              />
-            ) : (
-              <SourcePlatformPicker projectId={projectId} />
-            )}
-          </ConnectionStep>
-
-          <ConnectionStep
-            number={2}
-            title="Connect destination"
-            description="Then, connect the platform your records will sync to."
-            complete={destinationComplete}
-            hasConnection={Boolean(destConn)}
-            nextRequired={nextRequired === 'destination'}
-            last
-          >
-            {destPlatformId ? (
-              <PlatformCard
-                conn={destConn ?? makeSlotConn(destPlatformId, 'destination')}
-                onConnect={openConnect}
-                onUpdated={handleRowUpdated}
-                nextRequired={nextRequired === 'destination'}
-                connectDisabled={!sourceComplete && !destConn}
-              />
-            ) : (
-              <div className="text-muted-foreground px-4 py-3 text-sm">
-                Choose a destination platform before connecting credentials.
-              </div>
-            )}
-          </ConnectionStep>
-        </CardContent>
       </Card>
+      <div className={cn('space-y-5', className)}>
+        <ConnectionStep
+          number={1}
+          title="Connect source"
+          description="First, connect the platform your records come from."
+          complete={sourceComplete}
+          hasConnection={Boolean(sourceConn)}
+          nextRequired={nextRequired === 'source'}
+        >
+          {sourcePlatformId ? (
+            <PlatformCard
+              conn={sourceConn ?? makeSlotConn(sourcePlatformId, 'source')}
+              onConnect={openConnect}
+              onUpdated={handleRowUpdated}
+              nextRequired={nextRequired === 'source'}
+            />
+          ) : (
+            <SourcePlatformPicker projectId={projectId} />
+          )}
+        </ConnectionStep>
+
+        <ConnectionStep
+          number={2}
+          title="Connect destination"
+          description="Then, connect the platform your records will sync to."
+          complete={destinationComplete}
+          hasConnection={Boolean(destConn)}
+          nextRequired={nextRequired === 'destination'}
+          last
+        >
+          {destPlatformId ? (
+            <PlatformCard
+              conn={destConn ?? makeSlotConn(destPlatformId, 'destination')}
+              onConnect={openConnect}
+              onUpdated={handleRowUpdated}
+              nextRequired={nextRequired === 'destination'}
+              connectDisabled={!sourceComplete && !destConn}
+            />
+          ) : (
+            <div className="text-muted-foreground px-4 py-3 text-sm">
+              Choose a destination platform before connecting credentials.
+            </div>
+          )}
+        </ConnectionStep>
+      </div>
 
       {showMethodModal && activeConn && (
         <ConnectMethodModal

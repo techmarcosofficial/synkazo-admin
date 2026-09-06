@@ -30,12 +30,6 @@ import {
 } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogFooter,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import {
   InputGroup,
@@ -51,6 +45,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import {
   Tooltip,
   TooltipContent,
@@ -235,14 +237,14 @@ function ValueMapEditor({
             value={from}
             onChange={(e) => renameKey(i, e.target.value)}
             placeholder="Source value"
-            className="bg-muted h-9 flex-1 rounded-lg border-transparent font-mono text-xs shadow-none"
+            className="bg-muted h-9 flex-1 rounded-3xl border-transparent font-mono text-xs shadow-none"
           />
           <ArrowRight className="text-muted-foreground size-3 shrink-0" />
           {destOptions?.length ? (
             <Select value={to} onValueChange={(v) => setValue(i, v)}>
               <SelectTrigger
                 size="sm"
-                className="bg-muted h-9 flex-1 rounded-lg border-transparent shadow-none"
+                className="bg-muted h-9 flex-1 rounded-3xl border-transparent shadow-none"
               >
                 <SelectValue placeholder="Destination value" />
               </SelectTrigger>
@@ -259,7 +261,7 @@ function ValueMapEditor({
               value={to}
               onChange={(e) => setValue(i, e.target.value)}
               placeholder="Destination value"
-              className="bg-muted h-9 flex-1 rounded-lg border-transparent font-mono text-xs shadow-none"
+              className="bg-muted h-9 flex-1 rounded-3xl border-transparent font-mono text-xs shadow-none"
             />
           )}
           <Button
@@ -340,9 +342,7 @@ function ValueMappingEditor({
             checked={!!norm.trim}
             onCheckedChange={(v) => setNorm({ trim: v })}
           />
-          <span className="text-muted-foreground text-xs">
-            Trim whitespace
-          </span>
+          <span className="text-muted-foreground text-xs">Trim whitespace</span>
         </label>
         <label className="flex items-center gap-1.5">
           <Switch
@@ -375,14 +375,14 @@ function ValueMappingEditor({
             value={from}
             onChange={(e) => renameKey(i, e.target.value)}
             placeholder="Source value"
-            className="bg-muted h-9 flex-1 rounded-lg border-transparent font-mono text-xs shadow-none"
+            className="bg-muted h-9 flex-1 rounded-3xl border-transparent font-mono text-xs shadow-none"
           />
           <ArrowRight className="text-muted-foreground size-3 shrink-0" />
           {destOptions?.length ? (
             <Select value={to} onValueChange={(v) => setValue(i, v)}>
               <SelectTrigger
                 size="sm"
-                className="bg-muted h-9 flex-1 rounded-lg border-transparent shadow-none"
+                className="bg-muted h-9 flex-1 rounded-3xl border-transparent shadow-none"
               >
                 <SelectValue placeholder="Destination value" />
               </SelectTrigger>
@@ -399,7 +399,7 @@ function ValueMappingEditor({
               value={to}
               onChange={(e) => setValue(i, e.target.value)}
               placeholder="Destination value"
-              className="bg-muted h-9 flex-1 rounded-lg border-transparent font-mono text-xs shadow-none"
+              className="bg-muted h-9 flex-1 rounded-3xl border-transparent font-mono text-xs shadow-none"
             />
           )}
           <Button
@@ -475,7 +475,7 @@ function ActiveRule({
   return (
     <div
       className={cn(
-        'bg-card rounded-xl border shadow-sm transition-opacity',
+        'bg-card rounded-4xl border shadow-none transition-opacity',
         !isEnabled && 'opacity-55',
       )}
       style={{
@@ -566,7 +566,7 @@ function ActiveRule({
                     onClick={(e) => e.stopPropagation()}
                     aria-invalid={showError}
                     className={cn(
-                      'bg-muted h-9 rounded-lg border-transparent font-mono text-xs shadow-none',
+                      'bg-muted h-9 rounded-3xl border-transparent font-mono text-xs shadow-none',
                       isNum ? 'w-20' : 'w-36',
                     )}
                   />
@@ -818,31 +818,36 @@ export default function RuleBuilderModal({
   const totalErrors = Object.keys(validationErrors).length;
 
   return (
-    <Dialog
+    <Sheet
       open
       onOpenChange={(next) => {
         if (!next) onClose();
       }}
     >
-      <DialogContent
-        className="h-[88vh] max-h-[88vh]"
-        size="lg"
+      <SheetContent
+        className="w-[min(96vw,72rem)] p-0 sm:max-w-6xl"
+        showCloseButton={false}
         onEscapeKeyDown={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
       >
         {/* Header */}
-        <DialogHeader>
+        <SheetHeader className="shrink-0 border-b px-6 py-5">
           <div className="flex items-center gap-3">
             <div className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-xl">
               <Sparkles className="size-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold">Transformation Rules</h2>
+              <SheetTitle className="text-base font-bold">
+                Transformation Rules
+              </SheetTitle>
+              <SheetDescription className="sr-only">
+                Build transformation rules for this field mapping.
+              </SheetDescription>
               <div className="mt-1 flex flex-wrap items-center gap-1.5">
                 <span className="text-muted-foreground text-xs">
                   {sourceField?.label || mapping.sourceField}
                 </span>
-                <Badge variant="secondary" className="rounded-md font-mono">
+                <Badge variant="secondary" className="font-mono">
                   {sourceType}
                 </Badge>
                 <ArrowRight className="text-muted-foreground size-3" />
@@ -850,30 +855,40 @@ export default function RuleBuilderModal({
                   {destLabel}
                 </span>
                 {destType && (
-                  <Badge variant="secondary" className="rounded-md font-mono">
+                  <Badge variant="secondary" className="font-mono">
                     {destType}
                   </Badge>
                 )}
                 {activeRuleCount > 0 && (
-                  <Badge variant="secondary" className="rounded-md">
+                  <Badge variant="secondary">
                     {activeRuleCount} active rule
                     {activeRuleCount !== 1 ? 's' : ''}
                   </Badge>
                 )}
                 {totalErrors > 0 && (
-                  <Badge className="bg-destructive/10 text-destructive hover:bg-destructive/10 gap-1 rounded-md">
+                  <Badge className="bg-destructive/10 text-destructive hover:bg-destructive/10 gap-1">
                     <AlertCircle className="size-2.5" /> {totalErrors} need
                     values
                   </Badge>
                 )}
               </div>
             </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="ml-auto shrink-0"
+              onClick={onClose}
+              aria-label="Close transformation rules"
+            >
+              <X />
+            </Button>
           </div>
-        </DialogHeader>
+        </SheetHeader>
 
-        <div className="flex min-h-0 flex-1">
+        <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
           {/* Sidebar */}
-          <aside className="flex min-h-0 w-70 shrink-0 flex-col gap-4 py-5">
+          <aside className="flex max-h-[38vh] min-h-0 w-full shrink-0 flex-col gap-4 border-b px-5 py-4 lg:max-h-none lg:w-72 lg:border-r lg:border-b-0">
             <InputGroup>
               <InputGroupAddon>
                 <Search className="text-muted-foreground size-4" />
@@ -882,7 +897,7 @@ export default function RuleBuilderModal({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search rules…"
-                className="rounded-lg"
+                className="rounded-none"
               />
               {search && (
                 <InputGroupAddon align="inline-end">
@@ -898,7 +913,7 @@ export default function RuleBuilderModal({
               )}
             </InputGroup>
 
-            <ScrollArea className="h-[500px] flex-1">
+            <ScrollArea className="min-h-0 flex-1">
               {!search ? (
                 <Accordion
                   type="single"
@@ -920,7 +935,7 @@ export default function RuleBuilderModal({
                       <AccordionItem
                         key={cat.id}
                         value={cat.id}
-                        className="overflow-hidden rounded-lg border-0 border-l-2"
+                        className="overflow-hidden rounded-4xl border-0 border-l-2"
                         style={{
                           backgroundColor: isOpen ? cc.activeBg : 'transparent',
                           borderLeftColor: isOpen ? cc.border : 'transparent',
@@ -958,7 +973,7 @@ export default function RuleBuilderModal({
                                   type="button"
                                   onClick={() => addRule(def)}
                                   className={cn(
-                                    'group flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-xs transition-colors',
+                                    'group flex w-full items-center gap-1.5 rounded-3xl px-2 py-1.5 text-left text-xs transition-colors',
                                     isFlashing
                                       ? 'bg-destructive/10'
                                       : 'hover:bg-muted/60',
@@ -999,7 +1014,7 @@ export default function RuleBuilderModal({
                         type="button"
                         onClick={() => addRule(def)}
                         className={cn(
-                          'group w-full rounded-lg px-2.5 py-2 text-left transition-colors',
+                          'group w-full rounded-3xl px-2.5 py-2 text-left transition-colors',
                           isFlashing
                             ? 'bg-destructive/10'
                             : 'hover:bg-muted/60',
@@ -1110,11 +1125,11 @@ export default function RuleBuilderModal({
                 <Input
                   value={testInput}
                   onChange={(e) => setTestInput(e.target.value)}
-                  className="bg-muted h-9 min-w-0 flex-1 rounded-lg border-transparent font-mono text-xs shadow-none"
+                  className="bg-muted h-9 min-w-0 flex-1 rounded-3xl border-transparent font-mono text-xs shadow-none"
                   placeholder="Test input…"
                 />
                 <ArrowRight className="text-muted-foreground size-4 shrink-0" />
-                <div className="text-success bg-success/10 border-success/30 min-w-0 flex-1 truncate rounded-lg border px-3 py-2 font-mono text-xs">
+                <div className="text-success bg-success/10 border-success/30 min-w-0 flex-1 truncate rounded-3xl border px-3 py-2 font-mono text-xs">
                   {previewOutput !== '' ? (
                     previewOutput
                   ) : (
@@ -1127,7 +1142,7 @@ export default function RuleBuilderModal({
         </div>
 
         {/* Footer */}
-        <DialogFooter>
+        <SheetFooter className="shrink-0 flex-row items-center justify-end border-t px-6 py-4">
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={onClose}>
               Cancel
@@ -1141,8 +1156,8 @@ export default function RuleBuilderModal({
               <Check /> Apply Rules
             </Button>
           </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }

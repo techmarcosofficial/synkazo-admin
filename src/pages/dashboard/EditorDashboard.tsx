@@ -171,7 +171,7 @@ export default function EditorDashboard() {
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="gap-0 py-0">
-          <CardHeader className="bg-muted/40 border-b py-3!">
+          <CardHeader className="bg-muted py-3!">
             <CardTitle>Your Projects</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -205,7 +205,7 @@ export default function EditorDashboard() {
         </Card>
 
         <Card className="gap-0 py-0">
-          <CardHeader className="bg-muted/40 border-b py-3!">
+          <CardHeader className="bg-muted py-3!">
             <CardTitle>Recent Activity</CardTitle>
           </CardHeader>
           <CardContent className="p-0">

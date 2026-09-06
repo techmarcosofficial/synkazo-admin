@@ -146,7 +146,7 @@ function ProcessedTooltip({
   const updated = Number(point?.updated ?? 0);
 
   return (
-    <div className="bg-popover text-popover-foreground ring-foreground/5 dark:ring-foreground/10 min-w-40 rounded-xl px-3 py-2 text-xs shadow-lg ring-1">
+    <div className="bg-popover text-popover-foreground ring-foreground/5 dark:ring-foreground/10 min-w-40 rounded-3xl px-3 py-2 text-xs shadow-lg ring-1">
       <div className="mb-2 font-medium">{point?.label}</div>
       <div className="grid gap-1.5">
         <div className="flex items-center justify-between gap-6">
