@@ -1,5 +1,4 @@
 import {
-  ChartNoAxesColumnIncreasing,
   CalendarClock,
   Check,
   Clock,
@@ -13,7 +12,7 @@ import {
   X,
   type LucideIcon,
 } from 'lucide-react';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -80,26 +79,66 @@ interface ScheduleDraft {
   interval: IntervalConfig;
 }
 
-function ScheduleOverviewItem({
+function SyncSummaryCard({
   icon: Icon,
   label,
-  children,
+  value,
+  description,
 }: {
   icon: LucideIcon;
   label: string;
-  children: ReactNode;
+  value: string;
+  description: string;
 }) {
   return (
-    <div className="bg-muted/40 flex min-w-0 items-center gap-3 rounded-4xl border p-3">
-      <span className="bg-background text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-lg border">
-        <Icon className="size-4" aria-hidden="true" />
-      </span>
-      <div className="min-w-0">
-        <p className="text-muted-foreground text-xs">{label}</p>
-        <div className="mt-1 truncate text-sm font-semibold">{children}</div>
-      </div>
-    </div>
+    <Card size="sm" className="min-w-0 gap-0 py-0">
+      <CardContent className="space-y-2.5 p-4">
+        <span className="bg-muted text-muted-foreground flex size-9 items-center justify-center rounded-3xl">
+          <Icon className="size-4" aria-hidden="true" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-lg leading-tight font-bold tracking-tight">
+            {value}
+          </p>
+          <p className="text-muted-foreground mt-0.5 text-xs font-medium">
+            {label}
+          </p>
+          <p className="text-muted-foreground mt-0.5 text-[11px]">
+            {description}
+          </p>
+        </div>
+      </CardContent>
+    </Card>
   );
+}
+
+export function hasScheduleDefinition(schedule: {
+  scheduleMode?: string | null;
+  intervalMinutes?: number | null;
+  scheduleTimes?: string[] | null;
+  scheduleDays?: number[] | null;
+  cronExpression?: string | null;
+  oneTimeAt?: string | null;
+}): boolean {
+  if (schedule.scheduleMode === 'interval') {
+    return Boolean(schedule.intervalMinutes);
+  }
+  if (schedule.scheduleMode === 'daily_time') {
+    return Boolean(schedule.scheduleTimes?.length);
+  }
+  if (schedule.scheduleMode === 'day_specific') {
+    return Boolean(
+      schedule.scheduleDays?.length && schedule.scheduleTimes?.length,
+    );
+  }
+  if (schedule.scheduleMode === 'one_time') {
+    return Boolean(schedule.oneTimeAt);
+  }
+  return Boolean(schedule.cronExpression);
+}
+
+function capitalizeFirst(value: string): string {
+  return value ? value[0].toUpperCase() + value.slice(1) : value;
 }
 
 function formatScheduledAt(value: string | null | undefined, timezone: string) {
@@ -119,6 +158,35 @@ function formatScheduledAt(value: string | null | undefined, timezone: string) {
   } catch {
     return date.toLocaleString();
   }
+}
+
+export function getNextRunCardState({
+  scheduleConfigured,
+  schedulePaused,
+  nextRunAt,
+  timezone,
+}: {
+  scheduleConfigured: boolean;
+  schedulePaused: boolean;
+  nextRunAt?: string | null;
+  timezone: string;
+}): { value: string; description: string } {
+  if (!scheduleConfigured) {
+    return { value: '—', description: 'Configure a schedule' };
+  }
+  if (schedulePaused) {
+    return { value: 'Not scheduled', description: 'Schedule is paused' };
+  }
+  if (!nextRunAt) {
+    return {
+      value: 'Not scheduled',
+      description: 'Waiting for the next run time',
+    };
+  }
+  return {
+    value: formatScheduledAt(nextRunAt, timezone),
+    description: 'Next scheduled run',
+  };
 }
 
 export default function ScheduleTab() {
@@ -220,20 +288,6 @@ export default function ScheduleTab() {
       job.scheduleState === 'retry_pending' ||
       job.scheduleState === 'resume_pending');
 
-  const scheduleStatus = priorityModeActive
-    ? projectQueue?.status === 'paused'
-      ? 'schedule_paused'
-      : 'active'
-    : job.scheduleState === 'paused_limit_reached'
-      ? 'limit_reached'
-      : job.scheduleState === 'retry_pending'
-        ? 'retry_pending'
-        : job.scheduleState === 'paused'
-          ? 'schedule_paused'
-          : scheduleActive
-            ? 'active'
-            : 'disabled';
-
   const effectiveTimezone = BROWSER_TIMEZONE;
   const nextRunAt = priorityModeActive
     ? projectQueue?.nextStartAt
@@ -241,19 +295,45 @@ export default function ScheduleTab() {
   const scheduleSummary = isTwoWay
     ? 'Managed automatically'
     : priorityModeActive && projectQueue
-      ? formatSchedule({
-          scheduleMode: projectQueue.scheduleMode ?? undefined,
-          intervalMinutes: projectQueue.intervalMinutes,
-          scheduleTimes: projectQueue.scheduleTimes ?? undefined,
-          scheduleDays: projectQueue.scheduleDays ?? undefined,
-          cronExpression: projectQueue.startCronExpression,
-        })
+      ? projectQueue.scheduleMode === 'one_time'
+        ? `Once on ${formatScheduledAt(projectQueue.oneTimeAt, effectiveTimezone)}`
+        : formatSchedule({
+            scheduleMode: projectQueue.scheduleMode ?? undefined,
+            intervalMinutes: projectQueue.intervalMinutes,
+            scheduleTimes: projectQueue.scheduleTimes ?? undefined,
+            scheduleDays: projectQueue.scheduleDays ?? undefined,
+            cronExpression: projectQueue.startCronExpression,
+          })
       : formatSchedule(job);
   const performance = deriveSyncJobSummary(job, runLogs);
-  const completedRunCount = runLogs.filter(
-    (run) => !['running', 'pending', 'queued', 'paused'].includes(run.status),
-  ).length;
-  const performanceMetrics = [
+  const scheduleConfigured = isTwoWay
+    ? true
+    : priorityModeActive
+      ? Boolean(
+          projectQueue &&
+          hasScheduleDefinition({
+            scheduleMode: projectQueue.scheduleMode,
+            intervalMinutes: projectQueue.intervalMinutes,
+            scheduleTimes: projectQueue.scheduleTimes,
+            scheduleDays: projectQueue.scheduleDays,
+            cronExpression: projectQueue.startCronExpression,
+            oneTimeAt: projectQueue.oneTimeAt,
+          }),
+        )
+      : hasScheduleDefinition(job);
+  const schedulePaused = priorityModeActive
+    ? projectQueue?.status === 'paused'
+    : !scheduleActive;
+  const scheduleValue = scheduleConfigured
+    ? capitalizeFirst(scheduleSummary)
+    : 'Not configured';
+  const nextRunCard = getNextRunCardState({
+    scheduleConfigured,
+    schedulePaused,
+    nextRunAt,
+    timezone: effectiveTimezone,
+  });
+  const summaryCards = [
     {
       label: 'Records synced',
       value: (job.recordsSynced ?? 0).toLocaleString(),
@@ -261,11 +341,17 @@ export default function ScheduleTab() {
       icon: Database,
     },
     {
+      label: 'Schedule at',
+      value: scheduleValue,
+      description: scheduleConfigured
+        ? 'Current active schedule'
+        : 'Configure a schedule',
+      icon: CalendarClock,
+    },
+    {
       label: 'Avg duration',
       value: formatDurationMs(performance.averageDurationMs),
-      description: completedRunCount
-        ? `Across ${completedRunCount} recent runs`
-        : 'No completed runs',
+      description: 'Based on recent runs',
       icon: Timer,
     },
     {
@@ -275,17 +361,14 @@ export default function ScheduleTab() {
         : 'Never',
       description: performance.lastSyncAt
         ? 'Most recent completed run'
-        : 'Not synced yet',
-      icon: CalendarClock,
+        : 'No completed runs',
+      icon: Clock,
     },
     {
-      label: 'Success rate',
-      value:
-        performance.successRate == null
-          ? '—'
-          : `${performance.successRate.toFixed(performance.successRate % 1 === 0 ? 0 : 1)}%`,
-      description: completedRunCount ? 'Successful recent runs' : 'No run data',
-      icon: ChartNoAxesColumnIncreasing,
+      label: 'Next run',
+      value: nextRunCard.value,
+      description: nextRunCard.description,
+      icon: Play,
     },
   ];
   const manualRunBlocked = !job.isEnabled || queued || isSyncing;
@@ -371,69 +454,11 @@ export default function ScheduleTab() {
 
   return (
     <div className="space-y-5">
-      <Card className="gap-3 py-4">
-        <CardHeader className="flex items-start gap-3 px-4">
-          <span className="bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-xl">
-            <CalendarClock className="size-4" aria-hidden="true" />
-          </span>
-          <div>
-            <CardTitle>Schedule overview</CardTitle>
-            <CardDescription className="mt-1">
-              Current schedule state and the latest run timing.
-            </CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent className="px-4">
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-            <ScheduleOverviewItem icon={RefreshCw} label="Status">
-              <StatusBadge status={scheduleStatus} size="sm" />
-            </ScheduleOverviewItem>
-            <ScheduleOverviewItem icon={CalendarClock} label="Schedule">
-              <span className="capitalize">{scheduleSummary}</span>
-            </ScheduleOverviewItem>
-            <ScheduleOverviewItem icon={Clock} label="Next run">
-              {formatScheduledAt(nextRunAt, effectiveTimezone)}
-            </ScheduleOverviewItem>
-            <ScheduleOverviewItem icon={Database} label="Last synced">
-              {performance.lastSyncAt
-                ? formatScheduledAt(performance.lastSyncAt, effectiveTimezone)
-                : 'Never'}
-            </ScheduleOverviewItem>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="gap-0 overflow-hidden py-0">
-        <CardContent className="p-0">
-          <div className="grid sm:grid-cols-2 xl:grid-cols-4">
-            {performanceMetrics.map((metric, index) => (
-              <div
-                key={metric.label}
-                className={`flex min-w-0 items-center gap-3 p-4 ${
-                  index < 3 ? 'border-b xl:border-r xl:border-b-0' : ''
-                } ${index === 0 ? 'sm:border-r' : ''} ${
-                  index === 1 ? 'xl:border-r' : ''
-                } ${index === 2 ? 'sm:border-r sm:border-b-0' : ''}`}
-              >
-                <span className="bg-muted text-muted-foreground flex size-10 shrink-0 items-center justify-center rounded-xl">
-                  <metric.icon className="size-4.5" aria-hidden="true" />
-                </span>
-                <div className="min-w-0">
-                  <p className="truncate text-lg font-bold tracking-tight">
-                    {metric.value}
-                  </p>
-                  <p className="text-muted-foreground truncate text-xs font-medium">
-                    {metric.label}
-                  </p>
-                  <p className="text-muted-foreground truncate text-[11px]">
-                    {metric.description}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        {summaryCards.map((card) => (
+          <SyncSummaryCard key={card.label} {...card} />
+        ))}
+      </div>
 
       <div className="grid items-start gap-5 xl:grid-cols-2">
         <Card size="sm" className="min-w-0">
