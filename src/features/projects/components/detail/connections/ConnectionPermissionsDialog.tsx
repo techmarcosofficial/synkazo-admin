@@ -248,6 +248,7 @@ export default function ConnectionPermissionsDialog({
                         </div>
                         {sub.lastError && (
                           <PageContextAlert
+                            surface="inner"
                             variant="error"
                             title={sub.lastError}
                             className="px-2 py-1.5 **:data-[slot=alert-title]:text-xs"

@@ -1,4 +1,4 @@
-import { Bell, Monitor, Moon, Sun } from 'lucide-react';
+import { Bell, Layers3, Monitor, Moon, PanelTop, Sun } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -49,6 +49,10 @@ function PreferencesSection({
   const defaultView = useDisplayPreferencesStore((state) => state.defaultView);
   const setDefaultView = useDisplayPreferencesStore(
     (state) => state.setDefaultView,
+  );
+  const layoutStyle = useDisplayPreferencesStore((state) => state.layoutStyle);
+  const setLayoutStyle = useDisplayPreferencesStore(
+    (state) => state.setLayoutStyle,
   );
 
   const updateMeMutation = useUpdateMeMutation();
@@ -170,6 +174,29 @@ function PreferencesSection({
           </ToggleGroup>
         </div>
 
+        <div className="space-y-2">
+          <FieldLabel>Layout Style</FieldLabel>
+          <p className="text-muted-foreground text-xs">
+            Changes only major page sections, cards, panels, drawers, and
+            dialogs. Inner content and controls keep their existing styling.
+          </p>
+          <ToggleGroup
+            type="single"
+            value={layoutStyle}
+            onValueChange={(value) =>
+              value && setLayoutStyle(value as typeof layoutStyle)
+            }
+            variant="outline"
+          >
+            <ToggleGroupItem value="contrast">
+              <PanelTop /> Contrast / Border
+            </ToggleGroupItem>
+            <ToggleGroupItem value="shadow">
+              <Layers3 /> Normal / Shadow
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
+
         <div className="space-y-2 border-t pt-4">
           <Button
             onClick={save}
@@ -179,8 +206,8 @@ function PreferencesSection({
             Save Preferences
           </Button>
           <p className="text-muted-foreground text-xs">
-            Theme and Default View apply immediately. Notification changes are
-            saved when you click Save.
+            Theme, Default View, and Layout Style apply immediately.
+            Notification changes are saved when you click Save.
           </p>
         </div>
       </CardContent>

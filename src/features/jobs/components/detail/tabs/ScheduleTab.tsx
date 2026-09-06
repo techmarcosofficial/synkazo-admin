@@ -813,7 +813,7 @@ export default function ScheduleTab() {
         </Card>
       </div>
 
-      <Alert>
+      <Alert surface="outer">
         <Info />
         <AlertDescription>
           <span className="text-foreground font-medium">Good to know. </span>

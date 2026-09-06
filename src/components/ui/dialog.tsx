@@ -63,8 +63,9 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         data-size={size}
+        data-layout-surface="outer"
         className={cn(
-          'bg-popover text-popover-foreground ring-foreground/5 dark:ring-foreground/10 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-6 rounded-4xl p-6 text-sm shadow-xl ring-1 duration-100 outline-none sm:max-w-md data-[size=2xl]:sm:max-w-350 data-[size=3xl]:sm:max-w-400 data-[size=lg]:sm:max-w-225 data-[size=md]:sm:max-w-175 data-[size=sm]:sm:max-w-130 data-[size=xl]:sm:max-w-275 data-[size=xs]:sm:max-w-100',
+          'bg-popover text-popover-foreground border-border data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-6 rounded-4xl border p-6 text-sm shadow-none duration-100 outline-none sm:max-w-md data-[size=2xl]:sm:max-w-350 data-[size=3xl]:sm:max-w-400 data-[size=lg]:sm:max-w-225 data-[size=md]:sm:max-w-175 data-[size=sm]:sm:max-w-130 data-[size=xl]:sm:max-w-275 data-[size=xs]:sm:max-w-100',
           className,
         )}
         {...props}

@@ -25,13 +25,11 @@ describe('compact action controls', () => {
   });
 
   it('uses a circular thumb for the compact semantic switch', () => {
-    const { container } = render(
-      <Switch size="sm" aria-label="Enable rule" />,
-    );
+    const { container } = render(<Switch size="sm" aria-label="Enable rule" />);
 
     expect(screen.getByRole('switch', { name: 'Enable rule' })).toHaveClass(
-      'h-4',
-      'w-7',
+      'data-[size=sm]:h-4',
+      'data-[size=sm]:w-7',
       'rounded-full',
     );
     expect(container.querySelector('[data-slot="switch-thumb"]')).toHaveClass(

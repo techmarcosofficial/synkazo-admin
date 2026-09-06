@@ -28,6 +28,7 @@ interface PageContextAlertProps {
   dismissible?: boolean;
   onDismiss?: () => void;
   className?: string;
+  surface?: 'outer' | 'inner';
 }
 
 const VARIANT_CLASSES: Record<AlertVariant, string> = {
@@ -64,12 +65,14 @@ export default function PageContextAlert({
   dismissible = false,
   onDismiss,
   className,
+  surface = 'outer',
 }: PageContextAlertProps) {
   const Icon = icon === null ? null : (icon ?? VARIANT_ICON[variant]);
   const role = VARIANT_ROLE[variant];
 
   return (
     <Alert
+      surface={surface}
       role={role}
       aria-live={role === 'alert' ? 'assertive' : 'polite'}
       className={cn(

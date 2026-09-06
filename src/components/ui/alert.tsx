@@ -22,11 +22,16 @@ const alertVariants = cva(
 function Alert({
   className,
   variant,
+  surface = 'inner',
   ...props
-}: React.ComponentProps<'div'> & VariantProps<typeof alertVariants>) {
+}: React.ComponentProps<'div'> &
+  VariantProps<typeof alertVariants> & {
+    surface?: 'outer' | 'inner';
+  }) {
   return (
     <div
       data-slot="alert"
+      data-layout-surface={surface}
       role="alert"
       className={cn(alertVariants({ variant }), className)}
       {...props}
