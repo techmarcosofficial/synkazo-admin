@@ -76,7 +76,7 @@ export default function AppLayout() {
         <SetupWizardDialog />
         <SourceSetupDialog />
         <AppSidebar />
-        <SidebarInset>
+        <SidebarInset className="[--app-shell-header-height:--spacing(16)]">
           <SiteHeader />
           <main className="container mx-auto flex w-full flex-1 flex-col gap-6 px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
             <PastDueBanner />

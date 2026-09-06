@@ -14,7 +14,7 @@ export default function SiteHeader() {
   const { data: plan } = usePlanQuery();
 
   return (
-    <header className="bg-card sticky top-0 z-30 flex h-16 items-center border-b px-6">
+    <header className="bg-card sticky top-0 z-40 flex h-(--app-shell-header-height) items-center border-b px-6">
       {/* Left */}
       <div className="flex flex-1 items-center gap-4">
         <SidebarTrigger className="h-9 w-9 rounded-3xl" />

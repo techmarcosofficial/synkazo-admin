@@ -12,6 +12,7 @@ import ProjectTabs from './ProjectTabs';
 import ActivationConfirmModal from '@/components/connections/ActivationConfirmModal';
 import ErrorState from '@/components/shared/ErrorState';
 import { BackLink } from '@/components/shared/PageHeader';
+import StickyDetailHeader from '@/components/shared/StickyDetailHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs } from '@/components/ui/tabs';
@@ -69,7 +70,7 @@ export default function ProjectDetailPage() {
     return (
       <div className="animate-fade-in-up space-y-6">
         <div className="space-y-3 pb-3">
-          <Skeleton className="h-4 w-28" />
+          <Skeleton className="size-9 rounded-3xl" />
           <div className="flex items-center gap-3.5">
             <Skeleton className="size-10 rounded-lg" />
             <Skeleton className="size-10 rounded-lg" />
@@ -136,25 +137,28 @@ export default function ProjectDetailPage() {
       <Tabs
         value={activeTab}
         onValueChange={(v) => handleTabChange(v as ProjectDetailTabId)}
-        className="gap-6"
+        className="gap-0"
       >
-        <div className="space-y-2">
-          <BackLink label="Back to Projects" to="/projects" />
-          <Card className="gap-0 space-y-3 overflow-hidden py-0">
-            <ProjectHeader />
-            <div className="overflow-x-auto px-5">
-              <ProjectTabs tabs={tabs} />
-            </div>
-          </Card>
-        </div>
+        <StickyDetailHeader
+          backLabel="Back to Projects"
+          backTo="/projects"
+          header={
+            <Card className="gap-0 space-y-3 overflow-hidden py-0">
+              <ProjectHeader />
+              <div className="overflow-x-auto px-5">
+                <ProjectTabs tabs={tabs} />
+              </div>
+            </Card>
+          }
+        >
+          <SetupBanner
+            project={project}
+            connections={connections}
+            onOpenSetup={() => openSetupWizard(project.id)}
+          />
 
-        <SetupBanner
-          project={project}
-          connections={connections}
-          onOpenSetup={() => openSetupWizard(project.id)}
-        />
-
-        <ProjectTabContent />
+          <ProjectTabContent />
+        </StickyDetailHeader>
       </Tabs>
 
       {envActivation.activationModal && (
