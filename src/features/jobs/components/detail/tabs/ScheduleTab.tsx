@@ -11,8 +11,9 @@ import {
   Square,
   Timer,
   X,
+  type LucideIcon,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -77,6 +78,28 @@ interface ScheduleDraft {
   times: string[];
   days: number[];
   interval: IntervalConfig;
+}
+
+function ScheduleOverviewItem({
+  icon: Icon,
+  label,
+  children,
+}: {
+  icon: LucideIcon;
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="bg-muted/40 flex min-w-0 items-center gap-3 rounded-xl border p-3">
+      <span className="bg-background text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-lg border">
+        <Icon className="size-4" aria-hidden="true" />
+      </span>
+      <div className="min-w-0">
+        <p className="text-muted-foreground text-xs">{label}</p>
+        <div className="mt-1 truncate text-sm font-semibold">{children}</div>
+      </div>
+    </div>
+  );
 }
 
 function formatScheduledAt(value: string | null | undefined, timezone: string) {
@@ -348,6 +371,38 @@ export default function ScheduleTab() {
 
   return (
     <div className="space-y-5">
+      <Card className="gap-3 py-4">
+        <CardHeader className="flex items-start gap-3 px-4">
+          <span className="bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-xl">
+            <CalendarClock className="size-4" aria-hidden="true" />
+          </span>
+          <div>
+            <CardTitle>Schedule overview</CardTitle>
+            <CardDescription className="mt-1">
+              Current schedule state and the latest run timing.
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="px-4">
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            <ScheduleOverviewItem icon={RefreshCw} label="Status">
+              <StatusBadge status={scheduleStatus} size="sm" />
+            </ScheduleOverviewItem>
+            <ScheduleOverviewItem icon={CalendarClock} label="Schedule">
+              <span className="capitalize">{scheduleSummary}</span>
+            </ScheduleOverviewItem>
+            <ScheduleOverviewItem icon={Clock} label="Next run">
+              {formatScheduledAt(nextRunAt, effectiveTimezone)}
+            </ScheduleOverviewItem>
+            <ScheduleOverviewItem icon={Database} label="Last synced">
+              {performance.lastSyncAt
+                ? formatScheduledAt(performance.lastSyncAt, effectiveTimezone)
+                : 'Never'}
+            </ScheduleOverviewItem>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card className="gap-0 overflow-hidden py-0">
         <CardContent className="p-0">
           <div className="grid sm:grid-cols-2 xl:grid-cols-4">
@@ -380,163 +435,175 @@ export default function ScheduleTab() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-start gap-3">
-            <span className="bg-muted text-muted-foreground flex size-10 shrink-0 items-center justify-center rounded-xl">
-              <Play className="size-4.5" aria-hidden="true" />
-            </span>
-            <div className="space-y-1">
-              <CardTitle>Run manually</CardTitle>
-              <CardDescription>
-                Sync data now without changing the automatic schedule.
-              </CardDescription>
-            </div>
-          </div>
-          <CardAction className="flex flex-wrap items-center gap-2">
-            {isSyncing && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleStop}
-                disabled={stopping}
-              >
-                {stopping ? <RefreshCw className="animate-spin" /> : <Square />}
-                {stopping ? 'Stopping…' : 'Stop sync'}
-              </Button>
-            )}
-            {runLogs[0]?.bullmqJobId && queued && !isSyncing && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleCancelQueue}
-                disabled={cancellingQueue}
-                className="text-destructive"
-              >
-                <X /> {cancellingQueue ? 'Cancelling…' : 'Cancel queue'}
-              </Button>
-            )}
-            {failedQueueJob && !isSyncing && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleRetryQueue}
-                disabled={retryingQueue}
-              >
-                <RotateCcw /> {retryingQueue ? 'Retrying…' : 'Retry'}
-              </Button>
-            )}
-          </CardAction>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {(activeRunLog?.status === 'running' || isSyncing) && (
-            <div className="bg-muted/30 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border px-4 py-3 text-xs">
-              <StatusBadge status="running" size="sm" />
-              <span className="text-muted-foreground">
-                {liveProgress?.recordsProcessed ?? 0} records processed
+      <div className="grid items-start gap-5 xl:grid-cols-2">
+        <Card size="sm" className="min-w-0">
+          <CardHeader>
+            <div className="flex items-start gap-3">
+              <span className="bg-muted text-muted-foreground flex size-10 shrink-0 items-center justify-center rounded-xl">
+                <Play className="size-4.5" aria-hidden="true" />
               </span>
-              {liveProgress?.etaSeconds != null && (
-                <span className="text-muted-foreground">
-                  About {Math.max(1, Math.ceil(liveProgress.etaSeconds / 60))}{' '}
-                  min remaining
-                </span>
-              )}
+              <div className="space-y-1">
+                <CardTitle>Run manually</CardTitle>
+                <CardDescription>
+                  Sync data now without changing the automatic schedule.
+                </CardDescription>
+              </div>
             </div>
-          )}
-
-          {!job.isEnabled && !isSyncing && (
-            <Alert>
-              <Info />
-              <AlertDescription>
-                Set the job status to Active before starting a manual run.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {queued && !isSyncing && (
-            <Alert>
-              <Clock />
-              <AlertDescription>
-                This job is waiting in the queue. Cancel it before starting a
-                different manual run.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          <StartSyncModal
-            embedded
-            projectId={projectId}
-            jobId={job.id}
-            job={job}
-            hasBaseline={!!job.lastSyncedAt}
-            pipelineRequired={pipelineRequired}
-            pipelineConfigured={pipelineConfigured}
-            disabled={manualRunBlocked}
-            onGoToPipeline={() => handleTabChange('pipeline')}
-            onClose={() => undefined}
-            onRunNow={() => void handleRunNow()}
-            onLimitSyncDone={() => void beginTracking()}
-            onSyncAll={(range) =>
-              void handleSyncAll(() => handleTabChange('run-history'), range)
-            }
-          />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-start gap-3">
-            <span className="bg-muted text-muted-foreground flex size-10 shrink-0 items-center justify-center rounded-xl">
-              <CalendarClock className="size-4.5" aria-hidden="true" />
-            </span>
-            <div className="space-y-1">
-              <CardTitle>Automatic schedule</CardTitle>
-              <CardDescription>
-                Let Synkazo run this job automatically.
-              </CardDescription>
-            </div>
-          </div>
-          <CardAction>
-            {!priorityModeActive &&
-              !priorityQueueQuery.isLoading &&
-              !priorityQueueQuery.isError && (
-                <ScheduleEnableToggle
-                  projectId={projectId}
-                  jobId={job.id}
-                  job={job}
-                  scheduleToggling={scheduleToggling}
-                  pipelineRequired={pipelineRequired}
-                  pipelineConfigured={pipelineConfigured}
-                  onGoToPipeline={() => handleTabChange('pipeline')}
-                  onScheduleToggle={handleScheduleToggle}
-                  className="w-auto"
-                />
-              )}
-          </CardAction>
-        </CardHeader>
-
-        <CardContent className="space-y-5">
-          {priorityQueueQuery.isLoading ? (
-            <Skeleton className="h-40 w-full rounded-2xl" />
-          ) : priorityQueueQuery.isError ? (
-            <Alert>
-              <Info />
-              <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
-                <span>
-                  We could not determine which schedule controls this job.
-                </span>
+            <CardAction className="flex flex-wrap items-center gap-2">
+              {isSyncing && (
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
-                  onClick={() => priorityQueueQuery.refetch()}
+                  onClick={handleStop}
+                  disabled={stopping}
                 >
-                  Try again
+                  {stopping ? (
+                    <RefreshCw className="animate-spin" />
+                  ) : (
+                    <Square />
+                  )}
+                  {stopping ? 'Stopping…' : 'Stop sync'}
                 </Button>
-              </AlertDescription>
-            </Alert>
-          ) : (
-            <div className="flex flex-col gap-4">
-              <div className="order-last space-y-5 rounded-2xl border p-4">
+              )}
+              {runLogs[0]?.bullmqJobId && queued && !isSyncing && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCancelQueue}
+                  disabled={cancellingQueue}
+                  className="text-destructive"
+                >
+                  <X /> {cancellingQueue ? 'Cancelling…' : 'Cancel queue'}
+                </Button>
+              )}
+              {failedQueueJob && !isSyncing && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRetryQueue}
+                  disabled={retryingQueue}
+                >
+                  <RotateCcw /> {retryingQueue ? 'Retrying…' : 'Retry'}
+                </Button>
+              )}
+            </CardAction>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {(activeRunLog?.status === 'running' || isSyncing) && (
+              <div className="bg-muted/30 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border px-4 py-3 text-xs">
+                <StatusBadge status="running" size="sm" />
+                <span className="text-muted-foreground">
+                  {liveProgress?.recordsProcessed ?? 0} records processed
+                </span>
+                {liveProgress?.etaSeconds != null && (
+                  <span className="text-muted-foreground">
+                    About {Math.max(1, Math.ceil(liveProgress.etaSeconds / 60))}{' '}
+                    min remaining
+                  </span>
+                )}
+              </div>
+            )}
+
+            {!job.isEnabled && !isSyncing && (
+              <Alert className="py-2.5">
+                <Info />
+                <AlertDescription className="space-y-0.5 [&_p:not(:last-child)]:mb-0">
+                  <p className="text-foreground font-semibold">
+                    Job is inactive
+                  </p>
+                  <p>
+                    Set the job status to Active before starting a manual run.
+                  </p>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {queued && !isSyncing && (
+              <Alert className="py-2.5">
+                <Clock />
+                <AlertDescription className="space-y-0.5 [&_p:not(:last-child)]:mb-0">
+                  <p className="text-foreground font-semibold">Run queued</p>
+                  <p>
+                    Cancel the queued run before starting a different manual
+                    run.
+                  </p>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <StartSyncModal
+              embedded
+              projectId={projectId}
+              jobId={job.id}
+              job={job}
+              hasBaseline={!!job.lastSyncedAt}
+              pipelineRequired={pipelineRequired}
+              pipelineConfigured={pipelineConfigured}
+              disabled={manualRunBlocked}
+              onGoToPipeline={() => handleTabChange('pipeline')}
+              onClose={() => undefined}
+              onRunNow={() => void handleRunNow()}
+              onLimitSyncDone={() => void beginTracking()}
+              onSyncAll={(range) =>
+                void handleSyncAll(() => handleTabChange('run-history'), range)
+              }
+            />
+          </CardContent>
+        </Card>
+
+        <Card size="sm" className="min-w-0">
+          <CardHeader>
+            <div className="flex items-start gap-3">
+              <span className="bg-muted text-muted-foreground flex size-10 shrink-0 items-center justify-center rounded-xl">
+                <CalendarClock className="size-4.5" aria-hidden="true" />
+              </span>
+              <div className="space-y-1">
+                <CardTitle>Automatic schedule</CardTitle>
+                <CardDescription>
+                  Let Synkazo run this job automatically.
+                </CardDescription>
+              </div>
+            </div>
+            <CardAction>
+              {!priorityModeActive &&
+                !priorityQueueQuery.isLoading &&
+                !priorityQueueQuery.isError && (
+                  <ScheduleEnableToggle
+                    projectId={projectId}
+                    jobId={job.id}
+                    job={job}
+                    scheduleToggling={scheduleToggling}
+                    pipelineRequired={pipelineRequired}
+                    pipelineConfigured={pipelineConfigured}
+                    onGoToPipeline={() => handleTabChange('pipeline')}
+                    onScheduleToggle={handleScheduleToggle}
+                    className="w-auto"
+                  />
+                )}
+            </CardAction>
+          </CardHeader>
+
+          <CardContent className="space-y-5">
+            {priorityQueueQuery.isLoading ? (
+              <Skeleton className="h-40 w-full rounded-2xl" />
+            ) : priorityQueueQuery.isError ? (
+              <Alert>
+                <Info />
+                <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+                  <span>
+                    We could not determine which schedule controls this job.
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => priorityQueueQuery.refetch()}
+                  >
+                    Try again
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <div className="space-y-5 rounded-2xl border p-4">
                 {priorityModeActive ? (
                   <Alert>
                     <Info />
@@ -690,66 +757,36 @@ export default function ScheduleTab() {
                   </>
                 )}
               </div>
+            )}
+          </CardContent>
 
-              <div className="order-first grid overflow-hidden rounded-2xl border text-xs sm:grid-cols-2 xl:grid-cols-4">
-                <div className="flex min-w-0 items-center justify-between gap-3 border-b p-3 sm:border-r xl:border-b-0">
-                  <span className="text-muted-foreground">Status</span>
-                  <StatusBadge status={scheduleStatus} size="sm" />
+          {!isTwoWay &&
+            !priorityModeActive &&
+            !priorityQueueQuery.isLoading &&
+            !priorityQueueQuery.isError && (
+              <CardFooter className="justify-between gap-3 border-t">
+                <span className="text-muted-foreground text-xs">
+                  {isDirty
+                    ? 'You have unsaved changes.'
+                    : 'Schedule is up to date.'}
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={resetChanges}
+                    disabled={!isDirty || saving}
+                  >
+                    Reset
+                  </Button>
+                  <Button onClick={handleSave} disabled={!isDirty || saving}>
+                    {saving ? <Spinner /> : saved ? <Check /> : <Clock />}
+                    {saving ? 'Saving…' : saved ? 'Saved' : 'Save schedule'}
+                  </Button>
                 </div>
-                <div className="flex min-w-0 items-center justify-between gap-3 border-b p-3 xl:border-r xl:border-b-0">
-                  <span className="text-muted-foreground">Schedule</span>
-                  <span className="truncate text-right font-medium capitalize">
-                    {scheduleSummary}
-                  </span>
-                </div>
-                <div className="flex min-w-0 items-center justify-between gap-3 border-b p-3 sm:border-r sm:border-b-0 xl:border-r">
-                  <span className="text-muted-foreground">Next run</span>
-                  <span className="truncate text-right font-medium">
-                    {formatScheduledAt(nextRunAt, effectiveTimezone)}
-                  </span>
-                </div>
-                <div className="flex min-w-0 items-center justify-between gap-3 p-3">
-                  <span className="text-muted-foreground">Last synced</span>
-                  <span className="truncate text-right font-medium">
-                    {performance.lastSyncAt
-                      ? formatScheduledAt(
-                          performance.lastSyncAt,
-                          effectiveTimezone,
-                        )
-                      : 'Never'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-        </CardContent>
-
-        {!isTwoWay &&
-          !priorityModeActive &&
-          !priorityQueueQuery.isLoading &&
-          !priorityQueueQuery.isError && (
-            <CardFooter className="justify-between gap-3 border-t">
-              <span className="text-muted-foreground text-xs">
-                {isDirty
-                  ? 'You have unsaved changes.'
-                  : 'Schedule is up to date.'}
-              </span>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  onClick={resetChanges}
-                  disabled={!isDirty || saving}
-                >
-                  Reset
-                </Button>
-                <Button onClick={handleSave} disabled={!isDirty || saving}>
-                  {saving ? <Spinner /> : saved ? <Check /> : <Clock />}
-                  {saving ? 'Saving…' : saved ? 'Saved' : 'Save schedule'}
-                </Button>
-              </div>
-            </CardFooter>
-          )}
-      </Card>
+              </CardFooter>
+            )}
+        </Card>
+      </div>
 
       <Alert>
         <Info />

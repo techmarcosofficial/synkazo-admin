@@ -1090,20 +1090,24 @@ function RunLogRow({
             <div
               key={label}
               className={cn(
-                'px-5 py-3',
+                'p-1.5',
                 index > 0 && 'border-l',
                 index > 1 && 'max-sm:border-t',
               )}
             >
-              <p className="text-muted-foreground text-xs">{label}</p>
-              <p
-                className={cn(
-                  'mt-0.5 text-sm font-semibold',
-                  label === 'Failed' && Number(value) > 0 && 'text-destructive',
-                )}
-              >
-                {Number(value).toLocaleString()}
-              </p>
+              <div className="bg-card rounded-2xl px-3 py-2 space-y-1">
+                <p
+                  className={cn(
+                    'mt-0.5 text-md font-semibold',
+                    label === 'Failed' &&
+                      Number(value) > 0 &&
+                      'text-destructive',
+                  )}
+                >
+                  {Number(value).toLocaleString()}
+                </p>
+                <p className="text-muted-foreground text-xs">{label}</p>
+              </div>
             </div>
           ))}
         </div>

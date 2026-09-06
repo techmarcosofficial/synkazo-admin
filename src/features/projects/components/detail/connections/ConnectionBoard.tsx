@@ -97,7 +97,7 @@ function ConnectionStep({
 
       <section
         className={cn(
-          'border-primary/40 overflow-hidden rounded-3xl border',
+          'border-primary/20 overflow-hidden rounded-3xl border',
           !complete && 'border-dashed',
         )}
       >

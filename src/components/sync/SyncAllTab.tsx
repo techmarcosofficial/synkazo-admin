@@ -166,17 +166,25 @@ export default function SyncAllTab({
   return (
     <div className="space-y-5">
       {pipelineBlocked && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="py-2.5">
           <AlertTriangle />
-          <AlertDescription className="space-y-1.5">
-            <p className="font-semibold">Pipeline not configured</p>
-            <p>
-              This job syncs to <strong>{job?.destObject}</strong> which
-              requires a HubSpot pipeline. Configure one before running the
-              sync.
-            </p>
+          <AlertDescription className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between [&_p:not(:last-child)]:mb-0">
+            <div className="space-y-0.5">
+              <p className="text-foreground font-semibold">
+                Pipeline not configured
+              </p>
+              <p>
+                This job syncs to <strong>{job?.destObject}</strong>, which
+                requires a HubSpot pipeline. Configure one before running the
+                sync.
+              </p>
+            </div>
             {onGoToPipeline && (
-              <Button size="sm" onClick={onGoToPipeline}>
+              <Button
+                size="sm"
+                onClick={onGoToPipeline}
+                className="shrink-0 self-start sm:self-center"
+              >
                 <GitBranch /> Go to Pipeline tab
               </Button>
             )}

@@ -1,14 +1,5 @@
 import { formatDistanceToNow } from 'date-fns';
-import {
-  Activity,
-  ArrowRight,
-  CircleCheck,
-  CircleX,
-  Info,
-  LoaderCircle,
-  PauseCircle,
-  TriangleAlert,
-} from 'lucide-react';
+import { Activity, ArrowRight, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import type { ActivityFilter, OrgSyncLog } from '../types';
@@ -22,6 +13,7 @@ import type { ActivityGroup, ActivityStatus } from '../utils';
 
 import { PlatformPair } from '@/components/platform';
 import ListRow from '@/components/shared/list/ListRow';
+import StatusBadge from '@/components/shared/StatusBadge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -45,7 +37,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Tooltip,
@@ -53,46 +44,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-
-const STATUS_CONFIG: Record<
-  ActivityStatus,
-  {
-    label: string;
-    icon: typeof CircleCheck;
-    iconClassName: string;
-  }
-> = {
-  success: {
-    label: 'Success',
-    icon: CircleCheck,
-    iconClassName: 'text-success',
-  },
-  warning: {
-    label: 'Warning',
-    icon: TriangleAlert,
-    iconClassName: 'text-warning',
-  },
-  failed: {
-    label: 'Failed',
-    icon: CircleX,
-    iconClassName: 'text-destructive',
-  },
-  running: {
-    label: 'Running',
-    icon: LoaderCircle,
-    iconClassName: 'text-info',
-  },
-  stopped: {
-    label: 'Stopped',
-    icon: PauseCircle,
-    iconClassName: 'text-paused',
-  },
-  info: {
-    label: 'Activity',
-    icon: Info,
-    iconClassName: 'text-info',
-  },
-};
 
 const ACTIVITY_FILTERS: Array<{ value: ActivityFilter; label: string }> = [
   { value: 'all', label: 'All' },
@@ -123,6 +74,47 @@ function titleCase(value: string): string {
     .join(' ');
 }
 
+function getBadgeStatus(log: OrgSyncLog, status: ActivityStatus): string {
+  if (log.metadata?.status) return log.metadata.status;
+  if (status === 'warning') return 'partial';
+  if (status === 'stopped') return 'paused';
+  if (status === 'info') return 'pending';
+  return status;
+}
+
+function getTriggerLabel(triggeredBy?: string): string | null {
+  if (!triggeredBy) return null;
+  const labels: Record<string, string> = {
+    cron: 'Scheduled run',
+    manual: 'Manual run',
+    api: 'API run',
+    resume: 'Resumed run',
+    sync_all: 'All records',
+    limit_sync: 'Limited run',
+    webhook: 'Webhook run',
+  };
+  return labels[triggeredBy] ?? titleCase(triggeredBy);
+}
+
+function formatDuration(durationMs?: number | null): string | null {
+  if (!durationMs) return null;
+  const seconds = Math.max(1, Math.round(durationMs / 1000));
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return remainingSeconds ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
+}
+
+function getUsefulActivityDetail(
+  message: string | undefined,
+  status: ActivityStatus,
+): string | null {
+  if (!message || !['failed', 'stopped'].includes(status)) return null;
+  const marker = status === 'failed' ? /failed:\s*/i : /stopped early:\s*/i;
+  const detail = message.split(marker)[1]?.trim();
+  return detail ? shortenActivityMessage(detail, 72) : null;
+}
+
 function ActivityLoadingState() {
   return (
     <div className="space-y-3" aria-label="Loading recent activity">
@@ -145,8 +137,7 @@ function ActivityLoadingState() {
 
 function ActivityRow({ log }: { log: OrgSyncLog }) {
   const status = getActivityStatus(log);
-  const statusConfig = STATUS_CONFIG[status];
-  const StatusIcon = statusConfig.icon;
+  const badgeStatus = getBadgeStatus(log, status);
 
   const createdAt = log.createdAt ? new Date(log.createdAt) : null;
   const hasValidDate = createdAt && !Number.isNaN(createdAt.getTime());
@@ -154,16 +145,17 @@ function ActivityRow({ log }: { log: OrgSyncLog }) {
   const projectName = log.metadata?.projectName;
   const jobName = log.metadata?.jobName;
   const contextName = projectName ?? jobName ?? 'Organization activity';
+  const triggerLabel = getTriggerLabel(log.metadata?.triggeredBy);
 
   const sourceObject = log.metadata?.sourceObject;
   const destObject = log.metadata?.destObject;
 
   const fullMessage = log.message?.trim();
-  const shortMessage = shortenActivityMessage(fullMessage);
-  const showMessage = status !== 'success' && !!shortMessage;
+  const usefulDetail = getUsefulActivityDetail(fullMessage, status);
 
   const recordsFailed = log.metadata?.recordsFailed;
   const recordsProcessed = log.recordsProcessed;
+  const duration = formatDuration(log.durationMs);
 
   const runHref =
     log.projectId && log.jobId
@@ -173,40 +165,33 @@ function ActivityRow({ log }: { log: OrgSyncLog }) {
   const content = (
     <div
       className={cn(
-        'grid w-full min-w-0 items-center gap-x-5 gap-y-3',
-        'md:grid-cols-[110px_minmax(220px,1.6fr)_minmax(180px,1.2fr)_140px_90px_28px]',
+        'grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2',
+        'xl:grid-cols-[110px_minmax(220px,1.45fr)_minmax(190px,1.1fr)_130px_110px_24px] xl:gap-x-5',
       )}
     >
-      {/* Status */}
-      <div className="flex items-center">
-        <Badge variant="secondary" className="w-fit gap-1.5 whitespace-nowrap">
-          <StatusIcon className={cn('size-3.5', statusConfig.iconClassName)} />
-          {statusConfig.label}
-        </Badge>
+      <div className="flex items-center self-start xl:self-center">
+        <StatusBadge status={badgeStatus} size="sm" />
       </div>
 
-      {/* Activity / Context */}
       <div className="min-w-0">
-        <p className="truncate text-sm font-medium">
-          {getActivityTitle(status)}
+        <p className="truncate text-sm font-semibold" title={contextName}>
+          {contextName}
         </p>
-
-        {/* <div className="mt-1 flex min-w-0 items-center gap-1.5 text-xs">
-          <span className="text-foreground truncate">{contextName}</span>
-
+        <div className="text-muted-foreground mt-1 flex min-w-0 items-center gap-1.5 text-xs">
           {projectName && jobName && projectName !== jobName && (
-            <>
-              <span className="text-muted-foreground">·</span>
-              <span className="text-muted-foreground truncate">{jobName}</span>
-            </>
+            <span className="truncate">{jobName}</span>
           )}
-        </div> */}
-
-        {showMessage && (
+          {projectName &&
+            jobName &&
+            projectName !== jobName &&
+            triggerLabel && <span aria-hidden="true">·</span>}
+          {triggerLabel && <span className="shrink-0">{triggerLabel}</span>}
+        </div>
+        {usefulDetail && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <p className="text-muted-foreground mt-1.5 line-clamp-1 max-w-full text-xs">
-                {shortMessage}
+              <p className="text-destructive mt-1 line-clamp-1 max-w-full text-xs">
+                {usefulDetail}
               </p>
             </TooltipTrigger>
 
@@ -215,8 +200,7 @@ function ActivityRow({ log }: { log: OrgSyncLog }) {
         )}
       </div>
 
-      {/* Integration / Mapping */}
-      <div className="min-w-0 space-y-1.5">
+      <div className="col-start-2 min-w-0 space-y-1.5 xl:col-auto">
         {log.metadata?.sourcePlatformId && log.metadata?.destPlatformId && (
           <PlatformPair
             sourcePlatformId={log.metadata.sourcePlatformId}
@@ -235,26 +219,27 @@ function ActivityRow({ log }: { log: OrgSyncLog }) {
         )}
       </div>
 
-      {/* Records */}
-      <div className="flex flex-wrap items-center gap-1.5">
+      <div className="col-start-2 flex flex-wrap items-center gap-2 xl:col-auto xl:block">
         {typeof recordsProcessed === 'number' && (
-          <span className="text-xs font-medium">
+          <p className="text-sm font-semibold">
             {recordsProcessed.toLocaleString()}
             <span className="text-muted-foreground ml-1 font-normal">
               synced
             </span>
-          </span>
+          </p>
         )}
 
         {typeof recordsFailed === 'number' && recordsFailed > 0 && (
-          <Badge variant="destructive" className="h-5 px-1.5 text-[11px]">
+          <Badge
+            variant="secondary"
+            className="text-destructive mt-1 h-5 px-1.5 text-[11px]"
+          >
             {recordsFailed.toLocaleString()} failed
           </Badge>
         )}
       </div>
 
-      {/* Time */}
-      <div className="md:text-right">
+      <div className="col-start-2 flex items-center gap-3 xl:col-auto xl:block xl:text-right">
         {hasValidDate && (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -269,10 +254,14 @@ function ActivityRow({ log }: { log: OrgSyncLog }) {
             <TooltipContent>{createdAt.toLocaleString()}</TooltipContent>
           </Tooltip>
         )}
+        {duration && (
+          <span className="text-muted-foreground inline-flex items-center gap-1 text-xs whitespace-nowrap xl:mt-1">
+            <Clock className="size-3" /> {duration}
+          </span>
+        )}
       </div>
 
-      {/* Action */}
-      <div className="hidden justify-end md:flex">
+      <div className="col-start-3 row-start-1 flex justify-end xl:col-auto xl:row-auto">
         {runHref && (
           <ArrowRight className="text-muted-foreground group-hover:text-foreground size-4 transition-transform group-hover:translate-x-0.5" />
         )}
@@ -285,7 +274,7 @@ function ActivityRow({ log }: { log: OrgSyncLog }) {
       <ListRow
         asChild
         className={cn(
-          'group items-center',
+          'group items-center px-4 py-3 sm:px-5',
           'hover:bg-muted/40 transition-colors',
         )}
       >
@@ -303,7 +292,9 @@ function ActivityRow({ log }: { log: OrgSyncLog }) {
     );
   }
 
-  return <ListRow className="items-center">{content}</ListRow>;
+  return (
+    <ListRow className="items-center px-4 py-3 sm:px-5">{content}</ListRow>
+  );
 }
 
 export default function RecentActivityCard({
@@ -317,6 +308,9 @@ export default function RecentActivityCard({
     group,
     logs: recentLogs.filter((log) => getActivityGroup(log.createdAt) === group),
   })).filter(({ logs: groupedActivity }) => groupedActivity.length > 0);
+  const orderedLogs = groupedLogs.flatMap(
+    ({ logs: groupedActivity }) => groupedActivity,
+  );
 
   return (
     <Card>
@@ -374,21 +368,16 @@ export default function RecentActivityCard({
           </Empty>
         ) : (
           <div className="overflow-hidden rounded-4xl border">
-            {groupedLogs.map(({ group, logs: groupedActivity }, groupIndex) => (
-              <div key={group}>
-                {groupIndex > 0 && <Separator />}
-                {/* <p className="text-muted-foreground text-xs font-medium">
-                  {group}
-                </p> */}
-                <div>
-                  {groupedActivity.map((log, index) => (
-                    <ActivityRow
-                      key={log.id ?? `${group}-${index}`}
-                      log={log}
-                    />
-                  ))}
-                </div>
-              </div>
+            <div className="bg-muted/30 text-muted-foreground hidden grid-cols-[110px_minmax(220px,1.45fr)_minmax(190px,1.1fr)_130px_110px_24px] items-center gap-x-5 border-b px-5 py-2 text-xs font-medium xl:grid">
+              <span>Status</span>
+              <span>Project and run</span>
+              <span>Data flow</span>
+              <span>Result</span>
+              <span className="text-right">Time</span>
+              <span className="sr-only">Open</span>
+            </div>
+            {orderedLogs.map((log, index) => (
+              <ActivityRow key={log.id ?? `activity-${index}`} log={log} />
             ))}
           </div>
         )}

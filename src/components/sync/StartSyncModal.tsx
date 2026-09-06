@@ -1,6 +1,7 @@
 import { ChevronDown, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 
+import { ChoiceCardItem } from '@/components/form/ChoiceCard';
 import LimitSyncModal from '@/components/sync/LimitSyncModal';
 import RunConfirmModal from '@/components/sync/RunConfirmModal';
 import SyncAllTab from '@/components/sync/SyncAllTab';
@@ -12,8 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { RadioGroup } from '@/components/ui/radio-group';
 import type { ExtJob } from '@/features/jobs/hooks/useJobDetail';
 import { cn } from '@/lib/utils';
 
@@ -56,26 +56,7 @@ function ManualSyncContent({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <RadioGroup
-          value={runType}
-          onValueChange={(value) => setRunType(value as 'all' | 'limited')}
-          className="bg-muted/40 flex w-fit gap-1 rounded-xl border p-1"
-        >
-          <Label
-            htmlFor="manual-run-all"
-            className="text-muted-foreground has-data-checked:bg-background has-data-checked:text-foreground flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium has-data-checked:shadow-sm"
-          >
-            <RadioGroupItem value="all" id="manual-run-all" />
-            All records
-          </Label>
-          <Label
-            htmlFor="manual-run-limited"
-            className="text-muted-foreground has-data-checked:bg-background has-data-checked:text-foreground flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium has-data-checked:shadow-sm"
-          >
-            <RadioGroupItem value="limited" id="manual-run-limited" />
-            Limited run
-          </Label>
-        </RadioGroup>
+        <p className="text-sm font-medium">What records do you want to sync?</p>
 
         {runType === 'all' && (
           <Button
@@ -97,7 +78,26 @@ function ManualSyncContent({
         )}
       </div>
 
-      <div className="min-w-0 border-t pt-4">
+      <RadioGroup
+        value={runType}
+        onValueChange={(value) => setRunType(value as 'all' | 'limited')}
+        className="grid gap-2 sm:grid-cols-2"
+      >
+        <ChoiceCardItem
+          value="all"
+          id="manual-run-all"
+          title="All records"
+          description="Sync all available records"
+        />
+        <ChoiceCardItem
+          value="limited"
+          id="manual-run-limited"
+          title="Limited run"
+          description="Sync a controlled number of records"
+        />
+      </RadioGroup>
+
+      <div className="min-w-0">
         {runType === 'all' ? (
           <div className="space-y-4">
             <SyncAllTab

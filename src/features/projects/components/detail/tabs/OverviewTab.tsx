@@ -21,13 +21,11 @@ export default function OverviewTab() {
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <ProjectRecentActivity
           projectId={project.id}
-          destinationPlatformId={project.destPlatformId}
           logs={logs}
           jobs={jobs}
           onViewAll={() => handleTabChange('activity')}
         />
         <ProjectUpcomingEvents
-          destinationPlatformId={project.destPlatformId}
           jobs={jobs}
           onViewScheduler={() => handleTabChange('scheduler')}
         />

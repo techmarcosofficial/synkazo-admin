@@ -1,19 +1,18 @@
 import { formatDistanceToNow } from 'date-fns';
-import { ChevronRight, Clock3, Database, Timer } from 'lucide-react';
+import { ChevronRight, Clock3, Timer } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-import { PlatformIcon } from '@/components/platform';
 import EmptyState from '@/components/shared/EmptyState';
 import ListPanel from '@/components/shared/list/ListPanel';
 import ListRow from '@/components/shared/list/ListRow';
 import StatusBadge from '@/components/shared/StatusBadge';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import type { JobExt, ProjectActivityLog } from '@/features/projects/hooks';
 
 interface ProjectRecentActivityProps {
   projectId: string;
-  destinationPlatformId: string;
   logs: ProjectActivityLog[];
   jobs: JobExt[];
   onViewAll: () => void;
@@ -44,9 +43,22 @@ function formatDuration(durationMs?: number | null): string {
   return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
 }
 
+function triggerLabel(triggeredBy?: string): string | null {
+  if (!triggeredBy) return null;
+  const labels: Record<string, string> = {
+    cron: 'Scheduled run',
+    manual: 'Manual run',
+    api: 'API run',
+    resume: 'Resumed run',
+    sync_all: 'All records',
+    limit_sync: 'Limited run',
+    webhook: 'Webhook run',
+  };
+  return labels[triggeredBy] ?? titleCase(triggeredBy);
+}
+
 export default function ProjectRecentActivity({
   projectId,
-  destinationPlatformId,
   logs,
   jobs,
   onViewAll,
@@ -94,14 +106,17 @@ export default function ProjectRecentActivity({
                 sourceObject && destinationObject
                   ? `${titleCase(sourceObject)} → ${titleCase(destinationObject)}`
                   : (jobName ?? log.message);
-              const platformId =
-                log.metadata?.destPlatformId ?? destinationPlatformId;
+              const runType = triggerLabel(log.metadata?.triggeredBy);
+              const failedRecords = log.metadata?.recordsFailed ?? 0;
+              const createdAt = log.createdAt ? new Date(log.createdAt) : null;
+              const hasValidDate =
+                createdAt && !Number.isNaN(createdAt.getTime());
               const activityHref = log.jobId
                 ? `/projects/${projectId}/jobs/${log.jobId}?tab=run-history`
                 : `/projects/${projectId}?tab=activity`;
 
               return (
-                <ListRow key={log.id} asChild className="px-3 py-2">
+                <ListRow key={log.id} asChild className="px-4 py-1.5">
                   <Link
                     to={activityHref}
                     state={
@@ -112,43 +127,59 @@ export default function ProjectRecentActivity({
                           }
                         : undefined
                     }
-                    className="grid w-full grid-cols-[6.75rem_2.5rem_minmax(0,1fr)_auto] items-center gap-3 text-left"
+                    className="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 text-left xl:grid-cols-[6.75rem_minmax(0,1fr)_auto_auto]"
                     aria-label={`Open activity details for ${mapping}`}
                   >
                     <StatusBadge status={statusFor(log)} size="sm" />
-                    <PlatformIcon
-                      platformId={platformId}
-                      variant="avatar"
-                      size="lg"
-                    />
-                    <div className="min-w-0 space-y-1">
+                    <div className="col-start-2 row-start-1 min-w-0 space-y-1 xl:col-auto xl:row-auto">
                       <p
                         className="truncate text-sm font-semibold"
                         title={mapping}
                       >
                         {mapping}
                       </p>
-                      <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                      <div className="text-muted-foreground flex min-w-0 flex-wrap items-center gap-1.5 text-xs">
+                        {jobName && jobName !== mapping && (
+                          <span className="max-w-48 truncate">{jobName}</span>
+                        )}
+                        {jobName && jobName !== mapping && runType && (
+                          <span aria-hidden="true">·</span>
+                        )}
+                        {runType && <span>{runType}</span>}
+                      </div>
+                    </div>
+                    <div className="col-start-2 row-start-2 flex flex-wrap items-center gap-x-3 gap-y-1 xl:col-auto xl:row-auto xl:block xl:text-right">
+                      <p className="text-sm font-semibold whitespace-nowrap">
+                        {(log.recordsProcessed ?? 0).toLocaleString()}
+                        <span className="text-muted-foreground ml-1 font-normal">
+                          synced
+                        </span>
+                      </p>
+                      <div className="text-muted-foreground flex items-center gap-2 text-xs xl:mt-1 xl:justify-end">
                         <span className="inline-flex items-center gap-1">
-                          <Clock3 className="size-3.5" aria-hidden="true" />
-                          {log.createdAt
-                            ? formatDistanceToNow(new Date(log.createdAt), {
+                          <Clock3 className="size-3" aria-hidden="true" />
+                          {hasValidDate
+                            ? formatDistanceToNow(createdAt, {
                                 addSuffix: true,
                               })
                             : 'Time unavailable'}
                         </span>
                         <span className="inline-flex items-center gap-1">
-                          <Database className="size-3.5" aria-hidden="true" />
-                          {(log.recordsProcessed ?? 0).toLocaleString()} records
-                        </span>
-                        <span className="inline-flex items-center gap-1">
-                          <Timer className="size-3.5" aria-hidden="true" />
+                          <Timer className="size-3" aria-hidden="true" />
                           {formatDuration(log.durationMs)}
                         </span>
                       </div>
+                      {failedRecords > 0 && (
+                        <Badge
+                          variant="secondary"
+                          className="text-destructive mt-1 h-5 px-1.5 text-[11px]"
+                        >
+                          {failedRecords.toLocaleString()} failed
+                        </Badge>
+                      )}
                     </div>
                     <ChevronRight
-                      className="text-muted-foreground size-4 shrink-0"
+                      className="text-muted-foreground col-start-3 row-start-1 size-4 shrink-0 xl:col-auto xl:row-auto"
                       aria-hidden="true"
                     />
                   </Link>

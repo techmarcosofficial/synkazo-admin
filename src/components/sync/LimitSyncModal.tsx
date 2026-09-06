@@ -2,7 +2,6 @@ import {
   AlertTriangle,
   ArrowRight,
   CheckCircle2,
-  ChevronDown,
   ChevronRight,
   Info,
   Play,
@@ -19,11 +18,6 @@ import UpgradeRequiredDialog from '@/components/shared/UpgradeRequiredDialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
 import {
   Dialog,
   DialogContent,
@@ -160,8 +154,6 @@ export default function LimitSyncModal({
     open: boolean;
     message: string;
   }>({ open: false, message: '' });
-  const [advancedOpen, setAdvancedOpen] = useState(false);
-
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollCount = useRef(0);
   const lastFetched = useRef(0);
@@ -368,19 +360,27 @@ export default function LimitSyncModal({
               </DialogHeader>
             )}
 
-            <div className="flex-1 space-y-5 overflow-y-auto">
+            <div className="flex-1 space-y-3 overflow-y-auto">
               {pipelineBlocked && (
-                <Alert variant="destructive">
+                <Alert variant="destructive" className="py-2.5">
                   <AlertTriangle />
-                  <AlertDescription className="space-y-1.5">
-                    <p className="font-semibold">Pipeline not configured</p>
-                    <p>
-                      This job syncs to <strong>{job?.destObject}</strong> which
-                      requires a HubSpot pipeline. Configure one before running
-                      the sync.
-                    </p>
+                  <AlertDescription className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between [&_p:not(:last-child)]:mb-0">
+                    <div className="space-y-0.5">
+                      <p className="text-foreground font-semibold">
+                        Pipeline not configured
+                      </p>
+                      <p>
+                        This job syncs to <strong>{job?.destObject}</strong>,
+                        which requires a HubSpot pipeline. Configure one before
+                        running the sync.
+                      </p>
+                    </div>
                     {onGoToPipeline && (
-                      <Button size="sm" onClick={onGoToPipeline}>
+                      <Button
+                        size="sm"
+                        onClick={onGoToPipeline}
+                        className="shrink-0 self-start sm:self-center"
+                      >
                         <ArrowRight /> Go to Pipeline tab
                       </Button>
                     )}
@@ -388,19 +388,23 @@ export default function LimitSyncModal({
                 </Alert>
               )}
 
-              <Alert className="bg-primary/5 border-primary/20">
+              <Alert className="bg-primary/5 border-primary/20 py-2.5">
                 <Info className="text-primary" />
-                <AlertDescription>
-                  Process a controlled subset of records. Uses the same
-                  mappings, deduplication, and sync rules as a regular sync.
-                  Does not update the job's last synced timestamp.
+                <AlertDescription className="space-y-0.5 [&_p:not(:last-child)]:mb-0">
+                  <p className="text-foreground font-semibold">
+                    About limited runs
+                  </p>
+                  <p>
+                    Process a controlled subset using this job's existing sync
+                    rules. This does not update the last synced timestamp.
+                  </p>
                 </AlertDescription>
               </Alert>
 
-              <FieldGroup>
+              <FieldGroup className="grid gap-3 sm:grid-cols-3">
                 <Field data-invalid={!!errors.limit}>
                   <FieldLabel htmlFor="limit-count">
-                    Number of Records to Sync
+                    Number of records
                   </FieldLabel>
                   <Input
                     id="limit-count"
@@ -420,82 +424,53 @@ export default function LimitSyncModal({
                   </p>
                 </Field>
 
-                <Collapsible
-                  open={!compact || advancedOpen}
-                  onOpenChange={setAdvancedOpen}
-                >
-                  {compact && (
-                    <div className="flex justify-end">
-                      <CollapsibleTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="text-muted-foreground mb-2"
-                        >
-                          Advanced options
-                          <ChevronDown
-                            className={cn(
-                              'transition-transform',
-                              advancedOpen && 'rotate-180',
-                            )}
-                          />
-                        </Button>
-                      </CollapsibleTrigger>
-                    </div>
+                <Field data-invalid={!!errors.startPage}>
+                  <FieldLabel htmlFor="start-page">Starting page</FieldLabel>
+                  <Input
+                    id="start-page"
+                    type="number"
+                    min={1}
+                    value={startPage}
+                    onChange={(e) =>
+                      setStartPage(parseInt(e.target.value) || 1)
+                    }
+                    placeholder="1"
+                    aria-invalid={!!errors.startPage}
+                  />
+                  {errors.startPage && (
+                    <p className="text-destructive text-xs">
+                      {errors.startPage}
+                    </p>
                   )}
-                  <CollapsibleContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <Field data-invalid={!!errors.startPage}>
-                      <FieldLabel htmlFor="start-page">
-                        Starting Page
-                      </FieldLabel>
-                      <Input
-                        id="start-page"
-                        type="number"
-                        min={1}
-                        value={startPage}
-                        onChange={(e) =>
-                          setStartPage(parseInt(e.target.value) || 1)
-                        }
-                        placeholder="1"
-                        aria-invalid={!!errors.startPage}
-                      />
-                      {errors.startPage && (
-                        <p className="text-destructive text-xs">
-                          {errors.startPage}
-                        </p>
-                      )}
-                      <p className="text-muted-foreground text-[10px]">
-                        Source API page to start from
-                      </p>
-                    </Field>
-                    <Field data-invalid={!!errors.batchSize}>
-                      <FieldLabel htmlFor="batch-size">
-                        Records per Batch
-                      </FieldLabel>
-                      <Input
-                        id="batch-size"
-                        type="number"
-                        min={10}
-                        max={500}
-                        value={batchSize}
-                        onChange={(e) =>
-                          setBatchSize(parseInt(e.target.value) || 100)
-                        }
-                        placeholder="100"
-                        aria-invalid={!!errors.batchSize}
-                      />
-                      {errors.batchSize && (
-                        <p className="text-destructive text-xs">
-                          {errors.batchSize}
-                        </p>
-                      )}
-                      <p className="text-muted-foreground text-[10px]">
-                        Records per processing batch
-                      </p>
-                    </Field>
-                  </CollapsibleContent>
-                </Collapsible>
+                  <p className="text-muted-foreground text-[10px]">
+                    Source API page to start from
+                  </p>
+                </Field>
+                <Field data-invalid={!!errors.batchSize}>
+                  <FieldLabel htmlFor="batch-size">
+                    Records per batch
+                  </FieldLabel>
+                  <Input
+                    id="batch-size"
+                    type="number"
+                    min={10}
+                    max={500}
+                    value={batchSize}
+                    onChange={(e) =>
+                      setBatchSize(parseInt(e.target.value) || 100)
+                    }
+                    placeholder="100"
+                    aria-invalid={!!errors.batchSize}
+                  />
+                  {errors.batchSize && (
+                    <p className="text-destructive text-xs">
+                      {errors.batchSize}
+                    </p>
+                  )}
+                  <p className="text-muted-foreground text-[10px]">
+                    Between 10 and 500 records
+                  </p>
+                </Field>
               </FieldGroup>
 
               <Card className="py-0">

@@ -1,7 +1,6 @@
 import { format, formatDistanceToNow } from 'date-fns';
-import { CalendarClock, ChevronRight, Database, Repeat2 } from 'lucide-react';
+import { CalendarClock, ChevronRight, Repeat2 } from 'lucide-react';
 
-import { PlatformIcon } from '@/components/platform';
 import EmptyState from '@/components/shared/EmptyState';
 import ListPanel from '@/components/shared/list/ListPanel';
 import ListRow from '@/components/shared/list/ListRow';
@@ -13,7 +12,6 @@ import { getUpcomingScheduledJobs } from '@/features/projects/lib/projectOvervie
 import { formatSchedule } from '@/features/projects/utils';
 
 interface ProjectUpcomingEventsProps {
-  destinationPlatformId: string;
   jobs: JobExt[];
   onViewScheduler: () => void;
 }
@@ -27,7 +25,6 @@ function titleCase(value: string): string {
 }
 
 export default function ProjectUpcomingEvents({
-  destinationPlatformId,
   jobs,
   onViewScheduler,
 }: ProjectUpcomingEventsProps) {
@@ -66,53 +63,42 @@ export default function ProjectUpcomingEvents({
             upcomingJobs.map((job) => {
               const nextRun = new Date(job.nextRunAt!);
               const mapping = `${titleCase(job.sourceObject)} → ${titleCase(job.destObject)}`;
-
               return (
-                <ListRow key={job.id} asChild className="px-4 py-3.5">
+                <ListRow key={job.id} asChild className="px-4 py-1.5">
                   <button
                     type="button"
-                    className="grid w-full grid-cols-[6.75rem_2.5rem_minmax(0,1fr)_auto] items-center gap-3 text-left"
+                    className="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 text-left xl:grid-cols-[6.75rem_minmax(0,1fr)_auto_auto]"
                     onClick={onViewScheduler}
                     aria-label={`Open scheduled event for ${mapping}`}
                   >
                     <StatusBadge status="scheduled" size="sm" />
-                    <div className="bg-muted flex size-10 items-center justify-center rounded-xl">
-                      <PlatformIcon
-                        platformId={destinationPlatformId}
-                        variant="avatar"
-                        size="lg"
-                      />
-                    </div>
-                    <div className="min-w-0">
+                    <div className="col-start-2 row-start-1 min-w-0 xl:col-auto xl:row-auto">
                       <p
                         className="truncate text-sm font-semibold"
                         title={mapping}
                       >
                         {mapping}
                       </p>
-                      <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-                        <span
-                          className="inline-flex items-center gap-1"
-                          title={format(nextRun, 'PPpp')}
-                        >
-                          <CalendarClock
-                            className="size-3.5"
-                            aria-hidden="true"
-                          />
-                          {formatDistanceToNow(nextRun, { addSuffix: true })}
-                        </span>
+                      <p className="text-muted-foreground mt-1 truncate text-xs">
+                        {job.name}
+                      </p>
+                    </div>
+                    <div className="col-start-2 row-start-2 min-w-0 xl:col-auto xl:row-auto xl:text-right">
+                      <p
+                        className="text-sm font-semibold whitespace-nowrap"
+                        title={format(nextRun, 'PPpp')}
+                      >
+                        {formatDistanceToNow(nextRun, { addSuffix: true })}
+                      </p>
+                      <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs xl:justify-end">
                         <span className="inline-flex items-center gap-1">
                           <Repeat2 className="size-3.5" aria-hidden="true" />
                           {formatSchedule(job)}
                         </span>
-                        <span className="inline-flex items-center gap-1">
-                          <Database className="size-3.5" aria-hidden="true" />
-                          {(job.recordsSynced ?? 0).toLocaleString()} synced
-                        </span>
                       </div>
                     </div>
                     <ChevronRight
-                      className="text-muted-foreground size-4 shrink-0"
+                      className="text-muted-foreground col-start-3 row-start-1 size-4 shrink-0 xl:col-auto xl:row-auto"
                       aria-hidden="true"
                     />
                   </button>

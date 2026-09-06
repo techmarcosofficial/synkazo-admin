@@ -41,6 +41,7 @@ export interface ProjectActivityLogMetadata {
   destObject?: string;
   sourcePlatformId?: string;
   destPlatformId?: string;
+  recordsFailed?: number;
 }
 
 export interface ProjectActivityLog {
