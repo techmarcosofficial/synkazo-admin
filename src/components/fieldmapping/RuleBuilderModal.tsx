@@ -8,6 +8,7 @@ import {
   GitBranch,
   GripVertical,
   Hash,
+  Info,
   Plus,
   RefreshCw,
   Ruler,
@@ -19,7 +20,13 @@ import {
   Type as TypeIcon,
   X,
 } from 'lucide-react';
-import { useEffect, useMemo, useState, type ComponentType } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentType,
+} from 'react';
 
 import { associationsApi } from '@/api/associations';
 import {
@@ -142,27 +149,6 @@ const PARAM_LABELS: Record<string, string> = {
   map: 'Value mapping',
   fallback: 'If not listed',
   defaultValue: 'Default value',
-};
-
-// Category identity colors — each rule category is a distinct visual "tag",
-// not a semantic theme state, so these stay as raw colors like brand colors.
-const CATEGORY_COLORS: Record<
-  string,
-  { active: string; activeBg: string; border: string }
-> = {
-  text: { active: '#A855F7', activeBg: '#A855F712', border: '#A855F7' },
-  length: { active: '#F59E0B', activeBg: '#F59E0B12', border: '#F59E0B' },
-  validation: { active: '#22C55E', activeBg: '#22C55E12', border: '#22C55E' },
-  conditional: { active: '#EF4444', activeBg: '#EF444412', border: '#EF4444' },
-  number: { active: '#3B82F6', activeBg: '#3B82F612', border: '#3B82F6' },
-  date: { active: '#F43F5E', activeBg: '#F43F5E12', border: '#F43F5E' },
-  split: { active: '#EC4899', activeBg: '#EC489912', border: '#EC4899' },
-  conversion: { active: '#F97316', activeBg: '#F9731612', border: '#F97316' },
-};
-const DEFAULT_CAT_COLOR = {
-  active: 'var(--muted-foreground)',
-  activeBg: 'transparent',
-  border: 'var(--muted-foreground)',
 };
 
 const CATEGORY_ICONS: Record<
@@ -453,14 +439,11 @@ function ActiveRule({
   const def: RuleDefinition | undefined = RULE_DEFINITIONS.find(
     (r) => r.type === rule.type,
   );
-  // `map` is a lookup table, not a scalar — it gets its own editor below the row.
   const inlineParams = (def?.params ?? []).filter((p) => p !== 'map');
   const isValueMap = rule.type === 'value_map';
   const isValueMapping = rule.type === 'value_mapping';
   const hasParams = inlineParams.length > 0 || isValueMap || isValueMapping;
   const isEnabled = rule.enabled !== false;
-  const catColor =
-    CATEGORY_COLORS[def?.category as string] || DEFAULT_CAT_COLOR;
   const ruleErrors = validationErrors[index] || [];
   const hasError = ruleErrors.length > 0;
 
@@ -475,112 +458,46 @@ function ActiveRule({
   return (
     <div
       className={cn(
-        'bg-card rounded-4xl border shadow-none transition-opacity',
+        'border-border bg-card rounded-4xl border shadow-none transition-opacity',
+        hasError && 'border-destructive',
         !isEnabled && 'opacity-55',
       )}
-      style={{
-        borderColor: hasError
-          ? 'var(--destructive)'
-          : isEnabled
-            ? `${catColor.border}40`
-            : undefined,
-      }}
     >
       <div className="flex items-center gap-3 px-4 py-3">
-        {/* Grip handle + reorder */}
-        <div className="group/grip flex shrink-0 items-center">
-          <GripVertical className="text-muted-foreground/50 size-4" />
-          <div className="ml-0.5 flex flex-col opacity-0 transition-opacity group-hover/grip:opacity-100">
-            <button
-              type="button"
-              onClick={() => index > 0 && onMove(index, index - 1)}
-              disabled={index === 0}
-              aria-label="Move rule up"
-              className="text-muted-foreground hover:text-foreground flex h-3 w-3.5 items-center justify-center disabled:opacity-30"
-            >
-              <ChevronUp className="size-2.5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => index < total - 1 && onMove(index, index + 1)}
-              disabled={index === total - 1}
-              aria-label="Move rule down"
-              className="text-muted-foreground hover:text-foreground flex h-3 w-3.5 items-center justify-center disabled:opacity-30"
-            >
-              <ChevronDown className="size-2.5" />
-            </button>
-          </div>
-        </div>
-
-        <span
-          className="flex size-6 shrink-0 items-center justify-center rounded-md text-xs font-bold"
-          style={{
-            backgroundColor: hasError
-              ? 'var(--destructive)'
-              : isEnabled
-                ? `${catColor.border}20`
-                : 'var(--muted)',
-            color: hasError
-              ? 'white'
-              : isEnabled
-                ? catColor.active
-                : 'var(--muted-foreground)',
-          }}
-        >
-          {index + 1}
+        <span className="text-muted-foreground/50 bg-muted/40 flex size-8 shrink-0 items-center justify-center rounded-3xl">
+          <GripVertical className="size-4" />
         </span>
 
         <span
           className={cn(
-            'min-w-[120px] shrink-0 text-sm font-semibold',
-            isEnabled ? 'text-foreground' : 'text-muted-foreground',
+            'bg-muted text-foreground flex size-7 shrink-0 items-center justify-center rounded-3xl text-xs font-bold',
+            hasError && 'bg-destructive text-destructive-foreground',
           )}
         >
-          {def?.label || rule.type}
+          {index + 1}
         </span>
 
-        {hasParams && isEnabled && (
-          <div className="flex flex-1 flex-wrap items-center gap-3">
-            {(isValueMap ? ['fallback'] : inlineParams).map((p) => {
-              const isRequired = (REQUIRED_PARAMS[rule.type] || []).includes(p);
-              const isNum = isParamNumeric(rule.type, p);
-              const val = rule[p];
-              const isEmpty = !val || String(val).trim() === '';
-              const showError = isRequired && isEmpty && ruleErrors.includes(p);
-              return (
-                <div key={p} className="flex shrink-0 items-center gap-2">
-                  <span className="text-muted-foreground text-xs">
-                    {PARAM_LABELS[p] || p}:
-                  </span>
-                  <Input
-                    value={(rule[p] as string) || ''}
-                    onChange={(e) => handleParamChange(p, e.target.value)}
-                    placeholder={
-                      p === 'fallback'
-                        ? 'pass through'
-                        : isRequired
-                          ? 'required'
-                          : '—'
-                    }
-                    inputMode={isNum ? 'decimal' : 'text'}
-                    onClick={(e) => e.stopPropagation()}
-                    aria-invalid={showError}
-                    className={cn(
-                      'bg-muted h-9 rounded-3xl border-transparent font-mono text-xs shadow-none',
-                      isNum ? 'w-20' : 'w-36',
-                    )}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        )}
+        <div className="min-w-0 flex-1">
+          <p
+            className={cn(
+              'truncate text-sm font-semibold',
+              !isEnabled && 'text-muted-foreground',
+            )}
+          >
+            {def?.label || rule.type}
+          </p>
+          {def?.description && (
+            <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">
+              {def.description}
+            </p>
+          )}
+        </div>
 
-        <div className="ml-auto flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1">
           {hasError && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <AlertCircle className="text-destructive size-4" />
+                <AlertCircle className="text-destructive mr-1 size-4" />
               </TooltipTrigger>
               <TooltipContent side="top">
                 {ruleErrors
@@ -595,18 +512,75 @@ function ActiveRule({
             onCheckedChange={(checked) =>
               onUpdate(index, { ...rule, enabled: checked })
             }
+            aria-label={`${isEnabled ? 'Disable' : 'Enable'} ${def?.label || rule.type}`}
           />
 
           <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => index > 0 && onMove(index, index - 1)}
+            disabled={index === 0}
+            aria-label="Move rule up"
+          >
+            <ChevronUp />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => index < total - 1 && onMove(index, index + 1)}
+            disabled={index === total - 1}
+            aria-label="Move rule down"
+          >
+            <ChevronDown />
+          </Button>
+          <Button
+            type="button"
             variant="ghost"
             size="icon-sm"
             onClick={() => onRemove(index)}
             className="text-muted-foreground hover:text-destructive"
+            aria-label={`Delete ${def?.label || rule.type} rule`}
           >
             <Trash2 />
           </Button>
         </div>
       </div>
+
+      {hasParams && isEnabled && (
+        <div className="grid gap-3 px-14 pb-3 sm:grid-cols-2">
+          {(isValueMap ? ['fallback'] : inlineParams).map((p) => {
+            const isRequired = (REQUIRED_PARAMS[rule.type] || []).includes(p);
+            const isNum = isParamNumeric(rule.type, p);
+            const val = rule[p];
+            const isEmpty = !val || String(val).trim() === '';
+            const showError = isRequired && isEmpty && ruleErrors.includes(p);
+            return (
+              <label key={p} className="min-w-0 space-y-1.5">
+                <span className="text-muted-foreground text-xs font-medium">
+                  {PARAM_LABELS[p] || p}
+                </span>
+                <Input
+                  value={(rule[p] as string) || ''}
+                  onChange={(e) => handleParamChange(p, e.target.value)}
+                  placeholder={
+                    p === 'fallback'
+                      ? 'Pass through'
+                      : isRequired
+                        ? 'Required'
+                        : 'Optional'
+                  }
+                  inputMode={isNum ? 'decimal' : 'text'}
+                  onClick={(e) => e.stopPropagation()}
+                  aria-invalid={showError}
+                  className="bg-muted h-9 w-full rounded-3xl border-transparent font-mono text-xs shadow-none"
+                />
+              </label>
+            );
+          })}
+        </div>
+      )}
 
       {isValueMap && isEnabled && (
         <ValueMapEditor
@@ -664,6 +638,41 @@ interface RuleBuilderModalProps {
   sourceObject?: string;
 }
 
+export interface RulePreviewStep {
+  index: number;
+  label: string;
+  output: string;
+  enabled: boolean;
+}
+
+export function buildRulePreviewSteps(
+  input: string,
+  rules: Rule[],
+): RulePreviewStep[] {
+  let current = input;
+  let failed = false;
+
+  return rules.map((rule, index) => {
+    const enabled = rule.enabled !== false;
+    if (enabled && !failed) {
+      try {
+        current = String(executeRulePipeline(current, [rule]));
+      } catch {
+        current = '(error)';
+        failed = true;
+      }
+    }
+    return {
+      index,
+      label:
+        RULE_DEFINITIONS.find((definition) => definition.type === rule.type)
+          ?.label || rule.type,
+      output: current,
+      enabled,
+    };
+  });
+}
+
 export default function RuleBuilderModal({
   mapping,
   destKey,
@@ -681,6 +690,7 @@ export default function RuleBuilderModal({
   const destType = destField?.type;
 
   const [rules, setRules] = useState<Rule[]>(initialRules || []);
+  const initialRulesSnapshotRef = useRef(JSON.stringify(initialRules || []));
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>('text');
   const [testInput, setTestInput] = useState(
@@ -801,6 +811,10 @@ export default function RuleBuilderModal({
       return '(error)';
     }
   }, [testInput, rules]);
+  const previewSteps = useMemo(
+    () => buildRulePreviewSteps(testInput, rules),
+    [testInput, rules],
+  );
 
   const destLabel = destField?.label || destKey;
 
@@ -816,6 +830,8 @@ export default function RuleBuilderModal({
 
   const activeRuleCount = rules.filter((r) => r.enabled !== false).length;
   const totalErrors = Object.keys(validationErrors).length;
+  const hasUnsavedChanges =
+    JSON.stringify(rules) !== initialRulesSnapshotRef.current;
 
   return (
     <Sheet
@@ -825,40 +841,40 @@ export default function RuleBuilderModal({
       }}
     >
       <SheetContent
-        className="w-[min(96vw,72rem)] p-0 sm:max-w-6xl"
+        className="p-0 data-[side=right]:w-[60vw] data-[side=right]:sm:max-w-[96rem]"
         showCloseButton={false}
         onEscapeKeyDown={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
       >
         {/* Header */}
-        <SheetHeader className="shrink-0 border-b px-6 py-5">
-          <div className="flex items-center gap-3">
-            <div className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-xl">
+        <SheetHeader className="shrink-0 gap-4 border-b px-6 py-5">
+          <div className="flex items-start gap-3">
+            <div className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-3xl">
               <Sparkles className="size-5" />
             </div>
-            <div>
-              <SheetTitle className="text-base font-bold">
+            <div className="min-w-0 flex-1">
+              <SheetTitle className="text-lg font-bold">
                 Transformation Rules
               </SheetTitle>
-              <SheetDescription className="sr-only">
+              <SheetDescription className="mt-0.5 text-xs">
                 Build transformation rules for this field mapping.
               </SheetDescription>
-              <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                <span className="text-muted-foreground text-xs">
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span className="bg-muted/50 border-border rounded-3xl border px-3 py-2 text-xs font-medium">
                   {sourceField?.label || mapping.sourceField}
-                </span>
-                <Badge variant="secondary" className="font-mono">
-                  {sourceType}
-                </Badge>
-                <ArrowRight className="text-muted-foreground size-3" />
-                <span className="text-muted-foreground text-xs">
-                  {destLabel}
-                </span>
-                {destType && (
-                  <Badge variant="secondary" className="font-mono">
-                    {destType}
+                  <Badge variant="secondary" className="ml-2 font-mono">
+                    {sourceType}
                   </Badge>
-                )}
+                </span>
+                <ArrowRight className="text-muted-foreground size-3" />
+                <span className="bg-muted/50 border-border rounded-3xl border px-3 py-2 text-xs font-medium">
+                  {destLabel}
+                  {destType && (
+                    <Badge variant="secondary" className="ml-2 font-mono">
+                      {destType}
+                    </Badge>
+                  )}
+                </span>
                 {activeRuleCount > 0 && (
                   <Badge variant="secondary">
                     {activeRuleCount} active rule
@@ -886,9 +902,28 @@ export default function RuleBuilderModal({
           </div>
         </SheetHeader>
 
-        <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-          {/* Sidebar */}
-          <aside className="flex max-h-[38vh] min-h-0 w-full shrink-0 flex-col gap-4 border-b px-5 py-4 lg:max-h-none lg:w-72 lg:border-r lg:border-b-0">
+        <div className="shrink-0 px-4 pt-4">
+          <div className="bg-muted/40 flex items-start gap-3 rounded-4xl px-4 py-3">
+            <Info className="text-primary mt-0.5 size-4 shrink-0" />
+            <div>
+              <p className="text-xs font-semibold">How transformations work</p>
+              <p className="text-muted-foreground mt-0.5 text-xs">
+                Rules run from top to bottom. Use the arrows to reorder, or
+                disable a rule without deleting it.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto p-4 xl:grid-cols-[18rem_minmax(28rem,1fr)_20rem] xl:overflow-hidden">
+          {/* Rule library */}
+          <aside className="border-border bg-card flex max-h-[38vh] min-h-0 flex-col gap-4 rounded-4xl border p-4 xl:max-h-none">
+            <div>
+              <h3 className="text-sm font-bold">Rule library</h3>
+              <p className="text-muted-foreground mt-0.5 text-xs">
+                Choose a rule to add to this field.
+              </p>
+            </div>
             <InputGroup>
               <InputGroupAddon>
                 <Search className="text-muted-foreground size-4" />
@@ -927,7 +962,6 @@ export default function RuleBuilderModal({
                       (r) => r.category === cat.id,
                     );
                     const isOpen = activeCategory === cat.id;
-                    const cc = CATEGORY_COLORS[cat.id] || DEFAULT_CAT_COLOR;
                     const Icon = CATEGORY_ICONS[cat.id] || TypeIcon;
                     const addedTypes = new Set(rules.map((r) => r.type));
 
@@ -935,22 +969,22 @@ export default function RuleBuilderModal({
                       <AccordionItem
                         key={cat.id}
                         value={cat.id}
-                        className="overflow-hidden rounded-4xl border-0 border-l-2"
-                        style={{
-                          backgroundColor: isOpen ? cc.activeBg : 'transparent',
-                          borderLeftColor: isOpen ? cc.border : 'transparent',
-                        }}
+                        className={cn(
+                          'overflow-hidden rounded-4xl border-0 border-l-2',
+                          isOpen
+                            ? 'border-primary bg-muted/50'
+                            : 'border-transparent',
+                        )}
                       >
-                        <AccordionTrigger
-                          className="px-2.5 py-2.5 text-sm font-semibold hover:no-underline [&>svg]:size-3.5"
-                          style={{
-                            color: isOpen ? cc.active : 'var(--foreground)',
-                          }}
-                        >
+                        <AccordionTrigger className="px-2.5 py-2.5 text-sm font-semibold hover:no-underline [&>svg]:size-3.5">
                           <span className="flex flex-1 items-center gap-2.5">
                             <Icon
-                              className="size-4 shrink-0"
-                              style={{ color: cc.active }}
+                              className={cn(
+                                'size-4 shrink-0',
+                                isOpen
+                                  ? 'text-primary'
+                                  : 'text-muted-foreground',
+                              )}
                             />
                             {cat.label}
                             <Badge
@@ -973,26 +1007,33 @@ export default function RuleBuilderModal({
                                   type="button"
                                   onClick={() => addRule(def)}
                                   className={cn(
-                                    'group flex w-full items-center gap-1.5 rounded-3xl px-2 py-1.5 text-left text-xs transition-colors',
+                                    'group flex w-full items-start gap-2 rounded-3xl px-2 py-2 text-left text-xs transition-colors',
                                     isFlashing
                                       ? 'bg-destructive/10'
                                       : 'hover:bg-muted/60',
                                   )}
                                 >
-                                  <span
-                                    className={cn(
-                                      'flex-1 truncate font-medium',
-                                      alreadyAdded
-                                        ? 'text-muted-foreground'
-                                        : 'text-foreground/80 group-hover:text-foreground',
-                                    )}
-                                  >
-                                    {def.label}
+                                  <span className="min-w-0 flex-1">
+                                    <span
+                                      className={cn(
+                                        'block truncate font-medium',
+                                        alreadyAdded
+                                          ? 'text-muted-foreground'
+                                          : 'text-foreground/80 group-hover:text-foreground',
+                                      )}
+                                    >
+                                      {def.label}
+                                    </span>
+                                    <span className="text-muted-foreground mt-0.5 line-clamp-2 block text-[11px] leading-4">
+                                      {def.description}
+                                    </span>
                                   </span>
                                   {alreadyAdded ? (
-                                    <Check className="text-success size-3 shrink-0" />
+                                    <span className="text-success flex shrink-0 items-center gap-1 text-[11px] font-medium">
+                                      Added <Check className="size-3" />
+                                    </span>
                                   ) : (
-                                    <Plus className="text-muted-foreground group-hover:text-foreground size-3 shrink-0" />
+                                    <Plus className="text-muted-foreground group-hover:text-foreground mt-0.5 size-3 shrink-0" />
                                   )}
                                 </button>
                               );
@@ -1054,11 +1095,17 @@ export default function RuleBuilderModal({
           </aside>
 
           {/* Rule pipeline */}
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            <div className="flex shrink-0 items-center justify-between px-6 py-4">
-              <span className="text-sm font-bold">
-                Rule Pipeline ({rules.length})
-              </span>
+          <section className="border-border bg-card flex min-h-96 min-w-0 flex-col rounded-4xl border xl:min-h-0">
+            <div className="flex shrink-0 items-start justify-between gap-3 px-5 py-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold">Rule pipeline</h3>
+                  <Badge variant="secondary">{rules.length}</Badge>
+                </div>
+                <p className="text-muted-foreground mt-0.5 text-xs">
+                  Applied in this order from top to bottom.
+                </p>
+              </div>
               {rules.length > 0 && (
                 <Button
                   variant="ghost"
@@ -1087,7 +1134,7 @@ export default function RuleBuilderModal({
             <ScrollArea className="min-h-0 flex-1 px-6">
               {rules.length === 0 ? (
                 <div className="flex flex-col items-center pt-8 text-center">
-                  <div className="bg-muted mb-3 flex size-12 items-center justify-center rounded-xl">
+                  <div className="bg-muted mb-3 flex size-12 items-center justify-center rounded-4xl">
                     <Sparkles className="text-muted-foreground size-5" />
                   </div>
                   <p className="text-muted-foreground text-sm font-medium">
@@ -1098,51 +1145,137 @@ export default function RuleBuilderModal({
                   </p>
                 </div>
               ) : (
-                <div className="space-y-2.5 pb-4">
+                <div className="pb-4">
                   {rules.map((rule, idx) => (
-                    <ActiveRule
-                      key={idx}
-                      rule={rule}
-                      index={idx}
-                      total={rules.length}
-                      onUpdate={updateRule}
-                      onRemove={removeRule}
-                      onMove={moveRule}
-                      validationErrors={validationErrors}
-                      destOptions={destField?.options}
-                    />
+                    <div key={idx}>
+                      <ActiveRule
+                        rule={rule}
+                        index={idx}
+                        total={rules.length}
+                        onUpdate={updateRule}
+                        onRemove={removeRule}
+                        onMove={moveRule}
+                        validationErrors={validationErrors}
+                        destOptions={destField?.options}
+                      />
+                      {idx < rules.length - 1 && (
+                        <div className="bg-border mx-9 h-2.5 w-px" />
+                      )}
+                    </div>
                   ))}
                 </div>
               )}
             </ScrollArea>
+          </section>
 
-            {/* Preview */}
-            <div className="shrink-0 border-t px-6 py-3.5">
-              <div className="flex items-center gap-3">
-                <span className="text-muted-foreground shrink-0 text-xs font-bold">
-                  Preview
-                </span>
-                <Input
-                  value={testInput}
-                  onChange={(e) => setTestInput(e.target.value)}
-                  className="bg-muted h-9 min-w-0 flex-1 rounded-3xl border-transparent font-mono text-xs shadow-none"
-                  placeholder="Test input…"
-                />
-                <ArrowRight className="text-muted-foreground size-4 shrink-0" />
-                <div className="text-success bg-success/10 border-success/30 min-w-0 flex-1 truncate rounded-3xl border px-3 py-2 font-mono text-xs">
-                  {previewOutput !== '' ? (
-                    previewOutput
-                  ) : (
+          {/* Transformation preview */}
+          <aside className="border-border bg-card min-h-0 overflow-y-auto rounded-4xl border p-4">
+            <div>
+              <h3 className="text-sm font-bold">Test transformation</h3>
+              <p className="text-muted-foreground mt-0.5 text-xs">
+                Try a value before applying these rules.
+              </p>
+            </div>
+
+            <div className="bg-muted/30 mt-4 rounded-4xl border p-3">
+              <label
+                htmlFor="rule-preview-input"
+                className="text-xs font-semibold"
+              >
+                Source value
+              </label>
+              <p className="text-muted-foreground mt-0.5 text-[11px]">
+                Edit this sample to see every step update.
+              </p>
+              <Input
+                id="rule-preview-input"
+                value={testInput}
+                onChange={(e) => setTestInput(e.target.value)}
+                className="bg-background mt-2 h-9 rounded-3xl font-mono text-xs shadow-none"
+                placeholder="Test input…"
+              />
+            </div>
+
+            <div className="mt-4">
+              <div className="bg-muted/30 rounded-4xl border px-3 py-2.5">
+                <p className="text-muted-foreground text-[11px] font-medium">
+                  Original
+                </p>
+                <output className="mt-1 block font-mono text-xs break-all">
+                  {testInput || (
                     <span className="text-muted-foreground">(empty)</span>
                   )}
-                </div>
+                </output>
               </div>
+
+              {previewSteps.map((step) => (
+                <div key={`${step.index}-${step.label}`}>
+                  <div className="bg-border mx-5 h-2.5 w-px" />
+                  <div
+                    className={cn(
+                      'rounded-4xl border px-3 py-2.5',
+                      !step.enabled && 'bg-muted/30 opacity-60',
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="bg-muted flex size-5 shrink-0 items-center justify-center rounded-3xl text-[10px] font-bold">
+                        {step.index + 1}
+                      </span>
+                      <p className="min-w-0 flex-1 truncate text-[11px] font-semibold">
+                        {step.label}
+                      </p>
+                      {!step.enabled && (
+                        <Badge variant="outline" className="text-[10px]">
+                          Disabled
+                        </Badge>
+                      )}
+                    </div>
+                    <output className="mt-2 block font-mono text-xs break-all">
+                      {step.output || (
+                        <span className="text-muted-foreground">(empty)</span>
+                      )}
+                    </output>
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
+
+            <div className="border-primary/20 bg-primary/5 mt-4 rounded-4xl border p-3">
+              <p className="text-primary text-[11px] font-semibold">
+                Final output
+              </p>
+              <output className="mt-1 block font-mono text-sm font-semibold break-all">
+                {previewOutput !== '' ? (
+                  previewOutput
+                ) : (
+                  <span className="text-muted-foreground">(empty)</span>
+                )}
+              </output>
+            </div>
+
+            <p className="text-muted-foreground mt-3 flex items-start gap-2 text-[11px]">
+              <Info className="mt-0.5 size-3 shrink-0" /> Preview updates as you
+              edit or reorder rules.
+            </p>
+          </aside>
         </div>
 
         {/* Footer */}
-        <SheetFooter className="shrink-0 flex-row items-center justify-end border-t px-6 py-4">
+        <SheetFooter className="shrink-0 flex-row items-center justify-between border-t px-6 py-4">
+          <div className="text-muted-foreground flex items-center gap-2 text-xs">
+            {hasUnsavedChanges ? (
+              <>
+                <span className="bg-warning size-2 rounded-full" />
+                Unsaved rule changes
+              </>
+            ) : (
+              <>
+                <Check className="text-success size-3.5" />
+                {activeRuleCount} active rule
+                {activeRuleCount !== 1 ? 's' : ''}
+              </>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={onClose}>
               Cancel
@@ -1153,7 +1286,7 @@ export default function RuleBuilderModal({
                 totalErrors > 0 && 'bg-destructive hover:bg-destructive/90',
               )}
             >
-              <Check /> Apply Rules
+              <Check /> Apply rules
             </Button>
           </div>
         </SheetFooter>

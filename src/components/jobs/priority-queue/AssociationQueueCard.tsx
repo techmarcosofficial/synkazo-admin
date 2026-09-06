@@ -215,7 +215,7 @@ export default function AssociationQueueCard({
                             >
                               <div
                                 {...dragProvided.dragHandleProps}
-                                className="text-muted-foreground shrink-0 cursor-grab"
+                                className="text-muted-foreground hover:bg-muted focus-visible:ring-ring/30 flex size-8 shrink-0 cursor-grab items-center justify-center rounded-3xl outline-none focus-visible:ring-3"
                               >
                                 <GripVertical className="size-4" />
                               </div>

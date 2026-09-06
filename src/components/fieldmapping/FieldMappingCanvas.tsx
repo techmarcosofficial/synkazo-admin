@@ -1739,9 +1739,11 @@ export default function FieldMappingCanvas({
                   {fansOut ? ` → ${destF?.label ?? am.destKey}` : ''}
                   {matchMode === 'or' && activeMatches.length > 1 && (
                     <span className="flex items-center">
-                      <button
+                      <Button
                         type="button"
-                        className="hover:text-foreground disabled:opacity-30"
+                        variant="ghost"
+                        size="icon-xs"
+                        className="rounded-full"
                         disabled={idx === 0}
                         onClick={() =>
                           moveMatchOrder(am.sourceField, am.destKey, -1)
@@ -1749,10 +1751,12 @@ export default function FieldMappingCanvas({
                         aria-label="Try this field earlier"
                       >
                         <ChevronUp size={11} />
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         type="button"
-                        className="hover:text-foreground disabled:opacity-30"
+                        variant="ghost"
+                        size="icon-xs"
+                        className="rounded-full"
                         disabled={idx === activeMatches.length - 1}
                         onClick={() =>
                           moveMatchOrder(am.sourceField, am.destKey, 1)
@@ -1760,17 +1764,19 @@ export default function FieldMappingCanvas({
                         aria-label="Try this field later"
                       >
                         <ChevronDown size={11} />
-                      </button>
+                      </Button>
                     </span>
                   )}
-                  <button
+                  <Button
                     type="button"
-                    className="hover:text-foreground"
+                    variant="ghost"
+                    size="icon-xs"
+                    className="rounded-full"
                     onClick={() => toggleMatch(am.sourceField, am.destKey)}
                     aria-label="Remove match field"
                   >
                     <X size={11} />
-                  </button>
+                  </Button>
                 </Badge>
               );
             })}

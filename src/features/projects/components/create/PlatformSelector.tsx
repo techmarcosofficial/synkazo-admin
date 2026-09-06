@@ -3,6 +3,7 @@
 import { CircleHelp } from 'lucide-react';
 
 import { PlatformIcon } from '@/components/platform';
+import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
@@ -76,13 +77,15 @@ export default function PlatformSelector({
         {description && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon-xs"
                 className="text-muted-foreground hover:text-foreground rounded-full"
                 aria-label={`About ${label}`}
               >
                 <CircleHelp className="size-3.5" aria-hidden="true" />
-              </button>
+              </Button>
             </TooltipTrigger>
             <TooltipContent>{description}</TooltipContent>
           </Tooltip>
