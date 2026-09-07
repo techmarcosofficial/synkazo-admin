@@ -1,10 +1,10 @@
+import type { DraggableProvided, DropResult } from '@hello-pangea/dnd';
+import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd';
 import {
   AlertCircle,
   ArrowRight,
   Calendar,
   Check,
-  ChevronDown,
-  ChevronUp,
   GitBranch,
   GripVertical,
   Hash,
@@ -420,21 +420,21 @@ function ValueMappingEditor({
 function ActiveRule({
   rule,
   index,
-  total,
   onUpdate,
   onRemove,
-  onMove,
   validationErrors,
   destOptions,
+  dragHandleProps,
+  isDragging,
 }: {
   rule: Rule;
   index: number;
-  total: number;
   onUpdate: (index: number, rule: Rule) => void;
   onRemove: (index: number) => void;
-  onMove: (from: number, to: number) => void;
   validationErrors: Record<number, string[]>;
   destOptions?: { value: string; label: string }[];
+  dragHandleProps: DraggableProvided['dragHandleProps'];
+  isDragging: boolean;
 }) {
   const def: RuleDefinition | undefined = RULE_DEFINITIONS.find(
     (r) => r.type === rule.type,
@@ -461,16 +461,22 @@ function ActiveRule({
         'border-border bg-card rounded-4xl border shadow-none transition-opacity',
         hasError && 'border-destructive',
         !isEnabled && 'opacity-55',
+        isDragging && 'ring-primary/30 shadow-lg ring-2',
       )}
     >
-      <div className="flex items-center gap-3 px-4 py-3">
-        <span className="text-muted-foreground/50 bg-muted/40 flex size-8 shrink-0 items-center justify-center rounded-3xl">
+      <div className="flex items-center gap-2 px-3 py-2.5">
+        <button
+          type="button"
+          {...dragHandleProps}
+          className="text-muted-foreground hover:bg-muted focus-visible:ring-ring/30 flex size-7 shrink-0 cursor-grab items-center justify-center rounded-3xl outline-none focus-visible:ring-3 active:cursor-grabbing"
+          aria-label={`Drag to reorder ${def?.label || rule.type} rule`}
+        >
           <GripVertical className="size-4" />
-        </span>
+        </button>
 
         <span
           className={cn(
-            'bg-muted text-foreground flex size-7 shrink-0 items-center justify-center rounded-3xl text-xs font-bold',
+            'bg-muted text-foreground flex size-6 shrink-0 items-center justify-center rounded-3xl text-[11px] font-bold',
             hasError && 'bg-destructive text-destructive-foreground',
           )}
         >
@@ -487,13 +493,13 @@ function ActiveRule({
             {def?.label || rule.type}
           </p>
           {def?.description && (
-            <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">
+            <p className="text-muted-foreground mt-0.5 line-clamp-1 text-[11px] leading-4">
               {def.description}
             </p>
           )}
         </div>
 
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 items-center gap-0.5">
           {hasError && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -519,26 +525,6 @@ function ActiveRule({
             type="button"
             variant="ghost"
             size="icon-sm"
-            onClick={() => index > 0 && onMove(index, index - 1)}
-            disabled={index === 0}
-            aria-label="Move rule up"
-          >
-            <ChevronUp />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => index < total - 1 && onMove(index, index + 1)}
-            disabled={index === total - 1}
-            aria-label="Move rule down"
-          >
-            <ChevronDown />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
             onClick={() => onRemove(index)}
             className="text-muted-foreground hover:text-destructive"
             aria-label={`Delete ${def?.label || rule.type} rule`}
@@ -549,7 +535,7 @@ function ActiveRule({
       </div>
 
       {hasParams && isEnabled && (
-        <div className="grid gap-3 px-14 pb-3 sm:grid-cols-2">
+        <div className="grid gap-2 px-12 pb-2.5 sm:grid-cols-2">
           {(isValueMap ? ['fallback'] : inlineParams).map((p) => {
             const isRequired = (REQUIRED_PARAMS[rule.type] || []).includes(p);
             const isNum = isParamNumeric(rule.type, p);
@@ -557,7 +543,7 @@ function ActiveRule({
             const isEmpty = !val || String(val).trim() === '';
             const showError = isRequired && isEmpty && ruleErrors.includes(p);
             return (
-              <label key={p} className="min-w-0 space-y-1.5">
+              <label key={p} className="min-w-0 space-y-1">
                 <span className="text-muted-foreground text-xs font-medium">
                   {PARAM_LABELS[p] || p}
                 </span>
@@ -574,7 +560,7 @@ function ActiveRule({
                   inputMode={isNum ? 'decimal' : 'text'}
                   onClick={(e) => e.stopPropagation()}
                   aria-invalid={showError}
-                  className="bg-muted h-9 w-full rounded-3xl border-transparent font-mono text-xs shadow-none"
+                  className="bg-muted h-8 w-full rounded-3xl border-transparent font-mono text-xs shadow-none"
                 />
               </label>
             );
@@ -599,7 +585,7 @@ function ActiveRule({
       )}
 
       {hasError && (
-        <div className="flex flex-wrap gap-2 px-14 pb-2.5">
+        <div className="flex flex-wrap gap-2 px-12 pb-2.5">
           {ruleErrors.map((p) => (
             <span key={p} className="text-destructive text-xs">
               {p === 'map'
@@ -671,6 +657,27 @@ export function buildRulePreviewSteps(
       enabled,
     };
   });
+}
+
+export function reorderRules(
+  rules: Rule[],
+  fromIndex: number,
+  toIndex: number,
+): Rule[] {
+  if (
+    fromIndex === toIndex ||
+    fromIndex < 0 ||
+    toIndex < 0 ||
+    fromIndex >= rules.length ||
+    toIndex >= rules.length
+  ) {
+    return rules;
+  }
+
+  const reordered = Array.from(rules);
+  const [moved] = reordered.splice(fromIndex, 1);
+  reordered.splice(toIndex, 0, moved);
+  return reordered;
 }
 
 export default function RuleBuilderModal({
@@ -760,10 +767,30 @@ export default function RuleBuilderModal({
       return next;
     });
   };
-  const moveRule = (from: number, to: number) => {
-    const next = [...rules];
-    [next[from], next[to]] = [next[to], next[from]];
-    setRules(next);
+  const handleDragEnd = (result: DropResult) => {
+    const destinationIndex = result.destination?.index;
+    if (
+      destinationIndex === undefined ||
+      destinationIndex === result.source.index
+    ) {
+      return;
+    }
+
+    const reordered = reorderRules(
+      rules,
+      result.source.index,
+      destinationIndex,
+    );
+    setRules(reordered);
+
+    if (saveAttempted) {
+      const nextErrors: Record<number, string[]> = {};
+      reordered.forEach((rule, index) => {
+        const missing = validateRule(rule);
+        if (missing.length > 0) nextErrors[index] = missing;
+      });
+      setValidationErrors(nextErrors);
+    }
   };
 
   function validateRule(rule: Rule): string[] {
@@ -841,16 +868,16 @@ export default function RuleBuilderModal({
       }}
     >
       <SheetContent
-        className="p-0 data-[side=right]:w-[60vw] data-[side=right]:sm:max-w-[96rem]"
+        className="p-0 data-[side=right]:w-[calc(100vw-2rem)] data-[side=right]:sm:max-w-[60rem]"
         showCloseButton={false}
         onEscapeKeyDown={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
       >
         {/* Header */}
-        <SheetHeader className="shrink-0 gap-4 border-b px-6 py-5">
+        <SheetHeader className="shrink-0 gap-3 border-b px-5 py-4">
           <div className="flex items-start gap-3">
-            <div className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-3xl">
-              <Sparkles className="size-5" />
+            <div className="bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-3xl">
+              <Sparkles className="size-4.5" />
             </div>
             <div className="min-w-0 flex-1">
               <SheetTitle className="text-lg font-bold">
@@ -859,15 +886,15 @@ export default function RuleBuilderModal({
               <SheetDescription className="mt-0.5 text-xs">
                 Build transformation rules for this field mapping.
               </SheetDescription>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span className="bg-muted/50 border-border rounded-3xl border px-3 py-2 text-xs font-medium">
+              <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                <span className="bg-muted/50 border-border rounded-3xl border px-2.5 py-1.5 text-xs font-medium">
                   {sourceField?.label || mapping.sourceField}
                   <Badge variant="secondary" className="ml-2 font-mono">
                     {sourceType}
                   </Badge>
                 </span>
                 <ArrowRight className="text-muted-foreground size-3" />
-                <span className="bg-muted/50 border-border rounded-3xl border px-3 py-2 text-xs font-medium">
+                <span className="bg-muted/50 border-border rounded-3xl border px-2.5 py-1.5 text-xs font-medium">
                   {destLabel}
                   {destType && (
                     <Badge variant="secondary" className="ml-2 font-mono">
@@ -902,29 +929,29 @@ export default function RuleBuilderModal({
           </div>
         </SheetHeader>
 
-        <div className="shrink-0 px-4 pt-4">
-          <div className="bg-muted/40 flex items-start gap-3 rounded-4xl px-4 py-3">
+        <div className="shrink-0 px-3 pt-3">
+          <div className="bg-muted/40 flex items-start gap-2.5 rounded-4xl px-3 py-2.5">
             <Info className="text-primary mt-0.5 size-4 shrink-0" />
             <div>
               <p className="text-xs font-semibold">How transformations work</p>
               <p className="text-muted-foreground mt-0.5 text-xs">
-                Rules run from top to bottom. Use the arrows to reorder, or
-                disable a rule without deleting it.
+                Rules run from top to bottom. Drag them to reorder, or disable a
+                rule without deleting it.
               </p>
             </div>
           </div>
         </div>
 
-        <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto p-4 xl:grid-cols-[18rem_minmax(28rem,1fr)_20rem] xl:overflow-hidden">
+        <div className="grid min-h-0 flex-1 gap-3 overflow-y-auto p-3 xl:grid-cols-[16rem_minmax(19rem,1fr)_15rem] xl:overflow-hidden">
           {/* Rule library */}
-          <aside className="border-border bg-card flex max-h-[38vh] min-h-0 flex-col gap-4 rounded-4xl border p-4 xl:max-h-none">
+          <aside className="border-border bg-card flex max-h-[38vh] min-h-0 flex-col gap-3 rounded-4xl border p-3 xl:max-h-none">
             <div>
               <h3 className="text-sm font-bold">Rule library</h3>
               <p className="text-muted-foreground mt-0.5 text-xs">
                 Choose a rule to add to this field.
               </p>
             </div>
-            <InputGroup>
+            <InputGroup className="h-8">
               <InputGroupAddon>
                 <Search className="text-muted-foreground size-4" />
               </InputGroupAddon>
@@ -976,11 +1003,11 @@ export default function RuleBuilderModal({
                             : 'border-transparent',
                         )}
                       >
-                        <AccordionTrigger className="px-2.5 py-2.5 text-sm font-semibold hover:no-underline [&>svg]:size-3.5">
-                          <span className="flex flex-1 items-center gap-2.5">
+                        <AccordionTrigger className="px-2 py-2 text-xs font-semibold hover:no-underline [&>svg]:size-3.5">
+                          <span className="flex flex-1 items-center gap-2">
                             <Icon
                               className={cn(
-                                'size-4 shrink-0',
+                                'size-3.5 shrink-0',
                                 isOpen
                                   ? 'text-primary'
                                   : 'text-muted-foreground',
@@ -989,15 +1016,15 @@ export default function RuleBuilderModal({
                             {cat.label}
                             <Badge
                               variant="secondary"
-                              className="ml-auto rounded-full px-2 font-normal"
+                              className="ml-auto rounded-full px-1.5 font-normal"
                             >
                               {catRules.length}
                             </Badge>
                           </span>
                         </AccordionTrigger>
 
-                        <AccordionContent className="pb-1">
-                          <div className="ml-5 space-y-0.5 border-l pl-3.5">
+                        <AccordionContent className="px-1 pb-1">
+                          <div className="space-y-0.5">
                             {catRules.map((def) => {
                               const alreadyAdded = addedTypes.has(def.type);
                               const isFlashing = dupFlash === def.type;
@@ -1007,7 +1034,7 @@ export default function RuleBuilderModal({
                                   type="button"
                                   onClick={() => addRule(def)}
                                   className={cn(
-                                    'group flex w-full items-start gap-2 rounded-3xl px-2 py-2 text-left text-xs transition-colors',
+                                    'group grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-2 rounded-3xl px-2 py-1.5 text-left text-xs transition-colors',
                                     isFlashing
                                       ? 'bg-destructive/10'
                                       : 'hover:bg-muted/60',
@@ -1024,7 +1051,7 @@ export default function RuleBuilderModal({
                                     >
                                       {def.label}
                                     </span>
-                                    <span className="text-muted-foreground mt-0.5 line-clamp-2 block text-[11px] leading-4">
+                                    <span className="text-muted-foreground mt-0.5 line-clamp-1 block text-[10px] leading-3.5">
                                       {def.description}
                                     </span>
                                   </span>
@@ -1033,7 +1060,9 @@ export default function RuleBuilderModal({
                                       Added <Check className="size-3" />
                                     </span>
                                   ) : (
-                                    <Plus className="text-muted-foreground group-hover:text-foreground mt-0.5 size-3 shrink-0" />
+                                    <span className="bg-secondary text-secondary-foreground group-hover:bg-secondary/80 inline-flex size-6 shrink-0 items-center justify-center rounded-xl transition-colors">
+                                      <Plus className="size-3.5" />
+                                    </span>
                                   )}
                                 </button>
                               );
@@ -1055,7 +1084,7 @@ export default function RuleBuilderModal({
                         type="button"
                         onClick={() => addRule(def)}
                         className={cn(
-                          'group w-full rounded-3xl px-2.5 py-2 text-left transition-colors',
+                          'group w-full rounded-3xl px-2 py-1.5 text-left transition-colors',
                           isFlashing
                             ? 'bg-destructive/10'
                             : 'hover:bg-muted/60',
@@ -1075,10 +1104,12 @@ export default function RuleBuilderModal({
                           {alreadyAdded ? (
                             <Check className="text-success size-3" />
                           ) : (
-                            <Plus className="text-muted-foreground group-hover:text-primary size-3" />
+                            <span className="bg-secondary text-secondary-foreground group-hover:bg-secondary/80 inline-flex size-6 shrink-0 items-center justify-center rounded-xl transition-colors">
+                              <Plus className="size-3.5" />
+                            </span>
                           )}
                         </div>
-                        <div className="text-muted-foreground mt-0.5 text-xs">
+                        <div className="text-muted-foreground mt-0.5 line-clamp-1 text-[10px] leading-3.5">
                           {def.description}
                         </div>
                       </button>
@@ -1096,14 +1127,14 @@ export default function RuleBuilderModal({
 
           {/* Rule pipeline */}
           <section className="border-border bg-card flex min-h-96 min-w-0 flex-col rounded-4xl border xl:min-h-0">
-            <div className="flex shrink-0 items-start justify-between gap-3 px-5 py-4">
+            <div className="flex shrink-0 items-start justify-between gap-3 px-4 py-3">
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-sm font-bold">Rule pipeline</h3>
                   <Badge variant="secondary">{rules.length}</Badge>
                 </div>
                 <p className="text-muted-foreground mt-0.5 text-xs">
-                  Applied in this order from top to bottom.
+                  Drag rules to set the top-to-bottom order.
                 </p>
               </div>
               {rules.length > 0 && (
@@ -1131,7 +1162,7 @@ export default function RuleBuilderModal({
               )}
             </div>
 
-            <ScrollArea className="min-h-0 flex-1 px-6">
+            <ScrollArea className="min-h-0 flex-1 px-4">
               {rules.length === 0 ? (
                 <div className="flex flex-col items-center pt-8 text-center">
                   <div className="bg-muted mb-3 flex size-12 items-center justify-center rounded-4xl">
@@ -1145,31 +1176,54 @@ export default function RuleBuilderModal({
                   </p>
                 </div>
               ) : (
-                <div className="pb-4">
-                  {rules.map((rule, idx) => (
-                    <div key={idx}>
-                      <ActiveRule
-                        rule={rule}
-                        index={idx}
-                        total={rules.length}
-                        onUpdate={updateRule}
-                        onRemove={removeRule}
-                        onMove={moveRule}
-                        validationErrors={validationErrors}
-                        destOptions={destField?.options}
-                      />
-                      {idx < rules.length - 1 && (
-                        <div className="bg-border mx-9 h-2.5 w-px" />
-                      )}
-                    </div>
-                  ))}
-                </div>
+                <DragDropContext onDragEnd={handleDragEnd}>
+                  <Droppable droppableId="transformation-rule-pipeline">
+                    {(provided) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className="pb-3"
+                      >
+                        {rules.map((rule, idx) => (
+                          <Draggable
+                            key={rule.type}
+                            draggableId={rule.type}
+                            index={idx}
+                          >
+                            {(dragProvided, snapshot) => (
+                              <div
+                                ref={dragProvided.innerRef}
+                                {...dragProvided.draggableProps}
+                                style={dragProvided.draggableProps.style}
+                              >
+                                <ActiveRule
+                                  rule={rule}
+                                  index={idx}
+                                  onUpdate={updateRule}
+                                  onRemove={removeRule}
+                                  validationErrors={validationErrors}
+                                  destOptions={destField?.options}
+                                  dragHandleProps={dragProvided.dragHandleProps}
+                                  isDragging={snapshot.isDragging}
+                                />
+                                {idx < rules.length - 1 && (
+                                  <div className="bg-border mx-8 h-2 w-px" />
+                                )}
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </DragDropContext>
               )}
             </ScrollArea>
           </section>
 
           {/* Transformation preview */}
-          <aside className="border-border bg-card min-h-0 overflow-y-auto rounded-4xl border p-4">
+          <aside className="border-border bg-card min-h-0 overflow-y-auto rounded-4xl border p-3">
             <div>
               <h3 className="text-sm font-bold">Test transformation</h3>
               <p className="text-muted-foreground mt-0.5 text-xs">
@@ -1177,7 +1231,7 @@ export default function RuleBuilderModal({
               </p>
             </div>
 
-            <div className="bg-muted/30 mt-4 rounded-4xl border p-3">
+            <div className="bg-muted/30 mt-3 rounded-4xl border p-2.5">
               <label
                 htmlFor="rule-preview-input"
                 className="text-xs font-semibold"
@@ -1191,13 +1245,13 @@ export default function RuleBuilderModal({
                 id="rule-preview-input"
                 value={testInput}
                 onChange={(e) => setTestInput(e.target.value)}
-                className="bg-background mt-2 h-9 rounded-3xl font-mono text-xs shadow-none"
+                className="bg-background mt-2 h-8 rounded-3xl font-mono text-xs shadow-none"
                 placeholder="Test input…"
               />
             </div>
 
-            <div className="mt-4">
-              <div className="bg-muted/30 rounded-4xl border px-3 py-2.5">
+            <div className="mt-3">
+              <div className="bg-muted/30 rounded-4xl border px-3 py-2">
                 <p className="text-muted-foreground text-[11px] font-medium">
                   Original
                 </p>
@@ -1210,10 +1264,10 @@ export default function RuleBuilderModal({
 
               {previewSteps.map((step) => (
                 <div key={`${step.index}-${step.label}`}>
-                  <div className="bg-border mx-5 h-2.5 w-px" />
+                  <div className="bg-border mx-5 h-2 w-px" />
                   <div
                     className={cn(
-                      'rounded-4xl border px-3 py-2.5',
+                      'rounded-4xl border px-3 py-2',
                       !step.enabled && 'bg-muted/30 opacity-60',
                     )}
                   >
@@ -1230,7 +1284,7 @@ export default function RuleBuilderModal({
                         </Badge>
                       )}
                     </div>
-                    <output className="mt-2 block font-mono text-xs break-all">
+                    <output className="mt-1.5 block font-mono text-xs break-all">
                       {step.output || (
                         <span className="text-muted-foreground">(empty)</span>
                       )}
@@ -1240,7 +1294,7 @@ export default function RuleBuilderModal({
               ))}
             </div>
 
-            <div className="border-primary/20 bg-primary/5 mt-4 rounded-4xl border p-3">
+            <div className="border-primary/20 bg-primary/5 mt-3 rounded-4xl border p-2.5">
               <p className="text-primary text-[11px] font-semibold">
                 Final output
               </p>
@@ -1261,7 +1315,7 @@ export default function RuleBuilderModal({
         </div>
 
         {/* Footer */}
-        <SheetFooter className="shrink-0 flex-row items-center justify-between border-t px-6 py-4">
+        <SheetFooter className="shrink-0 flex-row items-center justify-between border-t px-5 py-3">
           <div className="text-muted-foreground flex items-center gap-2 text-xs">
             {hasUnsavedChanges ? (
               <>
@@ -1277,10 +1331,11 @@ export default function RuleBuilderModal({
             )}
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={onClose}>
+            <Button variant="outline" size="sm" onClick={onClose}>
               Cancel
             </Button>
             <Button
+              size="sm"
               onClick={handleSave}
               className={cn(
                 totalErrors > 0 && 'bg-destructive hover:bg-destructive/90',

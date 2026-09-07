@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { Rule } from '@/lib/ruleEngine';
 
-import { buildRulePreviewSteps } from './RuleBuilderModal';
+import { buildRulePreviewSteps, reorderRules } from './RuleBuilderModal';
 
 describe('buildRulePreviewSteps', () => {
   it('shows the output after each rule in pipeline order', () => {
@@ -47,5 +47,35 @@ describe('buildRulePreviewSteps', () => {
         enabled: true,
       },
     ]);
+  });
+});
+
+describe('reorderRules', () => {
+  it('moves a dragged rule to its dropped pipeline position', () => {
+    const rules: Rule[] = [
+      { type: 'trim', enabled: true },
+      { type: 'uppercase', enabled: true },
+      { type: 'suffix', value: '-done', enabled: true },
+    ];
+
+    expect(reorderRules(rules, 2, 0).map((rule) => rule.type)).toEqual([
+      'suffix',
+      'trim',
+      'uppercase',
+    ]);
+    expect(rules.map((rule) => rule.type)).toEqual([
+      'trim',
+      'uppercase',
+      'suffix',
+    ]);
+  });
+
+  it('returns the same rule list when the drop does not change position', () => {
+    const rules: Rule[] = [
+      { type: 'trim', enabled: true },
+      { type: 'uppercase', enabled: true },
+    ];
+
+    expect(reorderRules(rules, 1, 1)).toBe(rules);
   });
 });
