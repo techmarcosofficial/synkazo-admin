@@ -7,6 +7,7 @@ import {
   CreditCard,
   FolderOpen,
   ListChecks,
+  Megaphone,
   Percent,
   RefreshCw,
   Server,
@@ -364,6 +365,13 @@ export default function SuperAdminPage() {
           to="/super-admin/audit-log"
           tone="primary"
           metrics={auditMetrics}
+        />
+        <ModuleCard
+          title="Marketing"
+          description="Review website demo requests and manage follow-up."
+          icon={Megaphone}
+          to="/super-admin/marketing"
+          tone="info"
         />
       </div>
     </div>

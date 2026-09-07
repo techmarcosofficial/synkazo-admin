@@ -71,6 +71,9 @@ export const queryKeys = {
   hubspotWebhookSettings: {
     detail: ['hubspotWebhookSettings'] as const,
   },
+  authPagesSettings: {
+    detail: ['authPagesSettings'] as const,
+  },
   audit: {
     list: (page: number, limit: number, filters: AuditLogFilters) =>
       ['audit', page, limit, filters] as const,
@@ -80,6 +83,12 @@ export const queryKeys = {
   systemLogs: {
     list: (page: number, limit: number, search: string) =>
       ['systemLogs', page, limit, search] as const,
+  },
+  leads: {
+    all: ['leads'] as const,
+    list: (page: number, limit: number, status?: string, search?: string) =>
+      ['leads', page, limit, status ?? 'all', search ?? ''] as const,
+    notificationSettings: ['leads', 'notification-settings'] as const,
   },
   activity: {
     list: (projectId: string, page: number, limit: number) =>

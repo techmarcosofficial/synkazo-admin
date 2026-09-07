@@ -10,12 +10,13 @@ import {
   FolderOpen,
   LayoutDashboard,
   Mail,
+  Megaphone,
   Plug,
   Settings,
   Shield,
 } from 'lucide-react';
 import * as React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 import { SynkazoWordmark } from '@/components/branding/SynkazoMark';
 import { NavMain, type NavGroup } from '@/components/layout/nav-main';
@@ -134,6 +135,19 @@ const ACCOUNT_ITEMS: NavSecondaryItem[] = [
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { currentUser } = useSynkazoAuth();
+  const location = useLocation();
+  const isSuperAdminPage = location.pathname.startsWith('/super-admin');
+  const accountItems = isSuperAdminPage
+    ? [
+        ...ACCOUNT_ITEMS,
+        {
+          title: 'Marketing',
+          url: '/super-admin/marketing',
+          icon: Megaphone,
+          minRole: 'super_admin' as const,
+        },
+      ]
+    : ACCOUNT_ITEMS;
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -143,7 +157,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenuButton asChild size="lg" tooltip="synkazo">
               <Link to="/dashboard">
                 <SynkazoWordmark
-                  className="h-7! w-auto! text-foreground"
+                  className="text-foreground h-7! w-auto!"
                   tone="auto"
                 />
               </Link>
@@ -154,7 +168,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       <SidebarContent>
         <NavMain groups={NAV_GROUPS} />
-        <NavSecondary items={ACCOUNT_ITEMS} className="mt-auto" />
+        <NavSecondary items={accountItems} className="mt-auto" />
       </SidebarContent>
 
       {currentUser && (
