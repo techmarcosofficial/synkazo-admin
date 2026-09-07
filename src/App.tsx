@@ -59,6 +59,7 @@ import ProjectDetail from '@/pages/projects/ProjectDetail';
 import SchedulerHealth from '@/pages/SchedulerHealth';
 import SettingsPage from '@/pages/settings/SettingsPage';
 import OrganisationsPage from '@/pages/superadmin/OrganisationsPage';
+import MarketingPage from '@/pages/superadmin/MarketingPage';
 import PlatformAuditPage from '@/pages/superadmin/PlatformAuditPage';
 import SuperAdminProjectsPage from '@/pages/superadmin/ProjectsPage';
 import SuperAdminPage from '@/pages/superadmin/SuperAdminPage';
@@ -175,6 +176,10 @@ function App() {
                   element={<OrganisationsPage />}
                 />
                 <Route path="/super-admin/users" element={<UsersPage />} />
+                <Route
+                  path="/super-admin/marketing"
+                  element={<MarketingPage />}
+                />
                 <Route
                   path="/super-admin/projects"
                   element={<SuperAdminProjectsPage />}

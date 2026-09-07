@@ -53,6 +53,11 @@ export const queryKeys = {
     list: (page: number, limit: number, search: string) =>
       ['systemLogs', page, limit, search] as const,
   },
+  leads: {
+    all: ['leads'] as const,
+    list: (page: number, limit: number, status?: string, search?: string) =>
+      ['leads', page, limit, status ?? 'all', search ?? ''] as const,
+  },
   activity: {
     list: (projectId: string, page: number, limit: number) =>
       ['activity', projectId, page, limit] as const,
