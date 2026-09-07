@@ -43,6 +43,9 @@ export const queryKeys = {
   hubspotWebhookSettings: {
     detail: ['hubspotWebhookSettings'] as const,
   },
+  authPagesSettings: {
+    detail: ['authPagesSettings'] as const,
+  },
   audit: {
     list: (page: number, limit: number, filters: AuditLogFilters) =>
       ['audit', page, limit, filters] as const,

@@ -40,7 +40,7 @@ import AcceptInvite from '@/pages/auth/AcceptInvite';
 import AuthCallback from '@/pages/auth/AuthCallback';
 import ForgotPassword from '@/pages/auth/ForgotPassword';
 import Login from '@/pages/auth/Login';
-import Register from '@/pages/auth/Register';
+import RegistrationGate from '@/pages/auth/RegistrationGate';
 import ResetPassword from '@/pages/auth/ResetPassword';
 import VerifyEmail from '@/pages/auth/VerifyEmail';
 import CheckoutPage from '@/pages/checkout/CheckoutPage';
@@ -101,7 +101,7 @@ function App() {
             {/* Public — no layout */}
             <Route path="/" element={<RootRedirect />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            <Route path="/register" element={<RegistrationGate />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/verify-email" element={<VerifyEmail />} />
