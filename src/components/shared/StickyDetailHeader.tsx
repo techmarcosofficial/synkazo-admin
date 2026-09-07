@@ -14,8 +14,8 @@ interface StickyDetailHeaderProps {
 }
 
 /**
- * Two independently sticky rows for detail pages. Both remain in normal
- * document flow until they reach their calculated shell-relative offsets.
+ * Two independently sticky rows for detail pages. The header overlaps the
+ * back action slightly so its card surface remains visually in front.
  */
 export default function StickyDetailHeader({
   backLabel,
@@ -70,15 +70,19 @@ export default function StickyDetailHeader({
     <section
       ref={rootRef}
       className={cn(
-        'relative isolate [--detail-back-row-height:--spacing(9)] [--detail-sticky-top:var(--app-shell-header-height)]',
+        'relative isolate [--detail-back-row-height:--spacing(11)] [--detail-header-overlap:--spacing(2)] [--detail-sticky-top:var(--app-shell-header-height)]',
         className,
       )}
     >
       <div
         data-slot="sticky-detail-back"
-        className="bg-background before:bg-background sticky top-(--detail-sticky-top) z-30 flex h-(--detail-back-row-height) items-start before:pointer-events-none before:absolute before:inset-x-0 before:bottom-full before:hidden before:h-[calc(var(--detail-sticky-top)-var(--app-shell-header-height))] before:content-[''] data-[stuck=true]:before:block"
+        className="bg-background before:bg-background sticky top-(--detail-sticky-top) z-20 flex h-(--detail-back-row-height) items-start before:pointer-events-none before:absolute before:inset-x-0 before:bottom-full before:hidden before:h-[calc(var(--detail-sticky-top)-var(--app-shell-header-height))] before:content-[''] data-[stuck=true]:before:block"
       >
-        <Button asChild className="rounded-t-3xl rounded-b-none">
+        <Button
+          asChild
+          variant="secondary"
+          className="h-(--detail-back-row-height) rounded-t-3xl rounded-b-none bg-border pb-(--detail-header-overlap)"
+        >
           <Link to={backTo}>
             <ChevronLeft aria-hidden="true" data-icon="inline-start" />
             {backLabel}
@@ -88,7 +92,7 @@ export default function StickyDetailHeader({
 
       <div
         data-slot="sticky-detail-header"
-        className="bg-background sticky top-[calc(var(--detail-sticky-top)+var(--detail-back-row-height))] z-20"
+        className="sticky top-[calc(var(--detail-sticky-top)+var(--detail-back-row-height)-var(--detail-header-overlap))] z-30 -mt-(--detail-header-overlap)"
       >
         {header}
       </div>

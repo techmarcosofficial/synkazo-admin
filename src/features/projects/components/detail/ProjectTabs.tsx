@@ -20,7 +20,7 @@ export default function ProjectTabs({
           <TabsTrigger
             value={tab.id}
             disabled={tab.locked}
-            className="after:bg-primary py-2 font-semibold after:bottom-0! after:h-1! disabled:opacity-70"
+            className="after:bg-primary py-2 font-semibold after:-bottom-0.5! after:h-1! disabled:opacity-70 rounded-full"
           >
             {tab.label}
             {tab.locked && <Lock />}
