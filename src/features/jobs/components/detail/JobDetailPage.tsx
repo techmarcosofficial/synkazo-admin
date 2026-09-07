@@ -9,6 +9,7 @@ import JobTabs from './JobTabs';
 
 import ErrorState from '@/components/shared/ErrorState';
 import { BackLink } from '@/components/shared/PageHeader';
+import StickyDetailHeader from '@/components/shared/StickyDetailHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs } from '@/components/ui/tabs';
@@ -134,21 +135,23 @@ export default function JobDetailPage() {
       <Tabs
         value={activeTab}
         onValueChange={(v) => handleTabChange(v as typeof activeTab)}
-        className="gap-6"
+        className="gap-0"
       >
-        <div className="space-y-2">
-          <BackLink label={backLabel} to={backTo} />
-          <Card className="gap-0 space-y-3 overflow-hidden py-0">
-            <JobHeader />
-            <div className="overflow-x-auto px-5">
-              <JobTabs tabs={tabs} />
-            </div>
-          </Card>
-        </div>
-
-        <JobHeaderAlert />
-
-        <JobTabContent visibleTabIds={tabs.map((t) => t.id)} />
+        <StickyDetailHeader
+          backLabel={backLabel}
+          backTo={backTo}
+          header={
+            <Card className="gap-0 space-y-3 overflow-hidden py-0">
+              <JobHeader />
+              <div className="overflow-x-auto px-5">
+                <JobTabs tabs={tabs} />
+              </div>
+            </Card>
+          }
+        >
+          <JobHeaderAlert />
+          <JobTabContent visibleTabIds={tabs.map((t) => t.id)} />
+        </StickyDetailHeader>
       </Tabs>
     </JobDetailProvider>
   );

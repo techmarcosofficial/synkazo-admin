@@ -31,7 +31,10 @@ export default function StickyDetailHeader({
     const backRow = root?.querySelector<HTMLElement>(
       '[data-slot="sticky-detail-back"]',
     );
-    if (!root || !backRow) return;
+    const headerRow = root?.querySelector<HTMLElement>(
+      '[data-slot="sticky-detail-header"]',
+    );
+    if (!root || !backRow || !headerRow) return;
 
     let stickyTop = 0;
 
@@ -40,6 +43,7 @@ export default function StickyDetailHeader({
         window.scrollY > 0 &&
         root.getBoundingClientRect().top <= stickyTop + 0.5;
       backRow.dataset.stuck = String(isStuck);
+      headerRow.dataset.stuck = String(isStuck);
     };
 
     const measureNaturalTop = () => {
@@ -92,7 +96,7 @@ export default function StickyDetailHeader({
 
       <div
         data-slot="sticky-detail-header"
-        className="sticky top-[calc(var(--detail-sticky-top)+var(--detail-back-row-height)-var(--detail-header-overlap))] z-30 -mt-(--detail-header-overlap)"
+        className="sticky top-[calc(var(--detail-sticky-top)+var(--detail-back-row-height)-var(--detail-header-overlap))] z-30 -mt-(--detail-header-overlap) transition-[top] duration-200 ease-out data-[stuck=true]:top-(--detail-sticky-top)"
       >
         {header}
       </div>

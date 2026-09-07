@@ -53,6 +53,8 @@ describe('StickyDetailHeader', () => {
       'top-[calc(var(--detail-sticky-top)+var(--detail-back-row-height)-var(--detail-header-overlap))]',
       'z-30',
       '-mt-(--detail-header-overlap)',
+      'transition-[top]',
+      'data-[stuck=true]:top-(--detail-sticky-top)',
     );
     expect(headerRow).not.toHaveClass('pb-2', '-mb-2', 'bg-background');
     expect(backRow).not.toBe(headerRow);
