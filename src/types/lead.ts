@@ -16,3 +16,8 @@ export interface Lead {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface LeadNotificationSettings {
+  defaultRecipients: string[];
+  additionalRecipients: string[];
+}
