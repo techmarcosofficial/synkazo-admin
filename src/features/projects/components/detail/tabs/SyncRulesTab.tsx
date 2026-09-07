@@ -251,18 +251,10 @@ export default function SyncRulesTab() {
           projectId={project.id}
           open={showCreateJob}
           onClose={() => setShowCreateJob(false)}
-          onCreated={(jobId) => {
+          onCreated={() => {
             setShowCreateJob(false);
             refetch();
-            navigate(
-              `/projects/${project.id}/jobs/${jobId}?tab=field-mapping`,
-              {
-                state: {
-                  jobBackTo: `/projects/${project.id}?tab=sync-rules`,
-                  jobBackLabel: 'Back to Sync Jobs',
-                },
-              },
-            );
+            navigate(`/projects/${project.id}?tab=sync-rules`);
           }}
         />
       )}

@@ -54,7 +54,7 @@ export default function PriorityQueuePanel({
   if (queueQuery.isLoading) {
     return (
       <div className="flex h-40 items-center justify-center">
-        <Spinner className="text-paused size-6" />
+        <Spinner className="text-muted-foreground size-6" />
       </div>
     );
   }
@@ -148,79 +148,65 @@ export default function PriorityQueuePanel({
         clearingAndRestarting={clearAndRestartMutation.isPending}
       />
 
-      <div className="relative space-y-4 pl-9">
-        <div
-          className="bg-border absolute top-2 bottom-2 left-[15px] w-px"
-          aria-hidden
-        />
-
-        <div className="relative">
-          <div className="bg-paused text-primary-foreground absolute top-4 -left-9 flex size-6 items-center justify-center rounded-full text-xs font-bold">
-            1
-          </div>
-          <Card>
-            <CardContent className="space-y-4 pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold">Priority Queue</p>
-                  <p className="text-muted-foreground text-xs">
-                    Runs first — drag jobs to change execution order. Top runs
-                    first.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {dirty && (
-                    <Button
-                      size="sm"
-                      className="bg-paused hover:bg-paused/90"
-                      onClick={saveOrder}
-                      disabled={reorderMutation.isPending}
-                    >
-                      {reorderMutation.isPending ? <Spinner /> : <Save />}
-                      Save Changes
-                    </Button>
-                  )}
-                  <Button size="sm" onClick={openAddDrawer}>
-                    <Plus />
-                    Add Job
-                  </Button>
-                </div>
+      <Card size="sm">
+        <CardContent className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+            <div className="flex items-center gap-3">
+              <div className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
+                1
               </div>
-
-              {localJobs.length === 0 ? (
-                <div className="py-10 text-center">
-                  <p className="mb-1 text-sm font-medium">
-                    No jobs have been added to the priority queue
-                  </p>
-                  <p className="text-muted-foreground text-xs">
-                    Add jobs to create an execution sequence.
-                  </p>
-                </div>
-              ) : (
-                <QueueJobList
-                  queueJobs={localJobs}
-                  onReorderLocal={handleReorderLocal}
-                  onEdit={openEditDrawer}
-                  onToggleEnabled={handleToggleEnabled}
-                  onRetry={(id) => retryMutation.mutate(id)}
-                  onRemove={(id) => removeJobMutation.mutate(id)}
-                />
+              <div>
+                <p className="text-sm font-semibold">Priority Queue</p>
+                <p className="text-muted-foreground mt-0.5 text-xs">
+                  Runs first — drag jobs to reorder execution.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 self-end sm:self-auto">
+              {dirty && (
+                <Button
+                  size="sm"
+                  onClick={saveOrder}
+                  disabled={reorderMutation.isPending}
+                >
+                  {reorderMutation.isPending ? <Spinner /> : <Save />}
+                  Save Changes
+                </Button>
               )}
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="relative">
-          <div className="bg-paused text-primary-foreground absolute top-4 -left-9 flex size-6 items-center justify-center rounded-full text-xs font-bold">
-            2
+              <Button size="sm" onClick={openAddDrawer}>
+                <Plus />
+                Add Job
+              </Button>
+            </div>
           </div>
-          <AssociationQueueCard
-            projectId={projectId}
-            queue={config.queue}
-            items={config.associationQueueItems}
-          />
-        </div>
-      </div>
+
+          {localJobs.length === 0 ? (
+            <div className="py-8 text-center">
+              <p className="mb-1 text-sm font-medium">
+                No jobs have been added to the priority queue
+              </p>
+              <p className="text-muted-foreground text-xs">
+                Add jobs to create an execution sequence.
+              </p>
+            </div>
+          ) : (
+            <QueueJobList
+              queueJobs={localJobs}
+              onReorderLocal={handleReorderLocal}
+              onEdit={openEditDrawer}
+              onToggleEnabled={handleToggleEnabled}
+              onRetry={(id) => retryMutation.mutate(id)}
+              onRemove={(id) => removeJobMutation.mutate(id)}
+            />
+          )}
+        </CardContent>
+      </Card>
+
+      <AssociationQueueCard
+        projectId={projectId}
+        queue={config.queue}
+        items={config.associationQueueItems}
+      />
 
       <QueueJobDrawer
         // Remounts the form fresh whenever the target switches (a different queue job,

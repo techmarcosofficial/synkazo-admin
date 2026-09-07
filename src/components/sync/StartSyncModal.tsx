@@ -1,5 +1,5 @@
 import { ChevronDown, RefreshCw } from 'lucide-react';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import { ChoiceCardItem } from '@/components/form/ChoiceCard';
 import LimitSyncModal from '@/components/sync/LimitSyncModal';
@@ -29,6 +29,8 @@ interface StartSyncModalProps {
   onRunNow: () => void;
   onLimitSyncDone: () => void;
   onSyncAll: (range: { startDate?: string; endDate?: string }) => void;
+  /** Live status rendered directly above the all-records action row. */
+  runProgress?: ReactNode;
   disabled?: boolean;
   /** Renders the same run workflow directly inside the Sync & Schedule page. */
   embedded?: boolean;
@@ -46,6 +48,7 @@ function ManualSyncContent({
   onRunNow,
   onLimitSyncDone,
   onSyncAll,
+  runProgress,
   disabled = false,
   embedded = false,
 }: StartSyncModalProps) {
@@ -66,6 +69,7 @@ function ManualSyncContent({
             className="text-muted-foreground"
             aria-expanded={advancedOpen}
             onClick={() => setAdvancedOpen((open) => !open)}
+            disabled={disabled}
           >
             Advanced options
             <ChevronDown
@@ -88,12 +92,14 @@ function ManualSyncContent({
           id="manual-run-all"
           title="All records"
           description="Sync all available records"
+          disabled={disabled}
         />
         <ChoiceCardItem
           value="limited"
           id="manual-run-limited"
           title="Limited run"
           description="Sync a controlled number of records"
+          disabled={disabled}
         />
       </RadioGroup>
 
@@ -109,34 +115,35 @@ function ManualSyncContent({
               pipelineConfigured={pipelineConfigured}
               onGoToPipeline={onGoToPipeline}
               disabled={disabled}
-            />
-
-            <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
-              <CollapsibleContent className="pt-2">
-                <div className="bg-muted/30 flex flex-col gap-3 rounded-4xl border p-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">
-                      Sync only new or updated records
-                    </p>
-                    <p className="text-muted-foreground mt-1 text-xs">
-                      {hasBaseline
-                        ? 'Continue incrementally from the last successful sync.'
-                        : 'A full sync is recommended first to establish a baseline.'}
-                    </p>
+            >
+              <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+                <CollapsibleContent className="pt-2">
+                  <div className="bg-muted/30 flex flex-col gap-3 rounded-4xl border p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">
+                        Sync only new or updated records
+                      </p>
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        {hasBaseline
+                          ? 'Continue incrementally from the last successful sync.'
+                          : 'A full sync is recommended first to establish a baseline.'}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className="shrink-0"
+                      onClick={() => setShowIncrementalRun(true)}
+                      disabled={disabled}
+                    >
+                      <RefreshCw /> Run changes only
+                    </Button>
                   </div>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    className="shrink-0"
-                    onClick={() => setShowIncrementalRun(true)}
-                    disabled={disabled}
-                  >
-                    <RefreshCw /> Run changes only
-                  </Button>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
+                </CollapsibleContent>
+              </Collapsible>
+              {runProgress}
+            </SyncAllTab>
           </div>
         ) : (
           <LimitSyncModal

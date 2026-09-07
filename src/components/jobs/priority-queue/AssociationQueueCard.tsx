@@ -27,6 +27,9 @@ interface LocalItem {
   enabled: boolean;
 }
 
+const ASSOCIATION_GRID_CLASS =
+  'grid min-w-[720px] grid-cols-[4.25rem_minmax(13rem,1.2fr)_minmax(13rem,1fr)_5.5rem_5rem]';
+
 export default function AssociationQueueCard({
   projectId,
   queue,
@@ -131,14 +134,18 @@ export default function AssociationQueueCard({
   };
 
   return (
-    <Card>
+    <Card size="sm">
       <CardHeader className="flex-row items-center justify-between">
-        <div>
-          <CardTitle className="text-sm">Association Queue</CardTitle>
-          <p className="text-muted-foreground mt-0.5 text-xs">
-            Runs the selected association rules sequentially, after every job in
-            the queue has finished its pending sync work.
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
+            2
+          </div>
+          <div>
+            <CardTitle className="text-sm">Association Queue</CardTitle>
+            <p className="text-muted-foreground mt-0.5 text-xs">
+              Runs after the Priority Queue completes.
+            </p>
+          </div>
         </div>
         <Switch
           checked={enabled}
@@ -146,13 +153,14 @@ export default function AssociationQueueCard({
             setEnabled(v);
             markDirty();
           }}
+          aria-label="Enable association queue"
         />
       </CardHeader>
 
       {enabled && (
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-3">
-            <label className="text-xs font-medium">
+        <CardContent className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="mr-1 text-xs font-medium">
               Delay After Jobs Complete
             </label>
             <Input
@@ -163,7 +171,7 @@ export default function AssociationQueueCard({
                 setDelayAmount(Math.max(0, Number(e.target.value)));
                 markDirty();
               }}
-              className="w-24 font-mono"
+              className="h-8 w-24 font-mono"
             />
             <Select
               value={delayUnit}
@@ -172,7 +180,7 @@ export default function AssociationQueueCard({
                 markDirty();
               }}
             >
-              <SelectTrigger className="w-32">
+              <SelectTrigger size="sm" className="w-28">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -183,7 +191,7 @@ export default function AssociationQueueCard({
           </div>
 
           {localItems.length === 0 ? (
-            <p className="text-muted-foreground py-4 text-center text-xs">
+            <p className="text-muted-foreground rounded-4xl border py-6 text-center text-xs">
               No association rules added to the queue yet.
             </p>
           ) : (
@@ -193,8 +201,39 @@ export default function AssociationQueueCard({
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className="space-y-2"
+                    className="overflow-x-auto rounded-4xl border"
+                    role="table"
+                    aria-label="Association queue rules"
                   >
+                    <div
+                      className={cn(
+                        ASSOCIATION_GRID_CLASS,
+                        'bg-muted items-center text-xs font-medium',
+                      )}
+                      role="row"
+                    >
+                      <div className="px-3 py-2 text-right" role="columnheader">
+                        #
+                      </div>
+                      <div className="px-2 py-2" role="columnheader">
+                        Association Rule
+                      </div>
+                      <div className="px-2 py-2" role="columnheader">
+                        Source → Destination
+                      </div>
+                      <div
+                        className="px-2 py-2 text-center"
+                        role="columnheader"
+                      >
+                        Enabled
+                      </div>
+                      <div
+                        className="px-2 py-2 text-center"
+                        role="columnheader"
+                      >
+                        Actions
+                      </div>
+                    </div>
                     {localItems.map((item, index) => {
                       const rule = ruleById.get(item.associationRuleId);
                       return (
@@ -209,44 +248,71 @@ export default function AssociationQueueCard({
                               {...dragProvided.draggableProps}
                               style={dragProvided.draggableProps.style}
                               className={cn(
-                                'bg-card flex items-center gap-3 rounded-4xl border px-3 py-2',
-                                snapshot.isDragging && 'ring-paused/40 ring-2',
+                                ASSOCIATION_GRID_CLASS,
+                                'bg-card hover:bg-muted/40 items-center border-t text-xs transition-colors',
+                                snapshot.isDragging &&
+                                  'ring-ring rounded-4xl shadow-sm ring-2',
                               )}
+                              role="row"
                             >
                               <div
-                                {...dragProvided.dragHandleProps}
-                                className="text-muted-foreground hover:bg-muted focus-visible:ring-ring/30 flex size-8 shrink-0 cursor-grab items-center justify-center rounded-3xl outline-none focus-visible:ring-3"
+                                className="flex items-center gap-1 px-2 py-1.5"
+                                role="cell"
                               >
-                                <GripVertical className="size-4" />
+                                <button
+                                  type="button"
+                                  {...dragProvided.dragHandleProps}
+                                  className="text-muted-foreground hover:bg-muted focus-visible:ring-ring/30 flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg outline-none focus-visible:ring-3"
+                                  aria-label={`Reorder ${rule?.name ?? 'association rule'}`}
+                                >
+                                  <GripVertical className="size-4" />
+                                </button>
+                                <span className="bg-muted text-muted-foreground flex size-6 shrink-0 items-center justify-center rounded-md font-semibold">
+                                  {index + 1}
+                                </span>
                               </div>
-                              <div className="bg-muted text-muted-foreground flex size-6 shrink-0 items-center justify-center rounded-md text-xs font-bold">
-                                {index + 1}
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate text-sm">
-                                  {rule?.name ?? item.associationRuleId}
-                                </p>
-                                {rule && (
-                                  <p className="text-muted-foreground truncate text-xs">
-                                    {rule.sourceObject} → {rule.targetObject}
-                                  </p>
-                                )}
-                              </div>
-                              <Switch
-                                checked={item.enabled}
-                                onCheckedChange={() =>
-                                  toggleRule(item.associationRuleId)
-                                }
-                              />
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                onClick={() =>
-                                  removeRule(item.associationRuleId)
-                                }
+                              <div
+                                className="truncate px-2 py-1.5 text-sm font-medium"
+                                role="cell"
                               >
-                                <X />
-                              </Button>
+                                {rule?.name ?? item.associationRuleId}
+                              </div>
+                              <div
+                                className="text-muted-foreground truncate px-2 py-1.5"
+                                role="cell"
+                              >
+                                {rule
+                                  ? `${rule.sourceObject} → ${rule.targetObject}`
+                                  : '—'}
+                              </div>
+                              <div
+                                className="flex justify-center px-2 py-1.5"
+                                role="cell"
+                              >
+                                <Switch
+                                  size="sm"
+                                  checked={item.enabled}
+                                  onCheckedChange={() =>
+                                    toggleRule(item.associationRuleId)
+                                  }
+                                  aria-label={`Toggle ${rule?.name ?? 'association rule'}`}
+                                />
+                              </div>
+                              <div
+                                className="flex justify-center px-2 py-1.5"
+                                role="cell"
+                              >
+                                <Button
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  onClick={() =>
+                                    removeRule(item.associationRuleId)
+                                  }
+                                  aria-label={`Remove ${rule?.name ?? 'association rule'}`}
+                                >
+                                  <X />
+                                </Button>
+                              </div>
                             </div>
                           )}
                         </Draggable>
@@ -259,44 +325,56 @@ export default function AssociationQueueCard({
             </DragDropContext>
           )}
 
-          <div className="flex items-center gap-2">
-            <Select value={addingRuleId} onValueChange={addRule}>
-              <SelectTrigger className="w-72">
-                <SelectValue placeholder="Add an association rule…" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableOptions.map((r) => (
-                  <SelectItem key={r.id} value={r.id}>
-                    {r.name} ({r.sourceObject} → {r.targetObject})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Plus className="text-muted-foreground size-4" />
-          </div>
-
-          {dirty && (
+          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+            <div className="flex min-w-0 items-center gap-2">
+              <Select
+                value={addingRuleId}
+                onValueChange={addRule}
+                disabled={availableOptions.length === 0}
+              >
+                <SelectTrigger size="sm" className="w-72 max-w-full">
+                  <SelectValue
+                    placeholder={
+                      availableOptions.length > 0
+                        ? 'Add an association rule…'
+                        : 'All association rules added'
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableOptions.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.name} ({r.sourceObject} → {r.targetObject})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Plus
+                className="text-muted-foreground size-4 shrink-0"
+                aria-hidden="true"
+              />
+            </div>
             <Button
               size="sm"
               onClick={handleSave}
-              disabled={updateMutation.isPending}
+              disabled={!dirty || updateMutation.isPending}
             >
               {updateMutation.isPending ? <Spinner /> : <Save />}
               Save Association Queue
             </Button>
-          )}
+          </div>
         </CardContent>
       )}
 
       {!enabled && dirty && (
-        <CardContent>
+        <CardContent className="flex justify-end">
           <Button
             size="sm"
             onClick={handleSave}
             disabled={updateMutation.isPending}
           >
             {updateMutation.isPending ? <Spinner /> : <Save />}
-            Save
+            Save Association Queue
           </Button>
         </CardContent>
       )}

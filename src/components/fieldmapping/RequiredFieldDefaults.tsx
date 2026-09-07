@@ -91,6 +91,11 @@ export default function RequiredFieldDefaults({
   addRequestSignal,
   showAddButton = true,
 }: RequiredFieldDefaultsProps) {
+  // EmptyValuePolicy can emit a selection and the first keystroke before its
+  // parent has re-rendered. Keep the latest committed draft here so either
+  // action builds on the preceding one instead of restoring stale mappings.
+  const mappingsRef = useRef(mappings);
+  mappingsRef.current = mappings;
   const includeSource = scope === 'two_way';
   const requiredItems = getRequiredFieldItems(
     sourceFields,
@@ -183,7 +188,7 @@ export default function RequiredFieldDefaults({
     item: RequiredFieldItem,
     next: { onEmpty: OnEmptyPolicy; defaultValue: string },
   ) => {
-    let updated = mappings;
+    let updated = mappingsRef.current;
     if (item.pairs.length > 0) {
       for (const pair of item.pairs) {
         updated = setPairEmptyPolicy(updated, pair, next, item.side);
@@ -199,6 +204,7 @@ export default function RequiredFieldDefaults({
         isTwoWay: scope === 'two_way',
       });
     }
+    mappingsRef.current = updated;
     onMappingsChange(updated);
   };
 

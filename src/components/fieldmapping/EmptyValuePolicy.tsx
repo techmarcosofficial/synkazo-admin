@@ -1,4 +1,5 @@
 import { AlertTriangle } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 import type { OnEmptyPolicy } from './FieldMappingCanvas';
 
@@ -131,6 +132,16 @@ export default function EmptyValuePolicy({
   fieldOptions?: { value: string; label: string }[];
   fieldLabel?: string;
 }) {
+  // Mapping updates travel through the parent field-mapping draft. Keep a local
+  // text draft for the native input so a parent render that is one update behind
+  // never replaces the character the user has just typed.
+  const [inputDefaultValue, setInputDefaultValue] = useState(
+    value.defaultValue,
+  );
+  useEffect(() => {
+    setInputDefaultValue(value.defaultValue);
+  }, [value.defaultValue]);
+
   // Whichever side actually publishes an option list/type drives the default-value
   // picker — dest is tried first since requiredReasons() orders [dest, source].
   const options =
@@ -193,8 +204,12 @@ export default function EmptyValuePolicy({
               ? 'date'
               : 'text'
         }
-        value={value.defaultValue}
-        onChange={(e) => onChange({ ...value, defaultValue: e.target.value })}
+        value={inputDefaultValue}
+        onChange={(e) => {
+          const nextDefaultValue = e.target.value;
+          setInputDefaultValue(nextDefaultValue);
+          onChange({ ...value, defaultValue: nextDefaultValue });
+        }}
         placeholder={`Default value for ${fieldLabel}`}
         aria-label={`Default value for ${fieldLabel}`}
         aria-invalid={showInvalid}
@@ -221,7 +236,10 @@ export default function EmptyValuePolicy({
         )}
       >
         <Select
-          value={value.onEmpty === 'none' ? undefined : value.onEmpty}
+          // Keep this Select controlled from its first render. Switching from
+          // undefined to a value after the first choice made the default-value
+          // control fail to mount reliably and could discard typed input.
+          value={value.onEmpty === 'none' ? '' : value.onEmpty}
           onValueChange={(next) =>
             onChange({ ...value, onEmpty: next as OnEmptyPolicy })
           }

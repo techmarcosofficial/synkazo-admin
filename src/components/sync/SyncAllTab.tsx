@@ -65,6 +65,8 @@ interface SyncAllTabProps {
   projectId: string;
   jobId: string;
   job?: Job;
+  /** Optional manual-run content shown directly above the final action row. */
+  children?: ReactNode;
   onConfirm: (range: { startDate?: string; endDate?: string }) => void;
   pipelineRequired?: boolean;
   pipelineConfigured?: boolean;
@@ -76,6 +78,7 @@ export default function SyncAllTab({
   projectId,
   jobId,
   job,
+  children,
   onConfirm,
   pipelineRequired = false,
   pipelineConfigured = true,
@@ -94,7 +97,10 @@ export default function SyncAllTab({
 
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [startTime, setStartTime] = useState('00:00');
-  const [endDate, setEndDate] = useState<Date | undefined>();
+  // The default end bound is the current moment. Previously the time input
+  // showed "now" while the date button still read its placeholder, which made
+  // a valid default look unset.
+  const [endDate, setEndDate] = useState<Date | undefined>(() => new Date());
   const [endTime, setEndTime] = useState(() => format(new Date(), 'HH:mm'));
   const [estimate, setEstimate] = useState<SyncEstimate | null>(null);
   const [checking, setChecking] = useState(false);
@@ -323,24 +329,6 @@ export default function SyncAllTab({
             </div>
           </FieldGroup>
 
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <Button variant="outline" onClick={handleCheck} disabled={checking}>
-              {checking ? <Spinner /> : <Search />}
-              {checking ? 'Checking…' : 'Check records'}
-            </Button>
-            <Button
-              onClick={() =>
-                onConfirm({
-                  startDate: startDateTime?.toISOString(),
-                  endDate: endDateTime?.toISOString(),
-                })
-              }
-              disabled={pipelineBlocked || disabled}
-            >
-              <RotateCcw /> Run sync now
-            </Button>
-          </div>
-
           {attempted && (
             <>
               {checkError ? (
@@ -352,7 +340,7 @@ export default function SyncAllTab({
                   </AlertDescription>
                 </Alert>
               ) : (
-                <Card className="py-0">
+                <Card className="bg-muted/30 border-muted py-0">
                   <CardContent className="space-y-3 p-4">
                     <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
                       This run will sync
@@ -396,6 +384,26 @@ export default function SyncAllTab({
               )}
             </>
           )}
+
+          {children}
+
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button variant="outline" onClick={handleCheck} disabled={checking}>
+              {checking ? <Spinner /> : <Search />}
+              {checking ? 'Checking…' : 'Check records'}
+            </Button>
+            <Button
+              onClick={() =>
+                onConfirm({
+                  startDate: startDateTime?.toISOString(),
+                  endDate: endDateTime?.toISOString(),
+                })
+              }
+              disabled={pipelineBlocked || disabled}
+            >
+              <RotateCcw /> Run sync now
+            </Button>
+          </div>
         </>
       )}
     </div>

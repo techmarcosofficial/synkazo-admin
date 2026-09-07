@@ -5,9 +5,7 @@ import {
   ChevronRight,
   Info,
   Play,
-  RefreshCw,
   Sliders,
-  Square,
 } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
@@ -15,6 +13,7 @@ import { toast } from 'sonner';
 import { jobsApi } from '@/api/jobs';
 import { syncLogsApi } from '@/api/syncLogs';
 import UpgradeRequiredDialog from '@/components/shared/UpgradeRequiredDialog';
+import SyncRunProgress from '@/components/sync/SyncRunProgress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -27,7 +26,6 @@ import {
 } from '@/components/ui/dialog';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Progress } from '@/components/ui/progress';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import type { Job, SyncRun } from '@/types';
@@ -173,12 +171,6 @@ export default function LimitSyncModal({
   const estBatches = Math.ceil(safeLimit / safeBatch);
   const estSrcPages = Math.ceil(safeLimit / 500);
   const srcPageEnd = safeStart + estSrcPages - 1;
-
-  const pct = runLog
-    ? runLog.status !== 'running'
-      ? 100
-      : Math.min(99, Math.round(((runLog.totalFetched ?? 0) / safeLimit) * 100))
-    : 0;
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -473,7 +465,7 @@ export default function LimitSyncModal({
                 </Field>
               </FieldGroup>
 
-              <Card className="py-0">
+              <Card className="bg-muted/30 border-muted py-0">
                 <CardContent className="space-y-3 p-4">
                   <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
                     Preview
@@ -543,23 +535,17 @@ export default function LimitSyncModal({
 
         {step === 'running' && (
           <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-3 pr-8">
-              <div className="bg-primary/10 flex size-9 shrink-0 items-center justify-center rounded-xl">
-                <RefreshCw className="text-primary size-4 animate-spin" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="font-semibold">Sync Running…</h3>
-                <p className="text-muted-foreground text-xs">
-                  Up to {safeLimit.toLocaleString()} records · starting page{' '}
-                  {safeStart}
-                </p>
-              </div>
-              <span className="text-primary shrink-0 text-sm font-bold tabular-nums">
-                {pct}%
-              </span>
-            </div>
-
-            <Progress value={pct} className="h-1.5" />
+            <SyncRunProgress
+              totalRecords={safeLimit}
+              processedRecords={runLog?.totalFetched ?? 0}
+              createdCount={runLog?.createdCount}
+              updatedCount={runLog?.updatedCount}
+              skippedCount={runLog?.skippedCount}
+              failedCount={runLog?.failedCount}
+              description={`Up to ${safeLimit.toLocaleString()} records · starting page ${safeStart}`}
+              onStop={() => void handleStop()}
+              stopping={stopping}
+            />
 
             {stuckWarning && !timedOut && (
               <Alert className="bg-warning/10 border-warning/25 py-2">
@@ -570,61 +556,6 @@ export default function LimitSyncModal({
                 </AlertDescription>
               </Alert>
             )}
-
-            {runLog ? (
-              <div className="space-y-3">
-                <div className="flex flex-wrap gap-2">
-                  <Stat
-                    label="Processed"
-                    value={
-                      (runLog.createdCount ?? 0) + (runLog.updatedCount ?? 0)
-                    }
-                    tone="text-primary"
-                  />
-                  <Stat
-                    label="Created"
-                    value={runLog.createdCount}
-                    tone="text-success"
-                  />
-                  <Stat
-                    label="Updated"
-                    value={runLog.updatedCount}
-                    tone="text-info"
-                  />
-                  <Stat label="Skipped" value={runLog.skippedCount} />
-                  <Stat
-                    label="Failed"
-                    value={runLog.failedCount}
-                    tone="text-destructive"
-                  />
-                </div>
-                <p className="text-muted-foreground text-xs">
-                  Fetched{' '}
-                  <strong className="text-foreground">
-                    {(runLog.totalFetched ?? 0).toLocaleString()}
-                  </strong>{' '}
-                  of{' '}
-                  <strong className="text-foreground">
-                    {safeLimit.toLocaleString()}
-                  </strong>{' '}
-                  records from source
-                </p>
-              </div>
-            ) : (
-              <div className="text-muted-foreground flex items-center gap-2 text-sm">
-                <Spinner /> Starting — waiting for run to begin…
-              </div>
-            )}
-
-            <Button
-              variant="outline"
-              onClick={handleStop}
-              disabled={stopping}
-              className="border-destructive/30 text-destructive bg-destructive/5 w-full"
-            >
-              {stopping ? <Spinner /> : <Square className="fill-current" />}
-              {stopping ? 'Stopping…' : 'Stop Sync'}
-            </Button>
           </div>
         )}
 

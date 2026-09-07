@@ -7,6 +7,7 @@ import JobStatusDropdown from './JobStatusDropdown';
 import { PlatformIcon } from '@/components/platform';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { formatEntityLabel } from '@/features/projects/lib/syncJobSummary';
+import type { Project, ProjectEnvironment } from '@/types';
 
 export default function JobHeader() {
   const {
@@ -46,6 +47,12 @@ export default function JobHeader() {
         : schedPaused
           ? 'schedule_paused'
           : null;
+  // The detail endpoint returns camelCase, while a few older Project call
+  // sites still use the base type's snake_case field. Support both so the job
+  // header consistently displays the active Sandbox/Production environment.
+  const activeEnvironment =
+    (project as (Project & { activeEnvironment?: ProjectEnvironment }) | null)
+      ?.activeEnvironment ?? project?.active_environment;
 
   return (
     <div className="flex flex-col gap-5 px-6 py-5 lg:flex-row lg:items-start lg:justify-between">
@@ -99,8 +106,8 @@ export default function JobHeader() {
 
       <div className="ml-auto flex flex-wrap items-center justify-end gap-2.5">
         <StatusBadge status={twoWay ? 'two_way' : 'one_way'} size="lg" />
-        {project?.active_environment && (
-          <StatusBadge status={project.active_environment} size="sm" />
+        {activeEnvironment && (
+          <StatusBadge status={activeEnvironment} size="sm" />
         )}
         {operationalStatus && (
           <StatusBadge status={operationalStatus} size="sm" />

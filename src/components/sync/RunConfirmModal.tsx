@@ -151,8 +151,8 @@ export default function RunConfirmModal({
 
   const headerNode = (
     <div className="flex items-center gap-3">
-      <div className="bg-success/10 flex size-8 items-center justify-center rounded-lg">
-        <Play className="text-success size-4" />
+      <div className="bg-muted text-foreground flex size-8 items-center justify-center rounded-lg">
+        <Play className="size-4" />
       </div>
       <div>
         <div className="font-heading text-base font-medium">{title}</div>
@@ -416,7 +416,6 @@ export default function RunConfirmModal({
       <Button
         onClick={handleConfirm}
         disabled={pipelineBlocked || customPeriodMissing}
-        className="bg-success hover:bg-success/90"
       >
         <Play /> {cta}
       </Button>

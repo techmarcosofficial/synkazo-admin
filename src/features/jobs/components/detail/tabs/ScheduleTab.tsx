@@ -5,9 +5,7 @@ import {
   Database,
   Info,
   Play,
-  RefreshCw,
   RotateCcw,
-  Square,
   Timer,
   X,
   type LucideIcon,
@@ -19,9 +17,9 @@ import { toast } from 'sonner';
 import { useJobDetailContext } from '../context';
 
 import { jobsApi } from '@/api/jobs';
-import StatusBadge from '@/components/shared/StatusBadge';
 import UpgradeRequiredDialog from '@/components/shared/UpgradeRequiredDialog';
 import StartSyncModal from '@/components/sync/StartSyncModal';
+import SyncRunProgress from '@/components/sync/SyncRunProgress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -208,7 +206,6 @@ export default function ScheduleTab() {
     setUpgradeDialog,
     handleRunNow,
     handleSyncAll,
-    beginTracking,
     handleStop,
     handleCancelQueue,
     handleRetryQueue,
@@ -372,6 +369,13 @@ export default function ScheduleTab() {
     },
   ];
   const manualRunBlocked = !job.isEnabled || queued || isSyncing;
+  const liveProcessed =
+    liveProgress?.recordsProcessed ??
+    (activeRunLog?.createdCount ?? 0) +
+      (activeRunLog?.updatedCount ?? 0) +
+      (activeRunLog?.skippedCount ?? 0) +
+      (activeRunLog?.failedCount ?? 0);
+  const liveTotal = liveProgress?.totalRecords;
 
   const applyFrequency = (key: string, preset: FrequencyPreset | null) => {
     setFrequencyChoice(key);
@@ -460,36 +464,23 @@ export default function ScheduleTab() {
         ))}
       </div>
 
-      <div className="grid items-start gap-5 xl:grid-cols-2">
+      <div className="space-y-5">
         <Card size="sm" className="min-w-0">
           <CardHeader>
             <div className="flex items-start gap-3">
               <span className="bg-muted text-muted-foreground flex size-10 shrink-0 items-center justify-center rounded-xl">
                 <Play className="size-4.5" aria-hidden="true" />
               </span>
-              <div className="space-y-1">
-                <CardTitle>Run manually</CardTitle>
-                <CardDescription>
+              <div className="space-y-0.5">
+                <CardTitle className="text-sm font-semibold">
+                  Run manually
+                </CardTitle>
+                <CardDescription className="text-xs leading-tight">
                   Sync data now without changing the automatic schedule.
                 </CardDescription>
               </div>
             </div>
             <CardAction className="flex flex-wrap items-center gap-2">
-              {isSyncing && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleStop}
-                  disabled={stopping}
-                >
-                  {stopping ? (
-                    <RefreshCw className="animate-spin" />
-                  ) : (
-                    <Square />
-                  )}
-                  {stopping ? 'Stopping…' : 'Stop sync'}
-                </Button>
-              )}
               {runLogs[0]?.bullmqJobId && queued && !isSyncing && (
                 <Button
                   variant="ghost"
@@ -514,21 +505,6 @@ export default function ScheduleTab() {
             </CardAction>
           </CardHeader>
           <CardContent className="space-y-4">
-            {(activeRunLog?.status === 'running' || isSyncing) && (
-              <div className="bg-muted/30 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-4xl border px-4 py-3 text-xs">
-                <StatusBadge status="running" size="sm" />
-                <span className="text-muted-foreground">
-                  {liveProgress?.recordsProcessed ?? 0} records processed
-                </span>
-                {liveProgress?.etaSeconds != null && (
-                  <span className="text-muted-foreground">
-                    About {Math.max(1, Math.ceil(liveProgress.etaSeconds / 60))}{' '}
-                    min remaining
-                  </span>
-                )}
-              </div>
-            )}
-
             {!job.isEnabled && !isSyncing && (
               <Alert className="py-2.5">
                 <Info />
@@ -568,9 +544,23 @@ export default function ScheduleTab() {
               onGoToPipeline={() => handleTabChange('pipeline')}
               onClose={() => undefined}
               onRunNow={() => void handleRunNow()}
-              onLimitSyncDone={() => void beginTracking()}
-              onSyncAll={(range) =>
-                void handleSyncAll(() => handleTabChange('run-history'), range)
+              onLimitSyncDone={() => void refetch()}
+              onSyncAll={(range) => void handleSyncAll(undefined, range)}
+              runProgress={
+                activeRunLog?.status === 'running' || isSyncing ? (
+                  <SyncRunProgress
+                    totalRecords={liveTotal}
+                    processedRecords={liveProcessed}
+                    createdCount={activeRunLog?.createdCount}
+                    updatedCount={activeRunLog?.updatedCount}
+                    skippedCount={activeRunLog?.skippedCount}
+                    failedCount={activeRunLog?.failedCount}
+                    etaSeconds={liveProgress?.etaSeconds}
+                    description="Syncing all records in the selected date range."
+                    onStop={() => void handleStop()}
+                    stopping={stopping}
+                  />
+                ) : null
               }
             />
           </CardContent>
@@ -582,9 +572,11 @@ export default function ScheduleTab() {
               <span className="bg-muted text-muted-foreground flex size-10 shrink-0 items-center justify-center rounded-xl">
                 <CalendarClock className="size-4.5" aria-hidden="true" />
               </span>
-              <div className="space-y-1">
-                <CardTitle>Automatic schedule</CardTitle>
-                <CardDescription>
+              <div className="space-y-0.5">
+                <CardTitle className="text-sm font-semibold">
+                  Automatic schedule
+                </CardTitle>
+                <CardDescription className="text-xs leading-tight">
                   Let Synkazo run this job automatically.
                 </CardDescription>
               </div>

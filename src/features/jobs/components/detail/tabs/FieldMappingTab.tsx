@@ -319,6 +319,12 @@ export default function FieldMappingTab() {
 
   const handleMappingsChange = (newMappings: ConsolidatedMapping[]) => {
     setFieldMappings(newMappings);
+    // Keep the defaults tab on the same current structure. Auto Mapping and
+    // manual mapping edits otherwise leave it holding the previous snapshot,
+    // so its first policy change can be saved as a constant-only payload.
+    setDefaultMappings((currentDefaults) =>
+      mergeDefaultConfiguration(newMappings, currentDefaults),
+    );
     setMappingDirty(true);
     setSaved(false);
     // Cleared everything (via "Clear all" or deleting the last row one by one) —
@@ -328,6 +334,12 @@ export default function FieldMappingTab() {
 
   const handleDefaultsChange = (newMappings: ConsolidatedMapping[]) => {
     setDefaultMappings(newMappings);
+    // Default policies are metadata on the current mapping draft, not a
+    // separate structure. Reflect them in the mapping tab without marking a
+    // structural mapping edit dirty.
+    setFieldMappings((currentMappings) =>
+      mergeDefaultConfiguration(currentMappings, newMappings),
+    );
     setDefaultsDirty(true);
     setSaved(false);
   };
@@ -560,7 +572,7 @@ export default function FieldMappingTab() {
 
       if (activeWorkspaceTab === 'default-mapping') {
         const payload = mergeDefaultConfiguration(
-          savedMappingsRef.current,
+          fieldMappings,
           defaultMappings,
         );
         const didSave = await persistMappings(
@@ -568,9 +580,10 @@ export default function FieldMappingTab() {
           'Default settings saved successfully.',
         );
         if (!didSave) return;
+        setFieldMappings(cloneMappings(payload));
         setDefaultMappings(cloneMappings(payload));
+        setMappingDirty(false);
         setDefaultsDirty(false);
-        if (!mappingDirty) setFieldMappings(cloneMappings(payload));
         return;
       }
 

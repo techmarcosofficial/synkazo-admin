@@ -809,12 +809,7 @@ export const CreateJobForm = forwardRef<
       if (onCreated) {
         onCreated(job.id);
       } else {
-        navigate(`/projects/${projectId}/jobs/${job.id}?tab=field-mapping`, {
-          state: {
-            jobBackTo: `/projects/${projectId}?tab=sync-rules`,
-            jobBackLabel: 'Back to Sync Jobs',
-          },
-        });
+        navigate(`/projects/${projectId}?tab=sync-rules`);
       }
     } catch (err) {
       const e = err as { response?: { data?: { message?: string } } };
@@ -946,12 +941,7 @@ export const CreateJobForm = forwardRef<
       if (onCreated) {
         onCreated(jobId!);
       } else {
-        navigate(`/projects/${projectId}/jobs/${jobId}`, {
-          state: {
-            jobBackTo: `/projects/${projectId}?tab=sync-rules`,
-            jobBackLabel: 'Back to Sync Jobs',
-          },
-        });
+        navigate(`/projects/${projectId}?tab=sync-rules`);
       }
     } catch (err) {
       const e = err as { response?: { data?: { message?: string } } };

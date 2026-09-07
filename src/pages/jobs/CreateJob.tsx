@@ -13,14 +13,7 @@ export default function CreateJob() {
       projectId={projectId!}
       open
       onClose={goBack}
-      onCreated={(jobId) =>
-        navigate(`/projects/${projectId}/jobs/${jobId}?tab=field-mapping`, {
-          state: {
-            jobBackTo: `/projects/${projectId}?tab=sync-rules`,
-            jobBackLabel: 'Back to Sync Jobs',
-          },
-        })
-      }
+      onCreated={() => navigate(`/projects/${projectId}?tab=sync-rules`)}
     />
   );
 }
