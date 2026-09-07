@@ -16,6 +16,7 @@ import { consumePendingPlan, savePendingPlan } from '@/lib/pendingPlan';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { showToast } from '@/lib/toast';
 import { tokenStorage } from '@/lib/tokenStorage';
+import { authPagesSettingsApi } from '@/api/auth-pages-settings';
 
 export default function Login() {
   const { login, currentUser, isLoading } = useSynkazoAuth();
@@ -29,6 +30,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [registrationEnabled, setRegistrationEnabled] = useState(true);
 
   // Only ever a same-origin path — an absolute URL here would be an open redirect.
   const rawRedirect = new URLSearchParams(window.location.search).get(
@@ -51,6 +53,30 @@ export default function Login() {
         interval: params.get('interval') === 'year' ? 'year' : 'month',
       });
     }
+  }, []);
+
+  // Fetch auth pages settings to check if registration is enabled
+  useEffect(() => {
+    let isMounted = true;
+
+    authPagesSettingsApi
+      .get()
+      .then((settings) => {
+        if (isMounted) {
+          setRegistrationEnabled(settings.register);
+        }
+      })
+      .catch((err) => {
+        // On error or no response, default to showing the registration link (enabled)
+        if (isMounted) {
+          console.error('Failed to fetch auth pages settings:', err);
+          setRegistrationEnabled(true);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const resumeTarget = () => {
@@ -201,15 +227,18 @@ export default function Login() {
         </FieldGroup>
       </form>
 
-      <p className="text-muted-foreground mt-6 text-sm">
-        Don't have an account?{' '}
-        <Link
-          to="/register"
-          className="text-primary font-semibold hover:underline"
-        >
-          Create one free
-        </Link>
-      </p>
+      {/* Registration link hidden when registration is disabled */}
+      {registrationEnabled && (
+        <p className="text-muted-foreground mt-6 text-sm">
+          Don't have an account?{' '}
+          <Link
+            to="/register"
+            className="text-primary font-semibold hover:underline"
+          >
+            Create one free
+          </Link>
+        </p>
+      )}
     </SplitAuthLayout>
   );
 }
