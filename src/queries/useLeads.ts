@@ -37,3 +37,23 @@ export function useUpdateLeadMutation() {
       queryClient.invalidateQueries({ queryKey: queryKeys.leads.all }),
   });
 }
+
+export function useLeadNotificationSettingsQuery(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.leads.notificationSettings,
+    queryFn: leadsApi.getNotificationSettings,
+    enabled,
+  });
+}
+
+export function useUpdateLeadNotificationSettingsMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (additionalRecipients: string[]) =>
+      leadsApi.updateNotificationSettings(additionalRecipients),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.leads.notificationSettings,
+      }),
+  });
+}

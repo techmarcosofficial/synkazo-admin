@@ -60,6 +60,7 @@ export const queryKeys = {
     all: ['leads'] as const,
     list: (page: number, limit: number, status?: string, search?: string) =>
       ['leads', page, limit, status ?? 'all', search ?? ''] as const,
+    notificationSettings: ['leads', 'notification-settings'] as const,
   },
   activity: {
     list: (projectId: string, page: number, limit: number) =>

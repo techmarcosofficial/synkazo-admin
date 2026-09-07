@@ -1,5 +1,5 @@
-import { Clock, Eye, Megaphone, RefreshCw } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Clock, Eye, Mail, Megaphone, Plus, RefreshCw, X } from 'lucide-react';
+import { type FormEvent, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import EmptyState from '@/components/shared/EmptyState';
@@ -10,6 +10,15 @@ import PaginationBar from '@/components/shared/PaginationBar';
 import SkeletonTable from '@/components/shared/skeletons/SkeletonTable';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -34,7 +43,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
-import { useLeadsQuery, useUpdateLeadMutation } from '@/queries/useLeads';
+import {
+  useLeadNotificationSettingsQuery,
+  useLeadsQuery,
+  useUpdateLeadMutation,
+  useUpdateLeadNotificationSettingsMutation,
+} from '@/queries/useLeads';
 import type { Lead, LeadStatus } from '@/types/lead';
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
@@ -52,6 +66,8 @@ const STATUS_CLASSES: Record<LeadStatus, string> = {
   closed: 'bg-muted text-muted-foreground',
   spam: 'bg-destructive/10 text-destructive',
 };
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function StatusBadge({ status }: { status: LeadStatus }) {
   return (
@@ -191,12 +207,201 @@ function LeadDrawer({
   );
 }
 
+function LeadNotificationSettingsDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const settingsQuery = useLeadNotificationSettingsQuery(open);
+  const updateSettings = useUpdateLeadNotificationSettingsMutation();
+  const [additionalRecipients, setAdditionalRecipients] = useState<string[]>(
+    [],
+  );
+  const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
+
+  useEffect(() => {
+    if (!open || !settingsQuery.data) return;
+    setAdditionalRecipients(settingsQuery.data.additionalRecipients);
+    setEmail('');
+    setEmailError('');
+  }, [open, settingsQuery.data]);
+
+  const addRecipient = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const recipient = email.trim().toLowerCase();
+
+    if (!EMAIL_PATTERN.test(recipient)) {
+      setEmailError('Enter a valid email address.');
+      return;
+    }
+    if (settingsQuery.data?.defaultRecipients.includes(recipient)) {
+      setEmailError('This active Super Admin already receives notifications.');
+      return;
+    }
+    if (additionalRecipients.includes(recipient)) {
+      setEmailError('This email address has already been added.');
+      return;
+    }
+    if (additionalRecipients.length >= 20) {
+      setEmailError('You can add up to 20 notification recipients.');
+      return;
+    }
+
+    setAdditionalRecipients((current) => [...current, recipient].sort());
+    setEmail('');
+    setEmailError('');
+  };
+
+  const save = async () => {
+    try {
+      await updateSettings.mutateAsync(additionalRecipients);
+      toast.success('Lead notification recipients updated');
+      onOpenChange(false);
+    } catch {
+      toast.error(
+        'Could not update notification recipients. Please try again.',
+      );
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent size="lg">
+        <DialogHeader>
+          <DialogTitle>Lead notification emails</DialogTitle>
+          <DialogDescription>
+            Active Super Admins receive new leads only when no additional
+            recipients are configured below.
+          </DialogDescription>
+        </DialogHeader>
+
+        {settingsQuery.isLoading ? (
+          <p className="text-muted-foreground text-sm">Loading recipients…</p>
+        ) : settingsQuery.isError ? (
+          <p className="text-destructive text-sm">
+            Could not load notification recipients. Close this dialog and try
+            again.
+          </p>
+        ) : (
+          <div className="space-y-5">
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Fallback recipients</p>
+              {settingsQuery.data?.defaultRecipients.length ? (
+                <ul className="text-muted-foreground space-y-1 text-sm">
+                  {settingsQuery.data.defaultRecipients.map((recipient) => (
+                    <li key={recipient}>{recipient}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-muted-foreground text-sm">
+                  No active Super Admin email addresses are available for the
+                  fallback list.
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Notification recipients</p>
+              <form className="flex gap-2" onSubmit={addRecipient}>
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={(event) => {
+                    setEmail(event.target.value);
+                    setEmailError('');
+                  }}
+                  placeholder="name@company.com"
+                  aria-describedby={
+                    emailError ? 'lead-recipient-error' : undefined
+                  }
+                  aria-invalid={Boolean(emailError)}
+                />
+                <Button
+                  type="submit"
+                  variant="outline"
+                  disabled={!email.trim()}
+                >
+                  <Plus />
+                  Add
+                </Button>
+              </form>
+              {emailError && (
+                <p
+                  id="lead-recipient-error"
+                  className="text-destructive text-sm"
+                >
+                  {emailError}
+                </p>
+              )}
+
+              {additionalRecipients.length > 0 ? (
+                <ul className="space-y-2" aria-label="Notification recipients">
+                  {additionalRecipients.map((recipient) => (
+                    <li
+                      key={recipient}
+                      className="bg-muted flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm"
+                    >
+                      <span className="min-w-0 truncate">{recipient}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        className="shrink-0"
+                        onClick={() =>
+                          setAdditionalRecipients((current) =>
+                            current.filter(
+                              (emailAddress) => emailAddress !== recipient,
+                            ),
+                          )
+                        }
+                        aria-label={`Remove ${recipient}`}
+                      >
+                        <X />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-muted-foreground text-sm">
+                  No notification recipients configured. Active Super Admins
+                  will receive new leads.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={save}
+            disabled={
+              settingsQuery.isLoading ||
+              settingsQuery.isError ||
+              updateSettings.isPending
+            }
+          >
+            {updateSettings.isPending ? 'Saving…' : 'Save changes'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function MarketingPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<LeadStatus | 'all'>('all');
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [notificationSettingsOpen, setNotificationSettingsOpen] =
+    useState(false);
   const leadsQuery = useLeadsQuery(
     page,
     pageSize,
@@ -216,16 +421,25 @@ export default function MarketingPage() {
         title="Marketing"
         description="Review demo requests submitted through the marketing website."
         actions={
-          <Button
-            variant="outline"
-            onClick={() => leadsQuery.refetch()}
-            disabled={leadsQuery.isFetching}
-          >
-            <RefreshCw
-              className={cn(leadsQuery.isFetching && 'animate-spin')}
-            />
-            Refresh
-          </Button>
+          <>
+            <Button
+              variant="outline"
+              onClick={() => setNotificationSettingsOpen(true)}
+            >
+              <Mail />
+              Lead email settings
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => leadsQuery.refetch()}
+              disabled={leadsQuery.isFetching}
+            >
+              <RefreshCw
+                className={cn(leadsQuery.isFetching && 'animate-spin')}
+              />
+              Refresh
+            </Button>
+          </>
         }
       />
       {leadsQuery.isLoading ? (
@@ -352,6 +566,10 @@ export default function MarketingPage() {
         </Card>
       )}
       <LeadDrawer lead={selectedLead} onClose={() => setSelectedLead(null)} />
+      <LeadNotificationSettingsDialog
+        open={notificationSettingsOpen}
+        onOpenChange={setNotificationSettingsOpen}
+      />
     </div>
   );
 }
