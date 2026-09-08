@@ -281,7 +281,9 @@ export default function CompanyOwnerSection({
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-sm font-semibold">Company-Owner Sync</span>
+              <span className="text-sm font-semibold">
+                Company-Owner Association
+              </span>
               <Button
                 variant="ghost"
                 size="icon-sm"
@@ -291,12 +293,6 @@ export default function CompanyOwnerSection({
                 {collapsed ? <ChevronDown /> : <ChevronUp />}
               </Button>
             </div>
-            <p className="text-muted-foreground mt-0.5 max-w-md text-xs">
-              {isDataforma
-                ? 'Associate Dataforma customers with their matching HubSpot company owners, using your configured field mappings.'
-                : 'Associate ServiceTitan customers with their matching HubSpot company owners.'}
-            </p>
-
             {runAllMutation.isPending ? (
               <p className="text-muted-foreground mt-2 text-xs">
                 Association is running…
@@ -339,17 +335,6 @@ export default function CompanyOwnerSection({
           </div>
         </div>
 
-        <div className="px-4 pb-3">
-          <Alert>
-            <Info />
-            <AlertDescription>
-              {isDataforma
-                ? 'Each mapping resolves a Dataforma field (already a real, matched email address) to an active HubSpot owner by email. A source email that has no active HubSpot owner is skipped, not treated as a failure.'
-                : 'Requires the appropriate Sales Person custom field to be configured in ServiceTitan. Results may vary if the field is missing or not configured correctly.'}
-            </AlertDescription>
-          </Alert>
-        </div>
-
         {isDataforma && <DataformaOwnerMappingsEditor projectId={projectId} />}
 
         <div className="flex items-center gap-2 px-4 pb-3">
@@ -370,6 +355,18 @@ export default function CompanyOwnerSection({
 
         <Collapsible open={!collapsed}>
           <CollapsibleContent>
+            {!collapsed && (
+              <div className="px-4 pt-4">
+                <Alert>
+                  <Info />
+                  <AlertDescription>
+                    {isDataforma
+                      ? 'Each mapping resolves a Dataforma field (already a real, matched email address) to an active HubSpot owner by email. A source email that has no active HubSpot owner is skipped, not treated as a failure.'
+                      : 'Requires the appropriate Sales Person custom field to be configured in ServiceTitan. Results may vary if the field is missing or not configured correctly.'}
+                  </AlertDescription>
+                </Alert>
+              </div>
+            )}
             {logsQuery.isError ? (
               <div className="border-t p-4">
                 <ErrorState onRetry={() => logsQuery.refetch()} />
