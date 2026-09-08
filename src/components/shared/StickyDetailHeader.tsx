@@ -16,6 +16,16 @@ interface StickyDetailHeaderProps {
 /**
  * Two independently sticky rows for detail pages. The header overlaps the
  * back action slightly so its card surface remains visually in front.
+ *
+ * Both rows carry an opaque backdrop bled out to the page gutter. A card's
+ * box-shadow paints outside its own box, so a card scrolling behind these rows
+ * used to leak its shadow into the strip either side of them — the rows' own
+ * background only spans the content width. The bleed matches the gutter at each
+ * breakpoint (16/24/32px), which covers the shadow's blur without ever
+ * exceeding the padding box, so it cannot cause horizontal overflow. It is
+ * paint only: absolutely positioned and negatively stacked, so offsets, sizes
+ * and sticky behaviour are untouched, and each row's own shadow still paints
+ * over it.
  */
 export default function StickyDetailHeader({
   backLabel,
@@ -88,7 +98,7 @@ export default function StickyDetailHeader({
     >
       <div
         data-slot="sticky-detail-back"
-        className="bg-background before:bg-background sticky top-(--detail-sticky-top) z-20 flex h-(--detail-back-row-height) items-start before:pointer-events-none before:absolute before:inset-x-0 before:bottom-full before:hidden before:h-[calc(var(--detail-sticky-top)-var(--app-shell-header-height))] before:content-[''] data-[stuck=true]:before:block"
+        className="bg-background before:bg-background after:bg-background sticky top-(--detail-sticky-top) z-20 flex h-(--detail-back-row-height) items-start before:pointer-events-none before:absolute before:-inset-x-4 before:bottom-full before:hidden before:h-[calc(var(--detail-sticky-top)-var(--app-shell-header-height))] before:content-[''] after:pointer-events-none after:absolute after:-inset-x-4 after:inset-y-0 after:-z-10 after:content-[''] data-[stuck=true]:before:block sm:before:-inset-x-6 sm:after:-inset-x-6 lg:before:-inset-x-8 lg:after:-inset-x-8"
       >
         <Button
           asChild
@@ -104,7 +114,7 @@ export default function StickyDetailHeader({
 
       <div
         data-slot="sticky-detail-header"
-        className="sticky top-[calc(var(--detail-sticky-top)+var(--detail-back-row-height)-var(--detail-header-overlap))] z-30 -mt-(--detail-header-overlap) transition-[top] duration-200 ease-out data-[stuck=true]:top-(--detail-sticky-top)"
+        className="before:bg-background sticky top-[calc(var(--detail-sticky-top)+var(--detail-back-row-height)-var(--detail-header-overlap))] z-30 -mt-(--detail-header-overlap) transition-[top] duration-200 ease-out before:pointer-events-none before:absolute before:-inset-x-4 before:inset-y-0 before:-z-10 before:content-[''] data-[stuck=true]:top-(--detail-sticky-top) sm:before:-inset-x-6 lg:before:-inset-x-8"
       >
         {header}
       </div>
