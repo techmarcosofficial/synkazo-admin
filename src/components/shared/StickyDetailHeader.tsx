@@ -114,7 +114,7 @@ export default function StickyDetailHeader({
 
       <div
         data-slot="sticky-detail-header"
-        className="before:bg-background sticky top-[calc(var(--detail-sticky-top)+var(--detail-back-row-height)-var(--detail-header-overlap))] z-30 -mt-(--detail-header-overlap) transition-[top] duration-200 ease-out before:pointer-events-none before:absolute before:-inset-x-4 before:inset-y-0 before:-z-10 before:content-[''] data-[stuck=true]:top-(--detail-sticky-top) sm:before:-inset-x-6 lg:before:-inset-x-8"
+        className="before:bg-background before:rounded-full sticky top-[calc(var(--detail-sticky-top)+var(--detail-back-row-height)-var(--detail-header-overlap))] z-30 -mt-(--detail-header-overlap) transition-[top] duration-200 ease-out before:pointer-events-none before:absolute before:-inset-x-4 before:inset-y-0 before:-z-10 before:content-[''] data-[stuck=true]:top-(--detail-sticky-top) sm:before:-inset-x-6 lg:before:-inset-x-8"
       >
         {header}
       </div>
