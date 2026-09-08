@@ -65,12 +65,12 @@ import { showToast } from '@/lib/toast';
 import { useEntitlements } from '@/queries/useEntitlements';
 import { usePriorityQueueQuery } from '@/queries/usePriorityQueue';
 
-interface IntervalConfig {
+export interface IntervalConfig {
   amount: number;
   unit: 'minutes' | 'hours';
 }
 
-interface ScheduleDraft {
+export interface ScheduleDraft {
   mode: string;
   times: string[];
   days: number[];
@@ -133,6 +133,30 @@ export function hasScheduleDefinition(schedule: {
     return Boolean(schedule.oneTimeAt);
   }
   return Boolean(schedule.cronExpression);
+}
+
+export function getIntervalMinutes(interval: IntervalConfig) {
+  return interval.unit === 'hours' ? interval.amount * 60 : interval.amount;
+}
+
+/**
+ * Only send the schedule values that apply to the selected mode. Clearing the
+ * inactive values avoids a previous daily/day-specific configuration leaking
+ * into an interval update (and vice versa).
+ */
+export function buildScheduleUpdatePayload(
+  draft: ScheduleDraft,
+  timezone: string,
+) {
+  return {
+    scheduleMode: draft.mode,
+    scheduleTimes: draft.mode !== 'interval' ? draft.times : null,
+    scheduleDays: draft.mode === 'day_specific' ? draft.days : null,
+    intervalMinutes:
+      draft.mode === 'interval' ? getIntervalMinutes(draft.interval) : null,
+    timezone,
+    cronExpression: null,
+  };
 }
 
 function capitalizeFirst(value: string): string {
@@ -238,8 +262,7 @@ export default function ScheduleTab() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const getIntervalMinutes = () =>
-    interval.unit === 'hours' ? interval.amount * 60 : interval.amount;
+  const getCurrentIntervalMinutes = () => getIntervalMinutes(interval);
 
   const currentDraft = useMemo<ScheduleDraft>(
     () => ({ mode, times, days, interval }),
@@ -264,7 +287,7 @@ export default function ScheduleTab() {
   );
   const [frequencyChoice, setFrequencyChoice] = useState<string | null>(null);
   const frequency =
-    frequencyChoice ?? matchFrequency(mode, getIntervalMinutes(), times);
+    frequencyChoice ?? matchFrequency(mode, getCurrentIntervalMinutes(), times);
   const showEditor = canCustomise && (!hasPresets || frequency === 'custom');
   const minIntervalMinutes = entitlements.minIntervalMinutes;
   const minIntervalAmount =
@@ -423,7 +446,10 @@ export default function ScheduleTab() {
       toast.error('Select at least one day.');
       return;
     }
-    if (mode === 'interval' && getIntervalMinutes() < minIntervalMinutes) {
+    if (
+      mode === 'interval' &&
+      getCurrentIntervalMinutes() < minIntervalMinutes
+    ) {
       toast.error(
         `Interval must be at least ${minIntervalMinutes} minute${minIntervalMinutes === 1 ? '' : 's'}.`,
       );
@@ -432,14 +458,11 @@ export default function ScheduleTab() {
 
     setSaving(true);
     try {
-      await jobsApi.updateJob(projectId, job.id, {
-        scheduleMode: mode,
-        scheduleTimes: mode !== 'interval' ? times : null,
-        scheduleDays: mode === 'day_specific' ? days : null,
-        intervalMinutes: mode === 'interval' ? getIntervalMinutes() : null,
-        timezone: BROWSER_TIMEZONE,
-        cronExpression: null,
-      });
+      await jobsApi.updateJob(
+        projectId,
+        job.id,
+        buildScheduleUpdatePayload(currentDraft, BROWSER_TIMEZONE),
+      );
       setSavedSnapshot(currentSnapshot);
       setSaved(true);
       window.setTimeout(() => setSaved(false), 2000);

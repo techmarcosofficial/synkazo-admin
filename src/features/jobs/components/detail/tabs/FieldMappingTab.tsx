@@ -89,7 +89,33 @@ const cloneMappings = (mappings: ConsolidatedMapping[]) =>
 const cloneConditions = (conditions: ExcludeCondition[]) =>
   JSON.parse(JSON.stringify(conditions)) as ExcludeCondition[];
 
-type MappingWorkspaceTab = 'field-mapping' | 'default-mapping' | 'skip-record';
+export type MappingWorkspaceTab =
+  | 'field-mapping'
+  | 'default-mapping'
+  | 'skip-record';
+
+export function getWorkspaceDirtyState(
+  activeWorkspaceTab: MappingWorkspaceTab,
+  {
+    mappingDirty,
+    defaultsDirty,
+    conditionsDirty,
+  }: {
+    mappingDirty: boolean;
+    defaultsDirty: boolean;
+    conditionsDirty: boolean;
+  },
+) {
+  const anyDirty = mappingDirty || defaultsDirty || conditionsDirty;
+  const activeDirty =
+    activeWorkspaceTab === 'field-mapping'
+      ? mappingDirty
+      : activeWorkspaceTab === 'default-mapping'
+        ? defaultsDirty
+        : conditionsDirty;
+
+  return { anyDirty, activeDirty };
+}
 
 const DEFAULT_CONFIG_KEYS = [
   'destOnEmpty',
@@ -639,16 +665,14 @@ export default function FieldMappingTab() {
       (item.currentOnEmpty === 'default' &&
         !isValidDefaultValue(item.field.type, item.currentDefaultValue)),
   ).length;
-  const anyDirty = mappingDirty || defaultsDirty || conditionsDirty;
+  const { anyDirty, activeDirty } = getWorkspaceDirtyState(activeWorkspaceTab, {
+    mappingDirty,
+    defaultsDirty,
+    conditionsDirty,
+  });
   const displayedConditionsError =
     conditionsError ??
     (conditionsDirty ? validateExcludeConditions(excludeConditions) : null);
-  const activeDirty =
-    activeWorkspaceTab === 'field-mapping'
-      ? mappingDirty
-      : activeWorkspaceTab === 'default-mapping'
-        ? defaultsDirty
-        : conditionsDirty;
   const saveLabel =
     activeWorkspaceTab === 'field-mapping'
       ? 'Save mappings'
