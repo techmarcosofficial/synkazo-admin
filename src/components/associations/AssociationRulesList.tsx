@@ -741,13 +741,6 @@ export default function AssociationRulesList({
 
   return (
     <div className="space-y-6">
-      {showCompanyOwnerSection && (
-        <CompanyOwnerSection
-          projectId={projectId}
-          sourcePlatform={ownerSourcePlatform ?? 'servicetitan'}
-        />
-      )}
-
       <div>
         <h3 className="text-sm font-semibold">Association Rules</h3>
         <p className="text-muted-foreground mt-0.5 text-xs">
@@ -756,7 +749,26 @@ export default function AssociationRulesList({
         </p>
       </div>
 
-      {rules.length === 0 ? (
+      {(showCompanyOwnerSection || rules.length > 0) && (
+        <ListStack>
+          {showCompanyOwnerSection && (
+            <CompanyOwnerSection
+              projectId={projectId}
+              sourcePlatform={ownerSourcePlatform ?? 'servicetitan'}
+            />
+          )}
+          {rules.map((rule) => (
+            <RuleCard
+              key={rule.id}
+              rule={rule}
+              projectId={projectId}
+              onRefresh={load}
+            />
+          ))}
+        </ListStack>
+      )}
+
+      {rules.length === 0 && (
         <EmptyState
           icon={Link2}
           title="No association rules yet"
@@ -767,17 +779,6 @@ export default function AssociationRulesList({
             icon: Plus,
           }}
         />
-      ) : (
-        <ListStack>
-          {rules.map((rule) => (
-            <RuleCard
-              key={rule.id}
-              rule={rule}
-              projectId={projectId}
-              onRefresh={load}
-            />
-          ))}
-        </ListStack>
       )}
 
       {showCreate && (
