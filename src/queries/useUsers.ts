@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { queryKeys } from './queryKeys';
 
+import { authApi } from '@/api/auth';
 import type { UpdateUserPayload } from '@/api/users';
 import { usersApi } from '@/api/users';
 import type { User } from '@/types';
@@ -47,8 +48,23 @@ export function useUserProjectAccessQuery(
 }
 
 export function useUpdateMeMutation() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: Partial<User>) => usersApi.updateMe(data),
+    // Keeps any member list showing this user in step. `currentUser` itself
+    // lives in SynkazoAuthProvider's own state rather than the query cache, so
+    // callers that render it also await refreshUser() — without that, a saved
+    // value only reappeared after a full reload.
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+    },
+  });
+}
+
+export function useChangePasswordMutation() {
+  return useMutation({
+    mutationFn: (payload: { currentPassword: string; newPassword: string }) =>
+      authApi.changePassword(payload),
   });
 }
 

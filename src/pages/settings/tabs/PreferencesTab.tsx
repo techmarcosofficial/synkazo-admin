@@ -1,12 +1,6 @@
 import { Bell, Layers3, Monitor, Moon, PanelTop, Sun } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { toast } from 'sonner';
 
-import BillingSection from './BillingSection';
-import ProfileSection from './ProfileSection';
-
-import PageHeader from '@/components/shared/PageHeader';
 import { useTheme } from '@/components/theme-provider';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,19 +12,11 @@ import {
 } from '@/components/ui/card';
 import { FieldLabel } from '@/components/ui/field';
 import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
+import { showToast } from '@/lib/toast';
 import { useUpdateMeMutation } from '@/queries/useUsers';
 import { useDisplayPreferencesStore } from '@/stores/useDisplayPreferencesStore';
-import type { User as UserType } from '@/types';
-
-type UserWithNotifPrefs = UserType & {
-  notifySyncCompleted?: boolean;
-  notifySyncFailed?: boolean;
-  notify_sync_completed?: boolean;
-  notify_sync_failed?: boolean;
-};
 
 type NotifPrefs = { notifySyncCompleted: boolean; notifySyncFailed: boolean };
 
@@ -40,11 +26,33 @@ const THEME_OPTIONS = [
   { id: 'system', label: 'System', icon: Monitor },
 ] as const;
 
-function PreferencesSection({
-  currentUser,
-}: {
-  currentUser: UserWithNotifPrefs | null;
-}) {
+const NOTIFICATION_ROWS: {
+  label: string;
+  desc: string;
+  field: keyof NotifPrefs;
+}[] = [
+  {
+    label: 'Sync completed',
+    desc: 'Email when a sync job finishes successfully',
+    field: 'notifySyncCompleted',
+  },
+  {
+    label: 'Sync failed',
+    desc: 'Email when a sync job fails or encounters errors',
+    field: 'notifySyncFailed',
+  },
+];
+
+/**
+ * Personal preferences — everything here affects only the signed-in user.
+ *
+ * Theme, Default View and Layout Style apply immediately (they are client-only
+ * state in the theme provider and the display-preferences store), so `isDirty`
+ * deliberately tracks the notification switches alone: they are the only fields
+ * the Save button persists. The caption below the button says so.
+ */
+export default function PreferencesTab() {
+  const { currentUser } = useSynkazoAuth();
   const { theme, setTheme } = useTheme();
   const defaultView = useDisplayPreferencesStore((state) => state.defaultView);
   const setDefaultView = useDisplayPreferencesStore(
@@ -63,19 +71,12 @@ function PreferencesSection({
   const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
-    if (currentUser) {
-      setPrefs({
-        notifySyncCompleted:
-          currentUser.notifySyncCompleted ??
-          currentUser.notify_sync_completed ??
-          false,
-        notifySyncFailed:
-          currentUser.notifySyncFailed ??
-          currentUser.notify_sync_failed ??
-          true,
-      });
-      setIsDirty(false);
-    }
+    if (!currentUser) return;
+    setPrefs({
+      notifySyncCompleted: currentUser.notifySyncCompleted ?? false,
+      notifySyncFailed: currentUser.notifySyncFailed ?? true,
+    });
+    setIsDirty(false);
   }, [currentUser]);
 
   const updatePref = (field: keyof NotifPrefs, value: boolean) => {
@@ -88,26 +89,13 @@ function PreferencesSection({
       await updateMeMutation.mutateAsync({
         notifySyncCompleted: prefs.notifySyncCompleted,
         notifySyncFailed: prefs.notifySyncFailed,
-      } as Partial<UserType>);
+      });
       setIsDirty(false);
-      toast.success('Preferences saved');
+      showToast.success('Preferences saved');
     } catch {
-      toast.error('Failed to save preferences');
+      showToast.error('Failed to save preferences');
     }
   };
-
-  const rows: { label: string; desc: string; field: keyof NotifPrefs }[] = [
-    {
-      label: 'Sync completed',
-      desc: 'Email when a sync job finishes successfully',
-      field: 'notifySyncCompleted',
-    },
-    {
-      label: 'Sync failed',
-      desc: 'Email when a sync job fails or encounters errors',
-      field: 'notifySyncFailed',
-    },
-  ];
 
   return (
     <Card>
@@ -123,7 +111,7 @@ function PreferencesSection({
         <div className="space-y-2">
           <FieldLabel>Notifications</FieldLabel>
           <div className="divide-y">
-            {rows.map((row) => (
+            {NOTIFICATION_ROWS.map((row) => (
               <div
                 key={row.field}
                 className="flex items-center justify-between py-3"
@@ -142,7 +130,7 @@ function PreferencesSection({
         </div>
 
         <div className="space-y-2">
-          <FieldLabel>Theme</FieldLabel>
+          <FieldLabel>Appearance</FieldLabel>
           <ToggleGroup
             type="single"
             value={theme}
@@ -169,7 +157,7 @@ function PreferencesSection({
             onValueChange={(v) => v && setDefaultView(v as typeof defaultView)}
             variant="outline"
           >
-            <ToggleGroupItem value="card">Card</ToggleGroupItem>
+            <ToggleGroupItem value="card">Cards</ToggleGroupItem>
             <ToggleGroupItem value="table">List</ToggleGroupItem>
           </ToggleGroup>
         </div>
@@ -206,68 +194,11 @@ function PreferencesSection({
             Save Preferences
           </Button>
           <p className="text-muted-foreground text-xs">
-            Theme, Default View, and Layout Style apply immediately.
+            Appearance, Default View, and Layout Style apply immediately.
             Notification changes are saved when you click Save.
           </p>
         </div>
       </CardContent>
     </Card>
-  );
-}
-
-const SECTIONS = ['settings', 'profile', 'billing'] as const;
-type Section = (typeof SECTIONS)[number];
-
-export default function SettingsPage() {
-  const { currentUser, hasRole } = useSynkazoAuth();
-  const canBilling = hasRole('org_admin');
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  const requested = searchParams.get('section');
-  const section: Section =
-    requested === 'billing' && !canBilling
-      ? 'settings'
-      : SECTIONS.includes(requested as Section)
-        ? (requested as Section)
-        : 'settings';
-
-  const handleSectionChange = (value: string) => {
-    const next = new URLSearchParams(searchParams);
-    next.set('section', value);
-    setSearchParams(next, { replace: true });
-  };
-
-  return (
-    <div className="flex-col gap-6">
-      <PageHeader
-        backTo={{ label: 'Back to Dashboard', to: '/dashboard' }}
-        title="Settings"
-        description="Manage your account, appearance, and organisation."
-      />
-
-      <Tabs value={section} onValueChange={handleSectionChange}>
-        <TabsList>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-          {canBilling && <TabsTrigger value="billing">Billing</TabsTrigger>}
-        </TabsList>
-
-        <TabsContent value="settings" className="pt-4">
-          <PreferencesSection currentUser={currentUser} />
-        </TabsContent>
-
-        <TabsContent value="profile" className="pt-4">
-          <ProfileSection
-            onManageBilling={() => handleSectionChange('billing')}
-          />
-        </TabsContent>
-
-        {canBilling && (
-          <TabsContent value="billing" className="pt-4">
-            <BillingSection />
-          </TabsContent>
-        )}
-      </Tabs>
-    </div>
   );
 }

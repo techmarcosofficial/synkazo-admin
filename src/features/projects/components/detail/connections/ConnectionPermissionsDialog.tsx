@@ -32,9 +32,9 @@ export default function ConnectionPermissionsDialog({
   onOpenChange,
 }: ConnectionPermissionsDialogProps) {
   const meta = PLATFORM_META[conn.platformId] ?? { label: conn.platformId };
-  const { currentUser } = useSynkazoAuth();
-  const canManageWebhooks =
-    currentUser?.role === 'org_admin' || currentUser?.role === 'super_admin';
+  const { hasRole } = useSynkazoAuth();
+  // Rank-based, so a role added above org_admin is included automatically.
+  const canManageWebhooks = hasRole('org_admin');
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<ConnectionPermissions | null>(null);
   const [error, setError] = useState<string | null>(null);

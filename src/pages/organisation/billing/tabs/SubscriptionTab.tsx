@@ -1,5 +1,7 @@
 import { Loader2 } from 'lucide-react';
 
+import SubscriptionHistory from './SubscriptionHistory';
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -206,6 +208,13 @@ export default function SubscriptionTab() {
           </CardContent>
         </Card>
       )}
+
+      {/* Subscription lifecycle events (created, plan changed, trial started,
+          cancelled). This used to be a sixth top-level billing tab called
+          "History", which sat confusingly beside "Payment History" — the two
+          differ by data source, not presentation. It belongs with the
+          subscription it describes. */}
+      <SubscriptionHistory />
     </div>
   );
 }

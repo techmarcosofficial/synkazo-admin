@@ -7,9 +7,8 @@ import { useSynkazoAuth } from '@/lib/synkazoAuth';
 export default function PageNotFound() {
   const location = useLocation();
   const pageName = location.pathname.substring(1);
-  const { currentUser } = useSynkazoAuth();
-  const isAdmin =
-    currentUser?.role === 'super_admin' || currentUser?.role === 'org_admin';
+  const { hasRole } = useSynkazoAuth();
+  const isAdmin = hasRole('org_admin');
 
   return (
     <div className="bg-background flex min-h-screen items-center justify-center p-6">

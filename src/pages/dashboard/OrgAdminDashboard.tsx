@@ -99,7 +99,7 @@ export default function OrgAdminDashboard() {
       description={`Organisation Admin · ${currentUser?.email}`}
       actions={
         <Button asChild>
-          <Link to="/invitations">
+          <Link to="/organization/invitations">
             <Mail /> Invite Member
           </Link>
         </Button>
@@ -219,7 +219,7 @@ export default function OrgAdminDashboard() {
               description="Invite your first editor to get started."
               action={
                 <Button asChild>
-                  <Link to="/invitations">
+                  <Link to="/organization/invitations">
                     <Mail /> Invite your first editor
                   </Link>
                 </Button>

@@ -201,7 +201,7 @@ export default function CheckoutPage() {
         ? `&redirect=${encodeURIComponent(safeRedirect)}`
         : '';
     navigate(
-      `/settings?section=billing&checkout=success${tourParam}${redirectParam}`,
+      `/organization/billing/overview?checkout=success${tourParam}${redirectParam}`,
     );
   };
 

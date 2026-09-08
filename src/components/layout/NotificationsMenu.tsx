@@ -104,7 +104,7 @@ function notificationLink(n: Notification): string {
     n.type === 'subscription_past_due' ||
     n.type === 'subscription_canceled'
   ) {
-    return '/settings?section=billing';
+    return '/organization/billing/overview';
   }
   return '/scheduler';
 }

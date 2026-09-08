@@ -9,21 +9,8 @@ import {
 
 import { Toaster } from '@/components/ui/sonner';
 import { queryClientInstance } from '@/lib/query-client';
+import { SETTINGS_SECTION } from '@/lib/sectionTabs';
 import { SynkazoAuthProvider, useSynkazoAuth } from '@/lib/synkazoAuth';
-
-// `/profile` and `/settings/billing` were merged into `/settings` (see SettingsPage's Tabs).
-// This keeps old bookmarks/links working by forwarding to the right tab, preserving any
-// query params (e.g. `?tab=payment`, `?checkout=success`) already on the URL.
-function SettingsSectionRedirect({
-  section,
-}: {
-  section: 'profile' | 'billing';
-}) {
-  const { search } = useLocation();
-  const params = new URLSearchParams(search);
-  params.set('section', section);
-  return <Navigate to={`/settings?${params.toString()}`} replace />;
-}
 
 // Global UI
 import ConfirmDialog from '@/components/shared/ConfirmDialog';
@@ -51,13 +38,23 @@ import OrgAdminDashboard from '@/pages/dashboard/OrgAdminDashboard';
 import CreateJob from '@/pages/jobs/CreateJob';
 import JobDetail from '@/pages/jobs/JobDetail';
 import Jobs from '@/pages/jobs/Jobs';
-import InvitationsPage from '@/pages/organisation/InvitationsPage';
-import OrganizationPage from '@/pages/organisation/OrganizationPage';
+import BillingLayout from '@/pages/organisation/billing/BillingLayout';
+import BillingOverviewTab from '@/pages/organisation/billing/tabs/BillingOverviewTab';
+import InvoicesTab from '@/pages/organisation/billing/tabs/InvoicesTab';
+import PaymentHistoryTab from '@/pages/organisation/billing/tabs/PaymentHistoryTab';
+import PaymentMethodsTab from '@/pages/organisation/billing/tabs/PaymentMethodsTab';
+import SubscriptionTab from '@/pages/organisation/billing/tabs/SubscriptionTab';
+import OrganizationLayout from '@/pages/organisation/OrganizationLayout';
 import SetupOrganisation from '@/pages/organisation/SetupOrganisation';
+import OrgGeneralTab from '@/pages/organisation/tabs/OrgGeneralTab';
+import OrgInvitationsTab from '@/pages/organisation/tabs/OrgInvitationsTab';
+import OrgMembersTab from '@/pages/organisation/tabs/OrgMembersTab';
 import ProjectConnections from '@/pages/projects/ProjectConnections';
 import ProjectDetail from '@/pages/projects/ProjectDetail';
 import SchedulerHealth from '@/pages/SchedulerHealth';
-import SettingsPage from '@/pages/settings/SettingsPage';
+import PreferencesTab from '@/pages/settings/tabs/PreferencesTab';
+import ProfileTab from '@/pages/settings/tabs/ProfileTab';
+import SecurityTab from '@/pages/settings/tabs/SecurityTab';
 import OrganisationsPage from '@/pages/superadmin/OrganisationsPage';
 import MarketingPage from '@/pages/superadmin/MarketingPage';
 import PlatformAuditPage from '@/pages/superadmin/PlatformAuditPage';
@@ -71,6 +68,8 @@ import ActiveSyncs from '@/pages/sync/ActiveSyncs';
 import LogsPage from '@/pages/sync/LogsPage';
 import WelcomeOnboarding from '@/pages/WelcomeOnboarding';
 import RoleGuard from '@/components/auth/RoleGuard';
+import SectionTabsLayout from '@/components/layout/SectionTabsLayout';
+import LegacyRedirect from '@/components/routing/LegacyRedirect';
 
 import PageNotFound from './lib/PageNotFound';
 import ProjectsPage from './pages/projects/ProjectsPage';
@@ -120,12 +119,66 @@ function App() {
               <Route path="/active-syncs" element={<ActiveSyncs />} />
               <Route path="/scheduler" element={<SchedulerHealth />} />
               <Route path="/logs" element={<LogsPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route
-                path="/profile"
-                element={<SettingsSectionRedirect section="profile" />}
-              />
               <Route path="/editor" element={<EditorDashboard />} />
+
+              {/* Settings — personal. Every authenticated role; no guard, because
+                  every tab here is about the signed-in user's own account. */}
+              <Route
+                path="/settings"
+                element={<SectionTabsLayout section={SETTINGS_SECTION} />}
+              >
+                <Route
+                  index
+                  element={<LegacyRedirect fallback="/settings/preferences" />}
+                />
+                <Route path="preferences" element={<PreferencesTab />} />
+                <Route path="profile" element={<ProfileTab />} />
+                <Route path="security" element={<SecurityTab />} />
+                {/* Billing moved out of personal settings entirely. */}
+                <Route path="billing" element={<LegacyRedirect />} />
+                <Route
+                  path="*"
+                  element={<Navigate to="/settings/preferences" replace />}
+                />
+              </Route>
+
+              {/* Organization — tenant. Editor+ reaches the shell; the layout
+                  hides Invitations/Billing and bounces direct URLs for editors,
+                  from the same role rule that draws the tab strip (lib/sectionTabs). */}
+              <Route path="/organization" element={<OrganizationLayout />}>
+                <Route index element={<Navigate to="general" replace />} />
+                <Route path="general" element={<OrgGeneralTab />} />
+                <Route path="members" element={<OrgMembersTab />} />
+                <Route path="invitations" element={<OrgInvitationsTab />} />
+
+                {/* Third level — sub-views of one area, so a rail beside the
+                    content rather than a second tab row (see BillingLayout). */}
+                <Route path="billing" element={<BillingLayout />}>
+                  <Route index element={<Navigate to="overview" replace />} />
+                  <Route path="overview" element={<BillingOverviewTab />} />
+                  <Route path="subscription" element={<SubscriptionTab />} />
+                  <Route
+                    path="payment-methods"
+                    element={<PaymentMethodsTab />}
+                  />
+                  <Route path="invoices" element={<InvoicesTab />} />
+                  <Route
+                    path="payment-history"
+                    element={<PaymentHistoryTab />}
+                  />
+                </Route>
+
+                <Route
+                  path="*"
+                  element={<Navigate to="/organization/general" replace />}
+                />
+              </Route>
+
+              {/* Legacy URLs — pure redirects, so the destination's own rules decide
+                  who may see them (see lib/legacyRoutes for the full mapping). */}
+              <Route path="/profile" element={<LegacyRedirect />} />
+              <Route path="/invitations" element={<LegacyRedirect />} />
+              <Route path="/team" element={<LegacyRedirect />} />
 
               {/* Management routes — org_admin+ only. Editors hitting these via direct
                   URL are redirected to /dashboard (backend also blocks the mutations). */}
@@ -134,7 +187,6 @@ function App() {
                   <RoleGuard minRole="org_admin" redirectTo="/dashboard" />
                 }
               >
-                <Route path="/organization" element={<OrganizationPage />} />
                 <Route
                   path="/projects/new"
                   element={<Navigate to="/projects?new=1" replace />}
@@ -147,19 +199,10 @@ function App() {
                 />
                 <Route path="/connections" element={<ConnectionsPage />} />
                 <Route
-                  path="/team"
-                  element={<Navigate to="/organization" replace />}
-                />
-                <Route
                   path="/setup-organisation"
                   element={<SetupOrganisation />}
                 />
                 <Route path="/org-admin" element={<OrgAdminDashboard />} />
-                <Route path="/invitations" element={<InvitationsPage />} />
-                <Route
-                  path="/settings/billing"
-                  element={<SettingsSectionRedirect section="billing" />}
-                />
               </Route>
 
               {/* Platform administration — super_admin only */}

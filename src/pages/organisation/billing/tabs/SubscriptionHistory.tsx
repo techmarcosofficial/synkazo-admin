@@ -44,7 +44,7 @@ const LABEL: Record<string, string> = {
   'refund.updated': 'Refund processed',
 };
 
-export default function HistoryTab() {
+export default function SubscriptionHistory() {
   const { data, isLoading, isError, refetch } = useHistoryQuery(1, 50);
   const [view, setView] = useState<BillingHistoryViewMode>('table');
 

@@ -125,7 +125,7 @@ export function NavUser({ variant = 'sidebar' }: UserMenuProps) {
               )}
 
               <DropdownMenuItem asChild>
-                <Link to="/settings?section=profile">
+                <Link to="/settings/profile">
                   <User />
                   Profile
                 </Link>

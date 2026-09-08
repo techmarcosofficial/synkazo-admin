@@ -49,6 +49,13 @@ export default function StickyDetailHeader({
     const measureNaturalTop = () => {
       stickyTop = root.getBoundingClientRect().top + window.scrollY;
       root.style.setProperty('--detail-sticky-top', `${stickyTop}px`);
+      // Published so content inside `children` can stick *below* the header
+      // rather than sliding under it — the header's height varies with its own
+      // content, so it cannot be a fixed offset.
+      root.style.setProperty(
+        '--detail-header-height',
+        `${headerRow.offsetHeight}px`,
+      );
       updateStuckState();
     };
 
@@ -62,6 +69,7 @@ export default function StickyDetailHeader({
         : new ResizeObserver(measureNaturalTop);
     const pageContent = root.closest('main');
     if (pageContent) resizeObserver?.observe(pageContent);
+    resizeObserver?.observe(headerRow);
 
     return () => {
       window.removeEventListener('scroll', updateStuckState);
@@ -74,7 +82,7 @@ export default function StickyDetailHeader({
     <section
       ref={rootRef}
       className={cn(
-        'relative isolate [--detail-back-row-height:--spacing(11)] [--detail-header-overlap:--spacing(2)] [--detail-sticky-top:var(--app-shell-header-height)]',
+        'relative isolate [--detail-back-row-height:--spacing(11)] [--detail-header-height:0px] [--detail-header-overlap:--spacing(2)] [--detail-sticky-top:var(--app-shell-header-height)]',
         className,
       )}
     >
@@ -85,7 +93,7 @@ export default function StickyDetailHeader({
         <Button
           asChild
           variant="secondary"
-          className="h-(--detail-back-row-height) rounded-t-3xl rounded-b-none bg-border pb-(--detail-header-overlap)"
+          className="bg-border h-(--detail-back-row-height) rounded-t-3xl rounded-b-none pb-(--detail-header-overlap)"
         >
           <Link to={backTo}>
             <ChevronLeft aria-hidden="true" data-icon="inline-start" />
