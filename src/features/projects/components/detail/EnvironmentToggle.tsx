@@ -1,5 +1,6 @@
 import { Check, ChevronDown } from 'lucide-react';
 
+import { badgeVariants } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -51,7 +52,12 @@ export default function EnvironmentToggle({
     ) ?? ENVIRONMENTS[0];
 
   return (
-    <div className="bg-card text-muted-foreground flex items-center gap-2.5 rounded-3xl border p-0.5 pr-1 pl-3 text-sm font-medium">
+    <div
+      className={cn(
+        badgeVariants({ variant: 'outline' }),
+        'h-9 gap-2.5 rounded-3xl p-0.5 pr-1 pl-3 text-sm font-medium',
+      )}
+    >
       <p className="text-muted-foreground text-sm">Syncs run on</p>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -59,7 +65,7 @@ export default function EnvironmentToggle({
             variant="secondary"
             size="sm"
             disabled={isBusy}
-            className="rounded-2xl"
+            className="rounded-3xl"
           >
             {isBusy ? (
               <Spinner className="size-3" />

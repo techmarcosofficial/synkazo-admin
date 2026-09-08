@@ -4,7 +4,7 @@ import { DEFAULT_PROJECT_FILTERS } from '../types';
 import type { ProjectExtended, ProjectFiltersState } from '../types';
 import { filterProjects } from '../utils';
 
-export function useProjectFilters(projects: ProjectExtended[]) {
+export function useProjectFilters<T extends ProjectExtended>(projects: T[]) {
   const [filters, setFilters] = useState<ProjectFiltersState>(
     DEFAULT_PROJECT_FILTERS,
   );

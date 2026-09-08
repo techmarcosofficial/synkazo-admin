@@ -32,9 +32,9 @@ export default function ConnectionPermissionsDialog({
   onOpenChange,
 }: ConnectionPermissionsDialogProps) {
   const meta = PLATFORM_META[conn.platformId] ?? { label: conn.platformId };
-  const { currentUser } = useSynkazoAuth();
-  const canManageWebhooks =
-    currentUser?.role === 'org_admin' || currentUser?.role === 'super_admin';
+  const { hasRole } = useSynkazoAuth();
+  // Rank-based, so a role added above org_admin is included automatically.
+  const canManageWebhooks = hasRole('org_admin');
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<ConnectionPermissions | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -230,7 +230,7 @@ export default function ConnectionPermissionsDialog({
                     {data.webhookHealth.subscriptions.map((sub) => (
                       <div
                         key={sub.id}
-                        className="space-y-1 rounded-lg border px-2.5 py-2"
+                        className="space-y-1 rounded-4xl border px-2.5 py-2"
                       >
                         <div className="flex items-center justify-between gap-2">
                           <span className="truncate font-mono text-xs">
@@ -248,6 +248,7 @@ export default function ConnectionPermissionsDialog({
                         </div>
                         {sub.lastError && (
                           <PageContextAlert
+                            surface="inner"
                             variant="error"
                             title={sub.lastError}
                             className="px-2 py-1.5 **:data-[slot=alert-title]:text-xs"

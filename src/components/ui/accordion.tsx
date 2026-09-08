@@ -12,7 +12,7 @@ function Accordion({
     <AccordionPrimitive.Root
       data-slot="accordion"
       className={cn(
-        'flex w-full flex-col overflow-hidden rounded-2xl border',
+        'bg-card border-border flex w-full flex-col overflow-hidden rounded-4xl border shadow-none',
         className,
       )}
       {...props}

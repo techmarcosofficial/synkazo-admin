@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 
 import PageContextAlert from '@/components/shared/PageContextAlert';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { usePlanQuery } from '@/queries/useBilling';
 
 // Subscription state where the latest invoice failed but Stripe is still retrying — keeps
@@ -25,6 +26,12 @@ function formatDate(iso: string | null): string {
  */
 export default function PastDueBanner() {
   const { data } = usePlanQuery();
+  const { hasRole } = useSynkazoAuth();
+  // Rendered for every role by AppLayout, but billing is org_admin+. An editor
+  // still needs to know the org's plan is at risk; pointing them at a route they
+  // would be bounced from would just be a dead end, so they get the warning
+  // without the call to action.
+  const canManageBilling = hasRole('org_admin');
   if (!data) return null;
 
   const status = data.subscriptionStatus as string;
@@ -38,14 +45,21 @@ export default function PastDueBanner() {
         title={`Your ${data.planName} subscription is scheduled to cancel`}
         description={
           <>
-            You'll keep access until {formatDate(data.currentPeriodEnd)}.{' '}
-            <Link
-              to="/settings?section=billing"
-              className="text-primary hover:underline"
-            >
-              Reactivate
-            </Link>{' '}
-            to keep your plan.
+            You'll keep access until {formatDate(data.currentPeriodEnd)}.
+            {canManageBilling ? (
+              <>
+                {' '}
+                <Link
+                  to="/organization/billing/overview"
+                  className="text-primary hover:underline"
+                >
+                  Reactivate
+                </Link>{' '}
+                to keep your plan.
+              </>
+            ) : (
+              ' Ask an organization admin to reactivate it.'
+            )}
           </>
         }
       />
@@ -59,13 +73,16 @@ export default function PastDueBanner() {
       description={
         <>
           {`Update your payment method to keep your ${data.planName} plan active. `}
-          <Link
-            to="/settings?section=billing&tab=payment"
-            className="text-primary hover:underline"
-          >
-            Update payment method
-          </Link>
-          .
+          {canManageBilling ? (
+            <Link
+              to="/organization/billing/payment-methods"
+              className="text-primary hover:underline"
+            >
+              Update payment method
+            </Link>
+          ) : (
+            'Ask an organization admin to update it.'
+          )}
         </>
       }
     />

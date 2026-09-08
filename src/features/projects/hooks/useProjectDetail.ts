@@ -1,6 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { associationsApi, type AssociationRule } from '@/api/associations';
 import { connectionsApi } from '@/api/connections';
 import { jobsApi } from '@/api/jobs';
 import { projectsApi } from '@/api/projects';
@@ -29,13 +28,20 @@ export type ConnectionExt = Connection;
 
 export interface ProjectActivityLogMetadata {
   triggeredBy?: string;
-  status?: 'success' | 'partial' | 'failed' | 'cancelled';
+  status?:
+    | 'success'
+    | 'partial'
+    | 'failed'
+    | 'cancelled'
+    | 'limit_reached'
+    | 'time_limit_reached';
   jobName?: string;
   projectName?: string;
   sourceObject?: string;
   destObject?: string;
   sourcePlatformId?: string;
   destPlatformId?: string;
+  recordsFailed?: number;
 }
 
 export interface ProjectActivityLog {
@@ -55,7 +61,6 @@ export interface ProjectDetailData {
   jobs: JobExt[];
   connections: ConnectionExt[];
   logs: ProjectActivityLog[];
-  associationRules: AssociationRule[];
 }
 
 export function projectDetailQueryKey(projectId: string) {
@@ -63,9 +68,9 @@ export function projectDetailQueryKey(projectId: string) {
 }
 
 // One composite query for the whole ProjectDetail page — project, jobs,
-// connections, logs, and association rules are all loaded and refreshed
-// together (matching the original page's single loadData() bootstrap), so
-// they're modeled as one cached unit rather than five independent queries.
+// connections, and logs are loaded and refreshed together (matching the
+// original page's single loadData() bootstrap), so they're modeled as one
+// cached unit rather than four independent queries.
 //
 // projectId may be null/undefined for consumers that are always mounted
 // (e.g. the global SetupWizardDialog) but only have a project to load once
@@ -75,12 +80,11 @@ export function useProjectDetailQuery(projectId: string | null | undefined) {
     queryKey: projectDetailQueryKey(projectId ?? ''),
     queryFn: async (): Promise<ProjectDetailData> => {
       const id = projectId!;
-      const [proj, allJobs, allConns, logsRes, rules] = await Promise.all([
+      const [proj, allJobs, allConns, logsRes] = await Promise.all([
         projectsApi.getProject(id),
         jobsApi.listJobs(id),
         connectionsApi.listProjectConnections(id),
         syncLogsApi.listProjectSyncLogs(id, { limit: 50 }),
-        associationsApi.listRules(id).catch(() => []),
       ]);
       const rawLogs = ((logsRes as { data?: unknown[] }).data ||
         logsRes) as ProjectActivityLog[];
@@ -97,7 +101,6 @@ export function useProjectDetailQuery(projectId: string | null | undefined) {
             new Date(b.createdAt ?? 0).getTime() -
             new Date(a.createdAt ?? 0).getTime(),
         ),
-        associationRules: rules,
       };
     },
     enabled: !!projectId,

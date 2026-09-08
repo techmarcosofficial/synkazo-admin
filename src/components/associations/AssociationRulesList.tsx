@@ -192,7 +192,7 @@ export function RecentRunsList({
 
 function RecordRowSkeleton() {
   return (
-    <div className="border-border/60 bg-background/80 grid grid-cols-1 items-center gap-3 rounded-lg border p-3 md:grid-cols-[1fr_auto] md:gap-4">
+    <div className="border-border/60 bg-background/80 grid grid-cols-1 items-center gap-3 rounded-4xl border p-3 md:grid-cols-[1fr_auto] md:gap-4">
       <div className="min-w-0 space-y-2">
         <Skeleton className="h-4 w-56" />
         <Skeleton className="h-3 w-32" />
@@ -295,7 +295,7 @@ export function RuleRecordsList({
           {records.map((record) => (
             <div
               key={record.id}
-              className="border-border/60 bg-background/80 grid grid-cols-1 items-start gap-3 rounded-lg border p-3 text-xs md:grid-cols-[1fr_auto] md:items-center md:gap-4"
+              className="border-border/60 bg-background/80 grid grid-cols-1 items-start gap-3 rounded-4xl border p-3 text-xs md:grid-cols-[1fr_auto] md:items-center md:gap-4"
             >
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
@@ -500,7 +500,7 @@ function RuleCard({
   };
 
   return (
-    <Card className="border-border/60 bg-card/70 relative isolate overflow-hidden rounded-xl py-0 shadow-sm backdrop-blur-sm">
+    <Card className="border-border/60 bg-card/70 relative isolate overflow-hidden rounded-4xl py-0 shadow-none backdrop-blur-sm">
       <CardContent className="space-y-0 p-0">
         <div className="flex items-start justify-between p-4">
           <div className="flex flex-1 items-start gap-3">
@@ -663,7 +663,7 @@ function RuleCard({
         </div>
 
         <Collapsible open={expanded}>
-          <CollapsibleContent className="bg-background/90 overflow-hidden rounded-b-xl border-t px-4 py-4">
+          <CollapsibleContent className="bg-background/90 overflow-hidden rounded-b-4xl border-t px-4 py-4">
             <div className="space-y-6">
               <RecentRunsList projectId={projectId} ruleId={rule.id} />
 

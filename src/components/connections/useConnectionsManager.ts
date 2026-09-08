@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
-import type { ExtConnection, MissingSlot } from './types';
+import type { ExtConnection } from './types';
 
 import { connectionsApi } from '@/api/connections';
 import { sseClient } from '@/lib/sseClient';
@@ -173,18 +173,6 @@ export function useConnectionsManager({
     (c) => c.connectionType === 'destination',
   );
 
-  const missingSlots: MissingSlot[] = [];
-  if (sourcePlatformId && !sourceConn)
-    missingSlots.push({
-      platformId: sourcePlatformId,
-      connectionType: 'source',
-    });
-  if (destPlatformId && !destConn)
-    missingSlots.push({
-      platformId: destPlatformId,
-      connectionType: 'destination',
-    });
-
   const envHasAnyConnected = (env: string) =>
     connections
       .filter(isReal)
@@ -219,9 +207,6 @@ export function useConnectionsManager({
     loading,
     activeEnv,
     setActiveEnv,
-    connections,
-    realConnections,
-    missingSlots,
     sourceConn,
     destConn,
     envHasAnyConnected,

@@ -1,6 +1,7 @@
 import { ArrowLeft, ArrowRight, X } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -20,7 +21,7 @@ const STEPS: TourStep[] = [
     title: 'Welcome to your billing dashboard',
     description:
       "Here's a quick look at where to manage your subscription, usage, and payments.",
-    selector: '[data-tour="billing-header"]',
+    selector: null,
     tab: 'overview',
     position: 'bottom',
   },
@@ -70,8 +71,8 @@ const STEPS: TourStep[] = [
     id: 'payment-tab',
     title: 'Payment methods',
     description: 'Update the card on file or add a new payment method anytime.',
-    selector: '[data-tour="payment-tab"]',
-    tab: 'payment',
+    selector: '[data-tour="payment-methods-tab"]',
+    tab: 'payment-methods',
     position: 'bottom',
   },
   {
@@ -101,31 +102,37 @@ function measure(selector: string | null): Rect | null {
   return { top: r.top, left: r.left, width: r.width, height: r.height };
 }
 
+const BILLING_BASE = '/organization/billing';
+
 export default function BillingGuidedTour({
   active,
-  tab,
-  onNavigateTab,
   onDone,
 }: {
   active: boolean;
-  tab: string;
-  onNavigateTab: (tab: string) => void;
   onDone: () => void;
 }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
   const step = STEPS[stepIndex];
 
+  // Billing sub-tabs are routes now, so the current tab is read from the URL and
+  // advanced by navigating rather than by driving a parent's tab state.
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const tab = pathname.startsWith(`${BILLING_BASE}/`)
+    ? pathname.slice(BILLING_BASE.length + 1).split('/')[0]
+    : '';
+
   // Reset to the first step whenever the tour (re)activates.
   useEffect(() => {
     if (active) setStepIndex(0);
   }, [active]);
 
-  // Drive the real page's tab state so the tour highlights what the user actually sees.
+  // Drive the real page's route so the tour highlights what the user actually sees.
   useEffect(() => {
     if (!active || !step.tab || step.tab === tab) return;
-    onNavigateTab(step.tab);
-  }, [active, step.tab, tab, onNavigateTab]);
+    navigate(`${BILLING_BASE}/${step.tab}`, { replace: true });
+  }, [active, step.tab, tab, navigate]);
 
   // Measure the target element once the right tab (and its content) is mounted, and keep the
   // highlight glued to it across layout shifts — the tour can sit on a step for a while.
@@ -281,7 +288,7 @@ export default function BillingGuidedTour({
       )}
 
       <div
-        className="bg-popover text-popover-foreground border-border fixed z-[10000] w-[340px] rounded-xl border p-5 shadow-lg"
+        className="bg-popover text-popover-foreground border-border fixed z-[10000] w-[340px] rounded-4xl border p-5 shadow-lg"
         style={tooltipStyle}
       >
         <div className="mb-3 flex items-start justify-between gap-2">

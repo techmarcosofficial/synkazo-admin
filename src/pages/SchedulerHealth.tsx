@@ -48,7 +48,10 @@ import { usePagination } from '@/hooks/usePagination';
 import { useSort } from '@/hooks/useSort';
 import { cn } from '@/lib/utils';
 import { useProjectsQuery } from '@/queries/useProjects';
-import { useQueueStatsQuery, useSchedulerHealthQuery } from '@/queries/useScheduler';
+import {
+  useQueueStatsQuery,
+  useSchedulerHealthQuery,
+} from '@/queries/useScheduler';
 import type { QueueStats } from '@/api/notificationsApi';
 import type { Project } from '@/types';
 
@@ -294,6 +297,10 @@ function JobRow({
       <TableCell>
         <Link
           to={`/projects/${job.projectId}/jobs/${job.id}`}
+          state={{
+            jobBackTo: '/scheduler',
+            jobBackLabel: 'Back to Scheduler',
+          }}
           className="hover:text-primary font-medium transition-colors"
         >
           {job.name}
@@ -336,6 +343,14 @@ function JobRow({
       <TableCell className="text-right">
         <Link
           to={viewHref}
+          state={
+            prioritySchedulingEnabled
+              ? undefined
+              : {
+                  jobBackTo: '/scheduler',
+                  jobBackLabel: 'Back to Scheduler',
+                }
+          }
           className="text-primary hover:text-primary/80 inline-flex items-center gap-1 text-sm font-medium"
         >
           <Eye className="size-3.5" /> View

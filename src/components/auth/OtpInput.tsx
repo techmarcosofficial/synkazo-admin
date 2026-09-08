@@ -74,7 +74,7 @@ export default function OtpInput({
           aria-label={`Digit ${i + 1}`}
           className={cn(
             'border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 shadow-xs',
-            'h-12 w-full rounded-lg border text-center text-lg font-semibold outline-none',
+            'h-12 w-full rounded-3xl border text-center text-lg font-semibold outline-none',
             'transition-[color,box-shadow] focus-visible:ring-[3px]',
             'disabled:cursor-not-allowed disabled:opacity-50',
           )}

@@ -1,6 +1,5 @@
 import { createContext, useContext, type ReactNode } from 'react';
 
-import type { AssociationRule } from '@/api/associations';
 import type {
   ConnectionExt,
   JobExt,
@@ -16,11 +15,8 @@ export interface ProjectDetailContextValue {
   jobs: JobExt[];
   connections: ConnectionExt[];
   logs: ProjectActivityLog[];
-  associationRules: AssociationRule[];
   hasBothConnections: boolean;
   hasJobs: boolean;
-  totalRecordsSynced: number;
-  totalErrors: number;
   patchProject: (patch: Partial<ProjectExt>) => void;
   setConnectionsCache: (conns: ConnectionExt[]) => void;
   refetch: () => void;
@@ -29,10 +25,8 @@ export interface ProjectDetailContextValue {
     options?: { replace?: boolean },
   ) => void;
 
-  // Sync-job creation is triggered from three places (Sync Jobs tab's
-  // registered header action, Overview's step-2 nudge, Connections tab's
-  // ready banner) so the open state + the combined "switch tab and open the
-  // dialog" action live here.
+  // Sync-job creation is triggered from the Sync Jobs tab and the Connections
+  // tab's ready state, so the open state + combined navigation action live here.
   showCreateJob: boolean;
   setShowCreateJob: (open: boolean) => void;
   onCreateSyncRule: () => void;

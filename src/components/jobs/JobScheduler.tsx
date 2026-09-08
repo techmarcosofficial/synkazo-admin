@@ -1,4 +1,10 @@
-import { ListOrdered, Shuffle, Info } from 'lucide-react';
+import {
+  ArrowRight,
+  CalendarClock,
+  Info,
+  ListOrdered,
+  Shuffle,
+} from 'lucide-react';
 
 import IndividualSchedulerList from './IndividualSchedulerList';
 import PriorityQueuePanel from './priority-queue/PriorityQueuePanel';
@@ -11,7 +17,6 @@ import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import { TWO_WAY_SCHEDULER_TAB_MESSAGE } from '@/features/jobs/utils';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import { cn } from '@/lib/utils';
 import { useEntitlements } from '@/queries/useEntitlements';
 import { useProjectJobsQuery } from '@/queries/useJobs';
 import {
@@ -31,31 +36,24 @@ function ModeToggle({
   locked: boolean;
 }) {
   return (
-    <Card className={cn(enabled && 'border-paused/50')}>
-      <CardContent className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div
-            className={cn(
-              'flex size-8 shrink-0 items-center justify-center rounded-lg',
-              enabled ? 'bg-paused/10' : 'bg-muted',
-            )}
-          >
-            {enabled ? (
-              <ListOrdered className="text-paused size-4" />
-            ) : (
-              <Shuffle className="text-muted-foreground size-4" />
-            )}
-          </div>
-          <div>
-            <p className="flex items-center gap-2 text-sm font-semibold">
+    <Card size="sm">
+      <CardContent className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
+        <div className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-lg">
+          {enabled ? (
+            <ListOrdered className="size-4" aria-hidden="true" />
+          ) : (
+            <Shuffle
+              className="text-muted-foreground size-4"
+              aria-hidden="true"
+            />
+          )}
+        </div>
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="min-w-0">
+            <p className="flex flex-wrap items-center gap-2 text-sm font-semibold">
               Priority Scheduling
-              <Badge className="bg-muted text-muted-foreground gap-1.5">
-                <span
-                  className={cn(
-                    'size-1.5 rounded-full',
-                    enabled ? 'bg-paused' : 'bg-muted-foreground',
-                  )}
-                />
+              <Badge variant="secondary" className="gap-1.5">
+                <span className="bg-foreground size-1.5 rounded-full opacity-70" />
                 {enabled ? 'ON' : 'OFF'}
               </Badge>
             </p>
@@ -76,6 +74,40 @@ function ModeToggle({
   );
 }
 
+function ExecutionOrder() {
+  return (
+    <div className="min-w-0 lg:text-right">
+      <div
+        className="flex flex-wrap items-center gap-2 lg:justify-end"
+        aria-label="Execution order: Priority Queue, then Association Queue"
+      >
+        <Badge
+          variant="secondary"
+          className="size-6 rounded-full p-0 font-semibold"
+        >
+          1
+        </Badge>
+        <span className="text-xs font-medium">Priority Queue</span>
+        <ArrowRight
+          className="text-muted-foreground size-3.5"
+          aria-hidden="true"
+        />
+        <Badge
+          variant="secondary"
+          className="size-6 rounded-full p-0 font-semibold"
+        >
+          2
+        </Badge>
+        <span className="text-xs font-medium">Association Queue</span>
+      </div>
+      <p className="text-muted-foreground mt-1.5 max-w-lg text-xs">
+        Priority jobs run first. Association rules run after the job queue
+        finishes.
+      </p>
+    </div>
+  );
+}
+
 export default function JobScheduler({ projectId }: { projectId: string }) {
   const { confirm } = useConfirmDialog();
   const { priorityScheduling: canUsePriorityScheduling } = useEntitlements();
@@ -89,7 +121,7 @@ export default function JobScheduler({ projectId }: { projectId: string }) {
   if (jobsQuery.isLoading || queueQuery.isLoading) {
     return (
       <div className="flex h-40 items-center justify-center">
-        <Spinner className="text-paused size-6" />
+        <Spinner className="text-muted-foreground size-6" />
       </div>
     );
   }
@@ -151,12 +183,23 @@ export default function JobScheduler({ projectId }: { projectId: string }) {
   return (
     <div className="space-y-4">
       {upgradeDialog}
-      <div>
-        <h3 className="text-sm font-semibold">Job Scheduler</h3>
-        <p className="text-muted-foreground mt-0.5 text-xs">
-          Control how and when jobs in this project run.
-        </p>
-      </div>
+      <Card size="sm">
+        <CardContent className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="bg-muted flex size-10 shrink-0 items-center justify-center rounded-xl">
+              <CalendarClock className="size-5" aria-hidden="true" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold">Job Scheduler</h3>
+              <p className="text-muted-foreground mt-0.5 text-xs">
+                Control when jobs run and define the order in which work is
+                processed.
+              </p>
+            </div>
+          </div>
+          <ExecutionOrder />
+        </CardContent>
+      </Card>
 
       <ModeToggle
         enabled={priorityMode}

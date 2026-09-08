@@ -1,5 +1,7 @@
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { Calendar as CalendarIcon } from 'lucide-react';
+import { useState } from 'react';
+import type { ComponentProps } from 'react';
 import type { DateRange } from 'react-day-picker';
 
 import { Button } from '@/components/ui/button';
@@ -9,6 +11,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
 export interface DateRangeValue {
@@ -21,10 +24,13 @@ interface DateRangePickerProps {
   onChange: (value: DateRangeValue) => void;
   placeholder?: string;
   className?: string;
+  disabled?: ComponentProps<typeof Calendar>['disabled'];
+  numberOfMonths?: number;
+  closeOnComplete?: boolean;
 }
 
 function toDate(iso?: string): Date | undefined {
-  return iso ? new Date(iso) : undefined;
+  return iso ? parseISO(iso) : undefined;
 }
 
 function toIso(date?: Date): string | undefined {
@@ -38,7 +44,12 @@ export default function DateRangePicker({
   onChange,
   placeholder = 'Pick a date',
   className,
+  disabled,
+  numberOfMonths = 2,
+  closeOnComplete = false,
 }: DateRangePickerProps) {
+  const isMobile = useIsMobile();
+  const [open, setOpen] = useState(false);
   const selected: DateRange | undefined = value.from
     ? { from: toDate(value.from), to: toDate(value.to) }
     : undefined;
@@ -50,10 +61,11 @@ export default function DateRangePicker({
     : placeholder;
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
+          aria-label={selected?.from ? `Date range: ${label}` : placeholder}
           className={cn(
             'bg-muted justify-start font-normal',
             !selected?.from && 'text-muted-foreground',
@@ -68,10 +80,12 @@ export default function DateRangePicker({
         <Calendar
           mode="range"
           selected={selected}
-          onSelect={(range) =>
-            onChange({ from: toIso(range?.from), to: toIso(range?.to) })
-          }
-          numberOfMonths={2}
+          onSelect={(range) => {
+            onChange({ from: toIso(range?.from), to: toIso(range?.to) });
+            if (closeOnComplete && range?.from && range.to) setOpen(false);
+          }}
+          disabled={disabled}
+          numberOfMonths={isMobile ? 1 : numberOfMonths}
         />
       </PopoverContent>
     </Popover>

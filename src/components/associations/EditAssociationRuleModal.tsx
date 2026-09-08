@@ -125,7 +125,7 @@ export default function EditAssociationRuleModal({
             )}
           </Field>
 
-          <div className="bg-muted/40 text-muted-foreground rounded-lg border px-3 py-2 font-mono text-xs">
+          <div className="bg-muted/40 text-muted-foreground rounded-4xl border px-3 py-2 font-mono text-xs">
             {rule.sourceObject}.<strong>{rule.sourceMatchField}</strong>
             {' = '}
             {rule.targetObject}.<strong>{rule.targetMatchField}</strong>

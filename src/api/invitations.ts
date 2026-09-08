@@ -35,4 +35,10 @@ export const invitationsApi = {
     apiClient.post('/invitations/accept', data).then(d),
   revokeInvitation: (id: string): Promise<void> =>
     apiClient.post(`/invitations/${id}/revoke`).then(d),
+  /** Re-issues the token and extends the expiry, then re-sends the email. */
+  resendInvitation: (id: string): Promise<Invitation> =>
+    apiClient.post(`/invitations/${id}/resend`).then(d),
+  /** Only permitted for revoked or lapsed invitations. */
+  deleteInvitation: (id: string): Promise<void> =>
+    apiClient.delete(`/invitations/${id}`).then(d),
 };

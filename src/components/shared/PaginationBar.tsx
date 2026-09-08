@@ -22,6 +22,7 @@ interface PaginationBarProps {
   onPageChange: (page: number) => void;
   onPageSizeChange?: (size: number) => void;
   pageSizeOptions?: number[];
+  pageSizeLabel?: string;
   disabled?: boolean;
 }
 
@@ -33,6 +34,7 @@ export default function PaginationBar({
   onPageChange,
   onPageSizeChange,
   pageSizeOptions = [10, 25, 50],
+  pageSizeLabel = 'Rows per page',
   disabled = false,
 }: PaginationBarProps) {
   if (total === 0) return null;
@@ -57,7 +59,7 @@ export default function PaginationBar({
       <div className="flex items-center gap-4">
         {onPageSizeChange && (
           <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">Rows per page</span>
+            <span className="text-muted-foreground">{pageSizeLabel}</span>
             <Select
               value={String(pageSize)}
               onValueChange={(v) => onPageSizeChange(Number(v))}

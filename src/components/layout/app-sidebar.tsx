@@ -2,7 +2,6 @@
 
 import {
   Activity,
-  BarChart2,
   Briefcase,
   Building2,
   CalendarClock,
@@ -10,7 +9,6 @@ import {
   Clock,
   FolderOpen,
   LayoutDashboard,
-  Mail,
   Megaphone,
   Plug,
   Settings,
@@ -36,6 +34,11 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from '@/components/ui/sidebar';
+import {
+  ORGANIZATION_SECTION,
+  SETTINGS_SECTION,
+  sectionMinRole,
+} from '@/lib/sectionTabs';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
 
 const NAV_GROUPS: NavGroup[] = [
@@ -46,12 +49,6 @@ const NAV_GROUPS: NavGroup[] = [
         title: 'Dashboard',
         url: '/dashboard',
         icon: LayoutDashboard,
-        minRole: 'editor',
-      },
-      {
-        title: 'Metrics',
-        url: '/metrics',
-        icon: BarChart2,
         minRole: 'editor',
       },
     ],
@@ -109,16 +106,13 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Administration',
     items: [
       {
-        title: 'Organization',
-        url: '/organization',
+        title: ORGANIZATION_SECTION.title,
+        url: ORGANIZATION_SECTION.basePath,
         icon: Building2,
-        minRole: 'org_admin',
-      },
-      {
-        title: 'Invitations',
-        url: '/invitations',
-        icon: Mail,
-        minRole: 'org_admin',
+        // Derived, never restated — an editor reaches General and Members, so
+        // the nav entry must appear for them too. Invitations and Billing are
+        // hidden by the tab strip itself (see lib/sectionTabs).
+        minRole: sectionMinRole(ORGANIZATION_SECTION),
       },
       {
         title: 'Audit Log',
@@ -131,7 +125,12 @@ const NAV_GROUPS: NavGroup[] = [
 ];
 
 const ACCOUNT_ITEMS: NavSecondaryItem[] = [
-  { title: 'Settings', url: '/settings', icon: Settings, minRole: 'editor' },
+  {
+    title: SETTINGS_SECTION.title,
+    url: SETTINGS_SECTION.basePath,
+    icon: Settings,
+    minRole: sectionMinRole(SETTINGS_SECTION),
+  },
   {
     title: 'Super Admin',
     url: '/super-admin',

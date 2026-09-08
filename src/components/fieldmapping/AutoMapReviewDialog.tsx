@@ -172,7 +172,7 @@ export default function AutoMapReviewDialog({
                     high confidence — applied
                   </span>
                 </div>
-                <div className="divide-y rounded-lg border">
+                <div className="divide-y overflow-hidden rounded-4xl border">
                   {preview.matched.map((m) => (
                     <div
                       key={m.source.key}
@@ -386,7 +386,7 @@ export default function AutoMapReviewDialog({
                     map manually after applying
                   </span>
                 </div>
-                <div className="divide-y rounded-lg border">
+                <div className="divide-y overflow-hidden rounded-4xl border">
                   {preview.unmatched.map((f) => (
                     <div
                       key={f.key}

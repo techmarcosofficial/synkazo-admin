@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import {
@@ -10,7 +11,6 @@ import {
 export interface JobDetailTabView {
   id: JobDetailTabId;
   label: string;
-  badge: number | null;
 }
 
 // Tab is the URL's source of truth (`?tab=...`) so it's bookmarkable/shareable
@@ -23,7 +23,11 @@ export function useJobDetailTabs(ctx: JobDetailTabContext) {
     (tab) => !tab.visible || tab.visible(ctx),
   );
 
-  const requestedTab = searchParams.get('tab') as JobDetailTabId | null;
+  const rawRequestedTab = searchParams.get('tab');
+  const requestedTab =
+    rawRequestedTab === 'overview'
+      ? DEFAULT_TAB_ID
+      : (rawRequestedTab as JobDetailTabId | null);
   const activeTab = visibleDefs.some((t) => t.id === requestedTab)
     ? (requestedTab as JobDetailTabId)
     : DEFAULT_TAB_ID;
@@ -31,8 +35,17 @@ export function useJobDetailTabs(ctx: JobDetailTabContext) {
   const tabs: JobDetailTabView[] = visibleDefs.map((tab) => ({
     id: tab.id,
     label: tab.label,
-    badge: tab.badge ? tab.badge(ctx) : null,
   }));
+
+  // Overview now lives in the expandable card on the project's Sync Jobs tab.
+  // Keep existing bookmarks useful by replacing the retired tab in-place.
+  useEffect(() => {
+    if (rawRequestedTab !== 'overview') return;
+
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', DEFAULT_TAB_ID);
+    setSearchParams(next, { replace: true });
+  }, [rawRequestedTab, searchParams, setSearchParams]);
 
   const handleTabChange = (
     id: JobDetailTabId,

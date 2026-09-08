@@ -4,7 +4,13 @@ import type { PaginatedResponse } from '@/types';
 
 export interface ActivityLogMetadata {
   triggeredBy?: string;
-  status?: 'success' | 'partial' | 'failed' | 'cancelled';
+  status?:
+    | 'success'
+    | 'partial'
+    | 'failed'
+    | 'cancelled'
+    | 'limit_reached'
+    | 'time_limit_reached';
   jobName?: string;
   projectName?: string;
   sourceObject?: string;

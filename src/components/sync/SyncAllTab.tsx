@@ -65,20 +65,25 @@ interface SyncAllTabProps {
   projectId: string;
   jobId: string;
   job?: Job;
+  /** Optional manual-run content shown directly above the final action row. */
+  children?: ReactNode;
   onConfirm: (range: { startDate?: string; endDate?: string }) => void;
   pipelineRequired?: boolean;
   pipelineConfigured?: boolean;
   onGoToPipeline?: () => void;
+  disabled?: boolean;
 }
 
 export default function SyncAllTab({
   projectId,
   jobId,
   job,
+  children,
   onConfirm,
   pipelineRequired = false,
   pipelineConfigured = true,
   onGoToPipeline,
+  disabled = false,
 }: SyncAllTabProps) {
   const pipelineBlocked = pipelineRequired && !pipelineConfigured;
   const isTwoWay = job?.syncDirection === 'two_way';
@@ -92,9 +97,11 @@ export default function SyncAllTab({
 
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [startTime, setStartTime] = useState('00:00');
-  const [endDate, setEndDate] = useState<Date | undefined>(new Date());
+  // The default end bound is the current moment. Previously the time input
+  // showed "now" while the date button still read its placeholder, which made
+  // a valid default look unset.
+  const [endDate, setEndDate] = useState<Date | undefined>(() => new Date());
   const [endTime, setEndTime] = useState(() => format(new Date(), 'HH:mm'));
-  const [endDateTouched, setEndDateTouched] = useState(false);
   const [estimate, setEstimate] = useState<SyncEstimate | null>(null);
   const [checking, setChecking] = useState(false);
   const [checkError, setCheckError] = useState(false);
@@ -113,12 +120,10 @@ export default function SyncAllTab({
   };
   const handleEndDateChange = (d?: Date) => {
     setEndDate(d);
-    setEndDateTouched(true);
     setAttempted(false);
   };
   const handleEndTimeChange = (t: string) => {
     setEndTime(t);
-    setEndDateTouched(true);
     setAttempted(false);
   };
 
@@ -153,8 +158,8 @@ export default function SyncAllTab({
         </Alert>
         <Button
           onClick={() => onConfirm({})}
-          disabled={pipelineBlocked}
-          className="bg-paused hover:bg-paused/90 w-full"
+          disabled={pipelineBlocked || disabled}
+          className="w-full sm:w-auto"
         >
           <RotateCcw /> Start Full Sync
         </Button>
@@ -167,17 +172,25 @@ export default function SyncAllTab({
   return (
     <div className="space-y-5">
       {pipelineBlocked && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="py-2.5">
           <AlertTriangle />
-          <AlertDescription className="space-y-1.5">
-            <p className="font-semibold">Pipeline not configured</p>
-            <p>
-              This job syncs to <strong>{job?.destObject}</strong> which
-              requires a HubSpot pipeline. Configure one before running the
-              sync.
-            </p>
+          <AlertDescription className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between [&_p:not(:last-child)]:mb-0">
+            <div className="space-y-0.5">
+              <p className="text-foreground font-semibold">
+                Pipeline not configured
+              </p>
+              <p>
+                This job syncs to <strong>{job?.destObject}</strong>, which
+                requires a HubSpot pipeline. Configure one before running the
+                sync.
+              </p>
+            </div>
             {onGoToPipeline && (
-              <Button size="sm" onClick={onGoToPipeline}>
+              <Button
+                size="sm"
+                onClick={onGoToPipeline}
+                className="shrink-0 self-start sm:self-center"
+              >
                 <GitBranch /> Go to Pipeline tab
               </Button>
             )}
@@ -216,16 +229,16 @@ export default function SyncAllTab({
           </Alert>
           <Button
             onClick={() => onConfirm({})}
-            disabled={pipelineBlocked}
-            className="bg-paused hover:bg-paused/90 w-full"
+            disabled={pipelineBlocked || disabled}
+            className="w-full sm:w-auto"
           >
             <RotateCcw /> Resume Full Sync
           </Button>
         </>
       ) : (
         <>
-          <FieldGroup>
-            <div className="grid grid-cols-2 gap-4">
+          <FieldGroup className="gap-4">
+            <div className="grid gap-4 md:grid-cols-2">
               <Field>
                 <FieldLabel>Start Date</FieldLabel>
                 <div className="flex gap-2">
@@ -242,7 +255,7 @@ export default function SyncAllTab({
                         <span className="truncate">
                           {startDate
                             ? format(startDate, 'MMM d, yyyy')
-                            : 'Select date'}
+                            : 'Start date'}
                         </span>
                       </Button>
                     </PopoverTrigger>
@@ -266,8 +279,7 @@ export default function SyncAllTab({
                   />
                 </div>
                 <p className="text-muted-foreground text-[10px]">
-                  Where to start syncing from — leave unset to sync all
-                  historical records up to the end date
+                  Leave empty to include all earlier records
                 </p>
               </Field>
 
@@ -280,12 +292,14 @@ export default function SyncAllTab({
                         variant="outline"
                         className={cn(
                           'min-w-0 flex-1 shrink justify-start overflow-hidden font-normal',
-                          !endDateTouched && 'text-muted-foreground',
+                          !endDate && 'text-muted-foreground',
                         )}
                       >
                         <CalendarIcon className="shrink-0" />
                         <span className="truncate">
-                          {endDate ? format(endDate, 'MMM d, yyyy') : 'Today'}
+                          {endDate
+                            ? format(endDate, 'MMM d, yyyy')
+                            : 'End date'}
                         </span>
                       </Button>
                     </PopoverTrigger>
@@ -309,22 +323,11 @@ export default function SyncAllTab({
                   />
                 </div>
                 <p className="text-muted-foreground text-[10px]">
-                  Defaults to right now — clear the date to sync up through the
-                  current moment
+                  Leave unset to sync through the current moment
                 </p>
               </Field>
             </div>
           </FieldGroup>
-
-          <Button
-            variant="outline"
-            onClick={handleCheck}
-            disabled={(!startDate && !endDate) || checking}
-            className="w-full"
-          >
-            {checking ? <Spinner /> : <Search />}
-            {checking ? 'Checking…' : 'Check Records'}
-          </Button>
 
           {attempted && (
             <>
@@ -337,7 +340,7 @@ export default function SyncAllTab({
                   </AlertDescription>
                 </Alert>
               ) : (
-                <Card className="py-0">
+                <Card className="bg-muted/30 border-muted py-0">
                   <CardContent className="space-y-3 p-4">
                     <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
                       This run will sync
@@ -379,21 +382,28 @@ export default function SyncAllTab({
                   </CardContent>
                 </Card>
               )}
-
-              <Button
-                onClick={() =>
-                  onConfirm({
-                    startDate: startDateTime?.toISOString(),
-                    endDate: endDateTime?.toISOString(),
-                  })
-                }
-                disabled={pipelineBlocked}
-                className="bg-paused hover:bg-paused/90 w-full"
-              >
-                <RotateCcw /> Start Sync
-              </Button>
             </>
           )}
+
+          {children}
+
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button variant="outline" onClick={handleCheck} disabled={checking}>
+              {checking ? <Spinner /> : <Search />}
+              {checking ? 'Checking…' : 'Check records'}
+            </Button>
+            <Button
+              onClick={() =>
+                onConfirm({
+                  startDate: startDateTime?.toISOString(),
+                  endDate: endDateTime?.toISOString(),
+                })
+              }
+              disabled={pipelineBlocked || disabled}
+            >
+              <RotateCcw /> Run sync now
+            </Button>
+          </div>
         </>
       )}
     </div>

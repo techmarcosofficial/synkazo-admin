@@ -42,6 +42,7 @@ export default function TwoWayAuthNotice({
 
   return (
     <PageContextAlert
+      surface="inner"
       variant="warning"
       title="Private App connection — no real-time webhook updates"
       description={

@@ -1,13 +1,6 @@
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-import type {
-  ConnectionExt,
-  JobExt,
-  ProjectActivityLog,
-} from './useProjectDetail';
-
-import type { AssociationRule } from '@/api/associations';
 import {
   DEFAULT_TAB_ID,
   TAB_DEFS,
@@ -21,17 +14,12 @@ export interface ProjectDetailTabView {
   label: string;
   locked: boolean;
   lockReason: string;
-  badge: number | null;
 }
 
 interface UseProjectDetailTabsInput {
   loading: boolean;
   hasBothConnections: boolean;
   hasJobs: boolean;
-  jobs: JobExt[];
-  connections: ConnectionExt[];
-  associationRules: AssociationRule[];
-  logs: ProjectActivityLog[];
 }
 
 // Tab is the URL's source of truth (`?tab=...`) so it's bookmarkable/shareable
@@ -49,14 +37,6 @@ export function useProjectDetailTabs(input: UseProjectDetailTabsInput) {
     label: tab.label,
     locked: isTabLocked(tab, input.hasBothConnections, input.hasJobs),
     lockReason: lockReasonFor(tab, input.hasBothConnections, input.hasJobs),
-    badge: tab.badge
-      ? tab.badge({
-          jobs: input.jobs,
-          connections: input.connections,
-          associationRules: input.associationRules,
-          logs: input.logs,
-        })
-      : null,
   }));
 
   const handleTabChange = (

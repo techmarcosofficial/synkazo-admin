@@ -12,7 +12,10 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 
-import type { AssociationCondition, ConditionOperator } from '@/api/associations';
+import type {
+  AssociationCondition,
+  ConditionOperator,
+} from '@/api/associations';
 
 interface ObjectField {
   field: string;
@@ -33,7 +36,12 @@ const OPERATORS: Array<{
   { value: 'not_contains', label: 'Does not contain', needsValue: true },
   { value: 'starts_with', label: 'Starts with', needsValue: true },
   { value: 'ends_with', label: 'Ends with', needsValue: true },
-  { value: 'in', label: 'In (comma-separated)', needsValue: true, multiValue: true },
+  {
+    value: 'in',
+    label: 'In (comma-separated)',
+    needsValue: true,
+    multiValue: true,
+  },
   {
     value: 'not_in',
     label: 'Not in (comma-separated)',
@@ -88,7 +96,9 @@ export default function AssociationConditionsEditor({
   onChange: (conditions: AssociationCondition[], logic: 'AND' | 'OR') => void;
 }) {
   const update = (index: number, patch: Partial<AssociationCondition>) => {
-    const next = conditions.map((c, i) => (i === index ? { ...c, ...patch } : c));
+    const next = conditions.map((c, i) =>
+      i === index ? { ...c, ...patch } : c,
+    );
     onChange(next, conditionLogic);
   };
 
@@ -100,14 +110,17 @@ export default function AssociationConditionsEditor({
   };
 
   const add = () => {
-    onChange([...conditions, emptyCondition(fields[0]?.field ?? '')], conditionLogic);
+    onChange(
+      [...conditions, emptyCondition(fields[0]?.field ?? '')],
+      conditionLogic,
+    );
   };
 
   const error = validateConditions(conditions);
 
   return (
     <FieldGroup>
-      <div className="bg-muted/40 text-muted-foreground rounded-lg border p-3 text-xs">
+      <div className="bg-muted/40 text-muted-foreground rounded-4xl border p-3 text-xs">
         Optional — the association is only created when the source record
         satisfies these conditions. Leave empty to associate every matching
         record, same as today.
@@ -142,7 +155,7 @@ export default function AssociationConditionsEditor({
           return (
             <div
               key={i}
-              className="bg-muted/30 space-y-2 rounded-lg border p-3"
+              className="bg-muted/30 space-y-2 rounded-4xl border p-3"
               data-invalid={rowIncomplete}
             >
               <div className="flex items-center gap-2">
@@ -213,7 +226,9 @@ export default function AssociationConditionsEditor({
                         : e.target.value,
                     })
                   }
-                  placeholder={isMulti ? 'value1, value2, …' : 'Comparison value'}
+                  placeholder={
+                    isMulti ? 'value1, value2, …' : 'Comparison value'
+                  }
                   className="h-9 font-mono text-xs"
                 />
               )}

@@ -55,7 +55,7 @@ export default function ConnectMethodModal({
           onClick={manualEnabled ? onManual : undefined}
           disabled={!manualEnabled}
           className={cn(
-            'flex flex-col items-start gap-3 rounded-xl border p-4 text-left transition-colors',
+            'flex flex-col items-start gap-3 rounded-3xl border p-4 text-left transition-colors',
             manualEnabled
               ? 'hover:border-primary bg-muted/40 cursor-pointer'
               : 'bg-muted/20 cursor-not-allowed opacity-35',
@@ -94,7 +94,7 @@ export default function ConnectMethodModal({
         <button
           onClick={oauthEnabled ? onOAuth : undefined}
           className={cn(
-            'flex flex-col items-start gap-3 rounded-xl border p-4 text-left transition-colors',
+            'flex flex-col items-start gap-3 rounded-3xl border p-4 text-left transition-colors',
             oauthEnabled
               ? 'bg-muted/40 hover:border-hubspot cursor-pointer'
               : 'bg-muted/20 cursor-not-allowed opacity-35',

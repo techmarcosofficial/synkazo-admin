@@ -142,7 +142,7 @@ export default function GeneralSettingsCard({
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-3 rounded-xl border p-4">
+              <div className="flex items-center gap-3 rounded-4xl border p-4">
                 <PlatformIcon
                   platformId={project.sourcePlatformId ?? ''}
                   size={32}
@@ -155,7 +155,7 @@ export default function GeneralSettingsCard({
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 rounded-xl border p-4">
+              <div className="flex items-center gap-3 rounded-4xl border p-4">
                 <PlatformIcon platformId={project.destPlatformId} size={32} />
                 <div>
                   <p className="text-muted-foreground text-xs">Destination</p>

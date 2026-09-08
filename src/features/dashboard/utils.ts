@@ -1,17 +1,87 @@
-import { Activity, FolderOpen, Plug, Zap } from 'lucide-react';
+import { differenceInCalendarDays } from 'date-fns';
+import { Activity, FolderOpen, Zap } from 'lucide-react';
 
-import type {
-  DashboardStat,
-  DashboardStatsJob as Job,
-  DashboardStatsProject as Project,
-  KpiSparklinePoint,
-  KpiTrend,
-  OrgSyncLog,
-} from './types';
+import type { DashboardStat, OrgSyncLog } from './types';
 
 import type { DashboardSummary } from '@/api/dashboard';
+import {
+  buildRecentCreationTrend,
+  buildRecentRecordsTrend,
+} from '@/features/metrics/metricsData';
+import type { Job, Project } from '@/types';
 
-/** Formats large counts the same way the rest of the dashboard does. */
+export type ActivityStatus =
+  'success' | 'warning' | 'failed' | 'running' | 'stopped' | 'info';
+
+export type ActivityGroup =
+  'Today' | 'Yesterday' | 'Earlier this week' | 'Earlier';
+
+export function getActivityStatus(log: OrgSyncLog): ActivityStatus {
+  switch (log.metadata?.status) {
+    case 'success':
+      return 'success';
+    case 'partial':
+      return 'warning';
+    case 'failed':
+      return 'failed';
+    case 'running':
+      return 'running';
+    case 'cancelled':
+    case 'time_limit_reached':
+    case 'limit_reached':
+      return 'stopped';
+    default:
+      break;
+  }
+
+  if (log.level === 'success') return 'success';
+  if (log.level === 'warn') return 'warning';
+  if (log.level === 'error') return 'failed';
+  return 'info';
+}
+
+export function getActivityTitle(status: ActivityStatus): string {
+  const titles: Record<ActivityStatus, string> = {
+    success: 'Sync completed',
+    warning: 'Sync completed with warnings',
+    failed: 'Sync failed',
+    running: 'Sync running',
+    stopped: 'Sync stopped early',
+    info: 'Sync activity',
+  };
+
+  return titles[status];
+}
+
+export function getActivityGroup(
+  createdAt?: string,
+  now = new Date(),
+): ActivityGroup {
+  if (!createdAt) return 'Earlier';
+
+  const createdDate = new Date(createdAt);
+  if (Number.isNaN(createdDate.getTime())) return 'Earlier';
+
+  const dayDifference = differenceInCalendarDays(now, createdDate);
+  if (dayDifference <= 0) return 'Today';
+  if (dayDifference === 1) return 'Yesterday';
+  if (dayDifference <= 7) return 'Earlier this week';
+  return 'Earlier';
+}
+
+export function shortenActivityMessage(
+  message?: string,
+  maxLength = 88,
+): string {
+  const normalized = message?.trim() ?? '';
+  if (normalized.length <= maxLength) return normalized;
+
+  const shortened = normalized.slice(0, maxLength - 1);
+  const lastSpace = shortened.lastIndexOf(' ');
+  const cutAt = lastSpace > maxLength * 0.6 ? lastSpace : shortened.length;
+  return `${shortened.slice(0, cutAt).trimEnd()}…`;
+}
+
 function formatNum(n: number | undefined | null): string {
   if (!n) return '0';
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -19,172 +89,83 @@ function formatNum(n: number | undefined | null): string {
   return String(n);
 }
 
-/**
- * Builds a day-by-day sparkline from org sync logs, IF the logs carry enough
- * history to say anything. Returns undefined (not a fake flat array) when
- * there isn't enough data — the card then falls back to a quiet placeholder
- * instead of implying a trend that doesn't exist.
- *
- * `days` = how many buckets to build (7 = last 7 days).
- * `matcher` lets you count only logs relevant to a given stat, e.g. only
- * "error" level logs for the Failed Jobs card.
- */
-export function buildSparklineFromLogs(
-  logs: OrgSyncLog[],
-  days: number,
-  matcher: (log: OrgSyncLog) => boolean = () => true,
-): KpiSparklinePoint[] | undefined {
-  if (!logs || logs.length === 0) return undefined;
-
-  const buckets = new Map<string, number>();
-  const now = new Date();
-
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - i);
-    buckets.set(d.toISOString().slice(0, 10), 0);
-  }
-
-  let matchedAny = false;
-  for (const log of logs) {
-    if (!log.createdAt || !matcher(log)) continue;
-    const key = log.createdAt.slice(0, 10);
-    if (buckets.has(key)) {
-      buckets.set(key, (buckets.get(key) ?? 0) + 1);
-      matchedAny = true;
-    }
-  }
-
-  // If nothing in the window actually matched, there's no real signal to
-  // chart — let the caller fall back rather than draw a flat zero line.
-  if (!matchedAny) return undefined;
-
-  return Array.from(buckets.entries()).map(([date, value]) => ({
-    date,
-    value,
-  }));
-}
-
-/**
- * Compares the last two halves of a sparkline to produce a trend. Returns
- * undefined if there isn't a real, non-zero baseline to compare against —
- * a "0% change" from "0 to 0" isn't a trend worth showing.
- */
-export function trendFromSparkline(
-  points: KpiSparklinePoint[] | undefined,
-  label = 'vs last 7 days',
-): KpiTrend | undefined {
-  if (!points || points.length < 2) return undefined;
-
-  const mid = Math.floor(points.length / 2);
-  const firstHalf = points.slice(0, mid).reduce((s, p) => s + p.value, 0);
-  const secondHalf = points.slice(mid).reduce((s, p) => s + p.value, 0);
-
-  if (firstHalf === 0) return undefined; // can't compute a % change from zero
-
-  const pctChange = ((secondHalf - firstHalf) / firstHalf) * 100;
-  return {
-    value: `${Math.abs(pctChange).toFixed(1)}%`,
-    positive: pctChange >= 0,
-    label,
-  };
-}
-
-export function computeDashboardStats(input: {
-  projects: Project[];
+export function computeDashboardStats({
+  summary,
+  projects,
+  jobs,
+  logs,
+  now = new Date(),
+}: {
+  summary: DashboardSummary;
+  projects?: Project[];
   jobs: Job[];
   logs: OrgSyncLog[];
-  summary: DashboardSummary | null | undefined;
+  now?: Date;
 }): DashboardStat[] {
-  const { projects, jobs, logs, summary } = input;
-
-  const totalProjects = summary?.totalProjects ?? projects.length;
-  const activeProjects =
-    summary?.activeProjects ??
-    projects.filter((p) => p.status === 'active').length;
-
-  const totalConnections = summary?.totalConnections;
-  const connectedConnections = summary?.connectedConnections;
-
-  const totalJobs = summary?.totalJobs ?? jobs.length;
-  const enabledJobs =
-    summary?.enabledJobs ?? jobs.filter((j) => j.status === 'active').length;
-  const runningJobs = jobs.filter((j) => j.isRunning).length;
-
-  const totalRecordsSynced = summary?.totalRecordsSynced ?? 0;
-  const totalErrors =
-    summary?.totalErrors ??
-    jobs.reduce((sum, j) => sum + (j.errorCount ?? 0), 0);
-
-  // Success rate needs a denominator > 0, otherwise "100%" or "0%" would be
-  // a fabricated number rather than a real measurement.
-  const successDenominator = totalRecordsSynced + totalErrors;
-  const successRate =
-    successDenominator > 0
-      ? ((totalRecordsSynced / successDenominator) * 100).toFixed(1) + '%'
-      : undefined;
-
-  const recordsSparkline = buildSparklineFromLogs(logs, 7, (l) =>
-    (l.message ?? '').toLowerCase().includes('sync'),
-  );
+  const enabledJobs = jobs.filter((job) => job.isEnabled === true);
+  const projectTrend = buildRecentCreationTrend(projects, now);
+  const activeJobTrend = buildRecentCreationTrend(enabledJobs, now);
+  const recordsTrend = buildRecentRecordsTrend(logs, now);
+  const projectCreations = sumTrend(projectTrend);
+  const activeJobCreations = sumTrend(activeJobTrend);
+  const syncedRecords = sumTrend(recordsTrend);
 
   return [
     {
       id: 'projects',
-      label: 'Projects',
-      value: totalProjects,
-      sublabel: `${activeProjects} active`,
+      label: 'Total Projects',
+      value: summary.totalProjects,
+      sublabel: `${summary.activeProjects} active`,
       icon: FolderOpen,
-      iconClassName: 'text-violet-600',
-      iconBgClassName: 'bg-violet-100/40',
-      chartColor: 'oklch(0.55 0.2 290)',
+      iconClassName: 'text-primary',
+      iconBgClassName: 'bg-primary/10',
       href: '/projects',
-    },
-    {
-      id: 'connections',
-      label: 'Connections',
-      value: totalConnections ?? '—',
-      sublabel:
-        totalConnections != null
-          ? `${connectedConnections ?? 0} connected`
-          : 'not tracked yet',
-      icon: Plug,
-      iconClassName: 'text-emerald-600',
-      iconBgClassName: 'bg-emerald-100/40',
-      chartColor: 'oklch(0.6 0.15 160)',
-      href: '/connections',
+      chartData: projectTrend,
+      chartColor: 'var(--primary)',
+      chartLabel: 'Projects created · 7d',
+      chartSummary:
+        projectCreations === undefined
+          ? undefined
+          : `${projectCreations.toLocaleString()} ${projectCreations === 1 ? 'project' : 'projects'} created · 7d`,
     },
     {
       id: 'active-jobs',
       label: 'Active Sync Jobs',
-      value: enabledJobs,
-      sublabel: `${totalJobs} total · ${runningJobs} running now`,
+      value: summary.enabledJobs,
+      sublabel: `${summary.totalJobs} total jobs`,
       icon: Zap,
-      iconClassName: 'text-blue-600',
-      iconBgClassName: 'bg-blue-100/40',
-      chartColor: 'oklch(0.6 0.18 250)',
+      iconClassName: 'text-primary',
+      iconBgClassName: 'bg-primary/10',
       href: '/jobs',
+      chartData: activeJobTrend,
+      chartColor: 'var(--primary)',
+      chartLabel: 'Active jobs created · 7d',
+      chartSummary:
+        activeJobCreations === undefined
+          ? undefined
+          : `${activeJobCreations.toLocaleString()} active ${activeJobCreations === 1 ? 'job' : 'jobs'} created · 7d`,
     },
     {
       id: 'records-synced',
       label: 'Records Synced',
-      value: formatNum(totalRecordsSynced),
-      sublabel: recordsSparkline ? undefined : 'all time',
+      value: formatNum(summary.totalRecordsSynced),
+      sublabel: 'All time',
       icon: Activity,
-      iconClassName: 'text-orange-600',
-      iconBgClassName: 'bg-orange-100/40',
-      chartData: recordsSparkline,
-      trend: trendFromSparkline(recordsSparkline),
-      chartColor: 'oklch(0.65 0.18 60)',
+      iconClassName: 'text-primary',
+      iconBgClassName: 'bg-primary/10',
       href: '/logs',
-      secondaryStats: [
-        { label: 'Success rate', value: successRate ?? '—', tone: 'success' },
-        {
-          label: 'Errors',
-          value: totalErrors,
-          tone: totalErrors > 0 ? 'danger' : 'default',
-        },
-      ],
+      chartData: recordsTrend,
+      chartColor: 'var(--primary)',
+      chartLabel: 'Records synced · 7d',
+      chartSummary:
+        syncedRecords === undefined
+          ? undefined
+          : `${syncedRecords.toLocaleString()} ${syncedRecords === 1 ? 'record' : 'records'} synced · 7d`,
     },
   ];
+}
+
+function sumTrend(points: DashboardStat['chartData']): number | undefined {
+  if (!points) return undefined;
+  return points.reduce((total, point) => total + point.value, 0);
 }

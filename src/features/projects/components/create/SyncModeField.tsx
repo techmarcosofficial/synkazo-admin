@@ -51,7 +51,7 @@ export default function SyncModeField({
   return (
     <Field data-invalid={!!error}>
       <FieldLabel className="flex items-center gap-2">
-        Sync Mode
+        Sync Direction
         <span className="text-destructive -ml-1.5">*</span>
         {!(canOneWay && canTwoWay) && <PlanLockBadge label="Plan limited" />}
       </FieldLabel>

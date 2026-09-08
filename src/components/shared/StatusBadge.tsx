@@ -1,4 +1,5 @@
 import { cva, type VariantProps } from 'class-variance-authority';
+import { ArrowLeftRight, ArrowRight, type LucideIcon } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -73,6 +74,7 @@ const STATUS_CONFIG: Record<
     tone: Tone;
     label: string;
     description?: string;
+    icon?: LucideIcon;
   }
 > = {
   active: {
@@ -102,14 +104,27 @@ const STATUS_CONFIG: Record<
   completed: { tone: 'success', label: 'Completed' },
 
   pending: { tone: 'warning', label: 'Pending' },
+  retry_pending: { tone: 'warning', label: 'Retry pending' },
+  schedule_paused: { tone: 'paused', label: 'Schedule paused' },
+  ready_to_connect: { tone: 'info', label: 'Ready to connect' },
+  awaiting_connection: { tone: 'muted', label: 'Awaiting connection' },
   partial: { tone: 'warning', label: 'Partial' },
+  scheduled: { tone: 'info', label: 'Scheduled' },
+  sandbox: { tone: 'warning', label: 'Sandbox' },
+  production: { tone: 'success', label: 'Production' },
+  one_way: { tone: 'muted', label: 'One-way', icon: ArrowRight },
+  two_way: { tone: 'muted', label: 'Two-way', icon: ArrowLeftRight },
 
   failed: { tone: 'danger', label: 'Failed' },
+  cancelled: { tone: 'danger', label: 'Cancelled' },
+  limit_reached: { tone: 'muted', label: 'Limit reached' },
+  time_limit_reached: { tone: 'warning', label: 'Time limit reached' },
   disconnected: { tone: 'danger', label: 'Disconnected' },
 
   idle: { tone: 'muted', label: 'Idle' },
   skipped: { tone: 'muted', label: 'Skipped' },
   inactive: { tone: 'muted', label: 'Inactive' },
+  disabled: { tone: 'muted', label: 'Disabled' },
 
   invited: { tone: 'info', label: 'Invited' },
 
@@ -155,17 +170,22 @@ export default function StatusBadge({
     tone: 'muted' as Tone,
     label: status,
   };
+  const Icon = cfg.icon;
 
   if (variant === 'menu') {
     return (
       <div className="flex flex-col">
         <div className="flex items-center gap-2 font-medium">
-          <span
-            className={statusDot({
-              tone: cfg.tone,
-              size: 'md',
-            })}
-          />
+          {Icon ? (
+            <Icon className="size-3.5" aria-hidden="true" />
+          ) : (
+            <span
+              className={statusDot({
+                tone: cfg.tone,
+                size: 'md',
+              })}
+            />
+          )}
           {cfg.label}
         </div>
 
@@ -189,12 +209,16 @@ export default function StatusBadge({
         }),
       )}
     >
-      <span
-        className={statusDot({
-          tone: cfg.tone,
-          size,
-        })}
-      />
+      {Icon ? (
+        <Icon aria-hidden="true" />
+      ) : (
+        <span
+          className={statusDot({
+            tone: cfg.tone,
+            size,
+          })}
+        />
+      )}
       {cfg.label}
     </Badge>
   );

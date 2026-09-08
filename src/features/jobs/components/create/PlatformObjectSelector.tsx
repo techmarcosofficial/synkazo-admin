@@ -159,7 +159,15 @@ export default function PlatformObjectSelector({
       <Field>
         <FieldLabel>
           <PlatformIcon platformId={platformId} size={16} />
-          {platformLabel}
+          <span className="flex items-center gap-0.5">
+            {label}
+            <span className="text-destructive" aria-hidden="true">
+              *
+            </span>
+          </span>
+          <span className="text-muted-foreground font-normal">
+            · {platformLabel}
+          </span>
           <Tooltip>
             <TooltipTrigger asChild>
               {/* span wrapper: a disabled button emits no pointer events, so the tooltip

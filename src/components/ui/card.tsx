@@ -2,21 +2,39 @@ import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
+type CardSurface = 'auto' | 'outer' | 'inner';
+
+const CardNestingContext = React.createContext(false);
+
 function Card({
   className,
   size = 'default',
+  surface = 'auto',
+  children,
   ...props
-}: React.ComponentProps<'div'> & { size?: 'default' | 'sm' }) {
+}: React.ComponentProps<'div'> & {
+  size?: 'default' | 'sm';
+  surface?: CardSurface;
+}) {
+  const isNested = React.useContext(CardNestingContext);
+  const resolvedSurface =
+    surface === 'auto' ? (isNested ? 'inner' : 'outer') : surface;
+
   return (
-    <div
-      data-slot="card"
-      data-size={size}
-      className={cn(
-        'group/card bg-card text-card-foreground dark:ring-foreground/10 flex flex-col gap-(--card-spacing) overflow-hidden rounded-4xl py-(--card-spacing) text-sm [--card-spacing:--spacing(6)] has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(4)] *:[img:first-child]:rounded-t-4xl *:[img:last-child]:rounded-b-4xl',
-        className,
-      )}
-      {...props}
-    />
+    <CardNestingContext.Provider value>
+      <div
+        data-slot="card"
+        data-size={size}
+        data-layout-surface={resolvedSurface}
+        className={cn(
+          'group/card bg-card text-card-foreground border-border flex flex-col gap-(--card-spacing) overflow-hidden rounded-4xl border py-(--card-spacing) text-sm shadow-none [--card-spacing:--spacing(6)] has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(4)] *:[img:first-child]:rounded-t-4xl *:[img:last-child]:rounded-b-4xl',
+          className,
+        )}
+        {...props}
+      >
+        {children}
+      </div>
+    </CardNestingContext.Provider>
   );
 }
 

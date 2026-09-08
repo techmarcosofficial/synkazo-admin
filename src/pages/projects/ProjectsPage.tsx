@@ -3,7 +3,6 @@ import { ArrowRight } from 'lucide-react';
 import { useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
-import { PlatformIcon } from '@/components/platform';
 import ErrorState from '@/components/shared/ErrorState';
 import ManagementToolbar from '@/components/shared/ManagementToolbar';
 import PageHeader from '@/components/shared/PageHeader';
@@ -24,66 +23,101 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableHead,
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
 import {
-  ProjectGrid,
-  ProjectEmptyState,
   CreateProjectButton,
   CreateProjectDialog,
+  ProjectEmptyState,
+  ProjectGrid,
 } from '@/features/projects';
+import { ProjectPlatformPair } from '@/features/projects/components/cards';
 import { useProjectFilters } from '@/features/projects/hooks';
-import {
-  PROJECT_ENVIRONMENT_OPTIONS,
-  PROJECT_STATUS_OPTIONS,
-} from '@/features/projects/types';
+import { PROJECT_STATUS_OPTIONS } from '@/features/projects/types';
 import type {
-  ProjectEnvironmentFilter,
   ProjectExtended,
   ProjectStatusFilter,
 } from '@/features/projects/types';
 import { buildJobCountsByProject } from '@/features/projects/utils';
 import { usePagination } from '@/hooks/usePagination';
-import { useSort } from '@/hooks/useSort';
+import { useSort, type SortDirection } from '@/hooks/useSort';
 import { useViewMode } from '@/hooks/useViewMode';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { useJobsQuery } from '@/queries/useJobs';
 import { useProjectsQuery } from '@/queries/useProjects';
 import { useHeaderStore } from '@/stores/useHeaderStore';
 
-type ProjectWithMeta = ProjectExtended & { jobCount: number };
+type ProjectWithMeta = ProjectExtended & {
+  jobCount: number;
+};
 
 type SortKey =
-  'name' | 'environment' | 'records' | 'rules' | 'lastSynced' | 'status';
+  'name' | 'records' | 'rules' | 'lastSynced' | 'status' | 'updatedAt';
 
-/** Only shown once the environment has actually been activated — a fresh project
- *  defaults to "production" in the DB before any setup happens. */
-function projectEnv(project: ProjectExtended): string | undefined {
-  return project.environmentActivatedAt ? project.activeEnvironment : undefined;
+interface CardSortOption {
+  value: string;
+  label: string;
+  key: SortKey;
+  direction: SortDirection;
+}
+
+const CARD_SORT_OPTIONS: CardSortOption[] = [
+  {
+    value: 'updatedAt-desc',
+    label: 'Recently updated',
+    key: 'updatedAt',
+    direction: 'desc',
+  },
+  { value: 'name-asc', label: 'Name: A–Z', key: 'name', direction: 'asc' },
+  { value: 'name-desc', label: 'Name: Z–A', key: 'name', direction: 'desc' },
+  {
+    value: 'records-desc',
+    label: 'Most records synced',
+    key: 'records',
+    direction: 'desc',
+  },
+  {
+    value: 'rules-desc',
+    label: 'Most sync jobs',
+    key: 'rules',
+    direction: 'desc',
+  },
+  {
+    value: 'lastSynced-desc',
+    label: 'Recently synced',
+    key: 'lastSynced',
+    direction: 'desc',
+  },
+  { value: 'status-asc', label: 'Status', key: 'status', direction: 'asc' },
+];
+
+function timestamp(value?: string | null) {
+  return value ? new Date(value).getTime() : 0;
 }
 
 function compareProjects(a: ProjectWithMeta, b: ProjectWithMeta, key: SortKey) {
   switch (key) {
     case 'name':
       return (a.name || '').localeCompare(b.name || '');
-    case 'environment':
-      return (projectEnv(a) || '').localeCompare(projectEnv(b) || '');
     case 'records':
       return (a.totalRecordsSynced ?? 0) - (b.totalRecordsSynced ?? 0);
     case 'rules':
       return a.jobCount - b.jobCount;
     case 'lastSynced':
-      return (
-        new Date(a.lastSyncedAt || 0).getTime() -
-        new Date(b.lastSyncedAt || 0).getTime()
-      );
+      return timestamp(a.lastSyncedAt) - timestamp(b.lastSyncedAt);
     case 'status':
       return (a.status || '').localeCompare(b.status || '');
+    case 'updatedAt':
+      return timestamp(a.updatedAt) - timestamp(b.updatedAt);
   }
 }
 
 export default function ProjectsPage() {
   const navigate = useNavigate();
+  const { hasPermission } = useSynkazoAuth();
+  const canCreateProject = hasPermission('project.create');
 
   const projectsQuery = useProjectsQuery();
   const jobsQuery = useJobsQuery();
@@ -93,20 +127,23 @@ export default function ProjectsPage() {
   const projects = (projectsQuery.data ?? []) as ProjectExtended[];
   const jobs = jobsQuery.data ?? [];
 
-  const [viewMode, setViewMode] = useViewMode('projects');
+  const [viewMode, setViewMode] = useViewMode('projects', 'card');
   const { filters, setFilters, filteredProjects } = useProjectFilters(projects);
-  const jobCountsByProject = buildJobCountsByProject(jobs);
+  const jobCountsByProject = useMemo(
+    () => buildJobCountsByProject(jobs),
+    [jobs],
+  );
 
   const projectsWithMeta: ProjectWithMeta[] = useMemo(
     () =>
-      filteredProjects.map((p) => ({
-        ...p,
-        jobCount: jobCountsByProject[p.id] ?? 0,
+      filteredProjects.map((project) => ({
+        ...project,
+        jobCount: jobCountsByProject[project.id] ?? 0,
       })),
     [filteredProjects, jobCountsByProject],
   );
 
-  const { sorted, sortKey, direction, toggleSort } = useSort<
+  const { sorted, sortKey, direction, toggleSort, setSort } = useSort<
     ProjectWithMeta,
     SortKey
   >(projectsWithMeta, compareProjects);
@@ -114,17 +151,26 @@ export default function ProjectsPage() {
   const { page, setPage, pageSize, setPageSize, totalPages, pageItems, total } =
     usePagination(sorted, 10);
 
+  useEffect(() => {
+    setPage(1);
+  }, [filters.search, filters.status, setPage]);
+
   const handleProjectCreated = (project: ProjectExtended) =>
     navigate(`/projects/${project.id}`);
-  const setActions = useHeaderStore((s) => s.setActions);
-  const clearActions = useHeaderStore((s) => s.clearActions);
+  const setActions = useHeaderStore((state) => state.setActions);
+  const clearActions = useHeaderStore((state) => state.clearActions);
 
   useEffect(() => {
-    setActions(<CreateProjectButton />);
+    if (canCreateProject) setActions(<CreateProjectButton />);
+    else clearActions();
     return () => clearActions();
-  }, []);
+  }, [canCreateProject, clearActions, setActions]);
 
+  const clearFilters = () => setFilters({ search: '', status: 'all' });
   const hasResults = !isLoading && !isError && filteredProjects.length > 0;
+  const cardSortValue = CARD_SORT_OPTIONS.find(
+    (option) => option.key === sortKey && option.direction === direction,
+  )?.value;
 
   const paginationBar = (
     <PaginationBar
@@ -134,29 +180,28 @@ export default function ProjectsPage() {
       pageSize={pageSize}
       onPageChange={setPage}
       onPageSizeChange={setPageSize}
+      pageSizeLabel="Projects per page"
     />
   );
 
   return (
     <div className="w-full space-y-6">
-      {/* NOTE: wraps PageHeader instead of editing it, so other pages that
-          use PageHeader aren't affected. If PageHeader already has a
-          rightSlot/illustration prop, swap this wrapper for that instead. */}
       <PageHeader
         title="Projects"
         description={
           isLoading
-            ? 'A project pairs one source and one destination platform'
-            : `${projects.length} project${projects.length !== 1 ? 's' : ''} · a project pairs one source and one destination platform`
+            ? 'A project connects a source and destination platform'
+            : `${projects.length} project${projects.length !== 1 ? 's' : ''} · connect, monitor, and manage your syncs`
         }
       />
+
       <Card>
-        <CardContent className="space-y-8">
-          <div className="flex justify-between">
+        <CardContent className="space-y-6">
+          <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
             <div className="space-y-1">
-              <h3 className="text-xl font-semibold">Manage your projects</h3>
+              <h2 className="text-xl font-semibold">Manage projects</h2>
               <p className="text-muted-foreground text-sm">
-                Search, filter, and switch between table and card view
+                Find a project, review its status, or open it to manage syncs.
               </p>
             </div>
             <ManagementToolbar
@@ -173,46 +218,58 @@ export default function ProjectsPage() {
                       setFilters({ ...filters, status })
                     }
                   >
-                    <SelectTrigger className="bg-muted sm:w-44">
+                    <SelectTrigger
+                      className="bg-muted sm:w-40"
+                      aria-label="Filter projects by status"
+                    >
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {PROJECT_STATUS_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
+                      {PROJECT_STATUS_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
 
-                  <Select
-                    value={filters.environment}
-                    onValueChange={(environment: ProjectEnvironmentFilter) =>
-                      setFilters({ ...filters, environment })
-                    }
-                  >
-                    <SelectTrigger className="bg-muted sm:w-44">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PROJECT_ENVIRONMENT_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {viewMode === 'card' && (
+                    <Select
+                      value={cardSortValue}
+                      onValueChange={(value) => {
+                        const option = CARD_SORT_OPTIONS.find(
+                          (candidate) => candidate.value === value,
+                        );
+                        if (option) setSort(option.key, option.direction);
+                      }}
+                    >
+                      <SelectTrigger
+                        className="bg-muted sm:w-48"
+                        aria-label="Sort projects"
+                      >
+                        <SelectValue placeholder="Sort projects" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CARD_SORT_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </>
               }
             />
           </div>
+
           {isLoading ? (
             viewMode === 'table' ? (
               <Card className="overflow-hidden py-0">
                 <SkeletonTable rows={6} columns={6} />
               </Card>
             ) : (
-              <SkeletonCardGrid count={4} />
+              <SkeletonCardGrid count={6} />
             )
           ) : isError ? (
             <ErrorState
@@ -225,10 +282,12 @@ export default function ProjectsPage() {
             <ProjectEmptyState
               hasNoProjects={projects.length === 0}
               onCreated={handleProjectCreated}
+              onClearFilters={clearFilters}
+              canCreate={canCreateProject}
               viewMode={viewMode}
             />
           ) : viewMode === 'table' ? (
-            <div className="overflow-hidden rounded-4xl border">
+            <div className="border-border overflow-x-auto rounded-4xl border">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted hover:bg-muted/50">
@@ -240,32 +299,25 @@ export default function ProjectsPage() {
                       Project
                     </SortableTableHead>
                     <SortableTableHead
-                      active={sortKey === 'environment'}
-                      direction={direction}
-                      onClick={() => toggleSort('environment')}
-                    >
-                      Environment
-                    </SortableTableHead>
-                    <SortableTableHead
                       active={sortKey === 'rules'}
                       direction={direction}
                       onClick={() => toggleSort('rules')}
                     >
-                      Rules
+                      Sync jobs
                     </SortableTableHead>
                     <SortableTableHead
                       active={sortKey === 'records'}
                       direction={direction}
                       onClick={() => toggleSort('records')}
                     >
-                      Records Synced
+                      Records synced
                     </SortableTableHead>
                     <SortableTableHead
                       active={sortKey === 'lastSynced'}
                       direction={direction}
                       onClick={() => toggleSort('lastSynced')}
                     >
-                      Last Synced
+                      Last synced
                     </SortableTableHead>
                     <SortableTableHead
                       active={sortKey === 'status'}
@@ -274,66 +326,64 @@ export default function ProjectsPage() {
                     >
                       Status
                     </SortableTableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {pageItems.map((project) => {
-                    const env = projectEnv(project);
-                    return (
-                      <TableRow key={project.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="flex shrink-0 items-center gap-1.5">
-                              <PlatformIcon
-                                platformId={project.sourcePlatformId ?? ''}
-                                variant="avatar"
-                                size="md"
-                              />
-                              <ArrowRight className="text-muted-foreground size-3.5" />
-                              <PlatformIcon
-                                platformId={project.destPlatformId}
-                                variant="avatar"
-                                size="md"
-                              />
-                            </div>
-                            <div className="min-w-0">
-                              <Link
-                                to={`/projects/${project.id}`}
-                                className="hover:text-primary block truncate text-sm font-medium transition-colors"
-                              >
-                                {project.name}
-                              </Link>
-                              {project.description && (
-                                <p className="text-muted-foreground truncate text-xs">
-                                  {project.description}
-                                </p>
-                              )}
-                            </div>
+                  {pageItems.map((project) => (
+                    <TableRow key={project.id}>
+                      <TableCell className="min-w-72">
+                        <div className="flex items-center gap-3">
+                          <ProjectPlatformPair
+                            sourcePlatformId={project.sourcePlatformId}
+                            destPlatformId={project.destPlatformId}
+                            syncMode={project.syncMode}
+                          />
+                          <div className="min-w-0">
+                            <Link
+                              to={`/projects/${project.id}`}
+                              className="hover:text-primary focus-visible:ring-ring block truncate rounded-sm text-sm font-medium transition-colors outline-none focus-visible:ring-2"
+                            >
+                              {project.name}
+                            </Link>
+                            {project.description && (
+                              <p className="text-muted-foreground max-w-72 truncate text-xs">
+                                {project.description}
+                              </p>
+                            )}
                           </div>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm capitalize">
-                          {env ?? '—'}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {project.jobCount}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {project.totalRecordsSynced ?? 0}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {project.lastSyncedAt
-                            ? formatDistanceToNow(
-                                new Date(project.lastSyncedAt),
-                                { addSuffix: true },
-                              )
-                            : '—'}
-                        </TableCell>
-                        <TableCell>
-                          <StatusBadge status={project.status} size="sm" />
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {project.jobCount}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {(project.totalRecordsSynced ?? 0).toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                        {project.lastSyncedAt
+                          ? formatDistanceToNow(
+                              new Date(project.lastSyncedAt),
+                              {
+                                addSuffix: true,
+                              },
+                            )
+                          : 'Never'}
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={project.status} size="sm" />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Link
+                          to={`/projects/${project.id}`}
+                          className="text-primary focus-visible:ring-ring inline-flex items-center gap-1 rounded-sm text-sm font-medium outline-none hover:underline focus-visible:ring-2"
+                        >
+                          View
+                          <ArrowRight className="size-3.5" aria-hidden="true" />
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             </div>
@@ -342,16 +392,15 @@ export default function ProjectsPage() {
       </Card>
 
       {hasResults && viewMode === 'card' && (
-        <>
-          <ProjectGrid
-            projects={pageItems}
-            jobCountsByProject={jobCountsByProject}
-          />
-        </>
+        <ProjectGrid
+          projects={pageItems}
+          jobCountsByProject={jobCountsByProject}
+        />
       )}
-      {paginationBar}
 
-      <CreateProjectDialog />
+      {hasResults && paginationBar}
+
+      {canCreateProject && <CreateProjectDialog />}
     </div>
   );
 }

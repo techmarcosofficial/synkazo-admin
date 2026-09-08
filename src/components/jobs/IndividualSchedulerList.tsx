@@ -198,7 +198,7 @@ function JobCard({ job, index, projectId, rank, onRefresh }: JobCardProps) {
           <div className="flex items-center gap-3 px-4 py-3">
             <div
               {...provided.dragHandleProps}
-              className="text-muted-foreground shrink-0 cursor-grab"
+              className="text-muted-foreground hover:bg-muted focus-visible:ring-ring/30 flex size-8 shrink-0 cursor-grab items-center justify-center rounded-3xl outline-none focus-visible:ring-3"
             >
               <GripVertical className="size-4" />
             </div>

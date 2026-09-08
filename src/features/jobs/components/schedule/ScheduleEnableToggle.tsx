@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { usePriorityQueueQuery } from '@/queries/usePriorityQueue';
 
 interface ScheduleEnableToggleProps {
+  className?: string;
   projectId: string;
   jobId: string;
   job: ExtJob;
@@ -36,6 +37,7 @@ interface ScheduleEnableToggleProps {
  * offering a control that would silently do nothing.
  */
 export default function ScheduleEnableToggle({
+  className,
   projectId,
   jobId,
   job,
@@ -54,7 +56,7 @@ export default function ScheduleEnableToggle({
 
   if (priorityModeActive) {
     return (
-      <p className="text-muted-foreground bg-muted/40 rounded-lg px-4 py-3 text-sm">
+      <p className="text-muted-foreground bg-muted/40 rounded-4xl border px-4 py-3 text-sm">
         Priority scheduling is enabled.
       </p>
     );
@@ -74,10 +76,13 @@ export default function ScheduleEnableToggle({
         variant="outline"
         onClick={() => onScheduleToggle()}
         disabled={scheduleToggling}
-        className={cn('w-full', 'border-warning/30 text-warning bg-warning/5')}
+        className={cn(
+          'border-warning/30 bg-warning/5 text-warning w-full',
+          className,
+        )}
       >
         {scheduleToggling ? <Spinner /> : <Square className="fill-current" />}
-        {scheduleToggling ? 'Disabling…' : 'Disable Schedule'}
+        {scheduleToggling ? 'Pausing…' : 'Pause schedule'}
       </Button>
     );
   }
@@ -103,8 +108,8 @@ export default function ScheduleEnableToggle({
 
   return (
     <>
-      <Button onClick={() => setShowConfirm(true)}>
-        <Play /> {mode === 'resume' ? 'Resume Schedule' : 'Enable Schedule'}
+      <Button className={className} onClick={() => setShowConfirm(true)}>
+        <Play /> {mode === 'resume' ? 'Resume schedule' : 'Enable schedule'}
       </Button>
       {showConfirm && (
         <RunConfirmModal

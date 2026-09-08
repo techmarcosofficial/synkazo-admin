@@ -291,7 +291,7 @@ export default function CreateAssociationRuleModal({
           <>
             {step === 0 && (
               <FieldGroup>
-                <div className="bg-muted/40 text-muted-foreground rounded-lg border p-3 text-xs">
+                <div className="bg-muted/40 text-muted-foreground rounded-4xl border p-3 text-xs">
                   The{' '}
                   <strong className="text-foreground font-semibold">
                     source
@@ -402,7 +402,7 @@ export default function CreateAssociationRuleModal({
                 )}
 
                 {form.sourceObject && form.sourceMatchField && (
-                  <div className="bg-primary/5 border-primary/20 text-primary rounded-lg border px-3 py-2 font-mono text-xs">
+                  <div className="bg-primary/5 border-primary/20 text-primary rounded-4xl border px-3 py-2 font-mono text-xs">
                     {form.sourceObject}.<strong>{form.sourceMatchField}</strong>{' '}
                     = ?
                   </div>
@@ -412,7 +412,7 @@ export default function CreateAssociationRuleModal({
 
             {step === 1 && (
               <FieldGroup>
-                <div className="bg-muted/40 text-muted-foreground rounded-lg border p-3 text-xs">
+                <div className="bg-muted/40 text-muted-foreground rounded-4xl border p-3 text-xs">
                   The{' '}
                   <strong className="text-foreground font-semibold">
                     target
@@ -523,7 +523,7 @@ export default function CreateAssociationRuleModal({
                   form.targetObject &&
                   form.sourceMatchField &&
                   form.targetMatchField && (
-                    <div className="bg-primary/5 border-primary/30 text-primary flex items-center gap-2 rounded-lg border px-3 py-2 font-mono text-xs">
+                    <div className="bg-primary/5 border-primary/30 text-primary flex items-center gap-2 rounded-4xl border px-3 py-2 font-mono text-xs">
                       <span>
                         {form.sourceObject}.
                         <strong>{form.sourceMatchField}</strong>
@@ -632,7 +632,7 @@ export default function CreateAssociationRuleModal({
                               }))
                             }
                             className={cn(
-                              'w-full rounded-lg border px-3 py-2.5 text-left text-sm transition-colors',
+                              'w-full rounded-3xl border px-3 py-2.5 text-left text-sm transition-colors',
                               isSelected
                                 ? 'border-primary bg-primary/5 text-primary'
                                 : 'bg-muted/40 text-muted-foreground hover:bg-muted',

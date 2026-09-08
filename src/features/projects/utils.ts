@@ -35,13 +35,6 @@ import type { ProjectExtended, ProjectFiltersState } from './types';
 
 import type { Job } from '@/types';
 
-/** Whether a project is still going through the guided setup wizard. */
-export function isDraftProject(project: ProjectExtended): boolean {
-  // Driven by the guided-setup ratchet, not project.status — a project can
-  // be manually flipped to "active" status while setup is still incomplete.
-  return !project.setupCompletedAt;
-}
-
 /** Compact number formatting, e.g. 1500 -> "1.5k". */
 export function formatNum(n: number | undefined | null): number | string {
   if (!n) return 0;
@@ -49,20 +42,25 @@ export function formatNum(n: number | undefined | null): number | string {
   return n;
 }
 
-/** Applies search / status / environment filters to a project list. */
-export function filterProjects(
-  projects: ProjectExtended[],
+/** Applies the project-list search and status filter. */
+export function filterProjects<T extends ProjectExtended>(
+  projects: T[],
   filters: ProjectFiltersState,
-): ProjectExtended[] {
+): T[] {
   const search = filters.search.trim().toLowerCase();
 
   return projects.filter((p) => {
-    const matchSearch = !search || p.name.toLowerCase().includes(search);
+    const organisationName =
+      'organisationName' in p && typeof p.organisationName === 'string'
+        ? p.organisationName
+        : '';
+    const matchSearch =
+      !search ||
+      p.name.toLowerCase().includes(search) ||
+      p.description?.toLowerCase().includes(search) ||
+      organisationName.toLowerCase().includes(search);
     const matchStatus = filters.status === 'all' || p.status === filters.status;
-    const matchEnvironment =
-      filters.environment === 'all' ||
-      p.activeEnvironment === filters.environment;
-    return matchSearch && matchStatus && matchEnvironment;
+    return matchSearch && matchStatus;
   });
 }
 

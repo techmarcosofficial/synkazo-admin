@@ -13,8 +13,22 @@ export const queryKeys = {
     byProject: (projectId: string) => ['jobs', 'project', projectId] as const,
     detail: (projectId: string, jobId: string) =>
       ['jobs', 'project', projectId, jobId] as const,
-    runLogs: (projectId: string, jobId: string, page: number, limit: number) =>
-      ['jobs', 'runLogs', projectId, jobId, page, limit] as const,
+    runLogs: (
+      projectId: string,
+      jobId: string,
+      page: number,
+      limit: number,
+      filters?: object,
+    ) =>
+      [
+        'jobs',
+        'runLogs',
+        projectId,
+        jobId,
+        page,
+        limit,
+        filters ?? {},
+      ] as const,
   },
   connections: {
     all: ['connections'] as const,
@@ -29,6 +43,20 @@ export const queryKeys = {
   dashboard: {
     summary: ['dashboard', 'summary'] as const,
     activeSyncs: ['dashboard', 'activeSyncs'] as const,
+    syncMetrics: (
+      period: string,
+      timezone: string,
+      start?: string,
+      end?: string,
+    ) =>
+      [
+        'dashboard',
+        'syncMetrics',
+        period,
+        timezone,
+        start ?? null,
+        end ?? null,
+      ] as const,
   },
   scheduler: {
     health: ['scheduler', 'health'] as const,

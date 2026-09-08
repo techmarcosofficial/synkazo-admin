@@ -1,13 +1,14 @@
+import type { DraggableProvided, DropResult } from '@hello-pangea/dnd';
+import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd';
 import {
   AlertCircle,
   ArrowRight,
   Calendar,
   Check,
-  ChevronDown,
-  ChevronUp,
   GitBranch,
   GripVertical,
   Hash,
+  Info,
   Plus,
   RefreshCw,
   Ruler,
@@ -19,7 +20,13 @@ import {
   Type as TypeIcon,
   X,
 } from 'lucide-react';
-import { useEffect, useMemo, useState, type ComponentType } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentType,
+} from 'react';
 
 import { associationsApi } from '@/api/associations';
 import {
@@ -30,12 +37,6 @@ import {
 } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogFooter,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import {
   InputGroup,
@@ -51,6 +52,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import {
   Tooltip,
   TooltipContent,
@@ -142,27 +151,6 @@ const PARAM_LABELS: Record<string, string> = {
   defaultValue: 'Default value',
 };
 
-// Category identity colors — each rule category is a distinct visual "tag",
-// not a semantic theme state, so these stay as raw colors like brand colors.
-const CATEGORY_COLORS: Record<
-  string,
-  { active: string; activeBg: string; border: string }
-> = {
-  text: { active: '#A855F7', activeBg: '#A855F712', border: '#A855F7' },
-  length: { active: '#F59E0B', activeBg: '#F59E0B12', border: '#F59E0B' },
-  validation: { active: '#22C55E', activeBg: '#22C55E12', border: '#22C55E' },
-  conditional: { active: '#EF4444', activeBg: '#EF444412', border: '#EF4444' },
-  number: { active: '#3B82F6', activeBg: '#3B82F612', border: '#3B82F6' },
-  date: { active: '#F43F5E', activeBg: '#F43F5E12', border: '#F43F5E' },
-  split: { active: '#EC4899', activeBg: '#EC489912', border: '#EC4899' },
-  conversion: { active: '#F97316', activeBg: '#F9731612', border: '#F97316' },
-};
-const DEFAULT_CAT_COLOR = {
-  active: 'var(--muted-foreground)',
-  activeBg: 'transparent',
-  border: 'var(--muted-foreground)',
-};
-
 const CATEGORY_ICONS: Record<
   string,
   ComponentType<{ className?: string; style?: React.CSSProperties }>
@@ -235,14 +223,14 @@ function ValueMapEditor({
             value={from}
             onChange={(e) => renameKey(i, e.target.value)}
             placeholder="Source value"
-            className="bg-muted h-9 flex-1 rounded-lg border-transparent font-mono text-xs shadow-none"
+            className="bg-muted h-9 flex-1 rounded-3xl border-transparent font-mono text-xs shadow-none"
           />
           <ArrowRight className="text-muted-foreground size-3 shrink-0" />
           {destOptions?.length ? (
             <Select value={to} onValueChange={(v) => setValue(i, v)}>
               <SelectTrigger
                 size="sm"
-                className="bg-muted h-9 flex-1 rounded-lg border-transparent shadow-none"
+                className="bg-muted h-9 flex-1 rounded-3xl border-transparent shadow-none"
               >
                 <SelectValue placeholder="Destination value" />
               </SelectTrigger>
@@ -259,7 +247,7 @@ function ValueMapEditor({
               value={to}
               onChange={(e) => setValue(i, e.target.value)}
               placeholder="Destination value"
-              className="bg-muted h-9 flex-1 rounded-lg border-transparent font-mono text-xs shadow-none"
+              className="bg-muted h-9 flex-1 rounded-3xl border-transparent font-mono text-xs shadow-none"
             />
           )}
           <Button
@@ -340,9 +328,7 @@ function ValueMappingEditor({
             checked={!!norm.trim}
             onCheckedChange={(v) => setNorm({ trim: v })}
           />
-          <span className="text-muted-foreground text-xs">
-            Trim whitespace
-          </span>
+          <span className="text-muted-foreground text-xs">Trim whitespace</span>
         </label>
         <label className="flex items-center gap-1.5">
           <Switch
@@ -375,14 +361,14 @@ function ValueMappingEditor({
             value={from}
             onChange={(e) => renameKey(i, e.target.value)}
             placeholder="Source value"
-            className="bg-muted h-9 flex-1 rounded-lg border-transparent font-mono text-xs shadow-none"
+            className="bg-muted h-9 flex-1 rounded-3xl border-transparent font-mono text-xs shadow-none"
           />
           <ArrowRight className="text-muted-foreground size-3 shrink-0" />
           {destOptions?.length ? (
             <Select value={to} onValueChange={(v) => setValue(i, v)}>
               <SelectTrigger
                 size="sm"
-                className="bg-muted h-9 flex-1 rounded-lg border-transparent shadow-none"
+                className="bg-muted h-9 flex-1 rounded-3xl border-transparent shadow-none"
               >
                 <SelectValue placeholder="Destination value" />
               </SelectTrigger>
@@ -399,7 +385,7 @@ function ValueMappingEditor({
               value={to}
               onChange={(e) => setValue(i, e.target.value)}
               placeholder="Destination value"
-              className="bg-muted h-9 flex-1 rounded-lg border-transparent font-mono text-xs shadow-none"
+              className="bg-muted h-9 flex-1 rounded-3xl border-transparent font-mono text-xs shadow-none"
             />
           )}
           <Button
@@ -434,33 +420,30 @@ function ValueMappingEditor({
 function ActiveRule({
   rule,
   index,
-  total,
   onUpdate,
   onRemove,
-  onMove,
   validationErrors,
   destOptions,
+  dragHandleProps,
+  isDragging,
 }: {
   rule: Rule;
   index: number;
-  total: number;
   onUpdate: (index: number, rule: Rule) => void;
   onRemove: (index: number) => void;
-  onMove: (from: number, to: number) => void;
   validationErrors: Record<number, string[]>;
   destOptions?: { value: string; label: string }[];
+  dragHandleProps: DraggableProvided['dragHandleProps'];
+  isDragging: boolean;
 }) {
   const def: RuleDefinition | undefined = RULE_DEFINITIONS.find(
     (r) => r.type === rule.type,
   );
-  // `map` is a lookup table, not a scalar — it gets its own editor below the row.
   const inlineParams = (def?.params ?? []).filter((p) => p !== 'map');
   const isValueMap = rule.type === 'value_map';
   const isValueMapping = rule.type === 'value_mapping';
   const hasParams = inlineParams.length > 0 || isValueMap || isValueMapping;
   const isEnabled = rule.enabled !== false;
-  const catColor =
-    CATEGORY_COLORS[def?.category as string] || DEFAULT_CAT_COLOR;
   const ruleErrors = validationErrors[index] || [];
   const hasError = ruleErrors.length > 0;
 
@@ -475,112 +458,52 @@ function ActiveRule({
   return (
     <div
       className={cn(
-        'bg-card rounded-xl border shadow-sm transition-opacity',
+        'border-border bg-card rounded-4xl border shadow-none transition-opacity',
+        hasError && 'border-destructive',
         !isEnabled && 'opacity-55',
+        isDragging && 'ring-primary/30 shadow-lg ring-2',
       )}
-      style={{
-        borderColor: hasError
-          ? 'var(--destructive)'
-          : isEnabled
-            ? `${catColor.border}40`
-            : undefined,
-      }}
     >
-      <div className="flex items-center gap-3 px-4 py-3">
-        {/* Grip handle + reorder */}
-        <div className="group/grip flex shrink-0 items-center">
-          <GripVertical className="text-muted-foreground/50 size-4" />
-          <div className="ml-0.5 flex flex-col opacity-0 transition-opacity group-hover/grip:opacity-100">
-            <button
-              type="button"
-              onClick={() => index > 0 && onMove(index, index - 1)}
-              disabled={index === 0}
-              aria-label="Move rule up"
-              className="text-muted-foreground hover:text-foreground flex h-3 w-3.5 items-center justify-center disabled:opacity-30"
-            >
-              <ChevronUp className="size-2.5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => index < total - 1 && onMove(index, index + 1)}
-              disabled={index === total - 1}
-              aria-label="Move rule down"
-              className="text-muted-foreground hover:text-foreground flex h-3 w-3.5 items-center justify-center disabled:opacity-30"
-            >
-              <ChevronDown className="size-2.5" />
-            </button>
-          </div>
-        </div>
+      <div className="flex items-center gap-2 px-3 py-2.5">
+        <button
+          type="button"
+          {...dragHandleProps}
+          className="text-muted-foreground hover:bg-muted focus-visible:ring-ring/30 flex size-7 shrink-0 cursor-grab items-center justify-center rounded-3xl outline-none focus-visible:ring-3 active:cursor-grabbing"
+          aria-label={`Drag to reorder ${def?.label || rule.type} rule`}
+        >
+          <GripVertical className="size-4" />
+        </button>
 
         <span
-          className="flex size-6 shrink-0 items-center justify-center rounded-md text-xs font-bold"
-          style={{
-            backgroundColor: hasError
-              ? 'var(--destructive)'
-              : isEnabled
-                ? `${catColor.border}20`
-                : 'var(--muted)',
-            color: hasError
-              ? 'white'
-              : isEnabled
-                ? catColor.active
-                : 'var(--muted-foreground)',
-          }}
+          className={cn(
+            'bg-muted text-foreground flex size-6 shrink-0 items-center justify-center rounded-3xl text-[11px] font-bold',
+            hasError && 'bg-destructive text-destructive-foreground',
+          )}
         >
           {index + 1}
         </span>
 
-        <span
-          className={cn(
-            'min-w-[120px] shrink-0 text-sm font-semibold',
-            isEnabled ? 'text-foreground' : 'text-muted-foreground',
+        <div className="min-w-0 flex-1">
+          <p
+            className={cn(
+              'truncate text-sm font-semibold',
+              !isEnabled && 'text-muted-foreground',
+            )}
+          >
+            {def?.label || rule.type}
+          </p>
+          {def?.description && (
+            <p className="text-muted-foreground mt-0.5 line-clamp-1 text-[11px] leading-4">
+              {def.description}
+            </p>
           )}
-        >
-          {def?.label || rule.type}
-        </span>
+        </div>
 
-        {hasParams && isEnabled && (
-          <div className="flex flex-1 flex-wrap items-center gap-3">
-            {(isValueMap ? ['fallback'] : inlineParams).map((p) => {
-              const isRequired = (REQUIRED_PARAMS[rule.type] || []).includes(p);
-              const isNum = isParamNumeric(rule.type, p);
-              const val = rule[p];
-              const isEmpty = !val || String(val).trim() === '';
-              const showError = isRequired && isEmpty && ruleErrors.includes(p);
-              return (
-                <div key={p} className="flex shrink-0 items-center gap-2">
-                  <span className="text-muted-foreground text-xs">
-                    {PARAM_LABELS[p] || p}:
-                  </span>
-                  <Input
-                    value={(rule[p] as string) || ''}
-                    onChange={(e) => handleParamChange(p, e.target.value)}
-                    placeholder={
-                      p === 'fallback'
-                        ? 'pass through'
-                        : isRequired
-                          ? 'required'
-                          : '—'
-                    }
-                    inputMode={isNum ? 'decimal' : 'text'}
-                    onClick={(e) => e.stopPropagation()}
-                    aria-invalid={showError}
-                    className={cn(
-                      'bg-muted h-9 rounded-lg border-transparent font-mono text-xs shadow-none',
-                      isNum ? 'w-20' : 'w-36',
-                    )}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        <div className="ml-auto flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-0.5">
           {hasError && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <AlertCircle className="text-destructive size-4" />
+                <AlertCircle className="text-destructive mr-1 size-4" />
               </TooltipTrigger>
               <TooltipContent side="top">
                 {ruleErrors
@@ -595,18 +518,55 @@ function ActiveRule({
             onCheckedChange={(checked) =>
               onUpdate(index, { ...rule, enabled: checked })
             }
+            aria-label={`${isEnabled ? 'Disable' : 'Enable'} ${def?.label || rule.type}`}
           />
 
           <Button
+            type="button"
             variant="ghost"
             size="icon-sm"
             onClick={() => onRemove(index)}
             className="text-muted-foreground hover:text-destructive"
+            aria-label={`Delete ${def?.label || rule.type} rule`}
           >
             <Trash2 />
           </Button>
         </div>
       </div>
+
+      {hasParams && isEnabled && (
+        <div className="grid gap-2 px-12 pb-2.5 sm:grid-cols-2">
+          {(isValueMap ? ['fallback'] : inlineParams).map((p) => {
+            const isRequired = (REQUIRED_PARAMS[rule.type] || []).includes(p);
+            const isNum = isParamNumeric(rule.type, p);
+            const val = rule[p];
+            const isEmpty = !val || String(val).trim() === '';
+            const showError = isRequired && isEmpty && ruleErrors.includes(p);
+            return (
+              <label key={p} className="min-w-0 space-y-1">
+                <span className="text-muted-foreground text-xs font-medium">
+                  {PARAM_LABELS[p] || p}
+                </span>
+                <Input
+                  value={(rule[p] as string) || ''}
+                  onChange={(e) => handleParamChange(p, e.target.value)}
+                  placeholder={
+                    p === 'fallback'
+                      ? 'Pass through'
+                      : isRequired
+                        ? 'Required'
+                        : 'Optional'
+                  }
+                  inputMode={isNum ? 'decimal' : 'text'}
+                  onClick={(e) => e.stopPropagation()}
+                  aria-invalid={showError}
+                  className="bg-muted h-8 w-full rounded-3xl border-transparent font-mono text-xs shadow-none"
+                />
+              </label>
+            );
+          })}
+        </div>
+      )}
 
       {isValueMap && isEnabled && (
         <ValueMapEditor
@@ -625,7 +585,7 @@ function ActiveRule({
       )}
 
       {hasError && (
-        <div className="flex flex-wrap gap-2 px-14 pb-2.5">
+        <div className="flex flex-wrap gap-2 px-12 pb-2.5">
           {ruleErrors.map((p) => (
             <span key={p} className="text-destructive text-xs">
               {p === 'map'
@@ -664,6 +624,62 @@ interface RuleBuilderModalProps {
   sourceObject?: string;
 }
 
+export interface RulePreviewStep {
+  index: number;
+  label: string;
+  output: string;
+  enabled: boolean;
+}
+
+export function buildRulePreviewSteps(
+  input: string,
+  rules: Rule[],
+): RulePreviewStep[] {
+  let current = input;
+  let failed = false;
+
+  return rules.map((rule, index) => {
+    const enabled = rule.enabled !== false;
+    if (enabled && !failed) {
+      try {
+        current = String(executeRulePipeline(current, [rule]));
+      } catch {
+        current = '(error)';
+        failed = true;
+      }
+    }
+    return {
+      index,
+      label:
+        RULE_DEFINITIONS.find((definition) => definition.type === rule.type)
+          ?.label || rule.type,
+      output: current,
+      enabled,
+    };
+  });
+}
+
+export function reorderRules(
+  rules: Rule[],
+  fromIndex: number,
+  toIndex: number,
+): Rule[] {
+  if (
+    fromIndex === toIndex ||
+    fromIndex < 0 ||
+    toIndex < 0 ||
+    fromIndex >= rules.length ||
+    toIndex >= rules.length
+  ) {
+    return rules;
+  }
+
+  const reordered = Array.from(rules);
+  const [moved] = reordered.splice(fromIndex, 1);
+  reordered.splice(toIndex, 0, moved);
+  return reordered;
+}
+
 export default function RuleBuilderModal({
   mapping,
   destKey,
@@ -681,6 +697,7 @@ export default function RuleBuilderModal({
   const destType = destField?.type;
 
   const [rules, setRules] = useState<Rule[]>(initialRules || []);
+  const initialRulesSnapshotRef = useRef(JSON.stringify(initialRules || []));
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>('text');
   const [testInput, setTestInput] = useState(
@@ -750,10 +767,30 @@ export default function RuleBuilderModal({
       return next;
     });
   };
-  const moveRule = (from: number, to: number) => {
-    const next = [...rules];
-    [next[from], next[to]] = [next[to], next[from]];
-    setRules(next);
+  const handleDragEnd = (result: DropResult) => {
+    const destinationIndex = result.destination?.index;
+    if (
+      destinationIndex === undefined ||
+      destinationIndex === result.source.index
+    ) {
+      return;
+    }
+
+    const reordered = reorderRules(
+      rules,
+      result.source.index,
+      destinationIndex,
+    );
+    setRules(reordered);
+
+    if (saveAttempted) {
+      const nextErrors: Record<number, string[]> = {};
+      reordered.forEach((rule, index) => {
+        const missing = validateRule(rule);
+        if (missing.length > 0) nextErrors[index] = missing;
+      });
+      setValidationErrors(nextErrors);
+    }
   };
 
   function validateRule(rule: Rule): string[] {
@@ -801,6 +838,10 @@ export default function RuleBuilderModal({
       return '(error)';
     }
   }, [testInput, rules]);
+  const previewSteps = useMemo(
+    () => buildRulePreviewSteps(testInput, rules),
+    [testInput, rules],
+  );
 
   const destLabel = destField?.label || destKey;
 
@@ -816,65 +857,101 @@ export default function RuleBuilderModal({
 
   const activeRuleCount = rules.filter((r) => r.enabled !== false).length;
   const totalErrors = Object.keys(validationErrors).length;
+  const hasUnsavedChanges =
+    JSON.stringify(rules) !== initialRulesSnapshotRef.current;
 
   return (
-    <Dialog
+    <Sheet
       open
       onOpenChange={(next) => {
         if (!next) onClose();
       }}
     >
-      <DialogContent
-        className="h-[88vh] max-h-[88vh]"
-        size="lg"
+      <SheetContent
+        className="p-0 data-[side=right]:w-[calc(100vw-2rem)] data-[side=right]:sm:max-w-[60rem]"
+        showCloseButton={false}
         onEscapeKeyDown={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
       >
         {/* Header */}
-        <DialogHeader>
-          <div className="flex items-center gap-3">
-            <div className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-xl">
-              <Sparkles className="size-5" />
+        <SheetHeader className="shrink-0 gap-3 border-b px-5 py-4">
+          <div className="flex items-start gap-3">
+            <div className="bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-3xl">
+              <Sparkles className="size-4.5" />
             </div>
-            <div>
-              <h2 className="text-base font-bold">Transformation Rules</h2>
-              <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                <span className="text-muted-foreground text-xs">
+            <div className="min-w-0 flex-1">
+              <SheetTitle className="text-lg font-bold">
+                Transformation Rules
+              </SheetTitle>
+              <SheetDescription className="mt-0.5 text-xs">
+                Build transformation rules for this field mapping.
+              </SheetDescription>
+              <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                <span className="bg-muted/50 border-border rounded-3xl border px-2.5 py-1.5 text-xs font-medium">
                   {sourceField?.label || mapping.sourceField}
-                </span>
-                <Badge variant="secondary" className="rounded-md font-mono">
-                  {sourceType}
-                </Badge>
-                <ArrowRight className="text-muted-foreground size-3" />
-                <span className="text-muted-foreground text-xs">
-                  {destLabel}
-                </span>
-                {destType && (
-                  <Badge variant="secondary" className="rounded-md font-mono">
-                    {destType}
+                  <Badge variant="secondary" className="ml-2 font-mono">
+                    {sourceType}
                   </Badge>
-                )}
+                </span>
+                <ArrowRight className="text-muted-foreground size-3" />
+                <span className="bg-muted/50 border-border rounded-3xl border px-2.5 py-1.5 text-xs font-medium">
+                  {destLabel}
+                  {destType && (
+                    <Badge variant="secondary" className="ml-2 font-mono">
+                      {destType}
+                    </Badge>
+                  )}
+                </span>
                 {activeRuleCount > 0 && (
-                  <Badge variant="secondary" className="rounded-md">
+                  <Badge variant="secondary">
                     {activeRuleCount} active rule
                     {activeRuleCount !== 1 ? 's' : ''}
                   </Badge>
                 )}
                 {totalErrors > 0 && (
-                  <Badge className="bg-destructive/10 text-destructive hover:bg-destructive/10 gap-1 rounded-md">
+                  <Badge className="bg-destructive/10 text-destructive hover:bg-destructive/10 gap-1">
                     <AlertCircle className="size-2.5" /> {totalErrors} need
                     values
                   </Badge>
                 )}
               </div>
             </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="ml-auto shrink-0"
+              onClick={onClose}
+              aria-label="Close transformation rules"
+            >
+              <X />
+            </Button>
           </div>
-        </DialogHeader>
+        </SheetHeader>
 
-        <div className="flex min-h-0 flex-1">
-          {/* Sidebar */}
-          <aside className="flex min-h-0 w-70 shrink-0 flex-col gap-4 py-5">
-            <InputGroup>
+        <div className="shrink-0 px-3 pt-3">
+          <div className="bg-muted/40 flex items-start gap-2.5 rounded-4xl px-3 py-2.5">
+            <Info className="text-primary mt-0.5 size-4 shrink-0" />
+            <div>
+              <p className="text-xs font-semibold">How transformations work</p>
+              <p className="text-muted-foreground mt-0.5 text-xs">
+                Rules run from top to bottom. Drag them to reorder, or disable a
+                rule without deleting it.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid min-h-0 flex-1 gap-3 overflow-y-auto p-3 xl:grid-cols-[16rem_minmax(19rem,1fr)_15rem] xl:overflow-hidden">
+          {/* Rule library */}
+          <aside className="border-border bg-card flex max-h-[38vh] min-h-0 flex-col gap-3 rounded-4xl border p-3 xl:max-h-none">
+            <div>
+              <h3 className="text-sm font-bold">Rule library</h3>
+              <p className="text-muted-foreground mt-0.5 text-xs">
+                Choose a rule to add to this field.
+              </p>
+            </div>
+            <InputGroup className="h-8">
               <InputGroupAddon>
                 <Search className="text-muted-foreground size-4" />
               </InputGroupAddon>
@@ -882,7 +959,7 @@ export default function RuleBuilderModal({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search rules…"
-                className="rounded-lg"
+                className="rounded-none"
               />
               {search && (
                 <InputGroupAddon align="inline-end">
@@ -898,7 +975,7 @@ export default function RuleBuilderModal({
               )}
             </InputGroup>
 
-            <ScrollArea className="h-[500px] flex-1">
+            <ScrollArea className="min-h-0 flex-1">
               {!search ? (
                 <Accordion
                   type="single"
@@ -912,7 +989,6 @@ export default function RuleBuilderModal({
                       (r) => r.category === cat.id,
                     );
                     const isOpen = activeCategory === cat.id;
-                    const cc = CATEGORY_COLORS[cat.id] || DEFAULT_CAT_COLOR;
                     const Icon = CATEGORY_ICONS[cat.id] || TypeIcon;
                     const addedTypes = new Set(rules.map((r) => r.type));
 
@@ -920,35 +996,35 @@ export default function RuleBuilderModal({
                       <AccordionItem
                         key={cat.id}
                         value={cat.id}
-                        className="overflow-hidden rounded-lg border-0 border-l-2"
-                        style={{
-                          backgroundColor: isOpen ? cc.activeBg : 'transparent',
-                          borderLeftColor: isOpen ? cc.border : 'transparent',
-                        }}
+                        className={cn(
+                          'overflow-hidden rounded-4xl border-0 border-l-2',
+                          isOpen
+                            ? 'border-primary bg-muted/50'
+                            : 'border-transparent',
+                        )}
                       >
-                        <AccordionTrigger
-                          className="px-2.5 py-2.5 text-sm font-semibold hover:no-underline [&>svg]:size-3.5"
-                          style={{
-                            color: isOpen ? cc.active : 'var(--foreground)',
-                          }}
-                        >
-                          <span className="flex flex-1 items-center gap-2.5">
+                        <AccordionTrigger className="px-2 py-2 text-xs font-semibold hover:no-underline [&>svg]:size-3.5">
+                          <span className="flex flex-1 items-center gap-2">
                             <Icon
-                              className="size-4 shrink-0"
-                              style={{ color: cc.active }}
+                              className={cn(
+                                'size-3.5 shrink-0',
+                                isOpen
+                                  ? 'text-primary'
+                                  : 'text-muted-foreground',
+                              )}
                             />
                             {cat.label}
                             <Badge
                               variant="secondary"
-                              className="ml-auto rounded-full px-2 font-normal"
+                              className="ml-auto rounded-full px-1.5 font-normal"
                             >
                               {catRules.length}
                             </Badge>
                           </span>
                         </AccordionTrigger>
 
-                        <AccordionContent className="pb-1">
-                          <div className="ml-5 space-y-0.5 border-l pl-3.5">
+                        <AccordionContent className="px-1 pb-1">
+                          <div className="space-y-0.5">
                             {catRules.map((def) => {
                               const alreadyAdded = addedTypes.has(def.type);
                               const isFlashing = dupFlash === def.type;
@@ -958,26 +1034,35 @@ export default function RuleBuilderModal({
                                   type="button"
                                   onClick={() => addRule(def)}
                                   className={cn(
-                                    'group flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-xs transition-colors',
+                                    'group grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-2 rounded-3xl px-2 py-1.5 text-left text-xs transition-colors',
                                     isFlashing
                                       ? 'bg-destructive/10'
                                       : 'hover:bg-muted/60',
                                   )}
                                 >
-                                  <span
-                                    className={cn(
-                                      'flex-1 truncate font-medium',
-                                      alreadyAdded
-                                        ? 'text-muted-foreground'
-                                        : 'text-foreground/80 group-hover:text-foreground',
-                                    )}
-                                  >
-                                    {def.label}
+                                  <span className="min-w-0 flex-1">
+                                    <span
+                                      className={cn(
+                                        'block truncate font-medium',
+                                        alreadyAdded
+                                          ? 'text-muted-foreground'
+                                          : 'text-foreground/80 group-hover:text-foreground',
+                                      )}
+                                    >
+                                      {def.label}
+                                    </span>
+                                    <span className="text-muted-foreground mt-0.5 line-clamp-1 block text-[10px] leading-3.5">
+                                      {def.description}
+                                    </span>
                                   </span>
                                   {alreadyAdded ? (
-                                    <Check className="text-success size-3 shrink-0" />
+                                    <span className="text-success flex shrink-0 items-center gap-1 text-[11px] font-medium">
+                                      Added <Check className="size-3" />
+                                    </span>
                                   ) : (
-                                    <Plus className="text-muted-foreground group-hover:text-foreground size-3 shrink-0" />
+                                    <span className="bg-secondary text-secondary-foreground group-hover:bg-secondary/80 inline-flex size-6 shrink-0 items-center justify-center rounded-xl transition-colors">
+                                      <Plus className="size-3.5" />
+                                    </span>
                                   )}
                                 </button>
                               );
@@ -999,7 +1084,7 @@ export default function RuleBuilderModal({
                         type="button"
                         onClick={() => addRule(def)}
                         className={cn(
-                          'group w-full rounded-lg px-2.5 py-2 text-left transition-colors',
+                          'group w-full rounded-3xl px-2 py-1.5 text-left transition-colors',
                           isFlashing
                             ? 'bg-destructive/10'
                             : 'hover:bg-muted/60',
@@ -1019,10 +1104,12 @@ export default function RuleBuilderModal({
                           {alreadyAdded ? (
                             <Check className="text-success size-3" />
                           ) : (
-                            <Plus className="text-muted-foreground group-hover:text-primary size-3" />
+                            <span className="bg-secondary text-secondary-foreground group-hover:bg-secondary/80 inline-flex size-6 shrink-0 items-center justify-center rounded-xl transition-colors">
+                              <Plus className="size-3.5" />
+                            </span>
                           )}
                         </div>
-                        <div className="text-muted-foreground mt-0.5 text-xs">
+                        <div className="text-muted-foreground mt-0.5 line-clamp-1 text-[10px] leading-3.5">
                           {def.description}
                         </div>
                       </button>
@@ -1039,11 +1126,17 @@ export default function RuleBuilderModal({
           </aside>
 
           {/* Rule pipeline */}
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            <div className="flex shrink-0 items-center justify-between px-6 py-4">
-              <span className="text-sm font-bold">
-                Rule Pipeline ({rules.length})
-              </span>
+          <section className="border-border bg-card flex min-h-96 min-w-0 flex-col rounded-4xl border xl:min-h-0">
+            <div className="flex shrink-0 items-start justify-between gap-3 px-4 py-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold">Rule pipeline</h3>
+                  <Badge variant="secondary">{rules.length}</Badge>
+                </div>
+                <p className="text-muted-foreground mt-0.5 text-xs">
+                  Drag rules to set the top-to-bottom order.
+                </p>
+              </div>
               {rules.length > 0 && (
                 <Button
                   variant="ghost"
@@ -1069,10 +1162,10 @@ export default function RuleBuilderModal({
               )}
             </div>
 
-            <ScrollArea className="min-h-0 flex-1 px-6">
+            <ScrollArea className="min-h-0 flex-1 px-4">
               {rules.length === 0 ? (
                 <div className="flex flex-col items-center pt-8 text-center">
-                  <div className="bg-muted mb-3 flex size-12 items-center justify-center rounded-xl">
+                  <div className="bg-muted mb-3 flex size-12 items-center justify-center rounded-4xl">
                     <Sparkles className="text-muted-foreground size-5" />
                   </div>
                   <p className="text-muted-foreground text-sm font-medium">
@@ -1083,66 +1176,176 @@ export default function RuleBuilderModal({
                   </p>
                 </div>
               ) : (
-                <div className="space-y-2.5 pb-4">
-                  {rules.map((rule, idx) => (
-                    <ActiveRule
-                      key={idx}
-                      rule={rule}
-                      index={idx}
-                      total={rules.length}
-                      onUpdate={updateRule}
-                      onRemove={removeRule}
-                      onMove={moveRule}
-                      validationErrors={validationErrors}
-                      destOptions={destField?.options}
-                    />
-                  ))}
-                </div>
+                <DragDropContext onDragEnd={handleDragEnd}>
+                  <Droppable droppableId="transformation-rule-pipeline">
+                    {(provided) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className="pb-3"
+                      >
+                        {rules.map((rule, idx) => (
+                          <Draggable
+                            key={rule.type}
+                            draggableId={rule.type}
+                            index={idx}
+                          >
+                            {(dragProvided, snapshot) => (
+                              <div
+                                ref={dragProvided.innerRef}
+                                {...dragProvided.draggableProps}
+                                style={dragProvided.draggableProps.style}
+                              >
+                                <ActiveRule
+                                  rule={rule}
+                                  index={idx}
+                                  onUpdate={updateRule}
+                                  onRemove={removeRule}
+                                  validationErrors={validationErrors}
+                                  destOptions={destField?.options}
+                                  dragHandleProps={dragProvided.dragHandleProps}
+                                  isDragging={snapshot.isDragging}
+                                />
+                                {idx < rules.length - 1 && (
+                                  <div className="bg-border mx-8 h-2 w-px" />
+                                )}
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </DragDropContext>
               )}
             </ScrollArea>
+          </section>
 
-            {/* Preview */}
-            <div className="shrink-0 border-t px-6 py-3.5">
-              <div className="flex items-center gap-3">
-                <span className="text-muted-foreground shrink-0 text-xs font-bold">
-                  Preview
-                </span>
-                <Input
-                  value={testInput}
-                  onChange={(e) => setTestInput(e.target.value)}
-                  className="bg-muted h-9 min-w-0 flex-1 rounded-lg border-transparent font-mono text-xs shadow-none"
-                  placeholder="Test input…"
-                />
-                <ArrowRight className="text-muted-foreground size-4 shrink-0" />
-                <div className="text-success bg-success/10 border-success/30 min-w-0 flex-1 truncate rounded-lg border px-3 py-2 font-mono text-xs">
-                  {previewOutput !== '' ? (
-                    previewOutput
-                  ) : (
+          {/* Transformation preview */}
+          <aside className="border-border bg-card min-h-0 overflow-y-auto rounded-4xl border p-3">
+            <div>
+              <h3 className="text-sm font-bold">Test transformation</h3>
+              <p className="text-muted-foreground mt-0.5 text-xs">
+                Try a value before applying these rules.
+              </p>
+            </div>
+
+            <div className="bg-muted/30 mt-3 rounded-4xl border p-2.5">
+              <label
+                htmlFor="rule-preview-input"
+                className="text-xs font-semibold"
+              >
+                Source value
+              </label>
+              <p className="text-muted-foreground mt-0.5 text-[11px]">
+                Edit this sample to see every step update.
+              </p>
+              <Input
+                id="rule-preview-input"
+                value={testInput}
+                onChange={(e) => setTestInput(e.target.value)}
+                className="bg-background mt-2 h-8 rounded-3xl font-mono text-xs shadow-none"
+                placeholder="Test input…"
+              />
+            </div>
+
+            <div className="mt-3">
+              <div className="bg-muted/30 rounded-4xl border px-3 py-2">
+                <p className="text-muted-foreground text-[11px] font-medium">
+                  Original
+                </p>
+                <output className="mt-1 block font-mono text-xs break-all">
+                  {testInput || (
                     <span className="text-muted-foreground">(empty)</span>
                   )}
-                </div>
+                </output>
               </div>
+
+              {previewSteps.map((step) => (
+                <div key={`${step.index}-${step.label}`}>
+                  <div className="bg-border mx-5 h-2 w-px" />
+                  <div
+                    className={cn(
+                      'rounded-4xl border px-3 py-2',
+                      !step.enabled && 'bg-muted/30 opacity-60',
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="bg-muted flex size-5 shrink-0 items-center justify-center rounded-3xl text-[10px] font-bold">
+                        {step.index + 1}
+                      </span>
+                      <p className="min-w-0 flex-1 truncate text-[11px] font-semibold">
+                        {step.label}
+                      </p>
+                      {!step.enabled && (
+                        <Badge variant="outline" className="text-[10px]">
+                          Disabled
+                        </Badge>
+                      )}
+                    </div>
+                    <output className="mt-1.5 block font-mono text-xs break-all">
+                      {step.output || (
+                        <span className="text-muted-foreground">(empty)</span>
+                      )}
+                    </output>
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
+
+            <div className="border-primary/20 bg-primary/5 mt-3 rounded-4xl border p-2.5">
+              <p className="text-primary text-[11px] font-semibold">
+                Final output
+              </p>
+              <output className="mt-1 block font-mono text-sm font-semibold break-all">
+                {previewOutput !== '' ? (
+                  previewOutput
+                ) : (
+                  <span className="text-muted-foreground">(empty)</span>
+                )}
+              </output>
+            </div>
+
+            <p className="text-muted-foreground mt-3 flex items-start gap-2 text-[11px]">
+              <Info className="mt-0.5 size-3 shrink-0" /> Preview updates as you
+              edit or reorder rules.
+            </p>
+          </aside>
         </div>
 
         {/* Footer */}
-        <DialogFooter>
+        <SheetFooter className="shrink-0 flex-row items-center justify-between border-t px-5 py-3">
+          <div className="text-muted-foreground flex items-center gap-2 text-xs">
+            {hasUnsavedChanges ? (
+              <>
+                <span className="bg-warning size-2 rounded-full" />
+                Unsaved rule changes
+              </>
+            ) : (
+              <>
+                <Check className="text-success size-3.5" />
+                {activeRuleCount} active rule
+                {activeRuleCount !== 1 ? 's' : ''}
+              </>
+            )}
+          </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={onClose}>
+            <Button variant="outline" size="sm" onClick={onClose}>
               Cancel
             </Button>
             <Button
+              size="sm"
               onClick={handleSave}
               className={cn(
                 totalErrors > 0 && 'bg-destructive hover:bg-destructive/90',
               )}
             >
-              <Check /> Apply Rules
+              <Check /> Apply rules
             </Button>
           </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }

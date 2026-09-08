@@ -26,9 +26,9 @@ export default function ProjectStatusDropdown({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          variant="secondary"
+          variant="outline"
           size="sm"
-          className="group bg-card rounded-full"
+          className="group h-7 rounded-full px-2.5"
         >
           <StatusBadge variant="menu" status={current} />
           <ChevronDown className="text-muted-foreground size-4 transition-transform group-data-[state=open]:rotate-180" />

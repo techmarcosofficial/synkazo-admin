@@ -1,17 +1,13 @@
-import { useState } from 'react';
+import type { ReactNode } from 'react';
 
-import ConnectionHelp from './ConnectionHelp';
-import FlowConnector from './FlowConnector';
 import PlatformCard from './PlatformCard';
 import SourcePlatformPicker from './SourcePlatformPicker';
-import { type ConnectionsViewMode } from './ViewToggle';
 
 import ConnectionEnvDropdown from '@/components/connections/ConnectionEnvToggle';
-import ConnectionListView from '@/components/connections/ConnectionListView';
 import ConnectMethodModal from '@/components/connections/ConnectMethodModal';
 import CredentialsModal from '@/components/connections/CredentialsModal';
 import { useConnectionsManager } from '@/components/connections/useConnectionsManager';
-import { Badge } from '@/components/ui/badge';
+import StatusBadge from '@/components/shared/StatusBadge';
 import {
   Card,
   CardAction,
@@ -20,21 +16,106 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import type { Connection } from '@/types';
+
 interface ConnectionBoardProps {
   projectId: string;
   sourcePlatformId?: string;
   destPlatformId?: string;
-  /** Project sync-mode gate. When "two_way", HubSpot must be connected via OAuth — the Manual (API-token) method is disabled since webhooks need OAuth. Null = unrestricted (both methods offered). */
+  /** Two-way HubSpot connections require OAuth so webhooks can operate. */
   syncMode?: 'one_way' | 'two_way' | null;
   onConnectionsChange?: ((conns: Connection[]) => void) | null;
   projectActiveEnv?: string | null;
   reloadKey?: number;
-  /** Hides the Sandbox/Production environment switcher — used when embedding in the guided setup wizard, which always operates against sandbox. */
+  /** Used only when a parent flow has already fixed the credential environment. */
   hideEnvironmentToggle?: boolean;
   className?: string;
+}
+
+interface ConnectionStepProps {
+  number: number;
+  title: string;
+  description: string;
+  complete: boolean;
+  hasConnection: boolean;
+  nextRequired: boolean;
+  last?: boolean;
+  children: ReactNode;
+}
+
+function ConnectionStep({
+  number,
+  title,
+  description,
+  complete,
+  hasConnection,
+  nextRequired,
+  last = false,
+  children,
+}: ConnectionStepProps) {
+  const status = complete
+    ? 'connected'
+    : hasConnection
+      ? 'error'
+      : nextRequired
+        ? 'ready_to_connect'
+        : 'awaiting_connection';
+
+  return (
+    <div className="grid grid-cols-[2.25rem_minmax(0,1fr)] gap-3">
+      <div className="relative flex justify-center">
+        {!last && (
+          <span
+            className={cn(
+              'absolute top-9 -bottom-8 left-1/2 -translate-x-1/2 border-l-2 border-dashed',
+              complete ? 'border-primary/50' : 'border-border',
+            )}
+            aria-hidden="true"
+          />
+        )}
+        <span
+          className="border-primary/40 absolute top-[1.125rem] -right-3 left-1/2 border-t"
+          aria-hidden="true"
+        />
+        <span
+          className={cn(
+            'relative z-10 flex size-9 items-center justify-center rounded-full border-2 text-sm font-bold',
+            complete
+              ? 'border-primary bg-primary text-primary-foreground'
+              : nextRequired
+                ? 'border-primary bg-primary/10 text-primary border-dashed'
+                : 'border-border bg-card text-muted-foreground border-dashed',
+          )}
+          aria-label={`Step ${number}${complete ? ', complete' : ''}`}
+        >
+          {number}
+        </span>
+      </div>
+
+      <section
+        className={cn(
+          'border-primary/20 bg-card overflow-hidden rounded-4xl border shadow-none',
+          !complete && 'border-dashed',
+        )}
+      >
+        <div className="flex flex-col justify-between gap-2 px-4 py-3 sm:flex-row sm:items-center">
+          <div className="min-w-0">
+            <h3 className="font-heading text-sm font-semibold">{title}</h3>
+            <p className="text-muted-foreground mt-0.5 text-xs">
+              {description}
+            </p>
+          </div>
+          <StatusBadge status={status} size="sm" />
+        </div>
+
+        <Separator />
+        <div>{children}</div>
+      </section>
+    </div>
+  );
 }
 
 export default function ConnectionBoard({
@@ -48,14 +129,10 @@ export default function ConnectionBoard({
   hideEnvironmentToggle = false,
   className,
 }: ConnectionBoardProps) {
-  const [view, setView] = useState<ConnectionsViewMode>('board');
-
   const {
     loading,
     activeEnv,
     setActiveEnv,
-    realConnections,
-    missingSlots,
     sourceConn,
     destConn,
     envHasAnyConnected,
@@ -81,97 +158,94 @@ export default function ConnectionBoard({
 
   if (loading) {
     return (
-      <div className="flex h-32 items-center justify-center">
-        <Spinner className="size-6" />
-      </div>
+      <Card size="sm" className="w-full">
+        <CardContent className="flex h-40 items-center justify-center">
+          <Spinner className="size-6" />
+        </CardContent>
+      </Card>
     );
   }
 
+  const sourceComplete = sourceConn?.status === 'connected';
+  const destinationComplete = destConn?.status === 'connected';
+  const nextRequired = !sourceComplete
+    ? 'source'
+    : !destinationComplete
+      ? 'destination'
+      : null;
+
   return (
-    <div className="space-y-4">
-      {/* Connections Header part */}
-      {view === 'list' ? (
-        <ConnectionListView
-          realConnections={realConnections}
-          missingSlots={missingSlots}
-          activeEnv={activeEnv}
-          sourcePlatformId={sourcePlatformId}
-          destPlatformId={destPlatformId}
-          openConnect={openConnect}
-          handleRowUpdated={handleRowUpdated}
-          makeSlotConn={makeSlotConn}
-        />
-      ) : (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <CardTitle>Connections</CardTitle>
-              {/* Env badge */}
-              {activeEnv && (
-                <Badge className="bg-muted text-muted-foreground">
-                  <span
-                    className={cn(
-                      'size-2 rounded-full bg-current',
-                      activeEnv === 'sandbox' ? 'bg-warning' : 'bg-success',
-                    )}
-                  />
-                  {activeEnv}
-                </Badge>
-              )}
-            </div>
-            <CardDescription>
-              Connect your platforms to enable data sync
-            </CardDescription>
-            {!hideEnvironmentToggle && (
-              <CardAction>
-                <ConnectionEnvDropdown
-                  activeEnv={activeEnv}
-                  onChange={setActiveEnv}
-                  projectActiveEnv={projectActiveEnv}
-                  envHasAnyConnected={envHasAnyConnected}
-                  envFullyConnected={envFullyConnected}
-                />
-              </CardAction>
-            )}
-          </CardHeader>
-          <CardContent className={cn('flex items-center p-12', className)}>
-            {/* Source — until a source platform is chosen (fresh HubSpot
-                Marketplace project) show the one-time picker in its place. */}
-            <div className="h-full w-full max-w-140">
-              {sourcePlatformId ? (
-                <PlatformCard
-                  conn={sourceConn ?? makeSlotConn(sourcePlatformId, 'source')}
-                  onConnect={openConnect}
-                  onUpdated={handleRowUpdated}
-                />
-              ) : (
-                <SourcePlatformPicker projectId={projectId} />
-              )}
-            </div>
+    <>
+      <Card size="sm" className="w-full">
+        <CardHeader className="gap-1">
+          <div className="flex items-center gap-2">
+            <CardTitle className="font-semibold">Connections</CardTitle>
+            <StatusBadge
+              status={activeEnv === 'production' ? 'production' : 'sandbox'}
+              size="sm"
+            />
+          </div>
+          <CardDescription>
+            Connect the source first, then the destination to enable data sync.
+          </CardDescription>
+          {!hideEnvironmentToggle && (
+            <CardAction>
+              <ConnectionEnvDropdown
+                activeEnv={activeEnv}
+                onChange={setActiveEnv}
+                projectActiveEnv={projectActiveEnv}
+                envHasAnyConnected={envHasAnyConnected}
+                envFullyConnected={envFullyConnected}
+              />
+            </CardAction>
+          )}
+        </CardHeader>
+      </Card>
+      <div className={cn('space-y-5', className)}>
+        <ConnectionStep
+          number={1}
+          title="Connect source"
+          description="First, connect the platform your records come from."
+          complete={sourceComplete}
+          hasConnection={Boolean(sourceConn)}
+          nextRequired={nextRequired === 'source'}
+        >
+          {sourcePlatformId ? (
+            <PlatformCard
+              conn={sourceConn ?? makeSlotConn(sourcePlatformId, 'source')}
+              onConnect={openConnect}
+              onUpdated={handleRowUpdated}
+              nextRequired={nextRequired === 'source'}
+            />
+          ) : (
+            <SourcePlatformPicker projectId={projectId} />
+          )}
+        </ConnectionStep>
 
-            {/* Flow */}
-            <div className="relative flex w-full items-center justify-center self-center px-4 py-2">
-              <span className="absolute top-1/2 right-0 left-0 -translate-y-1/2 border-t border-dashed" />
-              <span className="dot bg-primary absolute top-1/2 left-0 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full" />
-              <span className="dot bg-primary absolute top-1/2 right-0 size-2 translate-x-1/2 -translate-y-1/2 rounded-full" />
-              <FlowConnector />
+        <ConnectionStep
+          number={2}
+          title="Connect destination"
+          description="Then, connect the platform your records will sync to."
+          complete={destinationComplete}
+          hasConnection={Boolean(destConn)}
+          nextRequired={nextRequired === 'destination'}
+          last
+        >
+          {destPlatformId ? (
+            <PlatformCard
+              conn={destConn ?? makeSlotConn(destPlatformId, 'destination')}
+              onConnect={openConnect}
+              onUpdated={handleRowUpdated}
+              nextRequired={nextRequired === 'destination'}
+              connectDisabled={!sourceComplete && !destConn}
+            />
+          ) : (
+            <div className="text-muted-foreground px-4 py-3 text-sm">
+              Choose a destination platform before connecting credentials.
             </div>
-
-            {/* Destination */}
-            <div className="w-full max-w-110">
-              {destPlatformId && (
-                <PlatformCard
-                  conn={destConn ?? makeSlotConn(destPlatformId, 'destination')}
-                  onConnect={openConnect}
-                  onUpdated={handleRowUpdated}
-                />
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <ConnectionHelp />
+          )}
+        </ConnectionStep>
+      </div>
 
       {showMethodModal && activeConn && (
         <ConnectMethodModal
@@ -180,9 +254,6 @@ export default function ConnectionBoard({
           onOAuth={
             activeConn.platformId === 'hubspot' ? handleOAuth : undefined
           }
-          // Two-way projects require OAuth for HubSpot (webhooks can't run on a
-          // Private App token). Only gate HubSpot — source platforms have no
-          // OAuth path, so disabling their manual option would strand the user.
           manualDisabled={
             activeConn.platformId === 'hubspot' && syncMode === 'two_way'
           }
@@ -198,6 +269,6 @@ export default function ConnectionBoard({
           onClose={resetModals}
         />
       )}
-    </div>
+    </>
   );
 }

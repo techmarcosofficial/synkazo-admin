@@ -5,9 +5,7 @@ import {
   ChevronRight,
   Info,
   Play,
-  RefreshCw,
   Sliders,
-  Square,
 } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
@@ -15,6 +13,7 @@ import { toast } from 'sonner';
 import { jobsApi } from '@/api/jobs';
 import { syncLogsApi } from '@/api/syncLogs';
 import UpgradeRequiredDialog from '@/components/shared/UpgradeRequiredDialog';
+import SyncRunProgress from '@/components/sync/SyncRunProgress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -27,7 +26,6 @@ import {
 } from '@/components/ui/dialog';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Progress } from '@/components/ui/progress';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import type { Job, SyncRun } from '@/types';
@@ -45,7 +43,7 @@ function Stat({
   tone?: string;
 }) {
   return (
-    <div className="bg-muted/40 flex min-w-[72px] flex-col items-center gap-0.5 rounded-lg border px-3 py-2">
+    <div className="bg-muted/40 flex min-w-[72px] flex-col items-center gap-0.5 rounded-4xl border px-3 py-2">
       <span className={cn('text-base font-bold', tone ?? 'text-foreground')}>
         {value ?? 0}
       </span>
@@ -67,6 +65,9 @@ interface LimitSyncModalProps {
   onGoToPipeline?: () => void;
   /** Render as plain tab content (no Dialog/overlay/close button) — used inside StartSyncModal. */
   embedded?: boolean;
+  /** Uses the parent section heading and moves technical fields behind disclosure. */
+  compact?: boolean;
+  disabled?: boolean;
 }
 
 // DialogTitle requires Radix Dialog context — swap for a plain equivalent when embedded.
@@ -106,7 +107,7 @@ function Frame({
   children: ReactNode;
 }) {
   if (embedded) {
-    return <div className="flex max-h-[70vh] flex-col gap-4">{children}</div>;
+    return <div className="flex flex-col gap-4">{children}</div>;
   }
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -132,6 +133,8 @@ export default function LimitSyncModal({
   pipelineConfigured = true,
   onGoToPipeline,
   embedded = false,
+  compact = false,
+  disabled = false,
 }: LimitSyncModalProps) {
   const pipelineBlocked = pipelineRequired && !pipelineConfigured;
   const [step, setStep] = useState('config');
@@ -149,7 +152,6 @@ export default function LimitSyncModal({
     open: boolean;
     message: string;
   }>({ open: false, message: '' });
-
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollCount = useRef(0);
   const lastFetched = useRef(0);
@@ -169,12 +171,6 @@ export default function LimitSyncModal({
   const estBatches = Math.ceil(safeLimit / safeBatch);
   const estSrcPages = Math.ceil(safeLimit / 500);
   const srcPageEnd = safeStart + estSrcPages - 1;
-
-  const pct = runLog
-    ? runLog.status !== 'running'
-      ? 100
-      : Math.min(99, Math.round(((runLog.totalFetched ?? 0) / safeLimit) * 100))
-    : 0;
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -339,34 +335,44 @@ export default function LimitSyncModal({
       <Frame embedded={embedded} onClose={onClose}>
         {step === 'config' && (
           <>
-            <DialogHeader>
-              <Title embedded={embedded} className="flex items-center gap-3">
-                <div className="bg-primary/10 flex size-8 items-center justify-center rounded-lg">
-                  <Sliders className="text-primary size-4" />
-                </div>
-                <div>
-                  <div>Custom Sync</div>
-                  <p className="text-muted-foreground flex items-center gap-1 text-xs font-normal">
-                    {job?.sourceObject} <ArrowRight className="size-3" />{' '}
-                    {job?.destObject}
-                  </p>
-                </div>
-              </Title>
-            </DialogHeader>
-
-            <div className="flex-1 space-y-5 overflow-y-auto">
-              {pipelineBlocked && (
-                <Alert variant="destructive">
-                  <AlertTriangle />
-                  <AlertDescription className="space-y-1.5">
-                    <p className="font-semibold">Pipeline not configured</p>
-                    <p>
-                      This job syncs to <strong>{job?.destObject}</strong> which
-                      requires a HubSpot pipeline. Configure one before running
-                      the sync.
+            {!compact && (
+              <DialogHeader>
+                <Title embedded={embedded} className="flex items-center gap-3">
+                  <div className="bg-primary/10 flex size-8 items-center justify-center rounded-lg">
+                    <Sliders className="text-primary size-4" />
+                  </div>
+                  <div>
+                    <div>Limited run</div>
+                    <p className="text-muted-foreground flex items-center gap-1 text-xs font-normal">
+                      {job?.sourceObject} <ArrowRight className="size-3" />{' '}
+                      {job?.destObject}
                     </p>
+                  </div>
+                </Title>
+              </DialogHeader>
+            )}
+
+            <div className="flex-1 space-y-3 overflow-y-auto">
+              {pipelineBlocked && (
+                <Alert variant="destructive" className="py-2.5">
+                  <AlertTriangle />
+                  <AlertDescription className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between [&_p:not(:last-child)]:mb-0">
+                    <div className="space-y-0.5">
+                      <p className="text-foreground font-semibold">
+                        Pipeline not configured
+                      </p>
+                      <p>
+                        This job syncs to <strong>{job?.destObject}</strong>,
+                        which requires a HubSpot pipeline. Configure one before
+                        running the sync.
+                      </p>
+                    </div>
                     {onGoToPipeline && (
-                      <Button size="sm" onClick={onGoToPipeline}>
+                      <Button
+                        size="sm"
+                        onClick={onGoToPipeline}
+                        className="shrink-0 self-start sm:self-center"
+                      >
                         <ArrowRight /> Go to Pipeline tab
                       </Button>
                     )}
@@ -374,19 +380,23 @@ export default function LimitSyncModal({
                 </Alert>
               )}
 
-              <Alert className="bg-primary/5 border-primary/20">
+              <Alert className="bg-primary/5 border-primary/20 py-2.5">
                 <Info className="text-primary" />
-                <AlertDescription>
-                  Process a controlled subset of records. Uses the same
-                  mappings, deduplication, and sync rules as a regular sync.
-                  Does not update the job's last synced timestamp.
+                <AlertDescription className="space-y-0.5 [&_p:not(:last-child)]:mb-0">
+                  <p className="text-foreground font-semibold">
+                    About limited runs
+                  </p>
+                  <p>
+                    Process a controlled subset using this job's existing sync
+                    rules. This does not update the last synced timestamp.
+                  </p>
                 </AlertDescription>
               </Alert>
 
-              <FieldGroup>
+              <FieldGroup className="grid gap-3 sm:grid-cols-3">
                 <Field data-invalid={!!errors.limit}>
                   <FieldLabel htmlFor="limit-count">
-                    Number of Records to Sync
+                    Number of records
                   </FieldLabel>
                   <Input
                     id="limit-count"
@@ -406,58 +416,56 @@ export default function LimitSyncModal({
                   </p>
                 </Field>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <Field data-invalid={!!errors.startPage}>
-                    <FieldLabel htmlFor="start-page">Starting Page</FieldLabel>
-                    <Input
-                      id="start-page"
-                      type="number"
-                      min={1}
-                      value={startPage}
-                      onChange={(e) =>
-                        setStartPage(parseInt(e.target.value) || 1)
-                      }
-                      placeholder="1"
-                      aria-invalid={!!errors.startPage}
-                    />
-                    {errors.startPage && (
-                      <p className="text-destructive text-xs">
-                        {errors.startPage}
-                      </p>
-                    )}
-                    <p className="text-muted-foreground text-[10px]">
-                      Source API page to start from
+                <Field data-invalid={!!errors.startPage}>
+                  <FieldLabel htmlFor="start-page">Starting page</FieldLabel>
+                  <Input
+                    id="start-page"
+                    type="number"
+                    min={1}
+                    value={startPage}
+                    onChange={(e) =>
+                      setStartPage(parseInt(e.target.value) || 1)
+                    }
+                    placeholder="1"
+                    aria-invalid={!!errors.startPage}
+                  />
+                  {errors.startPage && (
+                    <p className="text-destructive text-xs">
+                      {errors.startPage}
                     </p>
-                  </Field>
-                  <Field data-invalid={!!errors.batchSize}>
-                    <FieldLabel htmlFor="batch-size">
-                      Records per Batch
-                    </FieldLabel>
-                    <Input
-                      id="batch-size"
-                      type="number"
-                      min={10}
-                      max={500}
-                      value={batchSize}
-                      onChange={(e) =>
-                        setBatchSize(parseInt(e.target.value) || 100)
-                      }
-                      placeholder="100"
-                      aria-invalid={!!errors.batchSize}
-                    />
-                    {errors.batchSize && (
-                      <p className="text-destructive text-xs">
-                        {errors.batchSize}
-                      </p>
-                    )}
-                    <p className="text-muted-foreground text-[10px]">
-                      Records per processing batch
+                  )}
+                  <p className="text-muted-foreground text-[10px]">
+                    Source API page to start from
+                  </p>
+                </Field>
+                <Field data-invalid={!!errors.batchSize}>
+                  <FieldLabel htmlFor="batch-size">
+                    Records per batch
+                  </FieldLabel>
+                  <Input
+                    id="batch-size"
+                    type="number"
+                    min={10}
+                    max={500}
+                    value={batchSize}
+                    onChange={(e) =>
+                      setBatchSize(parseInt(e.target.value) || 100)
+                    }
+                    placeholder="100"
+                    aria-invalid={!!errors.batchSize}
+                  />
+                  {errors.batchSize && (
+                    <p className="text-destructive text-xs">
+                      {errors.batchSize}
                     </p>
-                  </Field>
-                </div>
+                  )}
+                  <p className="text-muted-foreground text-[10px]">
+                    Between 10 and 500 records
+                  </p>
+                </Field>
               </FieldGroup>
 
-              <Card className="py-0">
+              <Card className="bg-muted/30 border-muted py-0">
                 <CardContent className="space-y-3 p-4">
                   <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
                     Preview
@@ -509,13 +517,15 @@ export default function LimitSyncModal({
             </div>
 
             <DialogFooter>
-              <Button variant="outline" onClick={onClose} className="flex-1">
-                Cancel
-              </Button>
+              {!compact && (
+                <Button variant="outline" onClick={onClose} className="flex-1">
+                  Cancel
+                </Button>
+              )}
               <Button
                 onClick={handleStart}
-                disabled={pipelineBlocked}
-                className="flex-1"
+                disabled={pipelineBlocked || disabled}
+                className={compact ? undefined : 'flex-1'}
               >
                 <Play /> Start Sync
               </Button>
@@ -525,23 +535,17 @@ export default function LimitSyncModal({
 
         {step === 'running' && (
           <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-3 pr-8">
-              <div className="bg-primary/10 flex size-9 shrink-0 items-center justify-center rounded-xl">
-                <RefreshCw className="text-primary size-4 animate-spin" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="font-semibold">Sync Running…</h3>
-                <p className="text-muted-foreground text-xs">
-                  Up to {safeLimit.toLocaleString()} records · starting page{' '}
-                  {safeStart}
-                </p>
-              </div>
-              <span className="text-primary shrink-0 text-sm font-bold tabular-nums">
-                {pct}%
-              </span>
-            </div>
-
-            <Progress value={pct} className="h-1.5" />
+            <SyncRunProgress
+              totalRecords={safeLimit}
+              processedRecords={runLog?.totalFetched ?? 0}
+              createdCount={runLog?.createdCount}
+              updatedCount={runLog?.updatedCount}
+              skippedCount={runLog?.skippedCount}
+              failedCount={runLog?.failedCount}
+              description={`Up to ${safeLimit.toLocaleString()} records · starting page ${safeStart}`}
+              onStop={() => void handleStop()}
+              stopping={stopping}
+            />
 
             {stuckWarning && !timedOut && (
               <Alert className="bg-warning/10 border-warning/25 py-2">
@@ -552,61 +556,6 @@ export default function LimitSyncModal({
                 </AlertDescription>
               </Alert>
             )}
-
-            {runLog ? (
-              <div className="space-y-3">
-                <div className="flex flex-wrap gap-2">
-                  <Stat
-                    label="Processed"
-                    value={
-                      (runLog.createdCount ?? 0) + (runLog.updatedCount ?? 0)
-                    }
-                    tone="text-primary"
-                  />
-                  <Stat
-                    label="Created"
-                    value={runLog.createdCount}
-                    tone="text-success"
-                  />
-                  <Stat
-                    label="Updated"
-                    value={runLog.updatedCount}
-                    tone="text-info"
-                  />
-                  <Stat label="Skipped" value={runLog.skippedCount} />
-                  <Stat
-                    label="Failed"
-                    value={runLog.failedCount}
-                    tone="text-destructive"
-                  />
-                </div>
-                <p className="text-muted-foreground text-xs">
-                  Fetched{' '}
-                  <strong className="text-foreground">
-                    {(runLog.totalFetched ?? 0).toLocaleString()}
-                  </strong>{' '}
-                  of{' '}
-                  <strong className="text-foreground">
-                    {safeLimit.toLocaleString()}
-                  </strong>{' '}
-                  records from source
-                </p>
-              </div>
-            ) : (
-              <div className="text-muted-foreground flex items-center gap-2 text-sm">
-                <Spinner /> Starting — waiting for run to begin…
-              </div>
-            )}
-
-            <Button
-              variant="outline"
-              onClick={handleStop}
-              disabled={stopping}
-              className="border-destructive/30 text-destructive bg-destructive/5 w-full"
-            >
-              {stopping ? <Spinner /> : <Square className="fill-current" />}
-              {stopping ? 'Stopping…' : 'Stop Sync'}
-            </Button>
           </div>
         )}
 
@@ -632,7 +581,7 @@ export default function LimitSyncModal({
                   <div className="capitalize">
                     {timedOut
                       ? 'Run timed out'
-                      : `Custom Sync ${runLog?.status ?? 'done'}`}
+                      : `Limited run ${runLog?.status ?? 'done'}`}
                   </div>
                   <p className="text-muted-foreground text-xs font-normal">
                     {safeLimit.toLocaleString()} records · page {safeStart}

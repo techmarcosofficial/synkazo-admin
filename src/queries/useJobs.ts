@@ -8,7 +8,7 @@ import {
 import { queryKeys } from './queryKeys';
 
 import { jobsApi } from '@/api/jobs';
-import { syncLogsApi } from '@/api/syncLogs';
+import { syncLogsApi, type RunLogFilters } from '@/api/syncLogs';
 import type { Job } from '@/types';
 
 export function useJobsQuery() {
@@ -39,11 +39,14 @@ export function useRunLogsQuery(
   jobId: string,
   page: number,
   limit = 20,
+  enabled = true,
+  filters: RunLogFilters = {},
 ) {
   return useQuery({
-    queryKey: queryKeys.jobs.runLogs(projectId, jobId, page, limit),
-    queryFn: () => syncLogsApi.listRunLogs(projectId, jobId, { page, limit }),
-    enabled: !!projectId && !!jobId,
+    queryKey: queryKeys.jobs.runLogs(projectId, jobId, page, limit, filters),
+    queryFn: () =>
+      syncLogsApi.listRunLogs(projectId, jobId, { page, limit, ...filters }),
+    enabled: enabled && !!projectId && !!jobId,
     placeholderData: keepPreviousData,
   });
 }

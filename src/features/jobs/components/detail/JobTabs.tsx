@@ -3,15 +3,14 @@ import type { JobDetailTabView } from '@/features/jobs/hooks';
 
 export default function JobTabs({ tabs }: { tabs: JobDetailTabView[] }) {
   return (
-    <TabsList variant={'line'}>
+    <TabsList variant="line" className="h-10 min-w-max overflow-hidden p-0">
       {tabs.map((tab) => (
-        <TabsTrigger key={tab.id} value={tab.id} className="after:bg-primary">
+        <TabsTrigger
+          key={tab.id}
+          value={tab.id}
+          className="after:bg-primary py-2 font-semibold after:bottom-0! after:h-1!"
+        >
           {tab.label}
-          {tab.badge != null && (
-            <span className="bg-muted text-muted-foreground flex h-4.5 w-4.5 items-center justify-center rounded-full text-[11px] font-semibold">
-              {tab.badge}
-            </span>
-          )}
         </TabsTrigger>
       ))}
     </TabsList>

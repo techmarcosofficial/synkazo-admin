@@ -7,9 +7,8 @@ import { useSynkazoAuth } from '@/lib/synkazoAuth';
 export default function PageNotFound() {
   const location = useLocation();
   const pageName = location.pathname.substring(1);
-  const { currentUser } = useSynkazoAuth();
-  const isAdmin =
-    currentUser?.role === 'super_admin' || currentUser?.role === 'org_admin';
+  const { hasRole } = useSynkazoAuth();
+  const isAdmin = hasRole('org_admin');
 
   return (
     <div className="bg-background flex min-h-screen items-center justify-center p-6">
@@ -32,7 +31,7 @@ export default function PageNotFound() {
             </p>
           </div>
           {isAdmin && (
-            <div className="bg-muted ring-border mt-8 rounded-lg p-4 ring-1">
+            <div className="bg-muted border-border mt-8 rounded-4xl border p-4">
               <div className="flex items-start space-x-3">
                 <div className="bg-warning/10 mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full">
                   <div className="bg-warning h-2 w-2 rounded-full"></div>

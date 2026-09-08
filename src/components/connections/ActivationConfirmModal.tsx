@@ -84,7 +84,7 @@ function DiffSection({
     <Collapsible
       open={open}
       onOpenChange={setOpen}
-      className="overflow-hidden rounded-xl border"
+      className="overflow-hidden rounded-4xl border"
     >
       <CollapsibleTrigger className="bg-muted/40 flex w-full items-center justify-between px-4 py-2.5">
         <div className="flex items-center gap-2">
