@@ -1,17 +1,17 @@
 import { useQueryClient } from '@tanstack/react-query';
 import {
+  AlertCircle,
   Check,
   ChevronDown,
   ChevronUp,
   Hourglass,
   Link2,
+  MoreHorizontal,
   Pencil,
   Plus,
   Play,
   RefreshCw,
   RotateCcw,
-  ToggleLeft,
-  ToggleRight,
   Trash2,
   X,
 } from 'lucide-react';
@@ -31,17 +31,30 @@ import {
 } from '@/api/associations';
 import EmptyState from '@/components/shared/EmptyState';
 import ListRow from '@/components/shared/list/ListRow';
-import ListStack from '@/components/shared/list/ListStack';
 import PaginationBar from '@/components/shared/PaginationBar';
+import StatusBadge from '@/components/shared/StatusBadge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import { useHeaderPrimaryAction } from '@/hooks/useHeaderPrimaryAction';
 import { cn } from '@/lib/utils';
 import {
   useAssociationRecordsQuery,
@@ -370,19 +383,70 @@ export function RuleRecordsList({
 
 // --- Main Component ---
 
+function AssociationMetrics({
+  rules,
+  statsByRule,
+}: {
+  rules: AssociationRule[];
+  statsByRule: Record<string, AssociationRuleStats>;
+}) {
+  const statsLoaded = rules.every((rule) => statsByRule[rule.id] != null);
+  const pending = Object.values(statsByRule).reduce(
+    (sum, stats) => sum + stats.pending,
+    0,
+  );
+  const failed = Object.values(statsByRule).reduce(
+    (sum, stats) => sum + stats.failed,
+    0,
+  );
+  const metrics = [
+    { label: 'Total rules', value: rules.length },
+    {
+      label: 'Enabled',
+      value: rules.filter((rule) => rule.isEnabled ?? true).length,
+    },
+    { label: 'Pending records', value: pending, loading: !statsLoaded },
+    { label: 'Failed records', value: failed, loading: !statsLoaded },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {metrics.map((metric) => (
+        <div key={metric.label} className="bg-muted/50 rounded-3xl p-4">
+          <p className="text-muted-foreground text-xs font-medium">
+            {metric.label}
+          </p>
+          {metric.loading ? (
+            <Skeleton className="mt-2 h-7 w-12" />
+          ) : (
+            <p className="mt-1 text-2xl font-semibold tabular-nums">
+              {metric.value}
+            </p>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function RuleCard({
   rule,
   projectId,
   onRefresh,
+  onStatsChange,
 }: {
   rule: AssociationRule;
   projectId: string;
   onRefresh: () => void;
+  onStatsChange: (ruleId: string, stats: AssociationRuleStats) => void;
 }) {
   const [stats, setStats] = useState<AssociationRuleStats | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const runsQuery = useAssociationRunLogsQuery(projectId, rule.id);
+  const latestRun = runsQuery.data?.data?.[0];
 
   // Consolidating loading states for actions
   const [isProcessing, setIsProcessing] = useState({
@@ -399,10 +463,13 @@ function RuleCard({
     setIsProcessing((prev) => ({ ...prev, stats: true }));
     associationsApi
       .getRuleStats(projectId, rule.id)
-      .then(setStats)
+      .then((nextStats) => {
+        setStats(nextStats);
+        onStatsChange(rule.id, nextStats);
+      })
       .catch(() => {})
       .finally(() => setIsProcessing((prev) => ({ ...prev, stats: false })));
-  }, [projectId, rule.id]);
+  }, [onStatsChange, projectId, rule.id]);
 
   useEffect(() => {
     loadStats();
@@ -422,6 +489,7 @@ function RuleCard({
   const isEnabled = rule.isEnabled ?? true;
 
   const handleRun = async () => {
+    setActionError(null);
     setIsProcessing((prev) => ({ ...prev, run: true }));
     try {
       const result: AssociationRunResult = await associationsApi.runRule(
@@ -441,13 +509,17 @@ function RuleCard({
       invalidateRuleData();
     } catch (err) {
       const e = err as ApiError;
-      toast.error((e?.response?.data?.message as string) ?? 'Run failed');
+      const message =
+        (e?.response?.data?.message as string) ?? 'Failed to run this rule.';
+      setActionError(message);
+      toast.error(message);
     } finally {
       setIsProcessing((prev) => ({ ...prev, run: false }));
     }
   };
 
   const handleRetry = async () => {
+    setActionError(null);
     setIsProcessing((prev) => ({ ...prev, retry: true }));
     try {
       await associationsApi.retryFailed(projectId, rule.id);
@@ -456,13 +528,18 @@ function RuleCard({
       invalidateRuleData();
     } catch (err) {
       const e = err as ApiError;
-      toast.error((e?.response?.data?.message as string) ?? 'Retry failed');
+      const message =
+        (e?.response?.data?.message as string) ??
+        'Failed associations could not be queued.';
+      setActionError(message);
+      toast.error(message);
     } finally {
       setIsProcessing((prev) => ({ ...prev, retry: false }));
     }
   };
 
   const handleToggle = async () => {
+    setActionError(null);
     setIsProcessing((prev) => ({ ...prev, toggle: true }));
     try {
       await associationsApi.updateRule(projectId, rule.id, {
@@ -470,11 +547,41 @@ function RuleCard({
       } as Partial<BaseAssociationRule>);
       toast.success(isEnabled ? 'Rule disabled' : 'Rule enabled');
       onRefresh();
-    } catch {
-      toast.error('Failed to toggle rule');
+    } catch (err) {
+      const e = err as ApiError;
+      const message =
+        (e?.response?.data?.message as string) ??
+        `Failed to ${isEnabled ? 'disable' : 'enable'} this rule.`;
+      setActionError(message);
+      toast.error(message);
     } finally {
       setIsProcessing((prev) => ({ ...prev, toggle: false }));
     }
+  };
+
+  const requestRun = () => {
+    confirm({
+      title: `Run “${rule.name}” now?`,
+      description:
+        'The rule will evaluate synced records and create matching HubSpot associations. Unmatched records may be added to the pending queue.',
+      confirmLabel: 'Run rule',
+      onConfirm: handleRun,
+    });
+  };
+
+  const requestToggle = () => {
+    if (!isEnabled) {
+      void handleToggle();
+      return;
+    }
+
+    confirm({
+      title: `Disable “${rule.name}”?`,
+      description:
+        'Existing associations will remain, but this rule will no longer run automatically after sync jobs.',
+      confirmLabel: 'Disable rule',
+      onConfirm: handleToggle,
+    });
   };
 
   const handleDelete = () => {
@@ -486,12 +593,18 @@ function RuleCard({
       onConfirm: async () => {
         setIsProcessing((prev) => ({ ...prev, delete: true }));
         try {
+          setActionError(null);
           await associationsApi.deleteRule(projectId, rule.id);
           toast.success('Rule deleted');
           onRefresh();
-        } catch {
-          toast.error('Failed to delete rule');
-          throw new Error('Failed to delete rule');
+        } catch (err) {
+          const e = err as ApiError;
+          const message =
+            (e?.response?.data?.message as string) ??
+            'Failed to delete this rule.';
+          setActionError(message);
+          toast.error(message);
+          throw new Error(message);
         } finally {
           setIsProcessing((prev) => ({ ...prev, delete: false }));
         }
@@ -500,10 +613,10 @@ function RuleCard({
   };
 
   return (
-    <Card className="border-border/60 bg-card/70 relative isolate overflow-hidden rounded-4xl py-0 shadow-none backdrop-blur-sm">
+    <Card className="overflow-hidden py-0 shadow-none">
       <CardContent className="space-y-0 p-0">
-        <div className="flex items-start justify-between p-4">
-          <div className="flex flex-1 items-start gap-3">
+        <div className="grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+          <div className="flex min-w-0 items-start gap-3">
             <div
               className={cn(
                 'mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl border',
@@ -515,94 +628,38 @@ function RuleCard({
               <Link2 className="size-4" />
             </div>
 
-            <div className="flex-1">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold">{rule.name}</span>
-                  {!isEnabled && <Badge variant="secondary">Disabled</Badge>}
-                </div>
-
-                {/* Actions moved to Header Level for better hierarchy */}
-                <div className="ml-auto flex items-center gap-2">
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="h-8"
-                    onClick={handleRun}
-                    disabled={isProcessing.run || !isEnabled}
-                  >
-                    {isProcessing.run ? (
-                      <Spinner className="mr-2 size-3" />
-                    ) : (
-                      <Play className="mr-2 size-3" />
-                    )}
-                    Run
-                  </Button>
-
-                  {stats != null && stats.failed > 0 && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-warning/40 text-warning h-8"
-                      onClick={handleRetry}
-                      disabled={isProcessing.retry}
-                    >
-                      {isProcessing.retry ? (
-                        <Spinner className="mr-2 size-3" />
-                      ) : (
-                        <RotateCcw className="mr-2 size-3" />
-                      )}
-                      Retry {stats.failed}
-                    </Button>
-                  )}
-
-                  <Button
-                    variant="outline"
-                    size="icon-sm"
-                    onClick={() => setShowEditModal(true)}
-                    title="Edit Rule"
-                  >
-                    <Pencil className="size-4" />
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8"
-                    onClick={handleToggle}
-                    disabled={isProcessing.toggle}
-                    title={isEnabled ? 'Disable Rule' : 'Enable Rule'}
-                  >
-                    {isEnabled ? (
-                      <ToggleRight className="size-4" />
-                    ) : (
-                      <ToggleLeft className="size-4" />
-                    )}
-                  </Button>
-
-                  <Button variant="ghost" size="icon-sm" onClick={toggleExpand}>
-                    {expanded ? <ChevronUp /> : <ChevronDown />}
-                  </Button>
-                </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-semibold">{rule.name}</span>
+                <StatusBadge
+                  status={isEnabled ? 'active' : 'disabled'}
+                  size="sm"
+                />
+                {latestRun && (
+                  <StatusBadge status={latestRun.status} size="sm" />
+                )}
               </div>
 
-              {/* Enhanced Rule Mapping Readability */}
-              <div className="text-muted-foreground mt-1.5 flex items-center font-mono text-[11px] tracking-tight">
-                <div className="bg-background border-border/60 flex items-center rounded border px-1.5 py-0.5">
+              <div className="text-muted-foreground mt-2 flex min-w-0 flex-wrap items-center gap-2 font-mono text-[11px] tracking-tight">
+                <div className="bg-muted/50 border-border/60 flex min-w-0 items-center rounded border px-1.5 py-0.5">
                   <span>{rule.sourceObject}</span>
                   <span className="mx-0.5 opacity-40">.</span>
-                  <span className="text-primary">{rule.sourceMatchField}</span>
+                  <span className="text-primary min-w-0 break-all">
+                    {rule.sourceMatchField}
+                  </span>
                 </div>
-                <span className="mx-2 opacity-50">=</span>
-                <div className="bg-background border-border/60 flex items-center rounded border px-1.5 py-0.5">
+                <span className="opacity-50">=</span>
+                <div className="bg-muted/50 border-border/60 flex min-w-0 items-center rounded border px-1.5 py-0.5">
                   <span>{rule.targetObject}</span>
                   <span className="mx-0.5 opacity-40">.</span>
-                  <span className="text-primary">{rule.targetMatchField}</span>
+                  <span className="text-primary min-w-0 break-all">
+                    {rule.targetMatchField}
+                  </span>
                 </div>
                 {rule.conditions != null && rule.conditions.length > 0 && (
                   <Badge
                     variant="secondary"
-                    className="ml-2 font-sans text-[10px]"
+                    className="font-sans text-[10px]"
                     title="This rule only fires when its conditions pass"
                   >
                     {rule.conditions.length} condition
@@ -612,7 +669,10 @@ function RuleCard({
                 )}
               </div>
 
-              <div className="mt-3 flex flex-wrap items-center gap-2">
+              <div
+                className="mt-3 flex flex-wrap items-center gap-2"
+                aria-label="Rule record totals"
+              >
                 {stats ? (
                   <>
                     <StatChip
@@ -658,30 +718,110 @@ function RuleCard({
                   />
                 </Button>
               </div>
+
+              <p className="text-muted-foreground mt-2 text-xs">
+                {latestRun
+                  ? `Last run ${formatTimestamp(latestRun.startedAt)}`
+                  : runsQuery.isLoading
+                    ? 'Loading latest run…'
+                    : 'Not run yet'}
+              </p>
             </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+            <Button
+              size="sm"
+              onClick={requestRun}
+              disabled={isProcessing.run || !isEnabled}
+            >
+              {isProcessing.run ? <Spinner className="size-3" /> : <Play />}
+              Run
+            </Button>
+
+            {stats != null && stats.failed > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-warning/40 text-warning"
+                onClick={handleRetry}
+                disabled={isProcessing.retry}
+              >
+                {isProcessing.retry ? (
+                  <Spinner className="size-3" />
+                ) : (
+                  <RotateCcw />
+                )}
+                Retry {stats.failed}
+              </Button>
+            )}
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowEditModal(true)}
+            >
+              <Pencil />
+              Edit
+            </Button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  aria-label={`More actions for ${rule.name}`}
+                >
+                  <MoreHorizontal />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onSelect={requestToggle}
+                  disabled={isProcessing.toggle}
+                >
+                  {isEnabled ? 'Disable rule' : 'Enable rule'}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  variant="destructive"
+                  onSelect={handleDelete}
+                  disabled={isProcessing.delete}
+                >
+                  <Trash2 />
+                  Delete rule
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={toggleExpand}
+              aria-label={expanded ? 'Hide diagnostics' : 'Show diagnostics'}
+              aria-expanded={expanded}
+            >
+              {expanded ? <ChevronUp /> : <ChevronDown />}
+            </Button>
           </div>
         </div>
 
+        {actionError && (
+          <div className="px-4 pb-4">
+            <Alert variant="destructive">
+              <AlertCircle />
+              <AlertDescription>{actionError}</AlertDescription>
+            </Alert>
+          </div>
+        )}
+
         <Collapsible open={expanded}>
-          <CollapsibleContent className="bg-background/90 overflow-hidden rounded-b-4xl border-t px-4 py-4">
+          <CollapsibleContent className="bg-muted/20 overflow-hidden border-t px-4 py-4">
             <div className="space-y-6">
               <RecentRunsList projectId={projectId} ruleId={rule.id} />
 
               <div className="border-t pt-6">
                 <RuleRecordsList projectId={projectId} ruleId={rule.id} />
-              </div>
-
-              {/* Dangerous actions moved to the bottom of the expanded section */}
-              <div className="flex justify-end border-t pt-4">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  onClick={handleDelete}
-                  disabled={isProcessing.delete}
-                >
-                  <Trash2 className="mr-2 size-4" /> Delete Rule
-                </Button>
               </div>
             </div>
           </CollapsibleContent>
@@ -710,74 +850,145 @@ export default function AssociationRulesList({
 }) {
   const [rules, setRules] = useState<AssociationRule[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [statsByRule, setStatsByRule] = useState<
+    Record<string, AssociationRuleStats>
+  >({});
   const [showCreate, setShowCreate] = useState(false);
 
   const load = useCallback(() => {
-    setLoading(true);
+    setRefreshing(true);
+    setLoadError(null);
     associationsApi
       .listRules(projectId)
-      .then(setRules)
-      .catch(() => toast.error('Failed to load association rules'))
-      .finally(() => setLoading(false));
+      .then((nextRules) => {
+        setRules(nextRules);
+        setStatsByRule((current) =>
+          Object.fromEntries(
+            Object.entries(current).filter(([ruleId]) =>
+              nextRules.some((rule) => rule.id === ruleId),
+            ),
+          ),
+        );
+      })
+      .catch((err: ApiError) => {
+        const message =
+          (err?.response?.data?.message as string) ??
+          'Association rules could not be loaded.';
+        setLoadError(message);
+        toast.error(message);
+      })
+      .finally(() => {
+        setLoading(false);
+        setRefreshing(false);
+      });
   }, [projectId]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  useHeaderPrimaryAction({
-    label: 'New Association',
-    icon: Plus,
-    onClick: () => setShowCreate(true),
-  });
+  const handleStatsChange = useCallback(
+    (ruleId: string, nextStats: AssociationRuleStats) => {
+      setStatsByRule((current) => {
+        if (current[ruleId] === nextStats) return current;
+        return { ...current, [ruleId]: nextStats };
+      });
+    },
+    [],
+  );
 
   if (loading) {
     return (
-      <div className="flex h-32 items-center justify-center">
-        <Spinner className="text-primary size-6" />
+      <div className="space-y-4">
+        <Skeleton className="h-9 w-64" />
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Skeleton key={index} className="h-24 rounded-3xl" />
+          ))}
+        </div>
+        <Skeleton className="h-36 rounded-4xl" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-sm font-semibold">Association Rules</h3>
-        <p className="text-muted-foreground mt-0.5 text-xs">
-          Link HubSpot objects created by different sync jobs. Associations run
-          automatically after each job completes.
-        </p>
-      </div>
+    <div className="space-y-4">
+      <Card className="gap-0 border py-0">
+        <CardHeader className="flex items-start justify-between gap-4 px-4 py-3">
+          <div>
+            <CardTitle className="text-sm font-semibold">
+              Associations
+            </CardTitle>
+            <CardDescription className="mt-0.5 text-xs">
+              Create and monitor relationships between synced records.
+            </CardDescription>
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={load}
+              disabled={refreshing}
+            >
+              <RefreshCw className={cn(refreshing && 'animate-spin')} />
+              Refresh
+            </Button>
+            <Button size="sm" onClick={() => setShowCreate(true)}>
+              <Plus />
+              New association
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4 p-4">
+          <AssociationMetrics rules={rules} statsByRule={statsByRule} />
 
-      {(showCompanyOwnerSection || rules.length > 0) && (
-        <ListStack>
-          {showCompanyOwnerSection && (
-            <CompanyOwnerSection
-              projectId={projectId}
-              sourcePlatform={ownerSourcePlatform ?? 'servicetitan'}
+          {loadError && (
+            <Alert variant="destructive">
+              <AlertCircle />
+              <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+                <span>{loadError}</span>
+                <Button variant="outline" size="sm" onClick={load}>
+                  Try again
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {rules.length > 0 && (
+            <div className="space-y-3">
+              {rules.map((rule) => (
+                <RuleCard
+                  key={rule.id}
+                  rule={rule}
+                  projectId={projectId}
+                  onRefresh={load}
+                  onStatsChange={handleStatsChange}
+                />
+              ))}
+            </div>
+          )}
+
+          {rules.length === 0 && (
+            <EmptyState
+              icon={Link2}
+              title="No association rules yet"
+              description="Association rules link HubSpot objects synced by different jobs — e.g. Contacts to Companies, or custom objects."
+              action={{
+                label: 'Create first association',
+                onClick: () => setShowCreate(true),
+                icon: Plus,
+              }}
             />
           )}
-          {rules.map((rule) => (
-            <RuleCard
-              key={rule.id}
-              rule={rule}
-              projectId={projectId}
-              onRefresh={load}
-            />
-          ))}
-        </ListStack>
-      )}
+        </CardContent>
+      </Card>
 
-      {rules.length === 0 && (
-        <EmptyState
-          icon={Link2}
-          title="No association rules yet"
-          description="Association rules link HubSpot objects synced by different jobs — e.g. Contacts to Companies, or custom objects."
-          action={{
-            label: 'Create First Rule',
-            onClick: () => setShowCreate(true),
-            icon: Plus,
-          }}
+      {showCompanyOwnerSection && (
+        <CompanyOwnerSection
+          projectId={projectId}
+          sourcePlatform={ownerSourcePlatform ?? 'servicetitan'}
         />
       )}
 

@@ -4,11 +4,16 @@ import {
   ArrowRight,
   ArrowUp,
   CalendarDays,
+  CircleAlert,
+  CircleCheck,
   ChevronRight,
   Clock,
+  Copy,
   Database,
   Edit2,
+  FileText,
   Filter,
+  Info,
   Plus,
   RefreshCw,
   Search,
@@ -888,17 +893,255 @@ function FilteredRecordsList({
   );
 }
 
+const DEFAULT_RECORDS_PER_PAGE = 10;
+const RECORDS_PER_PAGE_OPTIONS = [10, 30, 50, 100];
+
+function RecordDetailsTable({
+  projectId,
+  jobId,
+  runId,
+  action,
+  search,
+}: {
+  projectId: string;
+  jobId: string;
+  runId: string;
+  action: (typeof ACTION_FILTER_OPTIONS)[number];
+  search?: string;
+}) {
+  const [records, setRecords] = useState<SyncLogRecord[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_RECORDS_PER_PAGE);
+  const [open, setOpen] = useState(action === 'failed');
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [requestVersion, setRequestVersion] = useState(0);
+
+  useEffect(() => setPage(1), [action, search]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setLoadError(false);
+    syncLogsApi
+      .listRecords(projectId, jobId, runId, {
+        page,
+        limit: pageSize,
+        action,
+        search,
+      })
+      .then((response) => {
+        if (cancelled) return;
+        setRecords(response.data || []);
+        setTotal(response.total || 0);
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [action, jobId, page, pageSize, projectId, requestVersion, runId, search]);
+
+  const actionConfig = ACTION_CONFIG[action as keyof typeof ACTION_CONFIG];
+  const ActionIcon = actionConfig.icon;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const isFailed = action === 'failed';
+  const title = `${actionConfig.label} Records`;
+
+  if (loading && records.length === 0) {
+    return (
+      <div className="bg-card text-muted-foreground flex items-center gap-2 rounded-3xl border px-4 py-5 text-xs">
+        <RefreshCw className="size-3.5 animate-spin" /> Loading{' '}
+        {title.toLowerCase()}…
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="bg-card flex items-center justify-between gap-3 rounded-3xl border px-4 py-4">
+        <span className="text-muted-foreground text-sm">
+          Could not load {title.toLowerCase()}.
+        </span>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setRequestVersion((version) => version + 1)}
+        >
+          <RefreshCw /> Try again
+        </Button>
+      </div>
+    );
+  }
+
+  if (records.length === 0) return null;
+
+  return (
+    <Collapsible
+      open={open}
+      onOpenChange={setOpen}
+      className={cn(
+        'bg-card overflow-hidden rounded-3xl border',
+        isFailed && 'border-destructive/25',
+      )}
+    >
+      <CollapsibleTrigger className="group hover:bg-muted/30 flex w-full items-center justify-between gap-3 px-3.5 py-2.5 text-left transition-colors">
+        <div className="flex items-center gap-2.5">
+          <div className="bg-muted flex size-6 items-center justify-center rounded-full">
+            <ActionIcon
+              className={cn(
+                'text-muted-foreground size-3.5',
+                isFailed && 'text-destructive',
+              )}
+            />
+          </div>
+          <div>
+            <p className="text-sm font-semibold">
+              {title} ({total.toLocaleString()})
+            </p>
+            <p className="text-muted-foreground text-xs">
+              {isFailed
+                ? 'Review the error and try again.'
+                : 'Records processed successfully by this run.'}
+            </p>
+          </div>
+        </div>
+        <ExpandChevron open={open} bordered />
+      </CollapsibleTrigger>
+
+      <CollapsibleContent>
+        <div className="overflow-x-auto border-t">
+          <table className="w-full min-w-[680px] text-left text-xs">
+            <thead className="bg-muted/70 text-muted-foreground">
+              <tr>
+                <th className="w-12 px-3.5 py-1.5 font-medium">#</th>
+                <th className="px-3.5 py-1.5 font-medium">Source Record ID</th>
+                <th className="px-3.5 py-1.5 font-medium">Result</th>
+                <th className="px-3.5 py-1.5 font-medium">
+                  {isFailed || action === 'skipped'
+                    ? 'Error / Reason'
+                    : 'Destination ID'}
+                </th>
+                <th className="w-20 px-3.5 py-1.5 font-medium">Page</th>
+              </tr>
+            </thead>
+            <tbody>
+              {records.map((record, index) => (
+                <tr
+                  key={record.id}
+                  className={cn(
+                    'border-t',
+                    isFailed && 'bg-destructive/[0.025]',
+                  )}
+                >
+                  <td className="text-muted-foreground px-3.5 py-2">
+                    {(page - 1) * pageSize + index + 1}
+                  </td>
+                  <td className="px-3.5 py-2 font-mono">
+                    {record.sourceRecordId}
+                  </td>
+                  <td className="px-3.5 py-2">
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        'border-transparent font-normal',
+                        isFailed
+                          ? 'bg-destructive/10 text-destructive'
+                          : 'bg-muted text-foreground',
+                      )}
+                    >
+                      {actionConfig.label}
+                    </Badge>
+                  </td>
+                  <td className="max-w-sm px-3.5 py-2">
+                    <RecordReason rec={record} />
+                  </td>
+                  <td className="text-muted-foreground px-3.5 py-2">
+                    {record.pageNumber ?? '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 px-3.5 py-2">
+          <span className="text-muted-foreground text-xs">
+            Showing {(page - 1) * pageSize + 1}–
+            {Math.min(page * pageSize, total)} of {total}
+          </span>
+          <div className="ml-auto flex items-center gap-1.5">
+            <span className="text-muted-foreground text-xs">Rows per page</span>
+            <Select
+              value={String(pageSize)}
+              onValueChange={(value) => {
+                setPageSize(Number(value));
+                setPage(1);
+              }}
+            >
+              <SelectTrigger size="sm" className="h-7 w-16 rounded-lg px-2">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent align="end">
+                {RECORDS_PER_PAGE_OPTIONS.map((option) => (
+                  <SelectItem key={option} value={String(option)}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {totalPages > 1 && (
+            <span className="text-muted-foreground text-xs">
+              Page {page} of {totalPages}
+            </span>
+          )}
+          <div className="flex gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              className="size-7 rounded-lg p-0"
+              disabled={page <= 1}
+              onClick={() => setPage((current) => current - 1)}
+              aria-label={`Previous ${title.toLowerCase()} page`}
+            >
+              <ArrowLeft />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="size-7 rounded-lg p-0"
+              disabled={page >= totalPages}
+              onClick={() => setPage((current) => current + 1)}
+              aria-label={`Next ${title.toLowerCase()} page`}
+            >
+              <ArrowRight />
+            </Button>
+          </div>
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
 function RunLogRow({
   run,
   projectId,
   jobId,
   recordSearch,
+  resultType,
   onRefresh,
 }: {
   run: ExtSyncRun;
   projectId: string;
   jobId: string;
   recordSearch?: string;
+  resultType?: string;
   onRefresh?: () => void | Promise<void>;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -906,17 +1149,6 @@ function RunLogRow({
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [detailError, setDetailError] = useState(false);
   const [stoppingRun, setStoppingRun] = useState(false);
-  const [pageCursor, setPageCursor] = useState(0);
-  const [recordFilters, setRecordFilters] = useState<RecordFilters>({
-    search: recordSearch || undefined,
-  });
-
-  useEffect(() => {
-    setRecordFilters((current) => ({
-      ...current,
-      search: recordSearch || undefined,
-    }));
-  }, [recordSearch]);
 
   const displayStatus = getRunStatus(run);
   const recordsSynced = (run.createdCount ?? 0) + (run.updatedCount ?? 0);
@@ -969,10 +1201,11 @@ function RunLogRow({
     setExpanded(next);
   };
 
-  const visiblePages = pages.slice(pageCursor, pageCursor + PAGES_PER_VIEW);
   const totalPageCount = pages.length;
-  const hasPrev = pageCursor > 0;
-  const hasNext = pageCursor + PAGES_PER_VIEW < totalPageCount;
+  const visibleRecordActions =
+    resultType && resultType !== ALL_FILTER_VALUE
+      ? [resultType]
+      : ACTION_FILTER_OPTIONS;
 
   return (
     <Collapsible
@@ -982,7 +1215,7 @@ function RunLogRow({
     >
       <div className="hover:bg-muted/30 flex items-stretch transition-colors">
         <CollapsibleTrigger
-          className="group flex min-w-0 flex-1 items-center gap-4 px-4 py-3 text-left sm:px-5"
+          className="group flex min-w-0 flex-1 items-center gap-3 px-4 py-2.5 text-left"
           title={`Run ID: ${run.id}`}
         >
           <StatusBadge status={displayStatus} size="sm" />
@@ -1023,7 +1256,7 @@ function RunLogRow({
           </div>
 
           <div className="hidden shrink-0 items-center divide-x lg:flex">
-            <div className="min-w-36 px-5">
+            <div className="min-w-36 px-4">
               <p className="text-muted-foreground text-xs">Started</p>
               <p className="mt-0.5 text-sm font-medium">
                 {run.startedAt
@@ -1031,13 +1264,13 @@ function RunLogRow({
                   : '—'}
               </p>
             </div>
-            <div className="min-w-28 px-5">
+            <div className="min-w-28 px-4">
               <p className="text-muted-foreground text-xs">Records synced</p>
               <p className="mt-0.5 text-sm font-medium">
                 {recordsSynced.toLocaleString()}
               </p>
             </div>
-            <div className="min-w-24 px-5">
+            <div className="min-w-24 px-4">
               <p className="text-muted-foreground text-xs">Duration</p>
               <p className="mt-0.5 text-sm font-medium">
                 {formatDuration(run.durationMs)}
@@ -1078,184 +1311,203 @@ function RunLogRow({
         )}
       </div>
 
-      <CollapsibleContent className="bg-muted border-t">
-        <div className="grid grid-cols-2 border-b sm:grid-cols-3 lg:grid-cols-5">
-          {[
-            ['Processed', run.totalFetched ?? 0],
-            ['Created', run.createdCount ?? 0],
-            ['Updated', run.updatedCount ?? 0],
-            ['Skipped', run.skippedCount ?? 0],
-            ['Failed', run.failedCount ?? 0],
-          ].map(([label, value], index) => (
-            <div
-              key={label}
-              className={cn(
-                'p-1.5',
-                index > 0 && 'border-l',
-                index > 1 && 'max-sm:border-t',
-              )}
-            >
-              <div className="bg-card space-y-1 rounded-4xl border px-3 py-2">
-                <p
-                  className={cn(
-                    'text-md mt-0.5 font-semibold',
-                    label === 'Failed' &&
-                      Number(value) > 0 &&
-                      'text-destructive',
-                  )}
+      <CollapsibleContent className="bg-muted/35 border-t">
+        <div className="space-y-4 p-4">
+          <section>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+              {[
+                {
+                  label: 'Processed',
+                  value: run.totalFetched ?? 0,
+                  icon: FileText,
+                  iconClassName: 'text-muted-foreground',
+                },
+                {
+                  label: 'Created',
+                  value: run.createdCount ?? 0,
+                  icon: Plus,
+                  iconClassName: 'text-success',
+                },
+                {
+                  label: 'Updated',
+                  value: run.updatedCount ?? 0,
+                  icon: Edit2,
+                  iconClassName: 'text-info',
+                },
+                {
+                  label: 'Skipped',
+                  value: run.skippedCount ?? 0,
+                  icon: SkipForward,
+                  iconClassName: 'text-warning',
+                },
+                {
+                  label: 'Failed',
+                  value: run.failedCount ?? 0,
+                  icon: CircleAlert,
+                  iconClassName: 'text-destructive',
+                },
+              ].map(({ label, value, icon: MetricIcon, iconClassName }) => (
+                <div
+                  key={label}
+                  className="bg-card flex items-center gap-2.5 rounded-2xl border px-3 py-2.5"
                 >
-                  {Number(value).toLocaleString()}
-                </p>
-                <p className="text-muted-foreground text-xs">{label}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {runMessage && (
-          <div
-            className={cn(
-              'mx-5 mt-4 rounded-4xl border px-4 py-3 text-sm',
-              displayStatus === 'failed'
-                ? 'border-destructive/20 bg-destructive/5 text-destructive'
-                : 'border-warning/20 bg-warning/5 text-foreground',
-            )}
-          >
-            <p className="font-medium">
-              {displayStatus === 'failed'
-                ? 'Why this run failed'
-                : 'Why this run stopped early'}
-            </p>
-            <p className="text-muted-foreground mt-1 text-xs">{runMessage}</p>
-          </div>
-        )}
-
-        {pages.length > 0 && (
-          <RecordFilterBar
-            filters={recordFilters}
-            onChange={setRecordFilters}
-            onClear={() => setRecordFilters({})}
-          />
-        )}
-        {detailError ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-5">
-            <div>
-              <p className="text-sm font-medium">Could not load run details</p>
-              <p className="text-muted-foreground text-xs">
-                Check your connection and try again.
-              </p>
-            </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => handleOpenChange(true)}
-            >
-              <RefreshCw /> Try again
-            </Button>
-          </div>
-        ) : pages.length > 0 && hasActiveFilters(recordFilters) ? (
-          <FilteredRecordsList
-            projectId={projectId}
-            jobId={jobId}
-            runId={run.id}
-            filters={recordFilters}
-          />
-        ) : pages.length > 0 ? (
-          <div className="px-5 py-4">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <p className="text-foreground text-sm font-semibold">
-                  Page Breakdown
-                </p>
-                <p className="text-muted-foreground text-xs">
-                  {totalPageCount} page{totalPageCount !== 1 ? 's' : ''} ·{' '}
-                  {run.totalFetched || 0} records
-                </p>
-              </div>
-              {totalPageCount > PAGES_PER_VIEW && (
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground text-xs">
-                    {pageCursor + 1}–
-                    {Math.min(pageCursor + PAGES_PER_VIEW, totalPageCount)} of{' '}
-                    {totalPageCount}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-6 px-2 text-xs"
-                    disabled={!hasPrev}
-                    onClick={() =>
-                      setPageCursor((c) => Math.max(0, c - PAGES_PER_VIEW))
-                    }
-                  >
-                    <ArrowLeft /> Prev
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-6 px-2 text-xs"
-                    disabled={!hasNext}
-                    onClick={() => setPageCursor((c) => c + PAGES_PER_VIEW)}
-                  >
-                    Next <ArrowRight />
-                  </Button>
+                  <div className="bg-muted flex size-7 shrink-0 items-center justify-center rounded-full">
+                    <MetricIcon className={cn('size-3.5', iconClassName)} />
+                  </div>
+                  <div>
+                    <p className="text-base leading-none font-semibold">
+                      {Number(value).toLocaleString()}
+                    </p>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      {label}
+                    </p>
+                  </div>
                 </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              {visiblePages.map((pg) => (
-                <PageRow
-                  key={pg.id}
-                  pg={pg}
-                  projectId={projectId}
-                  jobId={jobId}
-                  runId={run.id}
-                />
               ))}
             </div>
+          </section>
 
-            {totalPageCount > PAGES_PER_VIEW && (
-              <div className="mt-3 flex items-center justify-between border-t pt-3">
-                <span className="text-muted-foreground text-xs">
-                  Showing pages {pageCursor + 1}–
-                  {Math.min(pageCursor + PAGES_PER_VIEW, totalPageCount)} of{' '}
-                  {totalPageCount}
-                </span>
-                <div className="flex gap-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-6 px-2 text-xs"
-                    disabled={!hasPrev}
-                    onClick={() =>
-                      setPageCursor((c) => Math.max(0, c - PAGES_PER_VIEW))
-                    }
-                  >
-                    <ArrowLeft /> Prev
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-6 px-2 text-xs"
-                    disabled={!hasNext}
-                    onClick={() => setPageCursor((c) => c + PAGES_PER_VIEW)}
-                  >
-                    Next <ArrowRight />
-                  </Button>
-                </div>
+          {runMessage && (
+            <div
+              className={cn(
+                'flex gap-2.5 rounded-2xl border px-3.5 py-2.5',
+                displayStatus === 'failed'
+                  ? 'border-destructive/25 bg-destructive/5'
+                  : 'border-warning/25 bg-warning/5',
+              )}
+            >
+              <CircleAlert
+                className={cn(
+                  'mt-0.5 size-4 shrink-0',
+                  displayStatus === 'failed'
+                    ? 'text-destructive'
+                    : 'text-warning',
+                )}
+              />
+              <div>
+                <p className="text-sm font-semibold">
+                  {displayStatus === 'failed'
+                    ? 'Why this run failed'
+                    : 'Why this run stopped early'}
+                </p>
+                <p className="text-muted-foreground mt-0.5 text-xs">
+                  {runMessage}
+                </p>
               </div>
-            )}
-          </div>
-        ) : (
-          !loadingDetails && (
-            <div className="text-muted-foreground px-5 py-4 text-sm">
-              {(run.totalFetched ?? 0) === 0
-                ? 'No matching records were found for this run. Nothing was changed.'
-                : 'Detailed record logs are not available for this run.'}
             </div>
-          )
-        )}
+          )}
+
+          {detailError ? (
+            <div className="bg-card flex flex-wrap items-center justify-between gap-3 rounded-3xl border px-4 py-4">
+              <div>
+                <p className="text-sm font-medium">
+                  Could not load run details
+                </p>
+                <p className="text-muted-foreground text-xs">
+                  Check your connection and try again.
+                </p>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => handleOpenChange(true)}
+              >
+                <RefreshCw /> Try again
+              </Button>
+            </div>
+          ) : pages.length > 0 ? (
+            <>
+              <section>
+                <div className="mb-2 flex items-end justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold">Page Breakdown</h3>
+                    <p className="text-muted-foreground mt-0.5 text-xs">
+                      Each page shows the fetched records and batch result.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="text-muted-foreground hover:text-foreground flex min-w-0 items-center gap-1.5 text-xs transition-colors"
+                    onClick={() => {
+                      navigator.clipboard.writeText(run.id);
+                      toast.success('Run ID copied');
+                    }}
+                  >
+                    <span className="max-w-56 truncate">Run ID: {run.id}</span>
+                    <Copy className="size-3.5 shrink-0" />
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {pages.map((pageLog) => (
+                    <div
+                      key={pageLog.id}
+                      className="bg-card flex flex-wrap items-center gap-2 rounded-xl border px-2.5 py-1.5 text-xs"
+                    >
+                      <span className="flex items-center gap-1.5 font-medium">
+                        <FileText className="text-muted-foreground size-3.5" />
+                        Page {pageLog.pageNumber}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {pageLog.recordsFetched} fetched
+                      </span>
+                      {pageLog.createdCount + pageLog.updatedCount > 0 && (
+                        <span className="text-foreground flex items-center gap-1">
+                          <CircleCheck className="text-muted-foreground size-3" />
+                          +{pageLog.createdCount + pageLog.updatedCount}{' '}
+                          succeeded
+                        </span>
+                      )}
+                      <span className="text-muted-foreground">
+                        {pageLog.skippedCount} skipped
+                      </span>
+                      {pageLog.failedCount > 0 && (
+                        <span className="text-destructive">
+                          {pageLog.failedCount} failed
+                        </span>
+                      )}
+                      {pageLog.fetchDurationMs != null && (
+                        <span className="text-muted-foreground flex items-center gap-1">
+                          <Clock className="size-3" />
+                          {pageLog.fetchDurationMs}ms
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section>
+                <div className="mb-2">
+                  <h3 className="text-sm font-semibold">Record Details</h3>
+                  <p className="text-muted-foreground mt-0.5 text-xs">
+                    Records from this run, grouped by result. Global filters
+                    remain applied.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  {visibleRecordActions.map((action) => (
+                    <RecordDetailsTable
+                      key={action}
+                      projectId={projectId}
+                      jobId={jobId}
+                      runId={run.id}
+                      action={action}
+                      search={recordSearch}
+                    />
+                  ))}
+                </div>
+              </section>
+            </>
+          ) : (
+            !loadingDetails && (
+              <div className="bg-card text-muted-foreground rounded-3xl border px-4 py-4 text-sm">
+                {(run.totalFetched ?? 0) === 0
+                  ? 'No matching records were found for this run. Nothing was changed.'
+                  : 'Detailed record logs are not available for this run.'}
+              </div>
+            )
+          )}
+        </div>
       </CollapsibleContent>
     </Collapsible>
   );
@@ -1269,6 +1521,7 @@ export default function RunHistoryTab() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [status, setStatus] = useState(ALL_FILTER_VALUE);
+  const [resultType, setResultType] = useState(ALL_FILTER_VALUE);
   const [triggeredBy, setTriggeredBy] = useState(ALL_FILTER_VALUE);
   const [period, setPeriod] = useState('all');
   const [searchDraft, setSearchDraft] = useState('');
@@ -1307,13 +1560,14 @@ export default function RunHistoryTab() {
 
   const hasFilters =
     status !== ALL_FILTER_VALUE ||
+    resultType !== ALL_FILTER_VALUE ||
     triggeredBy !== ALL_FILTER_VALUE ||
     period !== 'all' ||
     !!search;
 
   useEffect(() => {
     setPage(1);
-  }, [status, triggeredBy, period, search]);
+  }, [status, resultType, triggeredBy, period, search]);
 
   function handlePageSizeChange(size: number) {
     setPageSize(size);
@@ -1338,6 +1592,7 @@ export default function RunHistoryTab() {
 
   const clearFilters = () => {
     setStatus(ALL_FILTER_VALUE);
+    setResultType(ALL_FILTER_VALUE);
     setTriggeredBy(ALL_FILTER_VALUE);
     setPeriod('all');
     setSearchDraft('');
@@ -1346,27 +1601,30 @@ export default function RunHistoryTab() {
 
   return (
     <Card className="gap-0 overflow-hidden">
-      <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <CardHeader className="flex flex-col gap-4 border-b pb-4 xl:flex-row xl:items-center xl:justify-between">
         <div className="shrink-0">
-          <CardTitle>Run history</CardTitle>
+          <CardTitle>Run History</CardTitle>
           <CardDescription className="mt-1">
             Review each sync run and expand it for page and record details.
           </CardDescription>
         </div>
 
-        <div className="flex w-full flex-wrap items-center justify-end gap-2 lg:w-auto">
-          <div className="relative w-56">
+        <div
+          className="flex w-full flex-wrap items-center gap-2 xl:w-auto xl:justify-end"
+          aria-label="Run History filters"
+        >
+          <div className="relative min-w-56 flex-1 xl:w-72 xl:flex-none">
             <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
             <Input
               value={searchDraft}
               onChange={(event) => setSearchDraft(event.target.value)}
-              placeholder="Search record ID"
-              aria-label="Search runs by record ID"
+              placeholder="Search run or record ID…"
+              aria-label="Search Run History"
               className="h-9 pl-9"
             />
           </div>
 
-          <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Select value={status} onValueChange={setStatus}>
               <SelectTrigger size="sm" className="h-9 w-36">
                 <SelectValue placeholder="Status" />
@@ -1381,12 +1639,26 @@ export default function RunHistoryTab() {
               </SelectContent>
             </Select>
 
-            <Select value={triggeredBy} onValueChange={setTriggeredBy}>
-              <SelectTrigger size="sm" className="h-9 w-40">
-                <SelectValue placeholder="Run type" />
+            <Select value={resultType} onValueChange={setResultType}>
+              <SelectTrigger size="sm" className="h-9 w-36">
+                <SelectValue placeholder="Result type" />
               </SelectTrigger>
               <SelectContent align="end">
-                <SelectItem value={ALL_FILTER_VALUE}>All run types</SelectItem>
+                <SelectItem value={ALL_FILTER_VALUE}>All results</SelectItem>
+                {ACTION_FILTER_OPTIONS.map((action) => (
+                  <SelectItem key={action} value={action}>
+                    {enumLabel(action)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={triggeredBy} onValueChange={setTriggeredBy}>
+              <SelectTrigger size="sm" className="h-9 w-40">
+                <SelectValue placeholder="Sync type" />
+              </SelectTrigger>
+              <SelectContent align="end">
+                <SelectItem value={ALL_FILTER_VALUE}>All sync types</SelectItem>
                 {RUN_TRIGGER_OPTIONS.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
@@ -1419,6 +1691,12 @@ export default function RunHistoryTab() {
       </CardHeader>
 
       <CardContent className="space-y-4 p-4 sm:p-5">
+        <div className="bg-info/5 text-muted-foreground border-info/10 flex items-center gap-2 rounded-2xl border px-3 py-2 text-xs">
+          <Info className="text-info size-3.5 shrink-0" />
+          These filters apply to the full Run History and any expanded run
+          details.
+        </div>
+
         {activeRunLog?.status === 'running' && (
           <LiveProgressBar runLog={activeRunLog} liveProgress={liveProgress} />
         )}
@@ -1456,6 +1734,7 @@ export default function RunHistoryTab() {
                   projectId={projectId}
                   jobId={jobId}
                   recordSearch={search}
+                  resultType={resultType}
                   onRefresh={handleRefresh}
                 />
               ))}

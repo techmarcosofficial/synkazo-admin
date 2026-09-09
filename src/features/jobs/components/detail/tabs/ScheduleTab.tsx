@@ -654,7 +654,9 @@ export default function ScheduleTab() {
                         settings are unavailable here.
                       </p>
                       <Button asChild variant="outline" size="sm">
-                        <Link to={`/projects/${projectId}?tab=scheduler`}>
+                        <Link
+                          to={`/projects/${projectId}?tab=settings&section=schedule`}
+                        >
                           Open project schedule
                         </Link>
                       </Button>

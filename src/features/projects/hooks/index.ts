@@ -1,4 +1,3 @@
-export { queryKeys } from './queryKeys';
 export { useCreateProject } from './useCreateProject';
 export { usePlatforms } from './usePlatforms';
 export {
@@ -16,11 +15,13 @@ export {
   type ProjectDetailTabView,
 } from './useProjectDetailTabs';
 export {
-  useProjectEnvironmentActivation,
-  type ActivationModalState,
-  type MigrationDiffResult,
-} from './useProjectEnvironmentActivation';
+  useProjectSettingsSections,
+  type ProjectSettingsSectionView,
+} from './useProjectSettingsSections';
+export { useProjectEnvironmentActivation } from './useProjectEnvironmentActivation';
+export { useEnvironmentMigration } from './useEnvironmentMigration';
+export { useProjectArchive } from './useProjectArchive';
+export { useProjectGeneralSettings } from './useProjectGeneralSettings';
 export { useProjectDetailLiveSync } from './useProjectDetailLiveSync';
 export { useProjectFilters } from './useProjectFilters';
 export { useProjectSetupState } from './useProjectSetupState';
-export { useProjectsQuery } from './useProjects';

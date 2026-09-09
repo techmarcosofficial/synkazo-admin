@@ -27,7 +27,9 @@ export default function OverviewTab() {
         />
         <ProjectUpcomingEvents
           jobs={jobs}
-          onViewScheduler={() => handleTabChange('scheduler')}
+          onViewScheduler={() =>
+            handleTabChange('settings', { section: 'schedule' })
+          }
         />
       </div>
     </div>

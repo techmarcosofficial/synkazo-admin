@@ -134,8 +134,8 @@ export default function AssociationQueueCard({
   };
 
   return (
-    <Card size="sm">
-      <CardHeader className="flex-row items-center justify-between">
+    <Card size="sm" className="gap-3">
+      <CardHeader className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
             2

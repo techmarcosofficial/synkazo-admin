@@ -13,6 +13,14 @@ export function useOrgsQuery(options?: { enabled?: boolean }) {
   });
 }
 
+export function useOrgQuery(id: string, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: queryKeys.organisations.detail(id),
+    queryFn: () => organisationsApi.getOrg(id),
+    enabled: Boolean(id) && options?.enabled !== false,
+  });
+}
+
 export function useMyOrgQuery() {
   return useQuery({
     queryKey: queryKeys.organisations.mine,
@@ -25,7 +33,10 @@ export function useUpdateOrgMutation() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Organisation> }) =>
       organisationsApi.updateOrg(id, data),
-    onSuccess: () => {
+    onSuccess: (_organisation, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.organisations.detail(variables.id),
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.organisations.mine });
       queryClient.invalidateQueries({ queryKey: queryKeys.organisations.all });
     },
@@ -36,7 +47,10 @@ export function useDeleteOrgMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => organisationsApi.deleteOrg(id),
-    onSuccess: () => {
+    onSuccess: (_data, id) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.organisations.detail(id),
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.organisations.all });
     },
   });

@@ -89,7 +89,7 @@ export default function QueueScheduleCard({
 
   return (
     <Card size="sm">
-      <CardHeader className="flex-row items-center gap-3">
+      <CardHeader className="flex items-start gap-3 pb-3">
         <div className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-lg">
           <Clock3 className="size-4" aria-hidden="true" />
         </div>
@@ -101,7 +101,7 @@ export default function QueueScheduleCard({
           </p>
         </div>
       </CardHeader>
-      <CardContent className="space-y-2.5 sm:pl-16">
+      <CardContent className="space-y-2.5">
         <div className="grid gap-3 md:grid-cols-[minmax(14rem,18rem)_minmax(0,1fr)_auto] md:items-end">
           <div className="space-y-1.5">
             <label className="text-xs font-medium">Schedule Type</label>

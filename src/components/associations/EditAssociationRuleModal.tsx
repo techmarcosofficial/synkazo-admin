@@ -1,4 +1,4 @@
-import { Check } from 'lucide-react';
+import { AlertCircle, Check } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -10,7 +10,8 @@ import {
 import AssociationConditionsEditor, {
   validateConditions,
 } from '@/components/associations/AssociationConditionsEditor';
-import FormDialog from '@/components/form/FormDialog';
+import FormDrawer from '@/components/form/FormDrawer';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -42,6 +43,11 @@ export default function EditAssociationRuleModal({
   const [sourceFields, setSourceFields] = useState<ObjectField[]>([]);
   const [saving, setSaving] = useState(false);
   const [nameError, setNameError] = useState<string | undefined>();
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const isDirty =
+    name !== (rule.name ?? '') ||
+    conditionLogic !== (rule.conditionLogic ?? 'AND') ||
+    JSON.stringify(conditions) !== JSON.stringify(rule.conditions ?? []);
 
   useEffect(() => {
     associationsApi
@@ -73,6 +79,7 @@ export default function EditAssociationRuleModal({
     }
     setNameError(undefined);
     setSaving(true);
+    setSubmitError(null);
     try {
       await associationsApi.updateRule(projectId, rule.id, {
         name: trimmedName,
@@ -84,19 +91,21 @@ export default function EditAssociationRuleModal({
       onClose();
     } catch (err) {
       const e = err as { response?: { data?: { message?: string } } };
-      toast.error(e?.response?.data?.message ?? 'Failed to save rule');
+      const message = e?.response?.data?.message ?? 'Failed to save rule';
+      setSubmitError(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <FormDialog
+    <FormDrawer
       open
       onOpenChange={(open) => !open && onClose()}
       title="Edit Association Rule"
-      size="lg"
-      isDirty
+      size="default"
+      isDirty={isDirty}
       footer={(requestClose) => (
         <div className="flex w-full items-center justify-between">
           <Button variant="outline" onClick={requestClose} disabled={saving}>
@@ -110,6 +119,12 @@ export default function EditAssociationRuleModal({
       )}
     >
       <div className="space-y-4">
+        {submitError && (
+          <Alert variant="destructive">
+            <AlertCircle />
+            <AlertDescription>{submitError}</AlertDescription>
+          </Alert>
+        )}
         <FieldGroup>
           <Field data-invalid={!!nameError}>
             <FieldLabel htmlFor="edit-rule-name" required>
@@ -143,6 +158,6 @@ export default function EditAssociationRuleModal({
           }}
         />
       </div>
-    </FormDialog>
+    </FormDrawer>
   );
 }

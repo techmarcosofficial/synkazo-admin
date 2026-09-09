@@ -6,6 +6,7 @@ import type {
   ProjectActivityLog,
   ProjectExt,
 } from '@/features/projects/hooks';
+import type { ProjectDetailTabChangeOptions } from '@/features/projects/hooks/useProjectDetailTabs';
 import type { ProjectDetailTabId } from '@/features/projects/lib/projectDetailTabs';
 import type { ProjectEnvironment } from '@/types';
 
@@ -22,7 +23,7 @@ export interface ProjectDetailContextValue {
   refetch: () => void;
   handleTabChange: (
     id: ProjectDetailTabId,
-    options?: { replace?: boolean },
+    options?: ProjectDetailTabChangeOptions,
   ) => void;
 
   // Sync-job creation is triggered from the Sync Jobs tab and the Connections
@@ -35,10 +36,11 @@ export interface ProjectDetailContextValue {
   // Connections tab (to pass through to ConnectionsManager).
   projectActiveEnv: ProjectEnvironment | null;
   envActivating: boolean;
-  envDiffLoading: boolean;
+  environmentActivationError: string | null;
+  clearEnvironmentActivationError: () => void;
   envFullyConnected: (env: string) => boolean;
   envHasAnyConnected: (env: string) => boolean;
-  onActivateEnv: (env: ProjectEnvironment) => void;
+  onActivateEnv: (env: ProjectEnvironment) => Promise<void>;
   connReloadKey: number;
 }
 

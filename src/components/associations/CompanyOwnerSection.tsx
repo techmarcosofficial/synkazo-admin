@@ -1,10 +1,8 @@
 import {
   AlertCircle,
   Check,
-  CheckCircle,
   ChevronDown,
   ChevronUp,
-  Clock,
   Info,
   Play,
   RefreshCw,
@@ -22,10 +20,17 @@ import ErrorState from '@/components/shared/ErrorState';
 import ListRow from '@/components/shared/list/ListRow';
 import PaginationBar from '@/components/shared/PaginationBar';
 import SkeletonTable from '@/components/shared/skeletons/SkeletonTable';
+import StatusBadge from '@/components/shared/StatusBadge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
 import {
@@ -50,26 +55,6 @@ import {
   useCompanyOwnerResultsQuery,
   useRunAllCompanyOwnersMutation,
 } from '@/queries/useAssociations';
-
-const STATUS_DOT: Record<string, string> = {
-  completed: 'bg-success',
-  partial: 'bg-warning',
-  failed: 'bg-destructive',
-};
-
-function RunStatusBadge({ status }: { status: string }) {
-  return (
-    <Badge className="bg-muted text-muted-foreground gap-1.5 capitalize">
-      <span
-        className={cn(
-          'size-1.5 rounded-full',
-          STATUS_DOT[status] ?? STATUS_DOT.partial,
-        )}
-      />
-      {status}
-    </Badge>
-  );
-}
 
 const RESULT_STATUS_META: Record<
   string,
@@ -117,43 +102,49 @@ function RunLogRow({
       : null;
 
   return (
-    <ListRow
-      onClick={onClick}
-      className={cn(
-        'cursor-pointer gap-3 rounded-3xl px-2 py-2 text-xs',
-        selected && 'bg-primary/5 ring-primary/30 ring-1',
-      )}
-    >
-      <RunStatusBadge status={log.status} />
-      <span className="text-muted-foreground font-mono tabular-nums">
-        {new Date(log.startedAt).toLocaleString()}
-      </span>
-      <span className="text-muted-foreground hidden capitalize sm:inline">
-        {String(log.triggeredBy).replace(/_/g, ' ')}
-      </span>
-      <span className="ml-auto flex shrink-0 items-center gap-2">
-        {total > 0 && (
-          <span className="text-muted-foreground">{total} companies</span>
+    <ListRow asChild>
+      <button
+        type="button"
+        onClick={onClick}
+        aria-pressed={selected}
+        className={cn(
+          'w-full cursor-pointer gap-3 rounded-3xl px-2 py-2 text-left text-xs',
+          selected && 'bg-primary/5 ring-primary/30 ring-1',
         )}
-        {success > 0 && (
-          <span className="text-success inline-flex items-center gap-0.5">
-            <Check className="size-3" /> {success}
-          </span>
-        )}
-        {failed > 0 && (
-          <span className="text-destructive inline-flex items-center gap-0.5">
-            <X className="size-3" /> {failed}
-          </span>
-        )}
-        {skipped > 0 && (
-          <span className="text-muted-foreground inline-flex items-center gap-0.5">
-            <SkipForward className="size-3" /> {skipped}
-          </span>
-        )}
-        {dur !== null && (
-          <span className="text-muted-foreground hidden md:inline">{dur}s</span>
-        )}
-      </span>
+      >
+        <StatusBadge status={log.status} size="sm" />
+        <span className="text-muted-foreground font-mono tabular-nums">
+          {new Date(log.startedAt).toLocaleString()}
+        </span>
+        <span className="text-muted-foreground hidden capitalize sm:inline">
+          {String(log.triggeredBy).replace(/_/g, ' ')}
+        </span>
+        <span className="ml-auto flex shrink-0 items-center gap-2">
+          {total > 0 && (
+            <span className="text-muted-foreground">{total} companies</span>
+          )}
+          {success > 0 && (
+            <span className="text-success inline-flex items-center gap-0.5">
+              <Check className="size-3" /> {success}
+            </span>
+          )}
+          {failed > 0 && (
+            <span className="text-destructive inline-flex items-center gap-0.5">
+              <X className="size-3" /> {failed}
+            </span>
+          )}
+          {skipped > 0 && (
+            <span className="text-muted-foreground inline-flex items-center gap-0.5">
+              <SkipForward className="size-3" /> {skipped}
+            </span>
+          )}
+          {dur !== null && (
+            <span className="text-muted-foreground hidden md:inline">
+              {dur}s
+            </span>
+          )}
+        </span>
+      </button>
     </ListRow>
   );
 }
@@ -167,7 +158,8 @@ export default function CompanyOwnerSection({
 }) {
   const isDataforma = sourcePlatform === 'dataforma';
   const { confirm } = useConfirmDialog();
-  const [collapsed, setCollapsed] = useState(true);
+  const [historyOpen, setHistoryOpen] = useState(true);
+  const [runError, setRunError] = useState<string | null>(null);
 
   const [recentRunsPage, setRecentRunsPage] = useState(1);
   const [recentRunsPageSize, setRecentRunsPageSize] = useState(10);
@@ -193,6 +185,7 @@ export default function CompanyOwnerSection({
   const runAllMutation = useRunAllCompanyOwnersMutation(projectId);
 
   const runAll = async () => {
+    setRunError(null);
     try {
       const stats = await runAllMutation.mutateAsync({});
       const hs = stats?.hubspot ?? {};
@@ -217,7 +210,12 @@ export default function CompanyOwnerSection({
       setRecentRunsPage(1);
     } catch (err) {
       const e = err as { response?: { data?: { message?: string } } };
-      toast.error(e?.response?.data?.message ?? 'Association failed.');
+      const message =
+        e?.response?.data?.message ??
+        'Company owners could not be associated. Review the configuration and try again.';
+      setRunError(message);
+      toast.error(message);
+      throw err;
     }
   };
 
@@ -230,7 +228,7 @@ export default function CompanyOwnerSection({
       body: (
         <p className="text-muted-foreground text-sm">
           {isDataforma
-            ? 'Make sure at least one owner mapping is configured below before running the association.'
+            ? 'Configured mappings are used when present; otherwise the documented default Dataforma owner mapping is used.'
             : 'Make sure the required ServiceTitan Sales Person / CAM field is configured before running the association.'}
         </p>
       ),
@@ -241,7 +239,6 @@ export default function CompanyOwnerSection({
 
   const associateOwnersButton = (
     <Button
-      variant="secondary"
       size="sm"
       onClick={handleRunAll}
       disabled={runAllMutation.isPending}
@@ -271,323 +268,339 @@ export default function CompanyOwnerSection({
   const resultsTotal = resultsQuery.data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(resultsTotal / pageSize));
   const filtersActive = search.length > 0 || statusFilter !== 'all';
+  const selectedLog = logs.find((log) => log.id === selectedRunId);
+
+  const selectRun = (runId: string) => {
+    setSelectedRunId((current) => (current === runId ? null : runId));
+    setPage(1);
+    setSearch('');
+    setStatusFilter('all');
+  };
 
   return (
-    <Card className="overflow-hidden py-0">
-      <CardContent className="space-y-0 p-0">
-        <div className="flex items-start gap-3 p-4">
-          <div className="bg-primary/10 mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg">
-            <Users className="text-primary size-4" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-sm font-semibold">
-                Company-Owner Association
-              </span>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => setCollapsed((c) => !c)}
-                title={collapsed ? 'Expand' : 'Collapse'}
-              >
-                {collapsed ? <ChevronDown /> : <ChevronUp />}
-              </Button>
+    <div className="space-y-4">
+      <Card className="gap-0 py-0 shadow-none">
+        <CardHeader className="flex items-start justify-between gap-4 p-5">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="bg-primary/10 flex size-9 shrink-0 items-center justify-center rounded-xl">
+              <Users className="text-primary size-4" />
             </div>
-            {runAllMutation.isPending ? (
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <CardTitle className="text-sm font-semibold">
+                  Company owner association
+                </CardTitle>
+                <Badge variant="outline" className="capitalize">
+                  {sourcePlatform}
+                </Badge>
+                {latestLog && (
+                  <StatusBadge status={latestLog.status} size="sm" />
+                )}
+              </div>
+              <CardDescription className="mt-1 max-w-2xl text-xs">
+                Match company ownership data from{' '}
+                {isDataforma ? 'Dataforma' : 'ServiceTitan'} to active HubSpot
+                owners and assign them to synced companies. Priority execution
+                may also run this workflow as its final queue stage.
+              </CardDescription>
               <p className="text-muted-foreground mt-2 text-xs">
-                Association is running…
-              </p>
-            ) : (
-              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-                <span className="text-muted-foreground">
-                  Last Run:{' '}
-                  {latestLog
-                    ? new Date(latestLog.startedAt).toLocaleString()
+                Last run:{' '}
+                {latestLog
+                  ? new Date(latestLog.startedAt).toLocaleString()
+                  : logsQuery.isLoading
+                    ? 'Loading…'
                     : 'Never'}
-                </span>
-                {latestLog ? (
-                  <RunStatusBadge status={latestLog.status} />
-                ) : (
-                  <span className="text-muted-foreground">
-                    Status: Not run yet
-                  </span>
-                )}
-                {latestLog && (latestLog.hsSuccessCount ?? 0) > 0 && (
-                  <span className="text-success flex items-center gap-1">
-                    <CheckCircle className="size-2.5" />{' '}
-                    {latestLog.hsSuccessCount} assigned
-                  </span>
-                )}
-                {latestLog && (latestLog.hsFailedCount ?? 0) > 0 && (
-                  <span className="text-destructive flex items-center gap-1">
-                    <AlertCircle className="size-2.5" />{' '}
-                    {latestLog.hsFailedCount} failed
-                  </span>
-                )}
-                {latestLog && (latestLog.hsSkippedCount ?? 0) > 0 && (
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    <Clock className="size-2.5" /> {latestLog.hsSkippedCount}{' '}
-                    skipped
-                  </span>
-                )}
-              </div>
-            )}
+              </p>
+            </div>
           </div>
-        </div>
 
-        {isDataforma && <DataformaOwnerMappingsEditor projectId={projectId} />}
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                void logsQuery.refetch();
+                if (selectedRunId) void resultsQuery.refetch();
+              }}
+              disabled={logsQuery.isFetching || runAllMutation.isPending}
+            >
+              <RefreshCw
+                className={cn(logsQuery.isFetching && 'animate-spin')}
+              />
+              Refresh
+            </Button>
+            {associateOwnersButton}
+          </div>
+        </CardHeader>
 
-        <div className="flex items-center gap-2 px-4 pb-3">
-          {associateOwnersButton}
-          <Button
-            variant="outline"
-            size="icon-sm"
-            onClick={() => {
-              logsQuery.refetch();
-              resultsQuery.refetch();
-            }}
-            disabled={logsQuery.isFetching || runAllMutation.isPending}
-            title="Refresh"
-          >
-            <RefreshCw className={cn(logsQuery.isFetching && 'animate-spin')} />
-          </Button>
-        </div>
+        <CardContent className="space-y-4 px-5 pb-5">
+          {runAllMutation.isPending && (
+            <Alert>
+              <RefreshCw className="animate-spin" />
+              <AlertDescription>
+                Owner assignment is running. The run history will refresh when
+                it finishes.
+              </AlertDescription>
+            </Alert>
+          )}
 
-        <Collapsible open={!collapsed}>
-          <CollapsibleContent>
-            {!collapsed && (
-              <div className="px-4 pt-4">
-                <Alert>
-                  <Info />
-                  <AlertDescription>
-                    {isDataforma
-                      ? 'Each mapping resolves a Dataforma field (already a real, matched email address) to an active HubSpot owner by email. A source email that has no active HubSpot owner is skipped, not treated as a failure.'
-                      : 'Requires the appropriate Sales Person custom field to be configured in ServiceTitan. Results may vary if the field is missing or not configured correctly.'}
-                  </AlertDescription>
-                </Alert>
+          {runError && (
+            <Alert variant="destructive">
+              <AlertCircle />
+              <AlertDescription>{runError}</AlertDescription>
+            </Alert>
+          )}
+
+          <Alert>
+            <Info />
+            <AlertDescription>
+              {isDataforma
+                ? 'Each mapping resolves a Dataforma email field to an active HubSpot owner. An email without an active owner is skipped rather than failed.'
+                : 'This workflow requires the appropriate ServiceTitan Sales Person or CAM custom field. Missing or invalid values are reported in the selected run results.'}
+            </AlertDescription>
+          </Alert>
+
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {[
+              { label: 'Processed', value: latestLog?.hsTotalCount },
+              { label: 'Associated', value: latestLog?.hsSuccessCount },
+              { label: 'Skipped', value: latestLog?.hsSkippedCount },
+              { label: 'Failed', value: latestLog?.hsFailedCount },
+            ].map((metric) => (
+              <div key={metric.label} className="bg-muted/50 rounded-3xl p-4">
+                <p className="text-muted-foreground text-xs font-medium">
+                  {metric.label}
+                </p>
+                {logsQuery.isLoading ? (
+                  <div className="bg-muted mt-2 h-7 w-12 animate-pulse rounded" />
+                ) : logsQuery.isError ? (
+                  <p className="text-muted-foreground mt-1 text-2xl font-semibold">
+                    —
+                  </p>
+                ) : (
+                  <p className="mt-1 text-2xl font-semibold tabular-nums">
+                    {(metric.value ?? 0).toLocaleString()}
+                  </p>
+                )}
               </div>
-            )}
-            {logsQuery.isError ? (
-              <div className="border-t p-4">
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {isDataforma && (
+        <Card className="py-0 shadow-none">
+          <CardContent className="p-5">
+            <DataformaOwnerMappingsEditor projectId={projectId} />
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="overflow-hidden py-0 shadow-none">
+        <CardContent className="p-0">
+          <div className="flex items-start justify-between gap-4 p-5">
+            <div>
+              <h4 className="text-sm font-semibold">Recent runs</h4>
+              <p className="text-muted-foreground mt-1 text-xs">
+                Select a run to inspect its company-level assignment results.
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => setHistoryOpen((open) => !open)}
+              aria-label={historyOpen ? 'Hide run history' : 'Show run history'}
+              aria-expanded={historyOpen}
+            >
+              {historyOpen ? <ChevronUp /> : <ChevronDown />}
+            </Button>
+          </div>
+
+          <Collapsible open={historyOpen}>
+            <CollapsibleContent className="border-t p-5">
+              {logsQuery.isError ? (
                 <ErrorState onRetry={() => logsQuery.refetch()} />
-              </div>
-            ) : !logsQuery.isLoading && logs.length === 0 ? (
-              <div className="border-t p-4">
+              ) : logsQuery.isLoading ? (
+                <SkeletonTable rows={3} columns={4} />
+              ) : logs.length === 0 ? (
                 <EmptyState
                   icon={Users}
-                  title="No association results yet"
-                  description="Run the association to process company owners."
+                  title="No owner-assignment runs yet"
+                  description="Run owner assignment to process eligible companies."
                   action={{
-                    label: 'Associate Owners',
+                    label: 'Associate owners',
                     icon: Play,
                     onClick: handleRunAll,
                   }}
                 />
-              </div>
-            ) : (
-              <>
-                <div className="border-t px-4 py-3">
-                  <p className="text-muted-foreground mb-2 text-xs font-semibold tracking-wider uppercase">
-                    Association Summary
-                  </p>
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    {[
-                      { label: 'Processed', value: latestLog?.hsTotalCount },
-                      {
-                        label: 'Associated',
-                        value: latestLog?.hsSuccessCount,
-                      },
-                      { label: 'Skipped', value: latestLog?.hsSkippedCount },
-                      { label: 'Failed', value: latestLog?.hsFailedCount },
-                    ].map((s) => (
-                      <div key={s.label} className="rounded-4xl border p-3">
-                        <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                          {s.label}
-                        </p>
-                        <p className="mt-1 text-xl font-semibold tabular-nums">
-                          {(s.value ?? 0).toLocaleString()}
-                        </p>
-                      </div>
+              ) : (
+                <>
+                  <div>
+                    {pagedLogs.map((log) => (
+                      <RunLogRow
+                        key={log.id}
+                        log={log}
+                        selected={log.id === selectedRunId}
+                        onClick={() => selectRun(log.id)}
+                      />
                     ))}
                   </div>
-                </div>
-
-                <div className="border-t px-4 py-3">
-                  <p className="text-muted-foreground mb-2 text-xs font-semibold tracking-wider uppercase">
-                    Recent Runs
-                  </p>
-                  {logsQuery.isLoading ? (
-                    <SkeletonTable rows={3} columns={4} />
-                  ) : (
-                    <>
-                      <div>
-                        {pagedLogs.map((log) => (
-                          <RunLogRow
-                            key={log.id}
-                            log={log}
-                            selected={log.id === selectedRunId}
-                            onClick={() =>
-                              setSelectedRunId((current) =>
-                                current === log.id ? null : log.id,
-                              )
-                            }
-                          />
-                        ))}
-                      </div>
-                      {logs.length > recentRunsPageSize && (
-                        <div className="mt-3">
-                          <PaginationBar
-                            page={recentRunsPage}
-                            totalPages={totalRunsPages}
-                            total={logs.length}
-                            pageSize={recentRunsPageSize}
-                            onPageChange={setRecentRunsPage}
-                            onPageSizeChange={(size) => {
-                              setRecentRunsPageSize(size);
-                              setRecentRunsPage(1);
-                            }}
-                            pageSizeOptions={[5, 10]}
-                          />
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-
-                <div className="border-t px-4 py-3">
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                      Association Logs
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        value={search}
-                        onChange={(e) => {
-                          setSearch(e.target.value);
-                          setPage(1);
+                  {logs.length > recentRunsPageSize && (
+                    <div className="mt-4">
+                      <PaginationBar
+                        page={recentRunsPage}
+                        totalPages={totalRunsPages}
+                        total={logs.length}
+                        pageSize={recentRunsPageSize}
+                        onPageChange={setRecentRunsPage}
+                        onPageSizeChange={(size) => {
+                          setRecentRunsPageSize(size);
+                          setRecentRunsPage(1);
                         }}
-                        placeholder="Search companies…"
-                        className="h-8 w-48 text-sm"
-                        disabled={!selectedRunId}
+                        pageSizeOptions={[5, 10]}
                       />
-                      <Select
-                        value={statusFilter}
-                        onValueChange={(v) => {
-                          setStatusFilter(v);
-                          setPage(1);
-                        }}
-                        disabled={!selectedRunId}
-                      >
-                        <SelectTrigger size="sm" className="h-8 w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Results</SelectItem>
-                          <SelectItem value="success">Associated</SelectItem>
-                          <SelectItem value="skipped">Skipped</SelectItem>
-                          <SelectItem value="failed">Failed</SelectItem>
-                        </SelectContent>
-                      </Select>
                     </div>
-                  </div>
+                  )}
+                </>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
+        </CardContent>
+      </Card>
 
-                  {!selectedRunId ? (
-                    <EmptyState
-                      icon={Users}
-                      title="No run selected"
-                      description="Select a run above to view its details."
-                    />
-                  ) : resultsQuery.isError ? (
-                    <ErrorState onRetry={() => resultsQuery.refetch()} />
-                  ) : resultsQuery.isLoading ? (
-                    <SkeletonTable rows={6} columns={8} />
-                  ) : results.length === 0 ? (
-                    <EmptyState
-                      icon={Users}
-                      title="No results"
-                      description={
-                        filtersActive
-                          ? 'No records match your search or filter.'
-                          : 'This run has no association results.'
-                      }
-                    />
-                  ) : (
-                    <>
-                      <div className="overflow-x-auto rounded-4xl border">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>HubSpot Company</TableHead>
-                              <TableHead>HubSpot ID</TableHead>
-                              <TableHead>
-                                {isDataforma
-                                  ? 'Matched Value'
-                                  : 'Sales Person / CAM Value'}
-                              </TableHead>
-                              <TableHead>Owner Name</TableHead>
-                              <TableHead>Owner Email</TableHead>
-                              <TableHead>Status</TableHead>
-                              <TableHead>Reason</TableHead>
-                              <TableHead>Associated At</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {results.map((r) => (
-                              <TableRow key={r.hsId}>
-                                <TableCell className="text-sm">
-                                  {r.companyName || '—'}
-                                </TableCell>
-                                <TableCell className="font-mono text-xs">
-                                  {r.hsId}
-                                </TableCell>
-                                <TableCell className="text-sm">
-                                  {r.camValue || '—'}
-                                </TableCell>
-                                <TableCell className="text-sm">
-                                  {r.ownerName || '—'}
-                                </TableCell>
-                                <TableCell className="text-sm">
-                                  {r.resolvedEmails.length > 0
-                                    ? r.resolvedEmails.join(', ')
-                                    : '—'}
-                                </TableCell>
-                                <TableCell>
-                                  <ResultStatusBadge status={r.result} />
-                                </TableCell>
-                                <TableCell className="text-muted-foreground text-xs">
-                                  {r.reason || '—'}
-                                </TableCell>
-                                <TableCell className="text-muted-foreground text-xs">
-                                  {r.associatedAt
-                                    ? new Date(r.associatedAt).toLocaleString()
-                                    : '—'}
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                      <div className="mt-3">
-                        <PaginationBar
-                          page={page}
-                          totalPages={totalPages}
-                          total={resultsTotal}
-                          pageSize={pageSize}
-                          onPageChange={setPage}
-                          onPageSizeChange={(size) => {
-                            setPageSize(size);
-                            setPage(1);
-                          }}
-                        />
-                      </div>
-                    </>
+      {selectedRunId && (
+        <Card className="py-0 shadow-none">
+          <CardContent className="space-y-4 p-5">
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h4 className="text-sm font-semibold">Run results</h4>
+                  {selectedLog && (
+                    <StatusBadge status={selectedLog.status} size="sm" />
                   )}
                 </div>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  {selectedLog
+                    ? `Started ${new Date(selectedLog.startedAt).toLocaleString()}`
+                    : 'Selected owner-assignment run'}
+                </p>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Input
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPage(1);
+                  }}
+                  placeholder="Search companies…"
+                  className="h-8 w-full text-sm sm:w-52"
+                />
+                <Select
+                  value={statusFilter}
+                  onValueChange={(value) => {
+                    setStatusFilter(value);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger size="sm" className="h-8 w-full sm:w-36">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All results</SelectItem>
+                    <SelectItem value="success">Associated</SelectItem>
+                    <SelectItem value="skipped">Skipped</SelectItem>
+                    <SelectItem value="failed">Failed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {resultsQuery.isError ? (
+              <ErrorState onRetry={() => resultsQuery.refetch()} />
+            ) : resultsQuery.isLoading ? (
+              <SkeletonTable rows={6} columns={8} />
+            ) : results.length === 0 ? (
+              <EmptyState
+                icon={Users}
+                title="No results"
+                description={
+                  filtersActive
+                    ? 'No records match your search or filter.'
+                    : 'This run has no association results.'
+                }
+              />
+            ) : (
+              <>
+                <div className="overflow-x-auto rounded-4xl border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>HubSpot Company</TableHead>
+                        <TableHead>HubSpot ID</TableHead>
+                        <TableHead>
+                          {isDataforma
+                            ? 'Matched Value'
+                            : 'Sales Person / CAM Value'}
+                        </TableHead>
+                        <TableHead>Owner Name</TableHead>
+                        <TableHead>Owner Email</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Reason</TableHead>
+                        <TableHead>Associated At</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {results.map((result) => (
+                        <TableRow key={result.hsId}>
+                          <TableCell className="text-sm">
+                            {result.companyName || '—'}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs">
+                            {result.hsId}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {result.camValue || '—'}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {result.ownerName || '—'}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {result.resolvedEmails.length > 0
+                              ? result.resolvedEmails.join(', ')
+                              : '—'}
+                          </TableCell>
+                          <TableCell>
+                            <ResultStatusBadge status={result.result} />
+                          </TableCell>
+                          <TableCell className="text-muted-foreground max-w-xs text-xs break-words">
+                            {result.reason || '—'}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
+                            {result.associatedAt
+                              ? new Date(result.associatedAt).toLocaleString()
+                              : '—'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                <PaginationBar
+                  page={page}
+                  totalPages={totalPages}
+                  total={resultsTotal}
+                  pageSize={pageSize}
+                  onPageChange={setPage}
+                  onPageSizeChange={(size) => {
+                    setPageSize(size);
+                    setPage(1);
+                  }}
+                />
               </>
             )}
-          </CollapsibleContent>
-        </Collapsible>
-      </CardContent>
-    </Card>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }

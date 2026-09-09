@@ -1,25 +1,26 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Check } from 'lucide-react';
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
-import { projectsApi } from '@/api/projects';
-import { PlatformIcon } from '@/components/platform';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Field,
   FieldContent,
-  FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { usePlatforms } from '@/features/projects/hooks';
-import type { ProjectExt } from '@/features/projects/hooks';
+import {
+  useProjectGeneralSettings,
+  type ProjectExt,
+} from '@/features/projects/hooks';
+import { cn } from '@/lib/utils';
 import { showToast } from '@/lib/toast';
 
 // Only the name/description are editable here. Source and destination platforms
@@ -44,12 +45,13 @@ type GeneralSettingsValues = z.infer<typeof generalSettingsSchema>;
 export default function GeneralSettingsCard({
   project,
   onUpdated,
+  className,
 }: {
   project: ProjectExt;
   onUpdated: (updated: ProjectExt) => void;
+  className?: string;
 }) {
-  const { data: platforms = [] } = usePlatforms();
-
+  const { updateProjectInfo } = useProjectGeneralSettings();
   const form = useForm<GeneralSettingsValues>({
     resolver: zodResolver(generalSettingsSchema),
     mode: 'onChange',
@@ -69,41 +71,33 @@ export default function GeneralSettingsCard({
     });
   }, [project.id, project.name, project.description, form]);
 
-  const labelFor = useMemo(
-    () => (platformId: string | null) =>
-      platformId
-        ? (platforms.find((p) => p.platformId === platformId)?.label ??
-          platformId)
-        : null,
-    [platforms],
-  );
-  const sourcePlatformLabel = labelFor(project.sourcePlatformId);
-  const destPlatformLabel = labelFor(project.destPlatformId);
-
   const saving = form.formState.isSubmitting;
 
   const onSubmit = form.handleSubmit(async (values) => {
+    form.clearErrors('root');
     try {
-      const updated = await projectsApi.updateProject(
-        project.id,
-        values as Partial<ProjectExt>,
-      );
+      const updated = await updateProjectInfo(project.id, values);
       showToast.success('Project updated.');
-      onUpdated(updated as ProjectExt);
+      onUpdated(updated);
       form.reset(values);
     } catch {
+      form.setError('root', {
+        message: 'Your changes could not be saved. Please try again.',
+      });
       showToast.error('Something went wrong. Please try again.');
     }
   });
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>General</CardTitle>
+    <Card className={cn('gap-0 border py-0', className)}>
+      <CardHeader className="gap-0 px-4 py-3">
+        <CardTitle className="text-sm font-semibold">
+          Project information
+        </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <form onSubmit={onSubmit} className="space-y-6">
-          <FieldGroup>
+      <CardContent className="space-y-4 px-4 pb-4">
+        <form onSubmit={onSubmit} className="space-y-4">
+          <FieldGroup className="gap-4">
             <Field>
               <FieldLabel htmlFor="proj-name" required>
                 Project Name
@@ -119,65 +113,39 @@ export default function GeneralSettingsCard({
               <FieldContent>
                 <Textarea
                   id="proj-desc"
-                  rows={3}
+                  rows={2}
+                  placeholder="Optional notes about this integration."
                   {...form.register('description')}
                 />
               </FieldContent>
-              <FieldDescription>
-                Optional notes about this integration.
-              </FieldDescription>
               <FieldError>
                 {form.formState.errors.description?.message}
               </FieldError>
             </Field>
           </FieldGroup>
 
-          <div className="space-y-3">
-            <div>
-              <CardTitle>Platforms</CardTitle>
-              <p className="text-muted-foreground text-xs">
-                Source and destination are fixed for the life of the project and
-                can't be changed.
-              </p>
-            </div>
+          {form.formState.errors.root?.message && (
+            <Alert variant="destructive">
+              <AlertDescription>
+                {form.formState.errors.root.message}
+              </AlertDescription>
+            </Alert>
+          )}
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-3 rounded-4xl border p-4">
-                <PlatformIcon
-                  platformId={project.sourcePlatformId ?? ''}
-                  size={32}
-                />
-                <div>
-                  <p className="text-muted-foreground text-xs">Source</p>
-                  <p className="font-medium">
-                    {sourcePlatformLabel ?? 'Not selected yet'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 rounded-4xl border p-4">
-                <PlatformIcon platformId={project.destPlatformId} size={32} />
-                <div>
-                  <p className="text-muted-foreground text-xs">Destination</p>
-                  <p className="font-medium">
-                    {destPlatformLabel ?? project.destPlatformId}
-                  </p>
-                </div>
-              </div>
-            </div>
+          <div className="flex justify-end">
+            <Button type="submit" disabled={saving || !form.formState.isDirty}>
+              {saving ? (
+                'Saving…'
+              ) : form.formState.isSubmitSuccessful &&
+                !form.formState.isDirty ? (
+                <>
+                  <Check /> Saved
+                </>
+              ) : (
+                'Save changes'
+              )}
+            </Button>
           </div>
-
-          <Button type="submit" disabled={saving || !form.formState.isDirty}>
-            {saving ? (
-              'Saving…'
-            ) : form.formState.isSubmitSuccessful && !form.formState.isDirty ? (
-              <>
-                <Check /> Saved
-              </>
-            ) : (
-              'Save Changes'
-            )}
-          </Button>
         </form>
       </CardContent>
     </Card>

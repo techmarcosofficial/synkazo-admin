@@ -2,7 +2,10 @@ import type { DropResult } from '@hello-pangea/dnd';
 import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd';
 import { differenceInSeconds, format, formatDistanceToNow } from 'date-fns';
 import {
+  AlertCircle,
+  ArrowDown,
   ArrowRight,
+  ArrowUp,
   ChevronDown,
   ChevronUp,
   Clock,
@@ -12,11 +15,13 @@ import {
   RefreshCw,
   Save,
 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { jobsApi } from '@/api/jobs';
 import ListRow from '@/components/shared/list/ListRow';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -148,10 +153,20 @@ interface JobCardProps {
   index: number;
   projectId: string;
   rank: number;
+  jobCount: number;
   onRefresh: () => void;
+  onMove: (index: number, offset: -1 | 1) => void;
 }
 
-function JobCard({ job, index, projectId, rank, onRefresh }: JobCardProps) {
+function JobCard({
+  job,
+  index,
+  projectId,
+  rank,
+  jobCount,
+  onRefresh,
+  onMove,
+}: JobCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [toggling, setToggling] = useState(false);
 
@@ -195,12 +210,35 @@ function JobCard({ job, index, projectId, rank, onRefresh }: JobCardProps) {
           )}
           style={provided.draggableProps.style}
         >
-          <div className="flex items-center gap-3 px-4 py-3">
-            <div
-              {...provided.dragHandleProps}
-              className="text-muted-foreground hover:bg-muted focus-visible:ring-ring/30 flex size-8 shrink-0 cursor-grab items-center justify-center rounded-3xl outline-none focus-visible:ring-3"
-            >
-              <GripVertical className="size-4" />
+          <div className="grid grid-cols-[auto_auto_minmax(0,1fr)] items-center gap-3 px-4 py-3 lg:grid-cols-[auto_auto_minmax(0,1fr)_auto]">
+            <div className="flex shrink-0 items-center">
+              <div
+                {...provided.dragHandleProps}
+                className="text-muted-foreground hover:bg-muted focus-visible:ring-ring/30 flex size-8 shrink-0 cursor-grab items-center justify-center rounded-3xl outline-none focus-visible:ring-3"
+                aria-label={`Drag to reorder ${job.name}`}
+              >
+                <GripVertical className="size-4" />
+              </div>
+              <div className="flex flex-col">
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  onClick={() => onMove(index, -1)}
+                  disabled={index === 0}
+                  aria-label={`Move ${job.name} up`}
+                >
+                  <ArrowUp />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  onClick={() => onMove(index, 1)}
+                  disabled={index === jobCount - 1}
+                  aria-label={`Move ${job.name} down`}
+                >
+                  <ArrowDown />
+                </Button>
+              </div>
             </div>
 
             <div className="bg-muted text-muted-foreground flex size-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold">
@@ -242,12 +280,12 @@ function JobCard({ job, index, projectId, rank, onRefresh }: JobCardProps) {
               </div>
             </div>
 
-            <div className="flex shrink-0 items-center gap-2">
+            <div className="col-start-3 flex flex-wrap items-center justify-end gap-2 lg:col-start-auto">
               <span className="text-muted-foreground ml-auto flex shrink-0 items-center gap-1 text-xs">
                 <Clock className="size-2.5" />
                 {job.syncDirection === 'two_way'
                   ? 'Auto · ~2 min'
-                  : readableCron(job.cronExpression ?? '')}
+                  : `${readableCron(job.cronExpression ?? '')} · ${job.timezone ?? 'Timezone not set'}`}
               </span>
               {job.isEnabled && (
                 <Button
@@ -265,6 +303,7 @@ function JobCard({ job, index, projectId, rank, onRefresh }: JobCardProps) {
                 variant="ghost"
                 size="icon-sm"
                 onClick={() => setExpanded((e) => !e)}
+                aria-label={`${expanded ? 'Collapse' : 'Expand'} ${job.name}`}
               >
                 {expanded ? <ChevronUp /> : <ChevronDown />}
               </Button>
@@ -273,6 +312,19 @@ function JobCard({ job, index, projectId, rank, onRefresh }: JobCardProps) {
 
           {expanded && (
             <div className="border-t p-3">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3 px-1">
+                <p className="text-muted-foreground text-xs">
+                  Edit cadence, timezone, retry behavior, and schedule state in
+                  the job workspace.
+                </p>
+                <Button asChild variant="outline" size="sm">
+                  <Link
+                    to={`/projects/${projectId}/jobs/${job.id}?tab=schedule`}
+                  >
+                    Edit schedule
+                  </Link>
+                </Button>
+              </div>
               <div className="overflow-hidden rounded-4xl border">
                 <div className="bg-muted px-4 py-3">
                   <p className="text-xs font-semibold tracking-wider uppercase">
@@ -291,8 +343,10 @@ function JobCard({ job, index, projectId, rank, onRefresh }: JobCardProps) {
 
 export default function IndividualSchedulerList({
   projectId,
+  refreshKey = 0,
 }: {
   projectId: string;
+  refreshKey?: number;
 }) {
   const [jobs, setJobs] = useState<
     (SchedulerJob & { recentRuns?: SchedulerRecentRun[] })[]
@@ -301,16 +355,20 @@ export default function IndividualSchedulerList({
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const lastRefreshKey = useRef(refreshKey);
 
   const load = useCallback(
     async (silent = false) => {
       if (!silent) setLoading(true);
       else setRefreshing(true);
+      setLoadError(null);
       try {
         const data = await jobsApi.getSchedulerView(projectId);
         setJobs(Array.isArray(data) ? data : (data as any).jobs);
         setDirty(false);
       } catch {
+        setLoadError('Job schedules could not be loaded. Please try again.');
         toast.error('Failed to load scheduler');
       } finally {
         setLoading(false);
@@ -321,8 +379,14 @@ export default function IndividualSchedulerList({
   );
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
+
+  useEffect(() => {
+    if (refreshKey === lastRefreshKey.current) return;
+    lastRefreshKey.current = refreshKey;
+    void load(true);
+  }, [load, refreshKey]);
 
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;
@@ -330,6 +394,16 @@ export default function IndividualSchedulerList({
     const reordered = Array.from(jobs);
     const [moved] = reordered.splice(result.source.index, 1);
     reordered.splice(result.destination.index, 0, moved);
+    setJobs(reordered);
+    setDirty(true);
+  };
+
+  const moveJob = (index: number, offset: -1 | 1) => {
+    const destination = index + offset;
+    if (destination < 0 || destination >= jobs.length) return;
+    const reordered = Array.from(jobs);
+    const [moved] = reordered.splice(index, 1);
+    reordered.splice(destination, 0, moved);
     setJobs(reordered);
     setDirty(true);
   };
@@ -358,8 +432,28 @@ export default function IndividualSchedulerList({
     );
   }
 
+  if (loadError && jobs.length === 0) {
+    return (
+      <Alert variant="destructive">
+        <AlertCircle aria-hidden="true" />
+        <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+          <span>{loadError}</span>
+          <Button variant="outline" size="sm" onClick={() => void load()}>
+            Retry
+          </Button>
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
   return (
     <div className="space-y-4">
+      {loadError && (
+        <Alert variant="destructive">
+          <AlertCircle aria-hidden="true" />
+          <AlertDescription>{loadError}</AlertDescription>
+        </Alert>
+      )}
       <div className="flex items-center justify-end gap-2">
         <Button
           variant="outline"
@@ -371,12 +465,7 @@ export default function IndividualSchedulerList({
           Refresh
         </Button>
         {dirty && (
-          <Button
-            size="sm"
-            className="bg-paused hover:bg-paused/90"
-            onClick={saveOrder}
-            disabled={saving}
-          >
+          <Button size="sm" onClick={saveOrder} disabled={saving}>
             {saving ? <Spinner /> : <Save />}
             {saving ? 'Saving…' : 'Save Order'}
           </Button>
@@ -388,7 +477,8 @@ export default function IndividualSchedulerList({
           <CardContent className="py-10 text-center">
             <p className="mb-1 text-sm font-medium">No jobs yet</p>
             <p className="text-muted-foreground text-xs">
-              Create jobs in the Jobs tab — they will appear here automatically.
+              Create jobs in the Sync Jobs tab — they will appear here
+              automatically.
             </p>
           </CardContent>
         </Card>
@@ -407,8 +497,10 @@ export default function IndividualSchedulerList({
                     job={job}
                     index={i}
                     rank={i + 1}
+                    jobCount={jobs.length}
                     projectId={projectId}
                     onRefresh={() => load(true)}
+                    onMove={moveJob}
                   />
                 ))}
                 {provided.placeholder}
