@@ -65,6 +65,7 @@
 
   /* Synkazo semantic extensions: sync/job status colors */
   --color-success: var(--success);
+  --color-success-fill: var(--success-fill);
   --color-warning: var(--warning);
   --color-info: var(--info);
   --color-paused: var(--paused);
@@ -150,7 +151,9 @@
   --destructive-foreground: #ffffff;
 
   /* Lime green — a green/yellow midpoint with enough contrast on light surfaces. */
-  --success: #4d7c0f;
+  --success: #65a30d;
+  /* Vivid fill only — too low-contrast on white for text/thin borders, use for solid blocks/badges. */
+  --success-fill: #52d500;
   --warning: #c77a0a;
   --info: #2f74d0;
   --paused: #7c5cd8;
@@ -205,7 +208,7 @@
   --primary-soft: rgba(248, 85, 8, 0.1);
   --primary-soft2: rgba(248, 85, 8, 0.16);
 
-  --success-soft: rgba(77, 124, 15, 0.12);
+  --success-soft: rgba(101, 163, 13, 0.12);
   --warning-soft: rgba(199, 122, 10, 0.13);
   --info-soft: rgba(47, 116, 208, 0.12);
   --paused-soft: rgba(124, 92, 216, 0.13);
@@ -263,6 +266,7 @@
 
   /* Brighter lime retains contrast against the dark app surfaces. */
   --success: #a3e635;
+  --success-fill: #52d500;
   --warning: #e0a53c;
   --info: #5b9bf0;
   --paused: #a78bfa;

@@ -97,8 +97,8 @@ function ConnectionStep({
 
       <Card
         className={cn(
-          'border-primary/20! gap-0 py-0 border!',
-          !complete && 'border-dashed!',
+          'gap-0 border! py-0',
+          complete ? 'border-success!' : 'border-primary/20! border-dashed!',
         )}
       >
         <div className="flex flex-col justify-between gap-2 px-4 py-3 sm:flex-row sm:items-center">
