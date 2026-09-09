@@ -1,5 +1,11 @@
 import { cva, type VariantProps } from 'class-variance-authority';
-import { ArrowLeftRight, ArrowRight, type LucideIcon } from 'lucide-react';
+import {
+  ArrowLeftRight,
+  ArrowRight,
+  ListOrdered,
+  Shuffle,
+  type LucideIcon,
+} from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -114,6 +120,13 @@ const STATUS_CONFIG: Record<
   production: { tone: 'success', label: 'Production' },
   one_way: { tone: 'muted', label: 'One-way', icon: ArrowRight },
   two_way: { tone: 'muted', label: 'Two-way', icon: ArrowLeftRight },
+  unrestricted: {
+    tone: 'muted',
+    label: 'Unrestricted',
+    icon: ArrowLeftRight,
+  },
+  individual: { tone: 'info', label: 'Independent', icon: Shuffle },
+  priority: { tone: 'info', label: 'Priority queue', icon: ListOrdered },
 
   failed: { tone: 'danger', label: 'Failed' },
   cancelled: { tone: 'danger', label: 'Cancelled' },

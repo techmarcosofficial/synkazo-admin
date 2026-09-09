@@ -9,7 +9,6 @@ import ProjectHeader from './ProjectHeader';
 import ProjectTabContent from './ProjectTabContent';
 import ProjectTabs from './ProjectTabs';
 
-import ActivationConfirmModal from '@/components/connections/ActivationConfirmModal';
 import ErrorState from '@/components/shared/ErrorState';
 import { BackLink } from '@/components/shared/PageHeader';
 import StickyDetailHeader from '@/components/shared/StickyDetailHeader';
@@ -77,7 +76,7 @@ export default function ProjectDetailPage() {
             <Skeleton className="h-6 w-56" />
           </div>
           <div className="flex gap-1">
-            {Array.from({ length: 6 }).map((_, i) => (
+            {Array.from({ length: 5 }).map((_, i) => (
               <Skeleton key={i} className="h-8 w-20" />
             ))}
           </div>
@@ -125,7 +124,8 @@ export default function ProjectDetailPage() {
     },
     projectActiveEnv: envActivation.projectActiveEnv,
     envActivating: envActivation.envActivating,
-    envDiffLoading: envActivation.envDiffLoading,
+    environmentActivationError: envActivation.activationError,
+    clearEnvironmentActivationError: envActivation.clearActivationError,
     envFullyConnected: envActivation.envFullyConnected,
     envHasAnyConnected: envActivation.envHasAnyConnected,
     onActivateEnv: envActivation.handleActivateEnv,
@@ -160,18 +160,6 @@ export default function ProjectDetailPage() {
           <ProjectTabContent />
         </StickyDetailHeader>
       </Tabs>
-
-      {envActivation.activationModal && (
-        <ActivationConfirmModal
-          projectId={projectId}
-          targetEnv={envActivation.activationModal.targetEnv}
-          currentEnv={envActivation.activationModal.currentEnv}
-          diff={envActivation.activationModal.diff}
-          onActivate={envActivation.doActivate}
-          activating={envActivation.envActivating}
-          onClose={envActivation.closeActivationModal}
-        />
-      )}
     </ProjectDetailProvider>
   );
 }

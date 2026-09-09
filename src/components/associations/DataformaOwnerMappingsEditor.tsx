@@ -1,9 +1,10 @@
-import { Pencil, Plus, Trash2, X } from 'lucide-react';
+import { AlertCircle, Info, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import { associationsApi, type CompanyOwnerMapping } from '@/api/associations';
 import { connectionsApi } from '@/api/connections';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -13,6 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 
 interface ObjectField {
   field: string;
@@ -32,8 +34,11 @@ export default function DataformaOwnerMappingsEditor({
 }: {
   projectId: string;
 }) {
+  const { confirm } = useConfirmDialog();
   const [mappings, setMappings] = useState<CompanyOwnerMapping[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [sourceFields, setSourceFields] = useState<ObjectField[]>([]);
   const [hubspotProperties, setHubspotProperties] = useState<HubspotProperty[]>(
     [],
@@ -47,10 +52,14 @@ export default function DataformaOwnerMappingsEditor({
 
   const load = () => {
     setLoading(true);
+    setLoadError(null);
     associationsApi
       .listCompanyOwnerMappings(projectId)
       .then(setMappings)
-      .catch(() => toast.error('Failed to load owner mappings'))
+      .catch(() => {
+        setLoadError('Owner mappings could not be loaded.');
+        toast.error('Failed to load owner mappings');
+      })
       .finally(() => setLoading(false));
   };
 
@@ -119,6 +128,7 @@ export default function DataformaOwnerMappingsEditor({
       return;
     }
     setSaving(true);
+    setActionError(null);
     try {
       if (editingId) {
         await associationsApi.updateCompanyOwnerMapping(projectId, editingId, {
@@ -137,52 +147,96 @@ export default function DataformaOwnerMappingsEditor({
       load();
     } catch (err) {
       const e = err as { response?: { data?: { message?: string } } };
-      toast.error(e?.response?.data?.message ?? 'Failed to save mapping');
+      const message =
+        e?.response?.data?.message ?? 'Failed to save owner mapping.';
+      setActionError(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
   };
 
   const removeMapping = async (id: string) => {
+    setActionError(null);
     try {
       await associationsApi.deleteCompanyOwnerMapping(projectId, id);
       toast.success('Mapping removed');
       load();
-    } catch {
-      toast.error('Failed to remove mapping');
+    } catch (err) {
+      const e = err as { response?: { data?: { message?: string } } };
+      const message =
+        e?.response?.data?.message ?? 'Failed to remove owner mapping.';
+      setActionError(message);
+      toast.error(message);
+      throw new Error(message);
     }
+  };
+
+  const requestRemoveMapping = (mapping: CompanyOwnerMapping) => {
+    confirm({
+      variant: 'danger',
+      title: 'Remove owner mapping?',
+      description: `“${mapping.sourceProperty}” will no longer assign the “${propertyLabel(mapping.targetHubspotProperty)}” HubSpot owner property in future runs. Removing it does not start a new owner-assignment run.`,
+      confirmLabel: 'Remove mapping',
+      onConfirm: () => removeMapping(mapping.id),
+    });
   };
 
   const propertyLabel = (name: string) =>
     hubspotProperties.find((p) => p.name === name)?.label ?? name;
 
   return (
-    <div className="space-y-2 px-4 pb-3">
-      <div className="flex items-center justify-between">
-        <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-          Owner Mappings
-        </p>
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+        <div>
+          <h4 className="text-sm font-semibold">Owner mappings</h4>
+          <p className="text-muted-foreground mt-1 text-xs">
+            Map Dataforma email fields to the HubSpot owner properties they
+            should populate.
+          </p>
+        </div>
         {!adding && !editingId && (
           <Button variant="outline" size="sm" onClick={startAdd}>
-            <Plus className="mr-1.5 size-3.5" /> Add Mapping
+            <Plus /> Add mapping
           </Button>
         )}
       </div>
+
+      {loadError && (
+        <Alert variant="destructive">
+          <AlertCircle />
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+            <span>{loadError}</span>
+            <Button variant="outline" size="sm" onClick={load}>
+              Try again
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {actionError && (
+        <Alert variant="destructive">
+          <AlertCircle />
+          <AlertDescription>{actionError}</AlertDescription>
+        </Alert>
+      )}
 
       {loading ? (
         <div className="text-muted-foreground flex items-center gap-2 py-4 text-xs">
           <Spinner className="size-3.5" /> Loading mappings…
         </div>
-      ) : mappings.length === 0 && !adding ? (
-        <p className="text-muted-foreground rounded-4xl border border-dashed p-3 text-xs">
-          No mappings configured — defaults to{' '}
-          <code className="text-primary">df_sales_email</code> →{' '}
-          <code className="text-primary">hubspot_owner_id</code>. Add a mapping
-          to customize which Dataforma fields assign which HubSpot owner
-          properties.
-        </p>
+      ) : loadError ? null : mappings.length === 0 && !adding ? (
+        <Alert>
+          <Info />
+          <AlertDescription>
+            No mappings configured. The workflow currently uses{' '}
+            <code className="text-primary">df_sales_email</code> →{' '}
+            <code className="text-primary">hubspot_owner_id</code>. Add a
+            mapping to customize this behavior.
+          </AlertDescription>
+        </Alert>
       ) : (
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           {mappings.map((m) =>
             editingId === m.id ? (
               <MappingDraftRow
@@ -201,9 +255,9 @@ export default function DataformaOwnerMappingsEditor({
             ) : (
               <div
                 key={m.id}
-                className="bg-muted/30 flex items-center justify-between gap-2 rounded-4xl border px-3 py-2 text-xs"
+                className="bg-muted/30 grid gap-3 rounded-4xl border px-3 py-3 text-xs sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
               >
-                <span className="font-mono">
+                <span className="min-w-0 font-mono break-all">
                   {m.sourceProperty}{' '}
                   <span className="text-muted-foreground">→</span>{' '}
                   {propertyLabel(m.targetHubspotProperty)}
@@ -213,14 +267,15 @@ export default function DataformaOwnerMappingsEditor({
                     variant="ghost"
                     size="icon-xs"
                     onClick={() => startEdit(m)}
-                    title="Edit mapping"
+                    aria-label={`Edit mapping from ${m.sourceProperty}`}
                   >
                     <Pencil className="size-3.5" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon-xs"
-                    onClick={() => removeMapping(m.id)}
+                    onClick={() => requestRemoveMapping(m)}
+                    aria-label={`Remove mapping from ${m.sourceProperty}`}
                     title="Remove mapping"
                   >
                     <Trash2 className="text-destructive size-3.5" />
@@ -274,10 +329,10 @@ function MappingDraftRow({
   onCancel: () => void;
 }) {
   return (
-    <div className="bg-muted/30 space-y-1.5 rounded-4xl border p-2">
-      <div className="flex items-center gap-2">
+    <div className="bg-muted/30 space-y-3 rounded-4xl border p-3">
+      <div className="grid items-center gap-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto]">
         <Select value={draftSource} onValueChange={setDraftSource}>
-          <SelectTrigger className="h-8 flex-1 font-mono text-xs">
+          <SelectTrigger className="h-8 w-full font-mono text-xs">
             <SelectValue placeholder="Dataforma field…" />
           </SelectTrigger>
           <SelectContent>
@@ -288,10 +343,12 @@ function MappingDraftRow({
             ))}
           </SelectContent>
         </Select>
-        <span className="text-muted-foreground text-xs">→</span>
+        <span className="text-muted-foreground hidden text-xs sm:inline">
+          →
+        </span>
         <Select value={draftTarget} onValueChange={setDraftTarget}>
           <SelectTrigger
-            className="h-8 flex-1 text-xs"
+            className="h-8 w-full text-xs"
             aria-invalid={duplicateTarget}
           >
             <SelectValue placeholder="HubSpot owner property…" />
@@ -308,7 +365,7 @@ function MappingDraftRow({
           variant="ghost"
           size="icon-sm"
           onClick={onCancel}
-          title="Cancel"
+          aria-label="Cancel mapping changes"
         >
           <X className="size-4" />
         </Button>
@@ -318,7 +375,7 @@ function MappingDraftRow({
           Another mapping already targets this property.
         </p>
       )}
-      <Button size="sm" onClick={onSave} disabled={saving}>
+      <Button size="sm" onClick={onSave} disabled={saving || duplicateTarget}>
         {saving ? <Spinner className="mr-1.5 size-3.5" /> : null}
         Save
       </Button>

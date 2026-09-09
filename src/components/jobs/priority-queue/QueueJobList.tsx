@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import type { QueueJob } from '@/types';
 
 const QUEUE_GRID_CLASS =
-  'grid min-w-[920px] grid-cols-[4.25rem_minmax(13rem,1.5fr)_minmax(12rem,1.2fr)_8rem_8rem_5.5rem_9rem]';
+  'grid min-w-[900px] grid-cols-[4.5rem_minmax(13rem,1.5fr)_minmax(12rem,1.2fr)_8rem_8rem_5.5rem_9rem]';
 
 function formatWindow(sec: number): string {
   const min = Math.round(sec / 60);

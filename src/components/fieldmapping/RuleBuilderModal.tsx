@@ -680,6 +680,19 @@ export function reorderRules(
   return reordered;
 }
 
+/**
+ * Rule editing is deliberately local to the drawer until Apply rules. Nested
+ * lookup/normalization values need cloning too, otherwise an edit followed by
+ * Cancel could mutate the mapping that supplied `initialRules`.
+ */
+export function cloneRules(rules: Rule[] = []): Rule[] {
+  return rules.map(({ map, normalization, ...rule }) => ({
+    ...rule,
+    ...(map ? { map: { ...map } } : {}),
+    ...(normalization ? { normalization: { ...normalization } } : {}),
+  }));
+}
+
 export default function RuleBuilderModal({
   mapping,
   destKey,
@@ -696,7 +709,7 @@ export default function RuleBuilderModal({
   const destField = destFields.find((f) => f.key === destKey);
   const destType = destField?.type;
 
-  const [rules, setRules] = useState<Rule[]>(initialRules || []);
+  const [rules, setRules] = useState<Rule[]>(() => cloneRules(initialRules));
   const initialRulesSnapshotRef = useRef(JSON.stringify(initialRules || []));
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>('text');
@@ -827,7 +840,7 @@ export default function RuleBuilderModal({
       setValidationErrors(errs);
       return;
     }
-    onSave(rules);
+    onSave(cloneRules(rules));
     onClose();
   };
 

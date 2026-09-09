@@ -12,7 +12,7 @@ import { associationsApi, type AssociationCondition } from '@/api/associations';
 import AssociationConditionsEditor, {
   validateConditions,
 } from '@/components/associations/AssociationConditionsEditor';
-import FormDialog from '@/components/form/FormDialog';
+import FormDrawer from '@/components/form/FormDrawer';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
@@ -100,11 +100,14 @@ export default function CreateAssociationRuleModal({
   const [conditions, setConditions] = useState<AssociationCondition[]>([]);
   const [conditionLogic, setConditionLogic] = useState<'AND' | 'OR'>('AND');
   const [errors, setErrors] = useState<FormErrors>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Dirty once the user has advanced past step 0 or filled in any field —
-  // drives the "Discard changes?" confirmation on close (3-step wizard).
+  // drives the "Discard changes?" confirmation on close (4-step wizard).
   const isDirty =
     step > 0 ||
+    conditions.length > 0 ||
+    conditionLogic !== 'AND' ||
     Object.values(form).some(
       (v) => v !== '' && v !== 'many_to_many' && v !== 'HUBSPOT_DEFINED',
     );
@@ -203,6 +206,7 @@ export default function CreateAssociationRuleModal({
   const handleSubmit = async () => {
     if (!validate()) return;
     setSaving(true);
+    setSubmitError(null);
     try {
       const selectedType = associationTypes.find(
         (t) => String(t.typeId) === String(form.hsAssociationTypeId),
@@ -227,18 +231,20 @@ export default function CreateAssociationRuleModal({
       onClose();
     } catch (err) {
       const e = err as { response?: { data?: { message?: string } } };
-      toast.error(e?.response?.data?.message ?? 'Failed to create rule');
+      const message = e?.response?.data?.message ?? 'Failed to create rule';
+      setSubmitError(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <FormDialog
+    <FormDrawer
       open
       onOpenChange={(open) => !open && onClose()}
       title="New Association Rule"
-      size="lg"
+      size="default"
       isDirty={isDirty}
       currentStep={step + 1}
       totalSteps={4}
@@ -275,6 +281,12 @@ export default function CreateAssociationRuleModal({
       )}
     >
       <div className="space-y-4">
+        {submitError && (
+          <Alert variant="destructive">
+            <AlertCircle />
+            <AlertDescription>{submitError}</AlertDescription>
+          </Alert>
+        )}
         {loadingObjects ? (
           <div className="text-muted-foreground flex items-center justify-center gap-2 py-10 text-sm">
             <Spinner /> Loading synced objects…
@@ -658,6 +670,6 @@ export default function CreateAssociationRuleModal({
           </>
         )}
       </div>
-    </FormDialog>
+    </FormDrawer>
   );
 }

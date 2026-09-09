@@ -130,7 +130,7 @@ export default function PriorityQueuePanel({
   const savingDrawer = addJobMutation.isPending || updateJobMutation.isPending;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <QueueScheduleCard
         queue={config.queue}
         saving={scheduleMutation.isPending}
@@ -148,8 +148,8 @@ export default function PriorityQueuePanel({
         clearingAndRestarting={clearAndRestartMutation.isPending}
       />
 
-      <Card size="sm">
-        <CardContent className="space-y-3">
+      <Card size="sm" className="gap-3">
+        <CardContent className="space-y-2.5">
           <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
             <div className="flex items-center gap-3">
               <div className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
@@ -165,6 +165,7 @@ export default function PriorityQueuePanel({
             <div className="flex items-center gap-2 self-end sm:self-auto">
               {dirty && (
                 <Button
+                  variant="outline"
                   size="sm"
                   onClick={saveOrder}
                   disabled={reorderMutation.isPending}

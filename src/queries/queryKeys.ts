@@ -143,6 +143,7 @@ export const queryKeys = {
   },
   organisations: {
     all: ['organisations'] as const,
+    detail: (id: string) => ['organisations', id] as const,
     mine: ['organisations', 'mine'] as const,
   },
   invitations: {

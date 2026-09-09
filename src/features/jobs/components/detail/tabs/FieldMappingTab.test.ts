@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { mergeDefaultConfiguration } from './FieldMappingTab';
+import {
+  getWorkspaceDirtyState,
+  mergeDefaultConfiguration,
+} from './FieldMappingTab';
 
 import type { ConsolidatedMapping } from '@/features/jobs/hooks';
 
@@ -69,5 +72,46 @@ describe('mergeDefaultConfiguration', () => {
         destDefaults: { pipeline: 'default' },
       }),
     ]);
+  });
+});
+
+describe('getWorkspaceDirtyState', () => {
+  it('keeps each workspace save bar isolated while retaining the global warning', () => {
+    const dirtyStates = {
+      mappingDirty: false,
+      defaultsDirty: true,
+      conditionsDirty: false,
+    };
+
+    expect(getWorkspaceDirtyState('field-mapping', dirtyStates)).toEqual({
+      anyDirty: true,
+      activeDirty: false,
+    });
+    expect(getWorkspaceDirtyState('default-mapping', dirtyStates)).toEqual({
+      anyDirty: true,
+      activeDirty: true,
+    });
+    expect(getWorkspaceDirtyState('skip-record', dirtyStates)).toEqual({
+      anyDirty: true,
+      activeDirty: false,
+    });
+  });
+
+  it('uses the Skip Records draft independently of mapping and defaults', () => {
+    expect(
+      getWorkspaceDirtyState('skip-record', {
+        mappingDirty: true,
+        defaultsDirty: true,
+        conditionsDirty: false,
+      }),
+    ).toEqual({ anyDirty: true, activeDirty: false });
+
+    expect(
+      getWorkspaceDirtyState('skip-record', {
+        mappingDirty: false,
+        defaultsDirty: false,
+        conditionsDirty: true,
+      }),
+    ).toEqual({ anyDirty: true, activeDirty: true });
   });
 });

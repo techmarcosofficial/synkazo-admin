@@ -10,10 +10,13 @@ import userEvent from '@testing-library/user-event';
 import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { RecentRunsList, RuleRecordsList } from './AssociationRulesList';
+import AssociationRulesList, {
+  RecentRunsList,
+  RuleRecordsList,
+} from './AssociationRulesList';
 
 import { associationsApi } from '@/api/associations';
-import type { AssociationRecord } from '@/api/associations';
+import type { AssociationRecord, AssociationRule } from '@/api/associations';
 import type { PaginatedResponse } from '@/types';
 
 vi.mock('@/api/associations', async () => {
@@ -25,6 +28,8 @@ vi.mock('@/api/associations', async () => {
     ...actual,
     associationsApi: {
       ...actual.associationsApi,
+      listRules: vi.fn(),
+      getRuleStats: vi.fn(),
       getRuleRecords: vi.fn(),
       getRunLogs: vi.fn(),
     },
@@ -33,6 +38,8 @@ vi.mock('@/api/associations', async () => {
 
 const getRuleRecords = vi.mocked(associationsApi.getRuleRecords);
 const getRunLogs = vi.mocked(associationsApi.getRunLogs);
+const listRules = vi.mocked(associationsApi.listRules);
+const getRuleStats = vi.mocked(associationsApi.getRuleStats);
 
 function makeRecord(overrides: Partial<AssociationRecord>): AssociationRecord {
   return {
@@ -298,6 +305,106 @@ describe('RecentRunsList', () => {
     ).toBeInTheDocument();
     const rows = screen.getAllByText('5');
     expect(rows.length).toBe(10);
+  });
+});
+
+describe('AssociationRulesList', () => {
+  const rule: AssociationRule = {
+    id: 'rule-1',
+    projectId: 'p1',
+    name: 'Contact to company',
+    sourceObject: 'contacts',
+    sourceMatchField: 'company_domain',
+    targetObject: 'companies',
+    targetMatchField: 'domain',
+    isEnabled: true,
+    conditions: [],
+  };
+
+  beforeEach(() => {
+    listRules.mockReset();
+    getRuleStats.mockReset();
+    getRunLogs.mockReset();
+    listRules.mockResolvedValue([rule]);
+    getRuleStats.mockResolvedValue({
+      total: 12,
+      resolved: 7,
+      pending: 3,
+      failed: 2,
+    });
+    getRunLogs.mockResolvedValue({
+      success: true,
+      data: [
+        {
+          id: 'run-1',
+          status: 'completed',
+          startedAt: '2026-01-01T00:00:00.000Z',
+          triggeredBy: 'manual',
+          succeeded: 7,
+          failed: 2,
+          pendingCreated: 3,
+        },
+      ],
+      total: 1,
+    });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('shows the section action, real metrics, mapping, and latest run summary', async () => {
+    renderWithClient(
+      <AssociationRulesList projectId="p1" showCompanyOwnerSection={false} />,
+    );
+
+    expect(await screen.findByText('Contact to company')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'New association' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Total rules').parentElement).toHaveTextContent(
+      '1',
+    );
+    expect(screen.getByText('Enabled').parentElement).toHaveTextContent('1');
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('Pending records').parentElement,
+      ).toHaveTextContent('3');
+      expect(
+        screen.getByText('Failed records').parentElement,
+      ).toHaveTextContent('2');
+    });
+
+    expect(screen.getByText('company_domain')).toBeInTheDocument();
+    expect(screen.getByText('domain')).toBeInTheDocument();
+    expect(screen.getByText(/Last run/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Run' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Show diagnostics' }),
+    ).toBeInTheDocument();
+  });
+
+  it('keeps a recoverable error state with a retry action', async () => {
+    listRules
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce([]);
+
+    renderWithClient(
+      <AssociationRulesList projectId="p1" showCompanyOwnerSection={false} />,
+    );
+
+    expect(
+      await screen.findByText('Association rules could not be loaded.'),
+    ).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
+
+    expect(
+      await screen.findByText('No association rules yet'),
+    ).toBeInTheDocument();
+    await waitFor(() => expect(listRules).toHaveBeenCalledTimes(2));
   });
 });
 
