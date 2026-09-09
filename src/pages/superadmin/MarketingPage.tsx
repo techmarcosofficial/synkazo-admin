@@ -398,6 +398,7 @@ export default function MarketingPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [status, setStatus] = useState<LeadStatus | 'all'>('all');
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [notificationSettingsOpen, setNotificationSettingsOpen] =
@@ -406,13 +407,30 @@ export default function MarketingPage() {
     page,
     pageSize,
     status === 'all' ? undefined : status,
-    search.trim() || undefined,
+    debouncedSearch || undefined,
   );
   const leads = leadsQuery.data?.data ?? [];
   const total = leadsQuery.data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   const resetPage = () => setPage(1);
+  const hasActiveFilters = !!search.trim() || status !== 'all';
+  const isUnfilteredEmpty = leads.length === 0 && !hasActiveFilters;
+
+  useEffect(() => {
+    const timeout = window.setTimeout(
+      () => setDebouncedSearch(search.trim()),
+      300,
+    );
+    return () => window.clearTimeout(timeout);
+  }, [search]);
+
+  const clearFilters = () => {
+    setSearch('');
+    setDebouncedSearch('');
+    setStatus('all');
+    resetPage();
+  };
 
   return (
     <div className="animate-fade-in-up space-y-6">
@@ -448,7 +466,7 @@ export default function MarketingPage() {
         </Card>
       ) : leadsQuery.isError && !leadsQuery.data ? (
         <ErrorState onRetry={() => leadsQuery.refetch()} />
-      ) : leads.length === 0 ? (
+      ) : isUnfilteredEmpty ? (
         <EmptyState
           icon={Megaphone}
           title="No demo requests yet"
@@ -494,60 +512,74 @@ export default function MarketingPage() {
                 }
               />
             </div>
-            <div className="overflow-hidden overflow-x-auto rounded-4xl border">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted hover:bg-muted/50">
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Company / platforms</TableHead>
-                    <TableHead>Request</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Time</TableHead>
-                    <TableHead className="w-20 text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {leads.map((lead) => (
-                    <TableRow key={lead.id}>
-                      <TableCell>
-                        <div className="font-medium">{lead.name}</div>
-                        <div className="text-muted-foreground text-sm">
-                          {lead.email}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div>{lead.company || '—'}</div>
-                        <div className="text-muted-foreground text-sm">
-                          {lead.platforms || '—'}
-                        </div>
-                      </TableCell>
-                      <TableCell className="max-w-72">
-                        <p className="line-clamp-2">{lead.message || '—'}</p>
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={lead.status} />
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1">
-                          <Clock className="size-3.5" />
-                          {formatDate(lead.createdAt)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setSelectedLead(lead)}
-                          aria-label={`View ${lead.name}`}
-                        >
-                          <Eye className="size-4" />
-                        </Button>
-                      </TableCell>
+            {leads.length === 0 ? (
+              <EmptyState
+                icon={Megaphone}
+                title="No demo requests match your filters"
+                description="Try a different search or status filter."
+                action={{
+                  onClick: clearFilters,
+                  icon: X,
+                  label: 'Clear filters',
+                }}
+                viewMode="table"
+              />
+            ) : (
+              <div className="overflow-hidden overflow-x-auto rounded-4xl border">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted hover:bg-muted/50">
+                      <TableHead>Contact</TableHead>
+                      <TableHead>Company / platforms</TableHead>
+                      <TableHead>Request</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Time</TableHead>
+                      <TableHead className="w-20 text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {leads.map((lead) => (
+                      <TableRow key={lead.id}>
+                        <TableCell>
+                          <div className="font-medium">{lead.name}</div>
+                          <div className="text-muted-foreground text-sm">
+                            {lead.email}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>{lead.company || '—'}</div>
+                          <div className="text-muted-foreground text-sm">
+                            {lead.platforms || '—'}
+                          </div>
+                        </TableCell>
+                        <TableCell className="max-w-72">
+                          <p className="line-clamp-2">{lead.message || '—'}</p>
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge status={lead.status} />
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                          <span className="inline-flex items-center gap-1">
+                            <Clock className="size-3.5" />
+                            {formatDate(lead.createdAt)}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setSelectedLead(lead)}
+                            aria-label={`View ${lead.name}`}
+                          >
+                            <Eye className="size-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </CardContent>
           <CardFooter>
             <PaginationBar
