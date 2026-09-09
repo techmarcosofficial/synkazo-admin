@@ -14,6 +14,14 @@ import SkeletonTable from '@/components/shared/skeletons/SkeletonTable';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
   Table,
   TableBody,
   TableCell,
@@ -92,162 +100,206 @@ export default function ActivityTab() {
 
   if (query.isLoading) {
     return (
-      <div className="overflow-hidden rounded-4xl border">
-        <SkeletonTable rows={8} columns={7} />
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Sync activity</CardTitle>
+          <CardDescription>
+            A complete history of sync runs for this project.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-hidden rounded-3xl border">
+            <SkeletonTable rows={8} columns={7} />
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   if (query.isError && !res) {
-    return <ErrorState onRetry={() => query.refetch()} />;
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Sync activity</CardTitle>
+          <CardDescription>
+            A complete history of sync runs for this project.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ErrorState onRetry={() => query.refetch()} />
+        </CardContent>
+      </Card>
+    );
   }
 
   if (logs.length === 0) {
     return (
-      <EmptyState
-        icon={AlertCircle}
-        title="No logs yet"
-        description="Logs will appear here once syncs run."
-        viewMode="table"
-      />
+      <Card>
+        <CardHeader>
+          <CardTitle>Sync activity</CardTitle>
+          <CardDescription>
+            A complete history of sync runs for this project.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-3xl border">
+            <EmptyState
+              icon={AlertCircle}
+              title="No sync activity yet"
+              description="When a sync job runs, its status, record counts, and timing will appear here."
+              viewMode="table"
+            />
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-muted-foreground text-sm">
-          {total} sync event{total !== 1 ? 's' : ''}
+    <Card>
+      <CardHeader className="gap-4 sm:flex sm:items-start sm:justify-between">
+        <div className="space-y-1.5">
+          <CardTitle>Sync activity</CardTitle>
+          <CardDescription>
+            Review each sync run, its outcome, and the records it processed.
+          </CardDescription>
+        </div>
+        <p className="text-muted-foreground shrink-0 text-sm">
+          {total.toLocaleString()} sync event{total !== 1 ? 's' : ''}
         </p>
-      </div>
+      </CardHeader>
 
-      <div className="bg-card overflow-hidden rounded-4xl border">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted hover:bg-muted/50">
-              <TableHead>Status</TableHead>
-              <TableHead>Entity</TableHead>
-              <TableHead>Source</TableHead>
-              <TableHead>Destination</TableHead>
-              <TableHead className="text-right">Synced</TableHead>
-              <TableHead className="text-right">Failed</TableHead>
-              <TableHead>Duration</TableHead>
-              <TableHead>Started At</TableHead>
-              <TableHead>Completed At</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {logs.map((log) => {
-              const jobName =
-                log.metadata?.jobName ??
-                jobs.find((j) => j.id === log.jobId)?.name ??
-                'Sync run';
-              const sourcePlatformId =
-                log.metadata?.sourcePlatformId ?? project.sourcePlatformId;
-              const destPlatformId =
-                log.metadata?.destPlatformId ?? project.destPlatformId;
-              const entity =
-                log.metadata?.sourceObject && log.metadata?.destObject
-                  ? `${titleCase(log.metadata.sourceObject)} → ${titleCase(log.metadata.destObject)}`
-                  : jobName;
-              const completedAt = log.createdAt
-                ? new Date(log.createdAt)
-                : null;
-              const startedAt =
-                completedAt && log.durationMs != null
-                  ? new Date(completedAt.getTime() - log.durationMs)
-                  : completedAt;
-              const failed = log.metadata?.recordsFailed;
+      <CardContent>
+        <div className="overflow-x-auto rounded-3xl border">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted hover:bg-muted/50">
+                <TableHead>Status</TableHead>
+                <TableHead>Entity</TableHead>
+                <TableHead>Source</TableHead>
+                <TableHead>Destination</TableHead>
+                <TableHead className="text-right">Synced</TableHead>
+                <TableHead className="text-right">Failed</TableHead>
+                <TableHead>Duration</TableHead>
+                <TableHead>Started At</TableHead>
+                <TableHead>Completed At</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {logs.map((log) => {
+                const jobName =
+                  log.metadata?.jobName ??
+                  jobs.find((j) => j.id === log.jobId)?.name ??
+                  'Sync run';
+                const sourcePlatformId =
+                  log.metadata?.sourcePlatformId ?? project.sourcePlatformId;
+                const destPlatformId =
+                  log.metadata?.destPlatformId ?? project.destPlatformId;
+                const entity =
+                  log.metadata?.sourceObject && log.metadata?.destObject
+                    ? `${titleCase(log.metadata.sourceObject)} → ${titleCase(log.metadata.destObject)}`
+                    : jobName;
+                const completedAt = log.createdAt
+                  ? new Date(log.createdAt)
+                  : null;
+                const startedAt =
+                  completedAt && log.durationMs != null
+                    ? new Date(completedAt.getTime() - log.durationMs)
+                    : completedAt;
+                const failed = log.metadata?.recordsFailed;
 
-              return (
-                <TableRow key={log.id}>
-                  <TableCell>
-                    <StatusBadge status={statusFor(log)} size="sm" />
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    <span
-                      className="block max-w-52 truncate"
-                      title={log.message}
+                return (
+                  <TableRow key={log.id}>
+                    <TableCell>
+                      <StatusBadge status={statusFor(log)} size="sm" />
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      <span
+                        className="block max-w-52 truncate"
+                        title={log.message}
+                      >
+                        {entity}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      {sourcePlatformId ? (
+                        <PlatformIcon
+                          platformId={sourcePlatformId}
+                          variant="icon-text"
+                          size="sm"
+                        />
+                      ) : (
+                        '—'
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {destPlatformId ? (
+                        <PlatformIcon
+                          platformId={destPlatformId}
+                          variant="icon-text"
+                          size="sm"
+                        />
+                      ) : (
+                        '—'
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-xs">
+                      {log.recordsProcessed ?? 0}
+                    </TableCell>
+                    <TableCell
+                      className={cn(
+                        'text-right font-mono text-xs',
+                        !!failed && 'text-destructive',
+                      )}
                     >
-                      {entity}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    {sourcePlatformId ? (
-                      <PlatformIcon
-                        platformId={sourcePlatformId}
-                        variant="icon-text"
-                        size="sm"
-                      />
-                    ) : (
-                      '—'
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {destPlatformId ? (
-                      <PlatformIcon
-                        platformId={destPlatformId}
-                        variant="icon-text"
-                        size="sm"
-                      />
-                    ) : (
-                      '—'
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right font-mono text-xs">
-                    {log.recordsProcessed ?? 0}
-                  </TableCell>
-                  <TableCell
-                    className={cn(
-                      'text-right font-mono text-xs',
-                      !!failed && 'text-destructive',
-                    )}
-                  >
-                    {failed ?? '—'}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-xs">
-                    {formatDuration(log.durationMs)}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-xs">
-                    {startedAt ? format(startedAt, 'MMM d, HH:mm:ss') : '—'}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-xs">
-                    {completedAt ? format(completedAt, 'MMM d, HH:mm:ss') : '—'}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {log.jobId ? (
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link
-                          to={`/projects/${projectId}/jobs/${log.jobId}?tab=run-history`}
-                          state={{
-                            jobBackTo: `/projects/${projectId}?tab=activity`,
-                            jobBackLabel: 'Back to Project Activity',
-                          }}
-                        >
-                          View <ArrowUpRight />
-                        </Link>
-                      </Button>
-                    ) : (
-                      <span className="text-muted-foreground text-xs">—</span>
-                    )}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
+                      {failed ?? '—'}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-xs">
+                      {formatDuration(log.durationMs)}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
+                      {startedAt ? format(startedAt, 'MMM d, HH:mm:ss') : '—'}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
+                      {completedAt ? format(completedAt, 'MMM d, HH:mm:ss') : '—'}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {log.jobId ? (
+                        <Button variant="ghost" size="sm" asChild>
+                          <Link
+                            to={`/projects/${projectId}/jobs/${log.jobId}?tab=run-history`}
+                            state={{
+                              jobBackTo: `/projects/${projectId}?tab=activity`,
+                              jobBackLabel: 'Back to Project Activity',
+                            }}
+                          >
+                            View <ArrowUpRight />
+                          </Link>
+                        </Button>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
 
-      <PaginationBar
-        page={page}
-        totalPages={totalPages}
-        total={total}
-        pageSize={limit}
-        onPageChange={setPage}
-        onPageSizeChange={handleLimitChange}
-        pageSizeOptions={PAGE_SIZE_OPTIONS}
-      />
-    </div>
+      <CardFooter className="border-t">
+        <PaginationBar
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          pageSize={limit}
+          onPageChange={setPage}
+          onPageSizeChange={handleLimitChange}
+          pageSizeOptions={PAGE_SIZE_OPTIONS}
+        />
+      </CardFooter>
+    </Card>
   );
 }

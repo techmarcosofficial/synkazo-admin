@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom';
 
 import apiClient from '@/api/apiClient';
 import AuthStatus from '@/components/auth/AuthStatus';
-import BrandMark from '@/components/auth/BrandMark';
 import SplitAuthLayout from '@/components/auth/SplitAuthLayout';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -39,11 +38,9 @@ export default function ForgotPassword() {
   };
 
   return (
-    <SplitAuthLayout>
-      <BrandMark />
-
+    <SplitAuthLayout variant="immersive">
       {sent ? (
-        <div className="mt-9">
+        <div>
           <AuthStatus
             icon={CheckCircle2}
             tone="success"
@@ -65,13 +62,10 @@ export default function ForgotPassword() {
         </div>
       ) : (
         <>
-          <div className="mt-9 space-y-1.5">
-            <h1 className="text-2xl font-bold tracking-tight">
-              Forgot password?
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              Enter your email and we'll send a reset link.
-            </p>
+          <div className="synkazo-login-heading">
+            <p className="synkazo-login-eyebrow">SECURE ACCOUNT RECOVERY.</p>
+            <h1>Forgot password?</h1>
+            <p>Enter your email and we'll send a reset link.</p>
           </div>
 
           {error && (
@@ -96,17 +90,19 @@ export default function ForgotPassword() {
                   autoFocus
                 />
               </Field>
-              <Button type="submit" disabled={loading} className="w-full">
+              <Button type="submit" size="lg" disabled={loading}>
                 {loading ? <Spinner /> : 'Send reset link'}
               </Button>
             </FieldGroup>
           </form>
 
-          <Button asChild variant="link" size="sm" className="mt-6 w-full">
-            <Link to="/login">
-              <ArrowLeft /> Back to sign in
-            </Link>
-          </Button>
+          <div className="mt-6 text-center">
+            <Button asChild variant="link" size="sm">
+              <Link to="/login">
+                <ArrowLeft /> Back to sign in
+              </Link>
+            </Button>
+          </div>
         </>
       )}
     </SplitAuthLayout>

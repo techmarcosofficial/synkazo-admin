@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronsUpDown, LogOut, Settings, Shield, User } from 'lucide-react';
+import { ChevronsUpDown, LogOut, SlidersHorizontal, User } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -115,15 +115,6 @@ export function NavUser({ variant = 'sidebar' }: UserMenuProps) {
             <DropdownMenuSeparator />
 
             <DropdownMenuGroup>
-              {currentUser.role === 'super_admin' && (
-                <DropdownMenuItem asChild>
-                  <Link to="/super-admin">
-                    <Shield />
-                    Super Admin
-                  </Link>
-                </DropdownMenuItem>
-              )}
-
               <DropdownMenuItem asChild>
                 <Link to="/settings/profile">
                   <User />
@@ -132,9 +123,9 @@ export function NavUser({ variant = 'sidebar' }: UserMenuProps) {
               </DropdownMenuItem>
 
               <DropdownMenuItem asChild>
-                <Link to="/settings">
-                  <Settings />
-                  Settings
+                <Link to="/settings/preferences">
+                  <SlidersHorizontal />
+                  Preferences
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>

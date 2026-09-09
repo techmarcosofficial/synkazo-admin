@@ -2154,7 +2154,7 @@ export default function FieldMappingCanvas({
               </div>
             </div>
 
-            <div className="max-h-150 overflow-auto">
+            <div>
               {autoMapping && (
                 <div className="text-muted-foreground flex items-center justify-center gap-3 border-b py-10 text-sm">
                   <Spinner />

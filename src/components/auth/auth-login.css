@@ -1,0 +1,1122 @@
+.synkazo-login-page {
+  --login-orange: #ff6232;
+  --login-orange-bright: #ff7448;
+  --login-ink: #090b0f;
+  display: grid;
+  width: 100%;
+  max-width: 100%;
+  height: 100svh;
+  min-height: 100svh;
+  grid-template-columns: minmax(520px, 41.25%) minmax(700px, 58.75%);
+  overflow: clip;
+  background: var(--login-ink);
+  color: #f4f5f7;
+  color-scheme: dark;
+}
+
+.synkazo-login-form-panel {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  min-width: 0;
+  height: 100svh;
+  min-height: 100svh;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid rgba(255, 255, 255, 0.075);
+  background:
+    radial-gradient(circle at 18% 2%, rgba(75, 85, 103, 0.15), transparent 34%),
+    radial-gradient(circle at 78% 50%, rgba(42, 52, 66, 0.12), transparent 34%),
+    linear-gradient(135deg, #11151c 0%, #0b0e13 62%, #090c10 100%);
+}
+
+.synkazo-login-form-panel::after {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(
+    rgba(255, 255, 255, 0.028) 0.7px,
+    transparent 0.7px
+  );
+  background-size: 5px 5px;
+  content: '';
+  opacity: 0.35;
+}
+
+.synkazo-login-form-header,
+.synkazo-login-form-scroll {
+  position: relative;
+  z-index: 1;
+  width: min(100% - 64px, 486px);
+  margin-inline: auto;
+}
+
+.synkazo-login-form-header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: clamp(30px, 4.6vh, 46px);
+}
+
+.synkazo-login-brand {
+  color: #fff;
+}
+
+.synkazo-login-brand > svg {
+  width: 40px;
+  height: 40px;
+  filter: drop-shadow(0 7px 14px rgba(255, 93, 40, 0.25));
+}
+
+.synkazo-login-brand > span {
+  font-size: 18px;
+}
+
+.synkazo-login-mobile-back {
+  display: none;
+  align-items: center;
+  gap: 7px;
+  color: #a9afbb;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.synkazo-login-mobile-actions {
+  display: none;
+  align-items: center;
+  gap: 10px;
+}
+
+.synkazo-login-mobile-actions button,
+.synkazo-showcase-header button {
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.035);
+  color: #c7cbd3;
+}
+
+.synkazo-login-mobile-back svg {
+  width: 14px;
+}
+
+.synkazo-login-form-scroll {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.synkazo-login-form-scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.synkazo-login-form-content {
+  position: relative;
+  width: 100%;
+  padding-block: 64px 130px;
+  animation: synkazo-login-enter 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.synkazo-login-eyebrow {
+  color: var(--login-orange-bright);
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.185em;
+}
+
+.synkazo-login-heading h1 {
+  margin-top: 14px;
+  font-size: clamp(35px, 2.75vw, 43px);
+  line-height: 1.08;
+  font-weight: 720;
+  letter-spacing: -0.035em;
+}
+
+.synkazo-login-heading > p:last-child {
+  margin-top: 14px;
+  color: #9ca3b1;
+  font-size: 16px;
+  line-height: 1.68;
+}
+
+.synkazo-login-form {
+  margin-top: 31px;
+}
+
+.synkazo-login-divider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-block: 28px 24px;
+  color: #757c89;
+  font-size: 11px;
+}
+
+.synkazo-login-divider::before,
+.synkazo-login-divider::after {
+  height: 1px;
+  flex: 1;
+  background: rgba(148, 157, 173, 0.28);
+  content: '';
+}
+
+.synkazo-login-socials {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.synkazo-login-trust {
+  position: absolute;
+  bottom: 61px;
+  left: 0;
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-top: 0;
+}
+
+.synkazo-login-trust > div {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 9px;
+}
+
+.synkazo-login-trust svg {
+  width: 19px;
+  height: 19px;
+  flex: 0 0 auto;
+  color: #b0b7c4;
+  stroke-width: 1.6;
+}
+
+.synkazo-login-trust span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.synkazo-login-trust strong {
+  overflow: hidden;
+  color: #e3e6eb;
+  font-size: 10px;
+  font-weight: 620;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.synkazo-login-trust small {
+  overflow: hidden;
+  margin-top: 4px;
+  color: #747c89;
+  font-size: 8.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.synkazo-login-showcase {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  min-width: 0;
+  height: 100svh;
+  min-height: 100svh;
+  flex-direction: column;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      ellipse 72% 54% at 59% 53%,
+      rgba(255, 92, 36, 0.085),
+      transparent 68%
+    ),
+    linear-gradient(145deg, #0b0e13 0%, #090b0f 68%, #0c0d11 100%);
+}
+
+.synkazo-showcase-grid {
+  position: absolute;
+  z-index: -3;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(125, 134, 149, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(125, 134, 149, 0.07) 1px, transparent 1px),
+    radial-gradient(rgba(188, 196, 209, 0.12) 0.7px, transparent 0.8px);
+  background-position:
+    0 0,
+    0 0,
+    0 0;
+  background-size:
+    64px 64px,
+    64px 64px,
+    18px 18px;
+  mask-image: radial-gradient(
+    ellipse 78% 72% at 50% 46%,
+    #000 22%,
+    transparent 88%
+  );
+  opacity: 0.75;
+}
+
+.synkazo-showcase-glow {
+  position: absolute;
+  z-index: -2;
+  top: 32%;
+  left: 33%;
+  width: 48%;
+  height: 35%;
+  border-radius: 50%;
+  background: rgba(255, 93, 39, 0.13);
+  filter: blur(75px);
+}
+
+.synkazo-showcase-horizon {
+  position: absolute;
+  z-index: -1;
+  right: -36%;
+  bottom: -29%;
+  width: 116%;
+  height: 55%;
+  border-top: 2px solid rgba(255, 113, 63, 0.88);
+  border-radius: 50% 50% 0 0;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 87, 31, 0.13),
+    rgba(19, 20, 26, 0.78) 22%,
+    #0b0d11 57%
+  );
+  box-shadow:
+    0 -5px 22px rgba(255, 81, 27, 0.36),
+    inset 0 17px 44px rgba(255, 101, 43, 0.08);
+  transform: rotate(-7deg);
+}
+
+.synkazo-showcase-header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: clamp(34px, 4.8vh, 48px) clamp(40px, 5.1vw, 76px) 0;
+}
+
+.synkazo-showcase-header a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #c7cbd3;
+  font-size: 12px;
+  font-weight: 550;
+  transition: color 160ms ease;
+}
+
+.synkazo-showcase-header a:hover {
+  color: #fff;
+}
+
+.synkazo-showcase-header svg {
+  width: 14px;
+  height: 14px;
+}
+
+.synkazo-showcase-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: min(100% - 80px, 860px);
+  flex: 1;
+  flex-direction: column;
+  margin-inline: auto;
+  padding: clamp(34px, 4.2vh, 42px) 0 clamp(72px, 11vh, 104px);
+  animation: synkazo-login-enter 720ms 100ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.synkazo-showcase-intro h2 {
+  margin-top: 17px;
+  color: #f7f7f8;
+  font-size: clamp(35px, 2.7vw, 43px);
+  line-height: 1.08;
+  font-weight: 720;
+  letter-spacing: -0.038em;
+}
+
+.synkazo-showcase-intro h2 em {
+  color: var(--login-orange-bright);
+  font-style: normal;
+}
+
+.synkazo-showcase-intro > p:last-child {
+  margin-top: 16px;
+  color: #a7adb8;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.synkazo-sync-stage {
+  position: relative;
+  height: 300px;
+  flex: 0 0 auto;
+  margin-top: clamp(34px, 5vh, 50px);
+}
+
+.synkazo-sync-lines {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.synkazo-sync-line-base path,
+.synkazo-sync-line-flow path {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.synkazo-sync-line-base path {
+  stroke: rgba(255, 109, 57, 0.23);
+  stroke-width: 1.2;
+}
+
+.synkazo-sync-line-flow path {
+  stroke: #ff713f;
+  stroke-width: 1.35;
+  stroke-dasharray: 3 8;
+  animation: synkazo-sync-flow 1.25s linear infinite;
+}
+
+.synkazo-sync-points circle {
+  fill: #fff0e9;
+  stroke: #ff6734;
+  stroke-width: 3;
+  filter: drop-shadow(0 0 5px #ff5e29);
+}
+
+.synkazo-sync-sources {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  display: flex;
+  width: 212px;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.synkazo-sync-tool {
+  position: relative;
+  display: flex;
+  height: 84px;
+  align-items: center;
+  gap: 13px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 15px;
+  background: linear-gradient(
+    135deg,
+    rgba(61, 68, 80, 0.5),
+    rgba(22, 27, 35, 0.38)
+  );
+  padding: 14px 17px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.025),
+    0 18px 38px rgba(0, 0, 0, 0.2),
+    0 0 0 1px rgba(0, 0, 0, 0.12);
+  backdrop-filter: blur(24px) saturate(145%);
+  transition:
+    border-color 220ms ease,
+    box-shadow 220ms ease,
+    transform 220ms ease;
+}
+
+.synkazo-sync-tool::before {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      circle at 12% 0%,
+      rgba(255, 255, 255, 0.13),
+      transparent 36%
+    ),
+    linear-gradient(115deg, rgba(255, 255, 255, 0.045), transparent 48%);
+  content: '';
+}
+
+.synkazo-sync-tool > * {
+  position: relative;
+  z-index: 1;
+}
+
+.synkazo-sync-tool:hover {
+  border-color: rgba(255, 126, 79, 0.32);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 20px 42px rgba(0, 0, 0, 0.24),
+    0 0 22px rgba(255, 98, 50, 0.055);
+  transform: translateY(-2px);
+}
+
+.synkazo-sync-tool-logo {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 11px;
+  background: rgba(31, 37, 47, 0.68);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 8px 18px rgba(0, 0, 0, 0.18);
+}
+
+.synkazo-sync-tool-logo img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.synkazo-sync-tool-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.synkazo-sync-tool-copy strong {
+  overflow: hidden;
+  color: #f0f1f3;
+  font-size: 12px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.synkazo-sync-tool-copy small {
+  overflow: hidden;
+  margin-top: 3px;
+  color: #7f8794;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.synkazo-sync-state {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  color: #c6cbd3;
+  font-size: 9px;
+}
+
+.synkazo-sync-state i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #2ed47a;
+  box-shadow: 0 0 7px #2ed47a;
+}
+
+.is-servicetitan .synkazo-sync-tool-logo {
+  background: #08090b;
+}
+
+.is-dataforma .synkazo-sync-tool-logo {
+  background: #fb173f;
+}
+
+.is-texada .synkazo-sync-tool-logo {
+  background: #383b3e;
+}
+
+.synkazo-sync-core {
+  position: absolute;
+  z-index: 2;
+  top: 88px;
+  left: 53.4%;
+  display: flex;
+  width: 132px;
+  height: 126px;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(255, 132, 86, 0.68);
+  border-radius: 21px;
+  background: linear-gradient(
+    145deg,
+    rgba(77, 50, 40, 0.55),
+    rgba(20, 23, 29, 0.62)
+  );
+  box-shadow:
+    0 0 48px rgba(255, 92, 36, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.13),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.035);
+  backdrop-filter: blur(26px) saturate(145%);
+  transform: translateX(-50%);
+  flex-direction: column;
+  justify-content: center;
+}
+
+.synkazo-sync-core-mark {
+  width: 49px;
+  height: 49px;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 8px 14px rgba(255, 89, 35, 0.25));
+}
+
+.synkazo-sync-core strong {
+  color: #f5f5f6;
+  font-size: 16px;
+  line-height: 1;
+  letter-spacing: -0.025em;
+}
+
+.synkazo-sync-core span {
+  margin-top: 5px;
+  color: #7e8490;
+  font-size: 9px;
+}
+
+.synkazo-sync-destination {
+  position: absolute;
+  z-index: 1;
+  top: 108px;
+  right: 0;
+  width: 210px;
+}
+
+.is-hubspot .synkazo-sync-tool-logo {
+  background: linear-gradient(145deg, #ff784f, #ff5f34);
+}
+
+.is-hubspot .synkazo-sync-tool-logo img {
+  filter: none;
+}
+
+.synkazo-sync-live {
+  position: absolute;
+  z-index: 2;
+  top: 3px;
+  right: 0;
+  display: flex;
+  min-width: 188px;
+  height: 56px;
+  align-items: center;
+  gap: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 13px;
+  background: linear-gradient(
+    135deg,
+    rgba(64, 70, 81, 0.5),
+    rgba(25, 30, 38, 0.38)
+  );
+  padding-inline: 15px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 16px 32px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(22px) saturate(145%);
+}
+
+.synkazo-sync-live > span:last-child {
+  display: flex;
+  flex-direction: column;
+}
+
+.synkazo-sync-live strong {
+  color: #eef0f3;
+  font-size: 11px;
+}
+
+.synkazo-sync-live small {
+  margin-top: 3px;
+  color: #9299a5;
+  font-size: 8.5px;
+}
+
+.synkazo-live-pulse {
+  position: relative;
+  display: grid;
+  width: 29px;
+  height: 29px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(37, 207, 113, 0.13);
+}
+
+.synkazo-live-pulse::before {
+  position: absolute;
+  inset: 3px;
+  border: 1px solid rgba(42, 222, 122, 0.21);
+  border-radius: inherit;
+  content: '';
+  animation: synkazo-live-pulse 1.8s ease-out infinite;
+}
+
+.synkazo-live-pulse i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #28d776;
+  box-shadow: 0 0 10px #28d776;
+}
+
+.synkazo-showcase-footer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 32px;
+  margin-top: auto;
+  padding-top: 28px;
+}
+
+.synkazo-showcase-footer blockquote {
+  max-width: 340px;
+  color: #b8bec8;
+  font-size: 12px;
+  line-height: 1.55;
+  font-style: italic;
+}
+
+.synkazo-showcase-footer cite {
+  display: block;
+  margin-top: 11px;
+  color: #979eaa;
+  font-style: normal;
+}
+
+.synkazo-showcase-metrics {
+  display: flex;
+  align-items: flex-start;
+}
+
+.synkazo-showcase-metrics > div {
+  display: flex;
+  min-width: 102px;
+  flex-direction: column;
+  padding-inline: 18px;
+}
+
+.synkazo-showcase-metrics > div + div {
+  border-left: 1px solid rgba(151, 160, 176, 0.22);
+}
+
+.synkazo-showcase-metrics strong {
+  color: #f3f4f6;
+  font-size: 19px;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.synkazo-showcase-metrics span {
+  margin-top: 9px;
+  color: #9ca3ae;
+  font-size: 9.5px;
+  white-space: nowrap;
+}
+
+/* Light-mode palette. The layout and orange brand accents stay consistent,
+   while the surfaces switch to translucent pearl glass. */
+.light .synkazo-login-page {
+  --login-ink: #edf1f6;
+  background: #edf1f6;
+  color: #171b24;
+  color-scheme: light;
+}
+
+.light .synkazo-login-form-panel {
+  border-right-color: rgba(39, 49, 66, 0.11);
+  background:
+    radial-gradient(
+      circle at 16% 0%,
+      rgba(255, 255, 255, 0.95),
+      transparent 38%
+    ),
+    radial-gradient(
+      circle at 82% 52%,
+      rgba(255, 112, 66, 0.055),
+      transparent 35%
+    ),
+    linear-gradient(135deg, #f8fafc 0%, #eef2f7 64%, #e9eef4 100%);
+}
+
+.light .synkazo-login-form-panel::after {
+  background-image: radial-gradient(
+    rgba(41, 51, 68, 0.07) 0.7px,
+    transparent 0.7px
+  );
+  opacity: 0.24;
+}
+
+.light .synkazo-login-brand > span {
+  color: #171b24;
+}
+
+.light .synkazo-login-mobile-back,
+.light .synkazo-showcase-header a {
+  color: #596273;
+}
+
+.light .synkazo-login-mobile-actions button,
+.light .synkazo-showcase-header button {
+  border-color: rgba(34, 43, 58, 0.12);
+  background: rgba(255, 255, 255, 0.58);
+  color: #3c4657;
+  box-shadow: 0 5px 16px rgba(39, 50, 69, 0.08);
+}
+
+.light .synkazo-login-heading > p:last-child {
+  color: #667083;
+}
+
+.light .synkazo-login-divider {
+  color: #7c8594;
+}
+
+.light .synkazo-login-divider::before,
+.light .synkazo-login-divider::after {
+  background: rgba(54, 65, 83, 0.18);
+}
+
+.light .synkazo-login-trust svg {
+  color: #667184;
+}
+
+.light .synkazo-login-trust strong {
+  color: #303847;
+}
+
+.light .synkazo-login-trust small {
+  color: #7c8594;
+}
+
+.light .synkazo-login-showcase {
+  background:
+    radial-gradient(
+      ellipse 72% 54% at 59% 53%,
+      rgba(255, 103, 56, 0.13),
+      transparent 68%
+    ),
+    linear-gradient(145deg, #f8fafc 0%, #eef2f7 68%, #e8edf3 100%);
+}
+
+.light .synkazo-showcase-grid {
+  background-image:
+    linear-gradient(rgba(49, 61, 80, 0.085) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(49, 61, 80, 0.085) 1px, transparent 1px),
+    radial-gradient(rgba(57, 69, 88, 0.14) 0.7px, transparent 0.8px);
+  opacity: 0.62;
+}
+
+.light .synkazo-showcase-glow {
+  background: rgba(255, 104, 53, 0.18);
+}
+
+.light .synkazo-showcase-horizon {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 105, 54, 0.13),
+    rgba(232, 225, 222, 0.72) 22%,
+    #dde4ec 57%
+  );
+}
+
+.light .synkazo-showcase-intro h2 {
+  color: #171b24;
+}
+
+.light .synkazo-showcase-intro > p:last-child {
+  color: #657083;
+}
+
+.light .synkazo-sync-line-base path {
+  stroke: rgba(225, 80, 29, 0.26);
+}
+
+.light .synkazo-sync-tool {
+  border-color: rgba(255, 255, 255, 0.78);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.69),
+    rgba(241, 245, 249, 0.42)
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.98),
+    inset 0 -1px 0 rgba(50, 61, 79, 0.045),
+    0 18px 38px rgba(43, 54, 73, 0.1),
+    0 0 0 1px rgba(49, 60, 78, 0.065);
+}
+
+.light .synkazo-sync-tool::before {
+  background:
+    radial-gradient(
+      circle at 12% 0%,
+      rgba(255, 255, 255, 0.96),
+      transparent 38%
+    ),
+    linear-gradient(115deg, rgba(255, 255, 255, 0.32), transparent 48%);
+}
+
+.light .synkazo-sync-tool:hover {
+  border-color: rgba(255, 122, 78, 0.52);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.98),
+    0 20px 42px rgba(46, 57, 76, 0.13),
+    0 0 24px rgba(255, 98, 50, 0.08);
+}
+
+.light .synkazo-sync-tool-logo {
+  border-color: rgba(255, 255, 255, 0.76);
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 8px 18px rgba(46, 56, 73, 0.1);
+}
+
+.light .is-servicetitan .synkazo-sync-tool-logo {
+  background: #08090b;
+}
+
+.light .is-dataforma .synkazo-sync-tool-logo {
+  background: #fb173f;
+}
+
+.light .is-texada .synkazo-sync-tool-logo {
+  background: #383b3e;
+}
+
+.light .is-hubspot .synkazo-sync-tool-logo {
+  background: linear-gradient(145deg, #ff784f, #ff5f34);
+}
+
+.light .synkazo-sync-tool-copy strong,
+.light .synkazo-sync-live strong {
+  color: #252c39;
+}
+
+.light .synkazo-sync-tool-copy small,
+.light .synkazo-sync-live small,
+.light .synkazo-sync-core span {
+  color: #7b8493;
+}
+
+.light .synkazo-sync-state {
+  color: #596374;
+}
+
+.light .synkazo-sync-core {
+  border-color: rgba(255, 111, 61, 0.64);
+  background: linear-gradient(
+    145deg,
+    rgba(255, 240, 233, 0.78),
+    rgba(255, 255, 255, 0.54)
+  );
+  box-shadow:
+    0 0 48px rgba(255, 92, 36, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.98),
+    inset 0 -1px 0 rgba(111, 65, 47, 0.06);
+}
+
+.light .synkazo-sync-core strong {
+  color: #242a36;
+}
+
+.light .synkazo-sync-live {
+  border-color: rgba(255, 255, 255, 0.76);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.72),
+    rgba(237, 242, 247, 0.46)
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.98),
+    0 16px 32px rgba(47, 58, 76, 0.1);
+}
+
+.light .synkazo-showcase-footer blockquote {
+  color: #5d6779;
+}
+
+.light .synkazo-showcase-footer cite,
+.light .synkazo-showcase-metrics span {
+  color: #717b8c;
+}
+
+.light .synkazo-showcase-metrics > div + div {
+  border-left-color: rgba(54, 65, 83, 0.16);
+}
+
+.light .synkazo-showcase-metrics strong {
+  color: #242b38;
+}
+
+@keyframes synkazo-login-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes synkazo-sync-flow {
+  to {
+    stroke-dashoffset: -22;
+  }
+}
+
+@keyframes synkazo-live-pulse {
+  0% {
+    opacity: 0.85;
+    transform: scale(0.65);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.55);
+  }
+}
+
+@media (max-height: 820px) and (min-width: 1181px) {
+  .synkazo-login-form-content {
+    min-height: auto;
+    padding-block: 28px 22px;
+  }
+
+  .synkazo-login-trust {
+    position: static;
+    margin-top: 32px;
+  }
+
+  .synkazo-showcase-content {
+    padding-block: 28px 30px;
+  }
+
+  .synkazo-sync-stage {
+    margin-top: 25px;
+  }
+}
+
+@media (max-width: 1420px) {
+  .synkazo-login-page {
+    grid-template-columns: minmax(500px, 43%) minmax(680px, 57%);
+  }
+
+  .synkazo-showcase-content {
+    width: min(100% - 64px, 760px);
+  }
+
+  .synkazo-sync-tool,
+  .synkazo-sync-sources {
+    width: 198px;
+  }
+
+  .synkazo-sync-destination {
+    width: 198px;
+  }
+}
+
+@media (max-width: 1180px) {
+  .synkazo-login-page {
+    display: block;
+    overflow: hidden;
+  }
+
+  .synkazo-login-form-panel {
+    min-height: 100svh;
+    border-right: 0;
+  }
+
+  .synkazo-login-form-header,
+  .synkazo-login-form-scroll {
+    width: min(100% - 48px, 500px);
+  }
+
+  .synkazo-login-form-content {
+    min-height: auto;
+    margin-block: auto;
+    padding-block: 48px 32px;
+  }
+
+  .synkazo-login-trust {
+    position: static;
+    width: auto;
+    margin-top: 48px;
+  }
+
+  .synkazo-login-mobile-back {
+    display: inline-flex;
+  }
+
+  .synkazo-login-mobile-actions {
+    display: flex;
+  }
+
+  .synkazo-login-showcase {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .synkazo-login-form-header,
+  .synkazo-login-form-scroll {
+    width: min(100% - 40px, 500px);
+  }
+
+  .synkazo-login-form-header {
+    padding-top: 22px;
+  }
+
+  .synkazo-login-brand > svg {
+    width: 35px;
+    height: 35px;
+  }
+
+  .synkazo-login-form-content {
+    padding-block: 46px 28px;
+  }
+
+  .synkazo-login-heading h1 {
+    font-size: 34px;
+  }
+
+  .synkazo-login-heading > p:last-child {
+    font-size: 14px;
+  }
+
+  .synkazo-login-socials {
+    grid-template-columns: 1fr;
+  }
+
+  .synkazo-login-trust {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    margin-top: 42px;
+  }
+
+  .synkazo-login-trust strong,
+  .synkazo-login-trust small {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .synkazo-login-form-content,
+  .synkazo-showcase-content,
+  .synkazo-sync-line-flow path,
+  .synkazo-live-pulse::before {
+    animation: none;
+  }
+}
