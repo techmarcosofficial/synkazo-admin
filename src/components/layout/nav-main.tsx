@@ -26,6 +26,7 @@ export interface NavItem {
   minRole: UserRole;
   tourId?: string;
   badge?: string;
+  openInNewTab?: boolean;
 }
 
 export interface NavGroup {
@@ -78,7 +79,16 @@ export function NavMain({
                         tooltip={item.title}
                         className="data-[active=true]:before:bg-primary data-[active=true]:text-primary relative data-[active=true]:before:absolute data-[active=true]:before:top-1/2 data-[active=true]:before:left-0 data-[active=true]:before:h-6 data-[active=true]:before:w-1 data-[active=true]:before:-translate-y-1/2 data-[active=true]:before:rounded-r-full"
                       >
-                        <Link to={item.url} data-tour={item.tourId}>
+                        <Link
+                          to={item.url}
+                          data-tour={item.tourId}
+                          target={item.openInNewTab ? '_blank' : undefined}
+                          rel={
+                            item.openInNewTab
+                              ? 'noopener noreferrer'
+                              : undefined
+                          }
+                        >
                           <item.icon />
                           <span>{item.title}</span>
                           {item.badge && (

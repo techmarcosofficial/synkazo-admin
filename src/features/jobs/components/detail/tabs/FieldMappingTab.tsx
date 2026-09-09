@@ -683,7 +683,7 @@ export default function FieldMappingTab() {
   return (
     <div
       ref={workspaceRef}
-      className={anyDirty ? 'space-y-4 pb-24' : 'space-y-4'}
+      className={anyDirty ? 'space-y-4 pb-8' : 'space-y-4'}
     >
       {isActive && anyDirty && (
         <div className="bg-warning/10 flex items-start gap-3 rounded-4xl px-4 py-3">
@@ -907,7 +907,7 @@ export default function FieldMappingTab() {
 
       {activeDirty && (
         <div
-          className={`bg-background/95 fixed right-0 bottom-0 left-0 z-40 border-t shadow-lg backdrop-blur ${
+          className={`bg-card fixed right-0 bottom-0 left-0 z-40 border-t shadow-lg backdrop-blur ${
             sidebarState === 'collapsed'
               ? 'md:left-(--sidebar-width-icon)'
               : 'md:left-(--sidebar-width)'

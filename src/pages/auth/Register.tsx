@@ -8,7 +8,6 @@ import {
 } from 'react-router-dom';
 
 import { authApi } from '@/api/auth';
-import BrandMark from '@/components/auth/BrandMark';
 import OtpInput from '@/components/auth/OtpInput';
 import PasswordInput from '@/components/auth/PasswordInput';
 import PasswordStrength from '@/components/auth/PasswordStrength';
@@ -159,14 +158,11 @@ export default function Register() {
 
   if (step === 'otp') {
     return (
-      <SplitAuthLayout>
-        <BrandMark />
-
-        <div className="mt-9 space-y-1.5">
-          <h1 className="text-2xl font-bold tracking-tight">
-            Verify your email
-          </h1>
-          <p className="text-muted-foreground">
+      <SplitAuthLayout variant="immersive">
+        <div className="synkazo-login-heading">
+          <p className="synkazo-login-eyebrow">ONE LAST STEP.</p>
+          <h1>Verify your email</h1>
+          <p>
             Enter the 6-digit code we sent to{' '}
             <span className="text-foreground font-medium">{form.email}</span>
           </p>
@@ -201,8 +197,8 @@ export default function Register() {
 
             <Button
               type="submit"
+              size="lg"
               disabled={verifying || code.length !== 6}
-              className="w-full"
             >
               {verifying ? (
                 <Spinner />
@@ -227,7 +223,6 @@ export default function Register() {
               <Button
                 variant="link"
                 size="sm"
-                className="h-auto p-0"
                 onClick={handleResend}
                 disabled={resendLoading}
               >
@@ -235,34 +230,30 @@ export default function Register() {
               </Button>
             </p>
           )}
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => {
               setStep('form');
               setCode('');
               setOtpError('');
               setResendSent(false);
             }}
-            className="text-muted-foreground inline-flex items-center gap-1 hover:underline"
           >
-            <ArrowLeft className="size-3.5" /> Use a different email
-          </button>
+            <ArrowLeft /> Use a different email
+          </Button>
         </div>
       </SplitAuthLayout>
     );
   }
 
   return (
-    <SplitAuthLayout>
-      <BrandMark />
-
-      <div className="mt-9 space-y-1.5">
-        <h1 className="text-2xl font-bold tracking-tight">
-          Create your account
-        </h1>
-        <p className="text-muted-foreground">
-          Get started — your first project is free
-        </p>
+    <SplitAuthLayout variant="immersive">
+      <div className="synkazo-login-heading">
+        <p className="synkazo-login-eyebrow">START. SYNC. SCALE.</p>
+        <h1>Create your account</h1>
+        <p>Get started — your first project is free</p>
       </div>
 
       {error && (
@@ -342,7 +333,7 @@ export default function Register() {
             />
           </Field>
 
-          <Button type="submit" disabled={loading} className="w-full">
+          <Button type="submit" size="lg" disabled={loading}>
             {loading ? (
               <Spinner />
             ) : (

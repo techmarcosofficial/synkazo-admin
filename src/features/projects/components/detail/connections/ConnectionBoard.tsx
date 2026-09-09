@@ -95,10 +95,10 @@ function ConnectionStep({
         </span>
       </div>
 
-      <section
+      <Card
         className={cn(
-          'border-primary/20 bg-card overflow-hidden rounded-4xl border shadow-none',
-          !complete && 'border-dashed',
+          'border-primary/20! gap-0 py-0 border!',
+          !complete && 'border-dashed!',
         )}
       >
         <div className="flex flex-col justify-between gap-2 px-4 py-3 sm:flex-row sm:items-center">
@@ -113,7 +113,7 @@ function ConnectionStep({
 
         <Separator />
         <div>{children}</div>
-      </section>
+      </Card>
     </div>
   );
 }

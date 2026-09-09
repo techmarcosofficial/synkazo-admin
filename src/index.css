@@ -149,7 +149,8 @@
     #db4437;
   --destructive-foreground: #ffffff;
 
-  --success: #1f9d55;
+  /* Lime green — a green/yellow midpoint with enough contrast on light surfaces. */
+  --success: #4d7c0f;
   --warning: #c77a0a;
   --info: #2f74d0;
   --paused: #7c5cd8;
@@ -204,7 +205,7 @@
   --primary-soft: rgba(248, 85, 8, 0.1);
   --primary-soft2: rgba(248, 85, 8, 0.16);
 
-  --success-soft: rgba(31, 157, 85, 0.12);
+  --success-soft: rgba(77, 124, 15, 0.12);
   --warning-soft: rgba(199, 122, 10, 0.13);
   --info-soft: rgba(47, 116, 208, 0.12);
   --paused-soft: rgba(124, 92, 216, 0.13);
@@ -260,7 +261,8 @@
     #f0685c;
   --destructive-foreground: #ffffff;
 
-  --success: #34c77b;
+  /* Brighter lime retains contrast against the dark app surfaces. */
+  --success: #a3e635;
   --warning: #e0a53c;
   --info: #5b9bf0;
   --paused: #a78bfa;
@@ -309,7 +311,7 @@
   --primary-soft: rgba(248, 85, 8, 0.16);
   --primary-soft2: rgba(248, 85, 8, 0.24);
 
-  --success-soft: rgba(52, 199, 123, 0.15);
+  --success-soft: rgba(163, 230, 53, 0.15);
   --warning-soft: rgba(224, 165, 60, 0.15);
   --info-soft: rgba(91, 155, 240, 0.15);
   --paused-soft: rgba(167, 139, 250, 0.16);

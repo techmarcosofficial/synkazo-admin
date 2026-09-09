@@ -1,9 +1,14 @@
-import { ArrowRight, Mail } from 'lucide-react';
+import {
+  ArrowRight,
+  LockKeyhole,
+  Mail,
+  ShieldCheck,
+  UsersRound,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import apiClient from '@/api/apiClient';
-import BrandMark from '@/components/auth/BrandMark';
 import PasswordInput from '@/components/auth/PasswordInput';
 import SplitAuthLayout from '@/components/auth/SplitAuthLayout';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -135,12 +140,14 @@ export default function Login() {
   };
 
   return (
-    <SplitAuthLayout>
-      <BrandMark />
-
-      <div className="mt-9 space-y-1.5">
-        <h1 className="text-2xl font-bold tracking-tight">Welcome back</h1>
-        <p className="text-muted-foreground">Your data, perfectly in sync.</p>
+    <SplitAuthLayout variant="immersive">
+      <div className="synkazo-login-heading">
+        <p className="synkazo-login-eyebrow">SECURE. SYNC. SCALE.</p>
+        <h1>Welcome back</h1>
+        <p>
+          Access your Synkazo account and keep your
+          <br className="synkazo-wide-only" /> data perfectly in sync.
+        </p>
       </div>
 
       {error === 'email_not_verified' ? (
@@ -168,12 +175,10 @@ export default function Login() {
         </Alert>
       ) : null}
 
-      <form onSubmit={handleSubmit} className="mt-8">
+      <form onSubmit={handleSubmit} className="synkazo-login-form">
         <FieldGroup>
           <Field>
-            <FieldLabel htmlFor="email" required>
-              Email
-            </FieldLabel>
+            <FieldLabel htmlFor="email">Email address</FieldLabel>
             <Input
               id="email"
               type="email"
@@ -185,9 +190,7 @@ export default function Login() {
           </Field>
 
           <Field>
-            <FieldLabel htmlFor="password" required>
-              Password
-            </FieldLabel>
+            <FieldLabel htmlFor="password">Password</FieldLabel>
             <PasswordInput
               id="password"
               value={form.password}
@@ -215,7 +218,7 @@ export default function Login() {
             </Link>
           </div>
 
-          <Button type="submit" disabled={loading} className="w-full">
+          <Button type="submit" size="lg" disabled={loading}>
             {loading ? (
               <Spinner />
             ) : (
@@ -227,9 +230,22 @@ export default function Login() {
         </FieldGroup>
       </form>
 
+      <div className="synkazo-login-divider">
+        <span>or continue with</span>
+      </div>
+
+      <div className="synkazo-login-socials">
+        <Button variant="outline" size="lg" asChild>
+          <a href={`${import.meta.env.VITE_FRONTEND_URL}/install`}>
+            <img src="/hubspot-logo.svg" alt="" className="size-4" />
+            Login with HubSpot
+          </a>
+        </Button>
+      </div>
+
       {/* Registration link hidden when registration is disabled */}
       {registrationEnabled && (
-        <p className="text-muted-foreground mt-6 text-sm">
+        <p className="text-muted-foreground mt-6 text-center text-sm">
           Don't have an account?{' '}
           <Link
             to="/register"
@@ -239,6 +255,30 @@ export default function Login() {
           </Link>
         </p>
       )}
+
+      <div className="synkazo-login-trust" aria-label="Security features">
+        <div>
+          <ShieldCheck />
+          <span>
+            <strong>Secure access</strong>
+            <small>Your data stays protected</small>
+          </span>
+        </div>
+        <div>
+          <LockKeyhole />
+          <span>
+            <strong>Encrypted connections</strong>
+            <small>End-to-end security</small>
+          </span>
+        </div>
+        <div>
+          <UsersRound />
+          <span>
+            <strong>Role-based access</strong>
+            <small>Control team permissions</small>
+          </span>
+        </div>
+      </div>
     </SplitAuthLayout>
   );
 }
