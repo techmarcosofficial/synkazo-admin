@@ -213,7 +213,7 @@ function ActivityRow({ log }: { log: OrgSyncLog }) {
         {sourceObject && destObject && (
           <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
             <span className="truncate">{titleCase(sourceObject)}</span>
-            <ArrowRight className="size-3 shrink-0" />
+            <ArrowRight className="size-4 shrink-0" />
             <span className="truncate">{titleCase(destObject)}</span>
           </div>
         )}
@@ -263,7 +263,7 @@ function ActivityRow({ log }: { log: OrgSyncLog }) {
 
       <div className="col-start-3 row-start-1 flex justify-end xl:col-auto xl:row-auto">
         {runHref && (
-          <ArrowRight className="text-muted-foreground group-hover:text-foreground size-4 transition-transform group-hover:translate-x-0.5" />
+          <ArrowRight className="text-muted-foreground group-hover:text-foreground size-5 transition-transform group-hover:translate-x-0.5" />
         )}
       </div>
     </div>

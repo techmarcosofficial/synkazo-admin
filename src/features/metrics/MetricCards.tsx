@@ -89,7 +89,7 @@ function Comparison({
 
   return (
     <span className="text-muted-foreground inline-flex items-center gap-1 text-xs font-medium">
-      <Icon className="size-3" />
+      <Icon className="size-4" />
       {Math.abs(rounded).toFixed(1)}
       {suffix} vs previous period
     </span>
