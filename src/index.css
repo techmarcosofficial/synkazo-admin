@@ -341,6 +341,16 @@
     border-color: transparent !important;
     box-shadow: var(--layout-surface-shadow) !important;
   }
+
+  /* Project connection states use their border as a status indicator. Keep that
+     indicator visible when the global shadow layout hides ordinary card borders. */
+  html[data-layout-style='shadow'] [data-project-connections-tab] [data-layout-surface='outer'][data-connection-state='connected'] {
+    border-color: color-mix(in oklab, var(--primary) 20%, transparent) !important;
+  }
+
+  html[data-layout-style='shadow'] [data-project-connections-tab] [data-layout-surface='outer'][data-connection-state='pending'] {
+    border-color: color-mix(in oklab, var(--primary) 20%, transparent) !important;
+  }
   /* Tailwind v4 dropped the default `cursor: pointer` on <button>; restore it
      for every interactive surface so buttons/menus/links behave like the app
      did before the upgrade. Disabled elements keep the default cursor. */

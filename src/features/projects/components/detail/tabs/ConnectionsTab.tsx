@@ -13,7 +13,7 @@ export default function ConnectionsTab() {
   } = useProjectDetailContext();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-project-connections-tab>
       <ConnectionBoard
         projectId={projectId}
         sourcePlatformId={project.sourcePlatformId ?? undefined}
