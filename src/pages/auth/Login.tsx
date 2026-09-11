@@ -5,7 +5,9 @@ import {
   ShieldCheck,
   UsersRound,
 } from 'lucide-react';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect, useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 
 import apiClient from '@/api/apiClient';
@@ -14,9 +16,14 @@ import SplitAuthLayout from '@/components/auth/SplitAuthLayout';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Spinner } from '@/components/ui/spinner';
+import { loginSchema, type LoginFormValues } from '@/lib/authValidation';
 import { consumePendingPlan, savePendingPlan } from '@/lib/pendingPlan';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { showToast } from '@/lib/toast';
@@ -27,15 +34,24 @@ export default function Login() {
   const { login, currentUser, isLoading } = useSynkazoAuth();
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({
-    email: '',
-    password: '',
-    remember: false,
-  });
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [unverifiedEmail, setUnverifiedEmail] = useState('');
   const [registrationEnabled, setRegistrationEnabled] = useState(true);
+  const {
+    register: registerField,
+    control,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    mode: 'onBlur',
+    reValidateMode: 'onChange',
+    defaultValues: {
+      email: '',
+      password: '',
+      remember: false,
+    },
+  });
 
   // Only ever a same-origin path — an absolute URL here would be an open redirect.
   const rawRedirect = new URLSearchParams(window.location.search).get(
@@ -111,17 +127,11 @@ export default function Login() {
 
   if (isLoading || currentUser) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (values: LoginFormValues) => {
     setError('');
     setUnverifiedEmail('');
-    if (!form.email || !form.password) {
-      setError('Please fill in all fields.');
-      return;
-    }
-    setLoading(true);
     try {
-      await login(form.email, form.password, form.remember);
+      await login(values.email, values.password, values.remember);
       showToast.success("Welcome back! You've logged in successfully.");
       navigate(redirectTo ?? resumeTarget(), {
         replace: true,
@@ -130,12 +140,11 @@ export default function Login() {
       const e = err as { response?: { data?: { message?: string } } };
       const msg = e?.response?.data?.message || '';
       if (msg === 'EMAIL_NOT_VERIFIED') {
-        setUnverifiedEmail(form.email.trim().toLowerCase());
+        setUnverifiedEmail(values.email);
         setError('email_not_verified');
       } else {
         setError(msg || 'Invalid email or password.');
       }
-      setLoading(false);
     }
   };
 
@@ -175,38 +184,54 @@ export default function Login() {
         </Alert>
       ) : null}
 
-      <form onSubmit={handleSubmit} className="synkazo-login-form">
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className="synkazo-login-form"
+        noValidate
+      >
         <FieldGroup>
-          <Field>
+          <Field data-invalid={!!errors.email}>
             <FieldLabel htmlFor="email">Email address</FieldLabel>
             <Input
               id="email"
               type="email"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
               placeholder="you@company.com"
               autoComplete="email"
+              aria-invalid={!!errors.email}
+              aria-describedby={errors.email ? 'login-email-error' : undefined}
+              {...registerField('email')}
             />
+            <FieldError id="login-email-error" errors={[errors.email]} />
           </Field>
 
-          <Field>
+          <Field data-invalid={!!errors.password}>
             <FieldLabel htmlFor="password">Password</FieldLabel>
             <PasswordInput
               id="password"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
               placeholder="••••••••"
               autoComplete="current-password"
+              aria-invalid={!!errors.password}
+              aria-describedby={
+                errors.password ? 'login-password-error' : undefined
+              }
+              {...registerField('password')}
             />
+            <FieldError id="login-password-error" errors={[errors.password]} />
           </Field>
 
           <div className="flex items-center justify-between">
             <label className="flex cursor-pointer items-center gap-2 text-sm">
-              <Checkbox
-                checked={form.remember}
-                onCheckedChange={(v) =>
-                  setForm({ ...form, remember: v === true })
-                }
+              <Controller
+                name="remember"
+                control={control}
+                render={({ field }) => (
+                  <Checkbox
+                    id="remember"
+                    checked={field.value}
+                    onCheckedChange={(value) => field.onChange(value === true)}
+                    onBlur={field.onBlur}
+                  />
+                )}
               />
               Remember me
             </label>
@@ -218,9 +243,9 @@ export default function Login() {
             </Link>
           </div>
 
-          <Button type="submit" size="lg" disabled={loading}>
-            {loading ? (
-              <Spinner />
+          <Button type="submit" size="lg" loading={isSubmitting}>
+            {isSubmitting ? (
+              'Signing in…'
             ) : (
               <>
                 Sign in <ArrowRight />

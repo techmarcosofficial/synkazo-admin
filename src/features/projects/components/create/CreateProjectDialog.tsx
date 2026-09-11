@@ -17,10 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  useCreateProjectStore,
-  useSetupWizardStore,
-} from '@/features/projects/store';
+import { useCreateProjectStore } from '@/features/projects/store';
 
 export default function CreateProjectDialog() {
   const navigate = useNavigate();
@@ -34,7 +31,6 @@ export default function CreateProjectDialog() {
   const isOpen = useCreateProjectStore((state) => state.isOpen);
   const close = useCreateProjectStore((state) => state.close);
   const setOpen = useCreateProjectStore((state) => state.setOpen);
-  const openSetupWizard = useSetupWizardStore((state) => state.open);
 
   return (
     <Dialog open={isOpen} onOpenChange={setOpen}>
@@ -56,9 +52,7 @@ export default function CreateProjectDialog() {
             onSelectionChange={setSelection}
             onSuccess={(project) => {
               close();
-
               navigate(`/projects/${project.id}`);
-              openSetupWizard(project.id);
             }}
           />
         </div>

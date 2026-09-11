@@ -10,9 +10,8 @@ import {
 import { useEntitlements } from '@/queries/useEntitlements';
 
 /**
- * Plan-aware schedule controls, shared by the create-job wizard's Schedule step, the job
- * detail Schedule tab and the setup wizard's schedule form — all three previously carried
- * an identical hardcoded copy of the mode list with no plan awareness.
+ * Plan-aware schedule controls shared by the create-job flow and job detail
+ * Schedule tab.
  *
  * Two layers:
  *  - `FrequencyPresetPicker` offers the fixed cadences the plan grants (`sync_frequency`).

@@ -1,5 +1,7 @@
+import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import {
   Link,
   useLocation,
@@ -14,10 +16,15 @@ import PasswordStrength from '@/components/auth/PasswordStrength';
 import SplitAuthLayout from '@/components/auth/SplitAuthLayout';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
-import { getPasswordError } from '@/lib/passwordValidation';
+import { registerSchema, type RegisterFormValues } from '@/lib/authValidation';
 import { consumePendingPlan, savePendingPlan } from '@/lib/pendingPlan';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { showToast } from '@/lib/toast';
@@ -61,15 +68,28 @@ export default function Register() {
   }, [currentUser, isLoading, navigate]);
 
   const [step, setStep] = useState<Step>(seededEmail ? 'otp' : 'form');
-  const [form, setForm] = useState({
-    fullName: '',
-    email: seededEmail ?? '',
-    orgName: '',
-    password: '',
-    confirmPassword: '',
-  });
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [verificationEmail, setVerificationEmail] = useState(seededEmail ?? '');
+  const {
+    register: registerField,
+    handleSubmit,
+    watch,
+    trigger,
+    formState: { errors, isSubmitting, touchedFields },
+  } = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
+    mode: 'onBlur',
+    reValidateMode: 'onChange',
+    defaultValues: {
+      fullName: '',
+      email: seededEmail ?? '',
+      orgName: '',
+      password: '',
+      confirmPassword: '',
+    },
+  });
+  const password = watch('password');
+  const confirmPassword = watch('confirmPassword');
 
   // OTP step state
   const [code, setCode] = useState('');
@@ -87,41 +107,27 @@ export default function Register() {
     }
   }, [seededEmail]);
 
+  // Once confirmation has been touched, changing the original password should
+  // update the match error immediately rather than waiting for another blur.
+  useEffect(() => {
+    if (touchedFields.confirmPassword) {
+      void trigger();
+    }
+  }, [password, confirmPassword, touchedFields.confirmPassword, trigger]);
+
   if (isLoading || currentUser) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (values: RegisterFormValues) => {
     setError('');
-    if (
-      !form.fullName ||
-      !form.email ||
-      !form.password ||
-      !form.orgName ||
-      !form.confirmPassword
-    ) {
-      setError('Please fill in all required fields.');
-      return;
-    }
-    const passwordError = getPasswordError(form.password);
-    if (passwordError) {
-      setError(passwordError);
-      return;
-    }
-    if (form.password !== form.confirmPassword) {
-      setError('Passwords do not match.');
-      return;
-    }
-    setLoading(true);
     try {
-      await register(form);
+      await register(values);
+      setVerificationEmail(values.email);
       setStep('otp');
     } catch (err) {
       const e = err as { response?: { data?: { message?: string } } };
       setError(
         e.response?.data?.message || 'Registration failed. Please try again.',
       );
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -131,7 +137,7 @@ export default function Register() {
     setOtpError('');
     try {
       // Auto-logs in and sets currentUser — the effect above handles redirect.
-      await verifyOtp(form.email, value);
+      await verifyOtp(verificationEmail, value);
       showToast.success('Email verified — welcome to synkazo!');
     } catch (err) {
       const e = err as { response?: { data?: { message?: string } } };
@@ -147,7 +153,7 @@ export default function Register() {
     setResendLoading(true);
     setOtpError('');
     try {
-      await authApi.resendVerification(form.email);
+      await authApi.resendVerification(verificationEmail);
     } catch {
       /* backend always returns success to avoid enumeration */
     } finally {
@@ -164,7 +170,9 @@ export default function Register() {
           <h1>Verify your email</h1>
           <p>
             Enter the 6-digit code we sent to{' '}
-            <span className="text-foreground font-medium">{form.email}</span>
+            <span className="text-foreground font-medium">
+              {verificationEmail}
+            </span>
           </p>
         </div>
 
@@ -262,80 +270,109 @@ export default function Register() {
         </Alert>
       )}
 
-      <form onSubmit={handleSubmit} className="mt-8">
+      <form onSubmit={handleSubmit(onSubmit)} className="mt-8" noValidate>
         <FieldGroup>
-          <Field>
+          <Field data-invalid={!!errors.fullName}>
             <FieldLabel htmlFor="fullName" required>
               Full Name
             </FieldLabel>
             <Input
               id="fullName"
-              value={form.fullName}
-              onChange={(e) => setForm({ ...form, fullName: e.target.value })}
               placeholder="Jane Smith"
               autoComplete="name"
+              aria-invalid={!!errors.fullName}
+              aria-describedby={
+                errors.fullName ? 'register-name-error' : undefined
+              }
+              {...registerField('fullName')}
             />
+            <FieldError id="register-name-error" errors={[errors.fullName]} />
           </Field>
 
-          <Field>
+          <Field data-invalid={!!errors.email}>
             <FieldLabel htmlFor="email" required>
               Email
             </FieldLabel>
             <Input
               id="email"
               type="email"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
               placeholder="you@company.com"
               autoComplete="email"
+              aria-invalid={!!errors.email}
+              aria-describedby={
+                errors.email ? 'register-email-error' : undefined
+              }
+              {...registerField('email')}
             />
+            <FieldError id="register-email-error" errors={[errors.email]} />
           </Field>
 
-          <Field>
+          <Field data-invalid={!!errors.orgName}>
             <FieldLabel htmlFor="orgName" required>
               Organization Name
             </FieldLabel>
             <Input
               id="orgName"
-              value={form.orgName}
-              onChange={(e) => setForm({ ...form, orgName: e.target.value })}
               placeholder="Acme Corp"
               autoComplete="organization"
+              aria-invalid={!!errors.orgName}
+              aria-describedby={
+                errors.orgName ? 'register-organization-error' : undefined
+              }
+              {...registerField('orgName')}
+            />
+            <FieldError
+              id="register-organization-error"
+              errors={[errors.orgName]}
             />
           </Field>
 
-          <Field>
+          <Field data-invalid={!!errors.password}>
             <FieldLabel htmlFor="password" required>
               Password
             </FieldLabel>
             <PasswordInput
               id="password"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
               placeholder="Min. 8 characters"
               autoComplete="new-password"
+              aria-invalid={!!errors.password}
+              aria-describedby={
+                errors.password ? 'register-password-error' : undefined
+              }
+              {...registerField('password')}
             />
-            <PasswordStrength password={form.password} />
+            <PasswordStrength password={password} />
+            <FieldError
+              id="register-password-error"
+              errors={[errors.password]}
+            />
           </Field>
 
-          <Field>
+          <Field data-invalid={!!errors.confirmPassword}>
             <FieldLabel htmlFor="confirmPassword" required>
               Confirm Password
             </FieldLabel>
             <PasswordInput
               id="confirmPassword"
-              value={form.confirmPassword}
-              onChange={(e) =>
-                setForm({ ...form, confirmPassword: e.target.value })
-              }
               placeholder="Repeat password"
               autoComplete="new-password"
+              aria-invalid={!!errors.confirmPassword}
+              aria-describedby={
+                errors.confirmPassword
+                  ? 'register-confirm-password-error'
+                  : undefined
+              }
+              {...registerField('confirmPassword')}
+            />
+            <FieldError
+              id="register-confirm-password-error"
+              errors={[errors.confirmPassword]}
             />
           </Field>
 
-          <Button type="submit" size="lg" disabled={loading}>
-            {loading ? (
-              <Spinner />
+          <Button type="submit" size="lg" loading={isSubmitting}>
+            {isSubmitting ? (
+              'Creating account…'
             ) : (
               <>
                 Create Account <ArrowRight />

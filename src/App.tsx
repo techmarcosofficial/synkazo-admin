@@ -14,6 +14,7 @@ import { SynkazoAuthProvider, useSynkazoAuth } from '@/lib/synkazoAuth';
 
 // Global UI
 import ConfirmDialog from '@/components/shared/ConfirmDialog';
+import GlobalLoader from '@/components/shared/GlobalLoader';
 
 // Layout
 // import AppLayout from '@/components/layout/AppLayout';
@@ -81,7 +82,7 @@ import ProjectsPage from './pages/projects/ProjectsPage';
 function RootRedirect() {
   const { currentUser, isLoading } = useSynkazoAuth();
   const { search } = useLocation();
-  if (isLoading) return null;
+  if (isLoading) return <GlobalLoader />;
   return (
     <Navigate
       to={`${currentUser ? '/dashboard' : '/login'}${search}`}

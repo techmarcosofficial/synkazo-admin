@@ -23,14 +23,14 @@ const integrations = [
   },
 ];
 
-function IntegrationCard({
+function IntegrationCardFace({
   name,
   description,
   logo,
   className,
 }: (typeof integrations)[number]) {
   return (
-    <div className={`synkazo-sync-tool ${className}`}>
+    <div className={`synkazo-sync-source-face ${className}`}>
       <span className="synkazo-sync-tool-logo">
         <img src={logo} alt="" />
       </span>
@@ -65,10 +65,20 @@ export default function AuthShowcase() {
       <div className="synkazo-showcase-content">
         <div className="synkazo-showcase-intro">
           <p className="synkazo-login-eyebrow">ALL YOUR DATA. IN SYNC.</p>
-          <h2>
-            Connect your tools.
-            <br />
-            Power your <em>business.</em>
+          <h2 className="synkazo-showcase-message">
+            <span className="sr-only">
+              Your source data flows into HubSpot.
+            </span>
+            <span className="synkazo-showcase-message-copy" aria-hidden="true">
+              Data flowing into <em>HubSpot</em>
+              <br /> from{' '}
+              <span className="synkazo-showcase-source-name">
+                {integrations.map(({ name }) => (
+                  <strong key={name}>{name}</strong>
+                ))}
+              </span>
+              <span>.</span>
+            </span>
           </h2>
           <p>
             Synkazo securely syncs your data across the tools you love,
@@ -77,7 +87,7 @@ export default function AuthShowcase() {
           </p>
         </div>
 
-        <div className="synkazo-sync-stage">
+        <div className="synkazo-sync-stage" aria-hidden="true">
           <svg
             className="synkazo-sync-lines"
             viewBox="0 0 760 300"
@@ -100,50 +110,42 @@ export default function AuthShowcase() {
               </filter>
             </defs>
             <g className="synkazo-sync-line-base">
-              <path d="M212 42 C292 42 274 150 340 150" />
-              <path d="M212 150 L340 150" />
-              <path d="M212 258 C292 258 274 150 340 150" />
-              <path d="M472 150 C514 150 524 150 550 150" />
+              <path
+                className="synkazo-sync-source-rope"
+                d="M262 42 C312 42 275 150 340 150"
+              />
+              <path d="M472 150 C537 150 500 258 550 258" />
             </g>
             <g className="synkazo-sync-line-flow" filter="url(#sync-line-glow)">
-              <path d="M212 42 C292 42 274 150 340 150" />
-              <path d="M212 150 L340 150" />
-              <path d="M212 258 C292 258 274 150 340 150" />
-              <path d="M472 150 C514 150 524 150 550 150" />
+              <path
+                className="synkazo-sync-source-rope"
+                d="M262 42 C312 42 275 150 340 150"
+              />
+              <path d="M472 150 C537 150 500 258 550 258" />
             </g>
             <g className="synkazo-sync-points">
-              <circle cx="212" cy="42" r="4" />
-              <circle cx="212" cy="150" r="4" />
-              <circle cx="212" cy="258" r="4" />
+              <circle cx="262" cy="42" r="4" />
               <circle cx="340" cy="150" r="5" />
               <circle cx="472" cy="150" r="5" />
-              <circle cx="550" cy="150" r="5" />
+              <circle cx="550" cy="258" r="5" />
             </g>
           </svg>
 
           <div className="synkazo-sync-sources">
-            {integrations.map((integration) => (
-              <IntegrationCard key={integration.name} {...integration} />
-            ))}
+            <div className="synkazo-sync-tool synkazo-sync-source-card bg-background">
+              {integrations.map((integration) => (
+                <IntegrationCardFace key={integration.name} {...integration} />
+              ))}
+            </div>
           </div>
 
-          <div className="synkazo-sync-core">
+          <div className="synkazo-sync-core bg-background">
             <SynkazoMark className="synkazo-sync-core-mark" />
             <strong>synkazo</strong>
             <span>Middleware</span>
           </div>
 
-          <div className="synkazo-sync-live">
-            <span className="synkazo-live-pulse">
-              <i />
-            </span>
-            <span>
-              <strong>Live sync</strong>
-              <small>Last synced 2 seconds ago</small>
-            </span>
-          </div>
-
-          <div className="synkazo-sync-tool synkazo-sync-destination is-hubspot">
+          <div className="synkazo-sync-tool synkazo-sync-destination is-hubspot bg-background">
             <span className="synkazo-sync-tool-logo">
               <img src="/hubspot-logo.svg" alt="" />
             </span>

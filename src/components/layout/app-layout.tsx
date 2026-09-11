@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 
-import GlobalLoader from '../shared/GlobalLoader';
+import GlobalLoader, { PageLoader } from '../shared/GlobalLoader';
 import OverLimitBanner from '../shared/OverLimitBanner';
 import PastDueBanner from '../shared/PastDueBanner';
 import WelcomeGuideModal from '../shared/WelcomeGuideModal';
@@ -13,8 +13,6 @@ import SiteHeader from './site-header';
 import SubscriptionPaywall from '@/components/billing/SubscriptionPaywall';
 import { AppSidebar } from '@/components/layout/app-sidebar';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
-import { Spinner } from '@/components/ui/spinner';
-import { SetupWizardDialog } from '@/features/projects/components/setup';
 import SourceSetupDialog from '@/features/projects/components/setup/SourceSetupDialog';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { usePlanQuery } from '@/queries/useBilling';
@@ -56,11 +54,7 @@ export default function AppLayout() {
   // we never flash the dashboard, then fail closed: only active/trialing orgs get through.
   if (!isSuperAdmin) {
     if (planQuery.isLoading) {
-      return (
-        <div className="bg-background fixed inset-0 z-[70] flex items-center justify-center">
-          <Spinner className="size-6" />
-        </div>
-      );
+      return <PageLoader className="z-[70]" label="Loading subscription" />;
     }
     if (PAYWALL_STATUSES.has(planQuery.data?.subscriptionStatus ?? 'none')) {
       return <SubscriptionPaywall />;
@@ -73,7 +67,6 @@ export default function AppLayout() {
         {showWelcome && (
           <WelcomeGuideModal onClose={() => setShowWelcome(false)} />
         )}
-        <SetupWizardDialog />
         <SourceSetupDialog />
         <AppSidebar />
         <SidebarInset className="[--app-shell-header-height:--spacing(16)]">

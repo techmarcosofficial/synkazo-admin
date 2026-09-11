@@ -21,8 +21,6 @@ export interface Project {
   syncMode?: ProjectSyncMode | null;
   status: ProjectStatus;
   active_environment?: ProjectEnvironment;
-  /** Non-null once the project has completed the guided setup wizard (one-way ratchet). */
-  setupCompletedAt?: string | null;
   schedulerMode?: SchedulerMode;
   lastSyncedAt?: string | null;
   totalRecordsSynced?: number;

@@ -434,6 +434,59 @@
   }
 }
 
+/* Every logo path draws together. Alternating dash direction makes the
+   wordmark trace from both sides before the completed logo briefly holds. */
+@keyframes synkazo-wordmark-draw {
+  0%,
+  12% {
+    stroke-dashoffset: var(--synkazo-draw-start, 1);
+    fill-opacity: 0;
+  }
+  52% {
+    stroke-dashoffset: 0;
+    fill-opacity: 0;
+  }
+  68%,
+  88% {
+    stroke-dashoffset: 0;
+    fill-opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: var(--synkazo-draw-end, -1);
+    fill-opacity: 0;
+  }
+}
+
+.synkazo-wordmark-loader {
+  overflow: visible;
+}
+
+.synkazo-wordmark-loader path {
+  stroke: currentColor;
+  stroke-width: 0.65;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  animation: synkazo-wordmark-draw 2.1s ease-in-out infinite;
+}
+
+.synkazo-wordmark-loader path:nth-child(even) {
+  --synkazo-draw-start: -1;
+  --synkazo-draw-end: 1;
+}
+
+.synkazo-wordmark-loader path:nth-child(-n + 2) {
+  stroke: #ff6b39;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .synkazo-wordmark-loader path {
+    animation: none;
+    stroke-dashoffset: 0;
+    fill-opacity: 1;
+  }
+}
+
 .animate-fade-in-up  { animation: fadeInUp 0.4s ease-out forwards; }
 /* .animate-gradient    { background-size: 400% 400%; animation: gradientShift 8s ease infinite; }
 .animate-sb-pulse    { animation: sbpulse 2s ease-in-out infinite; } */

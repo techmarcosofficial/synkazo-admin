@@ -15,7 +15,6 @@ import StickyDetailHeader from '@/components/shared/StickyDetailHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs } from '@/components/ui/tabs';
-import { SetupBanner } from '@/features/projects/components/setup';
 import {
   useProjectDetailCacheHelpers,
   useProjectDetailQuery,
@@ -24,13 +23,11 @@ import {
   useProjectEnvironmentActivation,
 } from '@/features/projects/hooks';
 import type { ProjectDetailTabId } from '@/features/projects/lib/projectDetailTabs';
-import { hasBothConnections as computeHasBothConnections } from '@/features/projects/lib/projectSetupState';
-import { useSetupWizardStore } from '@/features/projects/store';
+import { hasBothConnections as computeHasBothConnections } from '@/features/projects/lib/projectConnections';
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const projectId = id!;
-  const openSetupWizard = useSetupWizardStore((s) => s.open);
 
   const detailQuery = useProjectDetailQuery(projectId);
   const { patchProject, setConnections: setConnectionsCache } =
@@ -151,12 +148,6 @@ export default function ProjectDetailPage() {
             </Card>
           }
         >
-          <SetupBanner
-            project={project}
-            connections={connections}
-            onOpenSetup={() => openSetupWizard(project.id)}
-          />
-
           <ProjectTabContent />
         </StickyDetailHeader>
       </Tabs>

@@ -33,7 +33,7 @@ import type { ProjectSyncMode } from '@/types/project';
  * Finish the choice is persisted (source is immutable thereafter) and they're
  * dropped onto that project's Connections tab to enter the source credentials.
  *
- * Mounted once in AppLayout, alongside SetupWizardDialog.
+ * Mounted once in AppLayout.
  */
 export default function SourceSetupDialog() {
   const { hasRole } = useSynkazoAuth();

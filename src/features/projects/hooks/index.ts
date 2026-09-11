@@ -24,4 +24,3 @@ export { useProjectArchive } from './useProjectArchive';
 export { useProjectGeneralSettings } from './useProjectGeneralSettings';
 export { useProjectDetailLiveSync } from './useProjectDetailLiveSync';
 export { useProjectFilters } from './useProjectFilters';
-export { useProjectSetupState } from './useProjectSetupState';

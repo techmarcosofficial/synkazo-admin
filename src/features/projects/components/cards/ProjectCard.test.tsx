@@ -15,14 +15,13 @@ const draftProject: ProjectExtended = {
   destPlatformId: 'hubspot',
   syncMode: 'two_way',
   status: 'draft',
-  setupCompletedAt: null,
   totalRecordsSynced: 1200,
 };
 
 afterEach(cleanup);
 
 describe('ProjectCard', () => {
-  it('shows project context without linking to the setup wizard', () => {
+  it('shows project context and actions', () => {
     render(
       <MemoryRouter>
         <ProjectCard project={draftProject} jobCount={3} />
@@ -30,7 +29,6 @@ describe('ProjectCard', () => {
     );
 
     expect(screen.queryByText(/continue setup/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/finish setup/i)).not.toBeInTheDocument();
     expect(
       screen.getByRole('img', { name: /two-way sync/i }),
     ).toBeInTheDocument();

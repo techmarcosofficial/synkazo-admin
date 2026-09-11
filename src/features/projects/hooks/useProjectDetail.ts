@@ -72,9 +72,8 @@ export function projectDetailQueryKey(projectId: string) {
 // original page's single loadData() bootstrap), so they're modeled as one
 // cached unit rather than four independent queries.
 //
-// projectId may be null/undefined for consumers that are always mounted
-// (e.g. the global SetupWizardDialog) but only have a project to load once
-// a user opens it — `enabled` keeps the query dormant until then.
+// projectId may be null/undefined for conditionally active consumers;
+// `enabled` keeps the query dormant until an id is available.
 export function useProjectDetailQuery(projectId: string | null | undefined) {
   return useQuery({
     queryKey: projectDetailQueryKey(projectId ?? ''),

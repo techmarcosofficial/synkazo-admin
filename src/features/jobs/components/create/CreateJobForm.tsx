@@ -26,7 +26,7 @@ import CustomObjectModal from '@/components/fieldmapping/CustomObjectModal';
 import EmptyState from '@/components/shared/EmptyState';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { hasBothConnections } from '@/features/projects/lib/projectSetupState';
+import { hasBothConnections } from '@/features/projects/lib/projectConnections';
 import {
   KNOWN_PIPELINE_OBJECTS,
   type JobConfig,
@@ -137,7 +137,7 @@ export interface CreateJobFormState {
 interface CreateJobFormProps {
   projectId: string;
   onCreated?: (jobId: string) => void;
-  /** When true, hides the form's own stepper — a host (e.g. the Project Setup Wizard) drives navigation via the ref instead. */
+  /** When true, a parent surface drives navigation through the form ref. */
   embedded?: boolean;
   /** Uses the complete Job Details step as a standalone creation form. */
   detailsOnly?: boolean;
