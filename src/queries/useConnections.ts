@@ -17,6 +17,14 @@ export interface ObjectItem {
   isCustom?: boolean;
   /** Plan tier, annotated by the discovery endpoint. Absent on locally-added drafts. */
   tier?: ObjectTier;
+  /**
+   * HubSpot OAuth scope availability for this object, annotated by the
+   * discovery endpoint from the connection's granted scopes (api §2.7,
+   * §3.2). Absent for non-HubSpot platforms and for objects that don't
+   * gate on optional scopes. When present and false, the object is greyed
+   * out with a "Reconnect HubSpot to unlock" hint (§3.3).
+   */
+  scopeGranted?: { read: boolean; write: boolean };
 }
 
 export function useConnectionsQuery() {

@@ -178,4 +178,15 @@ export const connectionsApi = {
         params: { objectType },
       })
       .then((r) => r.data.data ?? []),
+
+  /**
+   * Kick off a HubSpot rescope flow — re-consent an existing HubSpot connection
+   * to add or remove optional scopes. Returns the HubSpot authorize URL for the
+   * browser to redirect to. Post-consent, HubSpot returns to our callback,
+   * which updates the same connection row in place (plan §2.8, §3.1).
+   */
+  startHubSpotRescope: (connectionId: string): Promise<{ redirectUrl: string }> =>
+    apiClient
+      .post('/connections/hubspot/rescope', { connectionId })
+      .then((r) => r.data.data),
 };
