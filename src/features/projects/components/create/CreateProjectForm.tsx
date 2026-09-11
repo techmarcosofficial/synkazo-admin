@@ -142,6 +142,7 @@ const CreateProjectForm = forwardRef<
       </FieldGroup>
 
       <PlatformPairField
+        compact
         sourceValue={sourcePlatformId}
         destValue={destPlatformId}
         platforms={platformOptions}

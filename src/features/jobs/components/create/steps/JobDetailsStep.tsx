@@ -104,14 +104,14 @@ export default function JobDetailsStep({
     <div className={cn(compact ? 'space-y-4' : 'space-y-6')}>
       {/* Connection */}
       <div className={cn(compact ? 'space-y-2' : 'space-y-3')}>
-        <div>
-          <h3 className="text-sm font-semibold">Objects to sync</h3>
-          {!compact && (
+        {!compact && (
+          <div>
+            <h3 className="text-sm font-semibold">Objects to sync</h3>
             <p className="text-muted-foreground mt-1 text-sm">
               Choose the source and destination records for this sync.
             </p>
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-[1fr_auto_1fr]">
           <div>
@@ -192,15 +192,15 @@ export default function JobDetailsStep({
       </div>
 
       {/* Job Details */}
-      <div className={cn('space-y-3 border-t', compact ? 'pt-4' : 'pt-6')}>
-        <div>
-          <h3 className="text-sm font-semibold">Job details</h3>
-          {!compact && (
+      <div className={cn(!compact && 'space-y-3 border-t pt-6')}>
+        {!compact && (
+          <div>
+            <h3 className="text-sm font-semibold">Job details</h3>
             <p className="text-muted-foreground mt-1 text-sm">
               Give this sync a clear name so it is easy to identify later.
             </p>
-          )}
-        </div>
+          </div>
+        )}
         <Field data-invalid={!!errors.name}>
           <FieldLabel htmlFor="job-name" required>
             Job Name
@@ -220,15 +220,15 @@ export default function JobDetailsStep({
       </div>
 
       {/* Sync Behaviour */}
-      <div className={cn('space-y-3 border-t', compact ? 'pt-4' : 'pt-6')}>
-        <div>
-          <h3 className="text-sm font-semibold">Sync settings</h3>
-          {!compact && (
+      <div className={cn(!compact && 'space-y-3 border-t pt-6')}>
+        {!compact && (
+          <div>
+            <h3 className="text-sm font-semibold">Sync settings</h3>
             <p className="text-muted-foreground mt-1 text-sm">
               Control which changes are included in this sync.
             </p>
-          )}
-        </div>
+          </div>
+        )}
 
         <SyncDirectionFields
           projectSyncMode={projectSyncMode}

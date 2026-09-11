@@ -35,7 +35,7 @@ export default function CreateProjectDialog() {
   return (
     <Dialog open={isOpen} onOpenChange={setOpen}>
       <DialogContent
-        className="flex max-h-[85vh] w-full flex-col gap-0 p-0 sm:max-w-5xl"
+        className="flex max-h-[85vh] w-full flex-col gap-0 p-0 sm:max-w-4xl"
         onEscapeKeyDown={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
       >

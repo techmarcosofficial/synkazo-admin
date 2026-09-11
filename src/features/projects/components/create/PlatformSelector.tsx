@@ -41,6 +41,9 @@ interface PlatformSelectorProps {
 
   cardClassName?: string;
 
+  /** Stack options and render shorter icon/title rows in compact forms. */
+  compact?: boolean;
+
   registerItemRef?: (
     platformId: PlatformId,
     element: HTMLDivElement | null,
@@ -57,6 +60,7 @@ export default function PlatformSelector({
   disabled = false,
   centerItems = false,
   cardClassName,
+  compact = false,
   registerItemRef,
 }: PlatformSelectorProps) {
   const groupPrefix = label.replace(/\s+/g, '-').toLowerCase();
@@ -70,7 +74,7 @@ export default function PlatformSelector({
       )}
     >
       <div className="flex items-center gap-1.5">
-        <Label className="font-semibold" required>
+        <Label className="font-semibold whitespace-nowrap" required>
           {label}
         </Label>
 
@@ -103,6 +107,7 @@ export default function PlatformSelector({
         }}
         className={cn(
           'flex w-full gap-2',
+          compact && 'flex-col items-start',
           centerItems && 'flex-1 justify-center',
         )}
         disabled={disabled}
@@ -128,6 +133,8 @@ export default function PlatformSelector({
               }}
               className={cn(
                 'border-muted-foreground/40 relative flex h-24 w-full min-w-30 cursor-pointer flex-col items-center justify-center gap-2 rounded-3xl border-2 border-dashed p-3 text-center transition-all',
+                compact &&
+                  'h-14 max-w-64 min-w-0 flex-row justify-start gap-3 rounded-2xl px-3 py-2 pr-10 text-left',
                 selected
                   ? 'border-primary bg-primary/5 ring-primary/10 border-solid ring-2'
                   : 'hover:border-primary/40 hover:bg-muted/40',
@@ -135,9 +142,15 @@ export default function PlatformSelector({
                 cardClassName,
               )}
             >
-              <PlatformIcon platformId={platform.platformId} size={32} />
+              <PlatformIcon
+                platformId={platform.platformId}
+                size={compact ? 28 : 32}
+              />
 
-              <Label htmlFor={inputId} className="cursor-pointer font-medium">
+              <Label
+                htmlFor={inputId}
+                className="min-w-0 cursor-pointer truncate font-medium"
+              >
                 {platform.label}
               </Label>
 
@@ -147,7 +160,10 @@ export default function PlatformSelector({
               <RadioGroupItem
                 value={platform.platformId}
                 id={inputId}
-                className="pointer-events-none absolute top-3 right-3"
+                className={cn(
+                  'pointer-events-none absolute right-3',
+                  compact ? 'top-1/2 -translate-y-1/2' : 'top-3',
+                )}
               />
             </div>
           );
