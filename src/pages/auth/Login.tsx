@@ -11,6 +11,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 
 import apiClient from '@/api/apiClient';
+import AuthInput from '@/components/auth/AuthInput';
 import PasswordInput from '@/components/auth/PasswordInput';
 import SplitAuthLayout from '@/components/auth/SplitAuthLayout';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -22,7 +23,6 @@ import {
   FieldGroup,
   FieldLabel,
 } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
 import { loginSchema, type LoginFormValues } from '@/lib/authValidation';
 import { consumePendingPlan, savePendingPlan } from '@/lib/pendingPlan';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
@@ -149,14 +149,37 @@ export default function Login() {
   };
 
   return (
-    <SplitAuthLayout variant="immersive">
+    <SplitAuthLayout
+      variant="immersive"
+      panelFooter={
+        <div className="synkazo-login-trust" aria-label="Security features">
+          <div>
+            <ShieldCheck />
+            <span>
+              <strong>Secure access</strong>
+              <small>Your data stays protected</small>
+            </span>
+          </div>
+          <div>
+            <LockKeyhole />
+            <span>
+              <strong>Encrypted connections</strong>
+              <small>End-to-end security</small>
+            </span>
+          </div>
+          <div>
+            <UsersRound />
+            <span>
+              <strong>Role-based access</strong>
+              <small>Control team permissions</small>
+            </span>
+          </div>
+        </div>
+      }
+    >
       <div className="synkazo-login-heading">
         <p className="synkazo-login-eyebrow">SECURE. SYNC. SCALE.</p>
         <h1>Welcome back</h1>
-        <p>
-          Access your Synkazo account and keep your
-          <br className="synkazo-wide-only" /> data perfectly in sync.
-        </p>
       </div>
 
       {error === 'email_not_verified' ? (
@@ -189,10 +212,11 @@ export default function Login() {
         className="synkazo-login-form"
         noValidate
       >
-        <FieldGroup>
+        <FieldGroup className="synkazo-login-fields">
           <Field data-invalid={!!errors.email}>
             <FieldLabel htmlFor="email">Email address</FieldLabel>
-            <Input
+            <AuthInput
+              icon={Mail}
               id="email"
               type="email"
               placeholder="you@company.com"
@@ -219,8 +243,8 @@ export default function Login() {
             <FieldError id="login-password-error" errors={[errors.password]} />
           </Field>
 
-          <div className="flex items-center justify-between">
-            <label className="flex cursor-pointer items-center gap-2 text-sm">
+          <div className="synkazo-login-options">
+            <label className="synkazo-login-remember">
               <Controller
                 name="remember"
                 control={control}
@@ -237,13 +261,18 @@ export default function Login() {
             </label>
             <Link
               to="/forgot-password"
-              className="text-primary text-sm font-medium hover:underline"
+              className="synkazo-login-forgot"
             >
               Forgot password?
             </Link>
           </div>
 
-          <Button type="submit" size="lg" loading={isSubmitting}>
+          <Button
+            type="submit"
+            size="lg"
+            loading={isSubmitting}
+            className="synkazo-login-submit"
+          >
             {isSubmitting ? (
               'Signing in…'
             ) : (
@@ -255,22 +284,9 @@ export default function Login() {
         </FieldGroup>
       </form>
 
-      <div className="synkazo-login-divider">
-        <span>or continue with</span>
-      </div>
-
-      <div className="synkazo-login-socials">
-        <Button variant="outline" size="lg" asChild>
-          <a href={`${import.meta.env.VITE_FRONTEND_URL}/install`}>
-            <img src="/hubspot-logo.svg" alt="" className="size-4" />
-            Login with HubSpot
-          </a>
-        </Button>
-      </div>
-
       {/* Registration link hidden when registration is disabled */}
       {registrationEnabled && (
-        <p className="text-muted-foreground mt-6 text-center text-sm">
+        <p className="synkazo-login-register">
           Don't have an account?{' '}
           <Link
             to="/register"
@@ -281,29 +297,6 @@ export default function Login() {
         </p>
       )}
 
-      <div className="synkazo-login-trust" aria-label="Security features">
-        <div>
-          <ShieldCheck />
-          <span>
-            <strong>Secure access</strong>
-            <small>Your data stays protected</small>
-          </span>
-        </div>
-        <div>
-          <LockKeyhole />
-          <span>
-            <strong>Encrypted connections</strong>
-            <small>End-to-end security</small>
-          </span>
-        </div>
-        <div>
-          <UsersRound />
-          <span>
-            <strong>Role-based access</strong>
-            <small>Control team permissions</small>
-          </span>
-        </div>
-      </div>
     </SplitAuthLayout>
   );
 }

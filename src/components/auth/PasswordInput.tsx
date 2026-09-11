@@ -1,4 +1,4 @@
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, LockKeyhole } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,10 @@ export default function PasswordInput(props: PasswordInputProps) {
   const [show, setShow] = useState(false);
 
   return (
-    <InputGroup>
+    <InputGroup className="synkazo-auth-input-group">
+      <InputGroupAddon align="inline-start" aria-hidden="true">
+        <LockKeyhole />
+      </InputGroupAddon>
       <InputGroupInput {...props} type={show ? 'text' : 'password'} />
       <InputGroupAddon align="inline-end">
         <Button

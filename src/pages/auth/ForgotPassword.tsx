@@ -1,10 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Mail } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link } from 'react-router-dom';
 
 import apiClient from '@/api/apiClient';
+import AuthInput from '@/components/auth/AuthInput';
 import AuthStatus from '@/components/auth/AuthStatus';
 import SplitAuthLayout from '@/components/auth/SplitAuthLayout';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,6 @@ import {
   FieldGroup,
   FieldLabel,
 } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
 import {
   forgotPasswordSchema,
   type ForgotPasswordFormValues,
@@ -84,7 +84,8 @@ export default function ForgotPassword() {
                 <FieldLabel htmlFor="email" required>
                   Email address
                 </FieldLabel>
-                <Input
+                <AuthInput
+                  icon={Mail}
                   id="email"
                   type="email"
                   placeholder="you@company.com"

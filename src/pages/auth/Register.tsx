@@ -1,5 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Building2,
+  CheckCircle2,
+  Mail,
+  UserRound,
+} from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import {
@@ -10,6 +17,7 @@ import {
 } from 'react-router-dom';
 
 import { authApi } from '@/api/auth';
+import AuthInput from '@/components/auth/AuthInput';
 import OtpInput from '@/components/auth/OtpInput';
 import PasswordInput from '@/components/auth/PasswordInput';
 import PasswordStrength from '@/components/auth/PasswordStrength';
@@ -22,7 +30,6 @@ import {
   FieldGroup,
   FieldLabel,
 } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { registerSchema, type RegisterFormValues } from '@/lib/authValidation';
 import { consumePendingPlan, savePendingPlan } from '@/lib/pendingPlan';
@@ -165,19 +172,23 @@ export default function Register() {
   if (step === 'otp') {
     return (
       <SplitAuthLayout variant="immersive">
-        <div className="synkazo-login-heading">
+        <div className="synkazo-login-heading synkazo-otp-heading">
           <p className="synkazo-login-eyebrow">ONE LAST STEP.</p>
           <h1>Verify your email</h1>
           <p>
             Enter the 6-digit code we sent to{' '}
-            <span className="text-foreground font-medium">
+            <span className="synkazo-otp-email">
               {verificationEmail}
             </span>
           </p>
         </div>
 
         {otpError && (
-          <Alert variant="destructive" className="mt-6">
+          <Alert
+            id="otp-error"
+            variant="destructive"
+            className="synkazo-otp-alert"
+          >
             <AlertDescription>{otpError}</AlertDescription>
           </Alert>
         )}
@@ -187,19 +198,34 @@ export default function Register() {
             e.preventDefault();
             handleVerify(code);
           }}
-          className="mt-8"
+          className="synkazo-otp-form"
+          aria-busy={verifying}
+          noValidate
         >
-          <FieldGroup>
-            <Field>
-              <FieldLabel>Verification code</FieldLabel>
+          <FieldGroup className="synkazo-login-fields synkazo-otp-fields">
+            <Field data-invalid={!!otpError}>
+              <FieldLabel id="verification-code-label">
+                Verification code
+              </FieldLabel>
+              <p id="verification-code-instructions" className="sr-only">
+                Enter one digit in each field. You can also paste the full
+                6-digit code.
+              </p>
               <OtpInput
                 value={code}
                 onChange={(v) => {
                   setCode(v);
-                  if (v.length === 6) handleVerify(v);
+                  if (otpError) setOtpError('');
                 }}
                 disabled={verifying}
                 autoFocus
+                labelledBy="verification-code-label"
+                describedBy={
+                  otpError
+                    ? 'verification-code-instructions otp-error'
+                    : 'verification-code-instructions'
+                }
+                invalid={!!otpError}
               />
             </Field>
 
@@ -207,9 +233,12 @@ export default function Register() {
               type="submit"
               size="lg"
               disabled={verifying || code.length !== 6}
+              className="synkazo-login-submit"
             >
               {verifying ? (
-                <Spinner />
+                <>
+                  <Spinner /> Verifying…
+                </>
               ) : (
                 <>
                   Verify &amp; Continue <ArrowRight />
@@ -219,16 +248,21 @@ export default function Register() {
           </FieldGroup>
         </form>
 
-        <div className="mt-6 space-y-3 text-center text-sm">
+        <div className="synkazo-otp-actions">
           {resendSent ? (
-            <p className="text-success flex items-center justify-center gap-2">
+            <p
+              className="synkazo-otp-resend-status"
+              role="status"
+              aria-live="polite"
+            >
               <CheckCircle2 className="size-4" /> New code sent — check your
               inbox.
             </p>
           ) : (
-            <p className="text-muted-foreground">
+            <p className="synkazo-otp-resend-prompt">
               Didn't get it?{' '}
               <Button
+                type="button"
                 variant="link"
                 size="sm"
                 onClick={handleResend}
@@ -242,6 +276,7 @@ export default function Register() {
             type="button"
             variant="ghost"
             size="sm"
+            className="synkazo-otp-change-email"
             onClick={() => {
               setStep('form');
               setCode('');
@@ -261,22 +296,26 @@ export default function Register() {
       <div className="synkazo-login-heading">
         <p className="synkazo-login-eyebrow">START. SYNC. SCALE.</p>
         <h1>Create your account</h1>
-        <p>Get started — your first project is free</p>
       </div>
 
       {error && (
-        <Alert variant="destructive" className="mt-6">
+        <Alert variant="destructive" className="synkazo-register-alert">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="mt-8" noValidate>
-        <FieldGroup>
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className="synkazo-login-form synkazo-register-form"
+        noValidate
+      >
+        <FieldGroup className="synkazo-login-fields synkazo-register-fields">
           <Field data-invalid={!!errors.fullName}>
             <FieldLabel htmlFor="fullName" required>
               Full Name
             </FieldLabel>
-            <Input
+            <AuthInput
+              icon={UserRound}
               id="fullName"
               placeholder="Jane Smith"
               autoComplete="name"
@@ -293,7 +332,8 @@ export default function Register() {
             <FieldLabel htmlFor="email" required>
               Email
             </FieldLabel>
-            <Input
+            <AuthInput
+              icon={Mail}
               id="email"
               type="email"
               placeholder="you@company.com"
@@ -311,7 +351,8 @@ export default function Register() {
             <FieldLabel htmlFor="orgName" required>
               Organization Name
             </FieldLabel>
-            <Input
+            <AuthInput
+              icon={Building2}
               id="orgName"
               placeholder="Acme Corp"
               autoComplete="organization"
@@ -370,7 +411,29 @@ export default function Register() {
             />
           </Field>
 
-          <Button type="submit" size="lg" loading={isSubmitting}>
+          <p className="synkazo-register-legal">
+            By creating an account you agree to our{' '}
+            <a
+              href={`${import.meta.env.VITE_FRONTEND_URL}/terms`}
+              className="synkazo-register-link"
+            >
+              Terms
+            </a>{' '}
+            and{' '}
+            <a
+              href={`${import.meta.env.VITE_FRONTEND_URL}/privacy`}
+              className="synkazo-register-link"
+            >
+              Privacy Policy
+            </a>
+          </p>
+
+          <Button
+            type="submit"
+            size="lg"
+            loading={isSubmitting}
+            className="synkazo-login-submit"
+          >
             {isSubmitting ? (
               'Creating account…'
             ) : (
@@ -379,31 +442,14 @@ export default function Register() {
               </>
             )}
           </Button>
-
-          <p className="text-muted-foreground text-center text-xs">
-            By creating an account you agree to our{' '}
-            <a
-              href={`${import.meta.env.VITE_FRONTEND_URL}/terms`}
-              className="text-primary hover:underline"
-            >
-              Terms
-            </a>{' '}
-            and{' '}
-            <a
-              href={`${import.meta.env.VITE_FRONTEND_URL}/privacy`}
-              className="text-primary hover:underline"
-            >
-              Privacy Policy
-            </a>
-          </p>
         </FieldGroup>
       </form>
 
-      <p className="text-muted-foreground mt-6 text-sm">
+      <p className="synkazo-register-signin">
         Already have an account?{' '}
         <Link
           to="/login"
-          className="text-primary font-semibold hover:underline"
+          className="synkazo-register-link"
         >
           Sign in
         </Link>

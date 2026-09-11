@@ -9,6 +9,7 @@ import './auth-login.css';
 interface SplitAuthLayoutProps {
   children: ReactNode;
   variant?: 'default' | 'immersive';
+  panelFooter?: ReactNode;
 }
 
 /**
@@ -18,6 +19,7 @@ interface SplitAuthLayoutProps {
 export default function SplitAuthLayout({
   children,
   variant = 'default',
+  panelFooter,
 }: SplitAuthLayoutProps) {
   if (variant === 'immersive') {
     return (
@@ -39,6 +41,11 @@ export default function SplitAuthLayout({
           <div className="synkazo-login-form-scroll">
             <div className="synkazo-login-form-content">{children}</div>
           </div>
+          {panelFooter && (
+            <footer className="synkazo-login-panel-footer">
+              {panelFooter}
+            </footer>
+          )}
         </section>
 
         <AuthShowcase />

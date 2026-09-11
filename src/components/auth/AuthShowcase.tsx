@@ -80,11 +80,6 @@ export default function AuthShowcase() {
               <span>.</span>
             </span>
           </h2>
-          <p>
-            Synkazo securely syncs your data across the tools you love,
-            <br className="synkazo-wide-only" /> so your teams always work with
-            the latest information.
-          </p>
         </div>
 
         <div className="synkazo-sync-stage" aria-hidden="true">
