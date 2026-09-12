@@ -42,6 +42,7 @@ export default function PastDueBanner() {
     return (
       <PageContextAlert
         variant="warning"
+        dismissKey="account:pending-cancellation"
         title={`Your ${data.planName} subscription is scheduled to cancel`}
         description={
           <>
@@ -69,6 +70,7 @@ export default function PastDueBanner() {
   return (
     <PageContextAlert
       variant="error"
+      dismissKey="account:payment-failed"
       title="Your last payment failed"
       description={
         <>

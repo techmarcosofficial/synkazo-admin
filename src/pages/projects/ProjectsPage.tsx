@@ -29,7 +29,6 @@ import {
 } from '@/components/ui/table';
 import {
   CreateProjectButton,
-  CreateProjectDialog,
   ProjectEmptyState,
   ProjectGrid,
 } from '@/features/projects';
@@ -161,10 +160,11 @@ export default function ProjectsPage() {
   const clearActions = useHeaderStore((state) => state.clearActions);
 
   useEffect(() => {
-    if (canCreateProject) setActions(<CreateProjectButton />);
+    if (canCreateProject && projects.length > 0)
+      setActions(<CreateProjectButton />);
     else clearActions();
     return () => clearActions();
-  }, [canCreateProject, clearActions, setActions]);
+  }, [canCreateProject, clearActions, projects.length, setActions]);
 
   const clearFilters = () => setFilters({ search: '', status: 'all' });
   const hasResults = !isLoading && !isError && filteredProjects.length > 0;
@@ -399,8 +399,6 @@ export default function ProjectsPage() {
       )}
 
       {hasResults && paginationBar}
-
-      {canCreateProject && <CreateProjectDialog />}
     </div>
   );
 }

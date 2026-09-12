@@ -6,9 +6,11 @@ import {
   type ProjectDetailContextValue,
 } from './context';
 import ProjectHeader from './ProjectHeader';
+import ProjectOnboardingJourney from './ProjectOnboardingJourney';
 import ProjectTabContent from './ProjectTabContent';
 import ProjectTabs from './ProjectTabs';
 
+import AccountContextAlert from '@/components/shared/AccountContextAlert';
 import ErrorState from '@/components/shared/ErrorState';
 import { BackLink } from '@/components/shared/PageHeader';
 import StickyDetailHeader from '@/components/shared/StickyDetailHeader';
@@ -109,6 +111,7 @@ export default function ProjectDetailPage() {
     logs,
     hasBothConnections,
     hasJobs,
+    activeTab,
     patchProject,
     setConnectionsCache,
     refetch,
@@ -148,6 +151,8 @@ export default function ProjectDetailPage() {
             </Card>
           }
         >
+          <ProjectOnboardingJourney />
+          <AccountContextAlert />
           <ProjectTabContent />
         </StickyDetailHeader>
       </Tabs>

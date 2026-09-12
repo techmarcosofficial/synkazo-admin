@@ -4,6 +4,7 @@ import {
   deriveSyncJobSummary,
   formatDurationMs,
   formatEntityLabel,
+  hasAnySyncRun,
 } from './syncJobSummary';
 
 describe('deriveSyncJobSummary', () => {
@@ -42,5 +43,17 @@ describe('sync job summary formatting', () => {
     expect(formatDurationMs(117_000)).toBe('1m 57s');
     expect(formatEntityLabel('customer_contacts')).toBe('Customer Contacts');
     expect(formatEntityLabel('2-4214989')).toBe('2-4214989');
+  });
+});
+
+describe('hasAnySyncRun', () => {
+  it('keeps performance content hidden before the first run', () => {
+    expect(hasAnySyncRun({ lastSyncedAt: null }, [])).toBe(false);
+  });
+
+  it('shows performance content after any run, including a failed run', () => {
+    expect(hasAnySyncRun({ lastSyncedAt: null }, [{ status: 'failed' }])).toBe(
+      true,
+    );
   });
 });

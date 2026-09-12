@@ -2,6 +2,7 @@ import { format, parseISO } from 'date-fns';
 import { useMemo, useState } from 'react';
 
 import type { DashboardMetricsPeriod } from '@/api/dashboard';
+import AccountContextAlert from '@/components/shared/AccountContextAlert';
 import DateRangePicker from '@/components/shared/DateRangePicker';
 import type { DateRangeValue } from '@/components/shared/DateRangePicker';
 import ErrorState from '@/components/shared/ErrorState';
@@ -25,6 +26,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import {
   computeDashboardStats,
   DashboardSkeleton,
+  DashboardOnboardingEmptyState,
   KpiStatCard,
   RecentActivityCard,
 } from '@/features/dashboard';
@@ -39,12 +41,14 @@ import {
   unwrapOrganizationLogs,
 } from '@/features/metrics/metricsData';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
+import { useOnboardingState } from '@/features/onboarding';
 import {
   useDashboardSummaryQuery,
   useDashboardSyncMetricsQuery,
   useOrgSyncLogsQuery,
 } from '@/queries/useDashboard';
 import { useJobsQuery } from '@/queries/useJobs';
+import { useConnectionsQuery } from '@/queries/useConnections';
 import { useProjectsQuery } from '@/queries/useProjects';
 
 function getGreeting() {
@@ -81,7 +85,7 @@ function formatSelectedRange(range: DateRangeValue): string | null {
 }
 
 export default function Dashboard() {
-  const { currentUser } = useSynkazoAuth();
+  const { currentUser, hasRole } = useSynkazoAuth();
   const [metricsPeriod, setMetricsPeriod] =
     useState<DashboardMetricsPeriod>('weekly');
   const [customRange, setCustomRange] = useState<DateRangeValue>({});
@@ -97,6 +101,7 @@ export default function Dashboard() {
   const summaryQuery = useDashboardSummaryQuery();
   const jobsQuery = useJobsQuery();
   const projectsQuery = useProjectsQuery();
+  const connectionsQuery = useConnectionsQuery();
   const activityQuery = useOrgSyncLogsQuery(7, {
     level: activityFilter === 'all' ? undefined : activityFilter,
   });
@@ -125,15 +130,23 @@ export default function Dashboard() {
     summaryQuery.isLoading ||
     jobsQuery.isLoading ||
     projectsQuery.isLoading ||
+    connectionsQuery.isLoading ||
     activityQuery.isLoading ||
     statsLogsQuery.isLoading;
   const isError =
     summaryQuery.isError ||
     jobsQuery.isError ||
+    connectionsQuery.isError ||
     activityQuery.isError ||
     statsLogsQuery.isError;
 
   const jobs = jobsQuery.data ?? [];
+  const connections = connectionsQuery.data ?? [];
+  const onboardingState = useOnboardingState(
+    projectsQuery.data,
+    jobs,
+    connections,
+  );
   const activityLogs = unwrapOrganizationLogs(activityQuery.data);
   const statsLogs = unwrapOrganizationLogs(statsLogsQuery.data);
   const firstName = currentUser?.fullName?.trim().split(/\s+/)[0];
@@ -164,12 +177,23 @@ export default function Dashboard() {
     }
   };
 
-  const header = <PageHeader title={greeting} />;
+  const header = (
+    <PageHeader
+      title={greeting}
+      showAccountContextAlert={false}
+      description={
+        onboardingState.stage !== 'complete'
+          ? 'Complete your setup journey to start syncing your data.'
+          : undefined
+      }
+    />
+  );
 
   const refetchAll = () => {
     summaryQuery.refetch();
     jobsQuery.refetch();
     projectsQuery.refetch();
+    connectionsQuery.refetch();
     activityQuery.refetch();
     statsLogsQuery.refetch();
     metricsQuery.refetch();
@@ -179,6 +203,7 @@ export default function Dashboard() {
     return (
       <div className="w-full space-y-6">
         {header}
+        <AccountContextAlert />
         <DashboardSkeleton />
       </div>
     );
@@ -193,6 +218,19 @@ export default function Dashboard() {
     );
   }
 
+  if (onboardingState.stage !== 'complete') {
+    return (
+      <div className="w-full space-y-6">
+        {header}
+        <DashboardOnboardingEmptyState
+          state={onboardingState}
+          canManage={hasRole('org_admin')}
+        />
+        <AccountContextAlert />
+      </div>
+    );
+  }
+
   const stats = computeDashboardStats({
     summary: summaryQuery.data,
     projects: projectsQuery.data,
@@ -203,6 +241,7 @@ export default function Dashboard() {
   return (
     <div className="w-full space-y-6">
       {header}
+      <AccountContextAlert />
 
       <section aria-label="Organization statistics">
         <div className="grid grid-cols-1 items-stretch gap-4 sm:grid-cols-3">

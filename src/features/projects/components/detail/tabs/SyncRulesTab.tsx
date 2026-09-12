@@ -35,16 +35,21 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateJobDialog } from '@/features/jobs/components/create';
+import { useJobDetailQuery, type JobDetailData } from '@/features/jobs/hooks';
+import SetupJourneyCard, {
+  type SetupJourneyStep,
+} from '@/features/onboarding/components/SetupJourneyCard';
+import { selectJobOnboardingState } from '@/features/onboarding';
 import type { JobExt } from '@/features/projects/hooks';
 import {
   deriveSyncJobSummary,
   formatDurationMs,
   formatEntityLabel,
+  hasAnySyncRun,
 } from '@/features/projects/lib/syncJobSummary';
 import { formatNum, formatSchedule } from '@/features/projects/utils';
 import { cn } from '@/lib/utils';
 import { useEntitlements } from '@/queries/useEntitlements';
-import { useRunLogsQuery } from '@/queries/useJobs';
 
 function formatLastSync(value: string | null): string {
   if (!value) return 'Never';
@@ -75,11 +80,101 @@ function metricCellClass(index: number): string {
   );
 }
 
+function CollapsibleJobSetup({
+  detail,
+  projectId,
+}: {
+  detail: JobDetailData;
+  projectId: string;
+}) {
+  const navigate = useNavigate();
+  const { job } = detail;
+  const state = selectJobOnboardingState({
+    mappings: detail.jobFieldMappings,
+    pipelineRequired: detail.pipelineRequired,
+    pipelineConfigured: detail.pipelineConfigured,
+    runLogs: detail.runLogs,
+    lastSyncedAt: job.lastSyncedAt,
+  });
+  const stepStatus = (
+    complete: boolean,
+    stage: typeof state.stage,
+  ): SetupJourneyStep['status'] =>
+    complete ? 'complete' : state.stage === stage ? 'current' : 'upcoming';
+  const steps: SetupJourneyStep[] = [
+    {
+      title: 'Mapping',
+      description: 'Match source fields to destination fields.',
+      status: stepStatus(state.mappingReady, 'field_mapping'),
+    },
+    {
+      title: 'Configure',
+      description: detail.pipelineRequired
+        ? 'Finish the required pipeline setup.'
+        : 'Required sync settings are ready.',
+      status: stepStatus(state.configurationReady, 'configure'),
+    },
+    {
+      title: 'Test & Review',
+      description: 'Run once and review the result.',
+      status: stepStatus(state.testComplete, 'test'),
+    },
+    {
+      title: 'Automate (optional)',
+      description: 'Add a schedule when you are ready.',
+      status: 'upcoming',
+      optional: true,
+    },
+  ];
+  const targetTab =
+    state.stage === 'field_mapping'
+      ? 'field-mapping'
+      : state.stage === 'configure'
+        ? 'pipeline'
+        : 'schedule';
+  const content =
+    state.stage === 'field_mapping'
+      ? {
+          title: 'Map this sync job',
+          description:
+            'Choose how records and fields should match before running the job.',
+        }
+      : state.stage === 'configure'
+        ? {
+            title: 'Finish the required configuration',
+            description:
+              'Complete the destination settings this job needs before testing.',
+          }
+        : {
+            title: 'Test and review this sync job',
+            description:
+              'The required setup is ready. Run the job once and review the result.',
+          };
+
+  return (
+    <SetupJourneyCard
+      eyebrow="Job setup"
+      title={content.title}
+      description={content.description}
+      steps={steps}
+      onContinue={() =>
+        navigate(`/projects/${projectId}/jobs/${job.id}?tab=${targetTab}`, {
+          state: {
+            jobBackTo: `/projects/${projectId}?tab=sync-rules`,
+            jobBackLabel: 'Back to Sync Jobs',
+          },
+        })
+      }
+    />
+  );
+}
+
 function SyncJobCard({ job, projectId }: { job: JobExt; projectId: string }) {
   const [open, setOpen] = useState(false);
-  const runLogsQuery = useRunLogsQuery(projectId, job.id, 1, 100, open);
-  const runs = runLogsQuery.data?.data ?? [];
+  const detailQuery = useJobDetailQuery(projectId, job.id, open);
+  const runs = detailQuery.data?.runLogs ?? [];
   const summary = deriveSyncJobSummary(job, runs);
+  const hasAnyRun = hasAnySyncRun(job, runs);
   const twoWay = job.syncDirection === 'two_way';
   const DirectionIcon = twoWay ? ArrowLeftRight : ArrowRight;
   const schedule = twoWay ? 'Automatic sync' : formatSchedule(job);
@@ -182,13 +277,7 @@ function SyncJobCard({ job, projectId }: { job: JobExt; projectId: string }) {
 
         <CollapsibleContent>
           <div className="bg-muted space-y-3 border-t px-3 py-4 sm:px-4">
-            {runLogsQuery.isError && (
-              <p className="text-muted-foreground px-4 text-sm" role="status">
-                Recent performance data is temporarily unavailable.
-              </p>
-            )}
-
-            {runLogsQuery.isLoading ? (
+            {detailQuery.isLoading ? (
               <div className="grid grid-cols-2 md:grid-cols-4">
                 {Array.from({ length: 4 }).map((_, index) => (
                   <div key={index} className={metricCellClass(index)}>
@@ -200,6 +289,15 @@ function SyncJobCard({ job, projectId }: { job: JobExt; projectId: string }) {
                   </div>
                 ))}
               </div>
+            ) : detailQuery.isError || !detailQuery.data ? (
+              <p className="text-muted-foreground px-4 text-sm" role="status">
+                Job setup details are temporarily unavailable.
+              </p>
+            ) : !hasAnyRun ? (
+              <CollapsibleJobSetup
+                detail={detailQuery.data}
+                projectId={projectId}
+              />
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-4">
                 {metrics.map((metric, index) => (

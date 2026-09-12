@@ -4,9 +4,11 @@ import type { JobDetailContextValue } from './context';
 import { JobDetailProvider } from './context';
 import JobHeader from './JobHeader';
 import JobHeaderAlert from './JobHeaderAlert';
+import JobOnboardingJourney from './JobOnboardingJourney';
 import JobTabContent from './JobTabContent';
 import JobTabs from './JobTabs';
 
+import AccountContextAlert from '@/components/shared/AccountContextAlert';
 import ErrorState from '@/components/shared/ErrorState';
 import { BackLink } from '@/components/shared/PageHeader';
 import StickyDetailHeader from '@/components/shared/StickyDetailHeader';
@@ -124,6 +126,7 @@ export default function JobDetailPage() {
     hasConnection,
     pipelineRequired,
     pipelineConfigured,
+    activeTab,
     patchJob,
     refetch,
     handleTabChange,
@@ -149,7 +152,8 @@ export default function JobDetailPage() {
             </Card>
           }
         >
-          <JobHeaderAlert />
+          <JobOnboardingJourney key={jobId} />
+          <AccountContextAlert fallback={<JobHeaderAlert />} />
           <JobTabContent visibleTabIds={tabs.map((t) => t.id)} />
         </StickyDetailHeader>
       </Tabs>

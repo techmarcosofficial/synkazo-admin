@@ -1,4 +1,4 @@
-import { ArrowRight, Check, CheckCircle2, Wand2, X } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Wand2, X } from 'lucide-react';
 import { useState } from 'react';
 
 import type { FieldDef } from './FieldMappingCanvas';
@@ -285,11 +285,23 @@ export default function AutoMapReviewDialog({
                             )}
 
                             {state.status === 'accepted' ? (
-                              <div className="flex shrink-0 items-center gap-1.5">
-                                <span className="text-success flex items-center gap-1.5 text-xs font-semibold">
-                                  <Check className="size-3.5" />
-                                  Accepted
-                                </span>
+                              <div className="flex shrink-0 gap-1.5">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() =>
+                                    setReviewState((prev) => ({
+                                      ...prev,
+                                      [r.source.key]: {
+                                        status: 'pending',
+                                        destKey: r.dest.key,
+                                      },
+                                    }))
+                                  }
+                                  className="w-16"
+                                >
+                                  Undo
+                                </Button>
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -310,6 +322,7 @@ export default function AutoMapReviewDialog({
                               <div className="flex shrink-0 gap-1.5">
                                 <Button
                                   size="sm"
+                                  className="w-16"
                                   onClick={() =>
                                     setReviewState((prev) => ({
                                       ...prev,
@@ -342,6 +355,7 @@ export default function AutoMapReviewDialog({
                               <div className="flex shrink-0 gap-1.5">
                                 <Button
                                   size="sm"
+                                  className="w-16"
                                   onClick={() =>
                                     setReviewState((prev) => ({
                                       ...prev,

@@ -18,6 +18,7 @@ export interface ProjectDetailContextValue {
   logs: ProjectActivityLog[];
   hasBothConnections: boolean;
   hasJobs: boolean;
+  activeTab: ProjectDetailTabId;
   patchProject: (patch: Partial<ProjectExt>) => void;
   setConnectionsCache: (conns: ConnectionExt[]) => void;
   refetch: () => void;

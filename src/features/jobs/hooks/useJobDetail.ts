@@ -200,7 +200,11 @@ export function jobDetailQueryKey(projectId: string, jobId: string) {
 // run logs, field mappings, connection presence, and pipeline requirement
 // are all fetched together (matching the original page's loadData()) so
 // they refresh as one unit.
-export function useJobDetailQuery(projectId: string, jobId: string) {
+export function useJobDetailQuery(
+  projectId: string,
+  jobId: string,
+  enabled = true,
+) {
   return useQuery({
     queryKey: jobDetailQueryKey(projectId, jobId),
     queryFn: async (): Promise<JobDetailData> => {
@@ -237,7 +241,7 @@ export function useJobDetailQuery(projectId: string, jobId: string) {
         pipelineConfigured: !pipeReq || psAny?.['configured'] === true,
       };
     },
-    enabled: !!projectId && !!jobId,
+    enabled: enabled && !!projectId && !!jobId,
   });
 }
 

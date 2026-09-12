@@ -15,6 +15,13 @@ export interface SyncJobSummary {
   successRate: number | null;
 }
 
+export function hasAnySyncRun(
+  job: Pick<Job, 'lastSyncedAt'>,
+  runs: readonly unknown[],
+): boolean {
+  return Boolean(job.lastSyncedAt || runs.length > 0);
+}
+
 export function deriveSyncJobSummary(
   job: Pick<Job, 'lastSyncedAt'>,
   runs: Array<
