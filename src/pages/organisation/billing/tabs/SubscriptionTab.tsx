@@ -2,18 +2,8 @@ import { Loader2 } from 'lucide-react';
 
 import SubscriptionHistory from './SubscriptionHistory';
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import {
   Card,
   CardContent,
@@ -47,6 +37,7 @@ export default function SubscriptionTab() {
   const cancelScheduledChange = useCancelScheduledChangeMutation();
   const cancel = useCancelSubscriptionMutation();
   const reactivate = useReactivateMutation();
+  const { confirm } = useConfirmDialog();
 
   if (isLoading) return <Skeleton className="h-40 w-full" />;
   if (!sub) {
@@ -122,27 +113,22 @@ export default function SubscriptionTab() {
               </Button>
             </div>
           ) : (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive">Cancel subscription</Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Cancel subscription?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    You’ll keep full access until the end of your current
-                    billing period, then your account moves to the free tier.
-                    You can reactivate any time before then.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Keep subscription</AlertDialogCancel>
-                  <AlertDialogAction onClick={doCancel}>
-                    Cancel subscription
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <Button
+              variant="destructive"
+              onClick={() =>
+                confirm({
+                  variant: 'danger',
+                  title: 'Cancel subscription?',
+                  description:
+                    'You’ll keep full access until the end of your current billing period, then your account moves to the free tier. You can reactivate any time before then.',
+                  confirmLabel: 'Cancel subscription',
+                  cancelLabel: 'Keep subscription',
+                  onConfirm: doCancel,
+                })
+              }
+            >
+              Cancel subscription
+            </Button>
           )}
         </CardContent>
       </Card>

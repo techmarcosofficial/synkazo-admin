@@ -9,7 +9,6 @@ import {
 
 import { Toaster } from '@/components/ui/sonner';
 import { queryClientInstance } from '@/lib/query-client';
-import { SETTINGS_SECTION } from '@/lib/sectionTabs';
 import { SynkazoAuthProvider, useSynkazoAuth } from '@/lib/synkazoAuth';
 
 // Global UI
@@ -55,7 +54,7 @@ import ProjectDetail from '@/pages/projects/ProjectDetail';
 import SchedulerHealth from '@/pages/SchedulerHealth';
 import PreferencesTab from '@/pages/settings/tabs/PreferencesTab';
 import ProfileTab from '@/pages/settings/tabs/ProfileTab';
-import SecurityTab from '@/pages/settings/tabs/SecurityTab';
+import SettingsLayout from '@/pages/settings/SettingsLayout';
 import OrganisationsPage from '@/pages/superadmin/OrganisationsPage';
 import MarketingPage from '@/pages/superadmin/MarketingPage';
 import PlatformAuditPage from '@/pages/superadmin/PlatformAuditPage';
@@ -69,7 +68,6 @@ import ActiveSyncs from '@/pages/sync/ActiveSyncs';
 import LogsPage from '@/pages/sync/LogsPage';
 import WelcomeOnboarding from '@/pages/WelcomeOnboarding';
 import RoleGuard from '@/components/auth/RoleGuard';
-import SectionTabsLayout from '@/components/layout/SectionTabsLayout';
 import LegacyRedirect from '@/components/routing/LegacyRedirect';
 
 import PageNotFound from './lib/PageNotFound';
@@ -124,22 +122,22 @@ function App() {
 
               {/* Settings — personal. Every authenticated role; no guard, because
                   every tab here is about the signed-in user's own account. */}
-              <Route
-                path="/settings"
-                element={<SectionTabsLayout section={SETTINGS_SECTION} />}
-              >
+              <Route path="/settings" element={<SettingsLayout />}>
                 <Route
                   index
-                  element={<LegacyRedirect fallback="/settings/preferences" />}
+                  element={<LegacyRedirect fallback="/settings/profile" />}
                 />
-                <Route path="preferences" element={<PreferencesTab />} />
                 <Route path="profile" element={<ProfileTab />} />
-                <Route path="security" element={<SecurityTab />} />
+                <Route path="preferences" element={<PreferencesTab />} />
+                <Route
+                  path="security"
+                  element={<Navigate to="/settings/profile" replace />}
+                />
                 {/* Billing moved out of personal settings entirely. */}
                 <Route path="billing" element={<LegacyRedirect />} />
                 <Route
                   path="*"
-                  element={<Navigate to="/settings/preferences" replace />}
+                  element={<Navigate to="/settings/profile" replace />}
                 />
               </Route>
 

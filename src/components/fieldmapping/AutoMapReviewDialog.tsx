@@ -279,9 +279,23 @@ export default function AutoMapReviewDialog({
                                 </Button>
                               </>
                             ) : (
-                              <span className="min-w-0 flex-1 truncate text-sm font-semibold">
-                                {destLabel}
-                              </span>
+                              <div className="flex min-w-0 flex-1 items-center gap-2">
+                                <span className="truncate text-sm font-semibold">
+                                  {destLabel}
+                                </span>
+                                {state.status === 'accepted' && (
+                                  <span
+                                    role="status"
+                                    className="text-success inline-flex shrink-0 items-center gap-1 text-xs font-medium"
+                                  >
+                                    <CheckCircle2
+                                      aria-hidden="true"
+                                      className="size-3.5"
+                                    />
+                                    Accepted
+                                  </span>
+                                )}
+                              </div>
                             )}
 
                             {state.status === 'accepted' ? (

@@ -1,4 +1,4 @@
-import { Lock, ShieldAlert } from 'lucide-react';
+import { Lock, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -29,9 +29,7 @@ const errorMessage = (err: unknown, fallback: string) =>
     ?.message ?? fallback;
 
 /**
- * Access and account lifecycle for the signed-in user. Split out of Profile so
- * that page stays purely informational, and so this one has somewhere obvious to
- * grow: two-factor auth, active sessions, recent sign-ins, connected providers.
+ * Password and account-lifecycle sections composed into Profile & Account.
  */
 export default function SecurityTab() {
   const { logout } = useSynkazoAuth();
@@ -185,18 +183,22 @@ export default function SecurityTab() {
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <Card>
+    <>
+      <Card className="h-full">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Lock className="text-muted-foreground size-4" /> Change Password
+            <Lock className="text-muted-foreground size-4" /> Password &
+            Security
           </CardTitle>
           <CardDescription>
-            Use a password you do not reuse anywhere else.
+            Protect your account with a strong, unique password.
           </CardDescription>
+          <div className="bg-success/10 text-success mt-2 flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium">
+            <ShieldCheck className="size-3.5" /> Account protected
+          </div>
         </CardHeader>
         <CardContent>
-          <FieldGroup className="max-w-lg">
+          <FieldGroup>
             <Field>
               <FieldLabel htmlFor="current-pw" required>
                 Current Password
@@ -251,24 +253,33 @@ export default function SecurityTab() {
         </CardContent>
       </Card>
 
-      <Card className="border-destructive/50">
+      <Card className="border-destructive/30 lg:col-span-2">
         <CardHeader>
           <CardTitle className="text-destructive flex items-center gap-2">
             <ShieldAlert className="size-4" /> Danger Zone
           </CardTitle>
+          <CardDescription>
+            Destructive account actions cannot be undone.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-sm font-medium">Delete Account</p>
-            <p className="text-muted-foreground text-xs">
-              Permanently delete your account and sign out.
-            </p>
+        <CardContent>
+          <div className="border-destructive/20 bg-destructive/5 flex flex-col gap-3 rounded-3xl border p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium">Delete Account</p>
+              <p className="text-muted-foreground text-xs">
+                Permanently delete your account and all associated access.
+              </p>
+            </div>
+            <Button
+              className="w-fit shrink-0"
+              variant="destructive"
+              onClick={handleDeleteAccount}
+            >
+              Delete Account
+            </Button>
           </div>
-          <Button variant="destructive" onClick={handleDeleteAccount}>
-            Delete Account
-          </Button>
         </CardContent>
       </Card>
-    </div>
+    </>
   );
 }

@@ -36,9 +36,9 @@ describe('section tab visibility', () => {
     expect(ids('super_admin')).toEqual(all);
   });
 
-  it('shows all settings tabs to every role — settings is personal', () => {
+  it('shows both settings tabs to every role — settings is personal', () => {
     for (const role of ROLE_HIERARCHY) {
-      expect(visibleTabs(SETTINGS_SECTION.tabs, as(role))).toHaveLength(3);
+      expect(visibleTabs(SETTINGS_SECTION.tabs, as(role))).toHaveLength(2);
     }
   });
 });
@@ -69,9 +69,7 @@ describe('default landing tab', () => {
     expect(defaultTabPath(ORGANIZATION_SECTION, editor)).toBe(
       '/organization/general',
     );
-    expect(defaultTabPath(SETTINGS_SECTION, editor)).toBe(
-      '/settings/preferences',
-    );
+    expect(defaultTabPath(SETTINGS_SECTION, editor)).toBe('/settings/profile');
   });
 
   it('falls back to the dashboard when no tab is permitted', () => {

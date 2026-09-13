@@ -12,15 +12,15 @@ describe('legacy settings URLs', () => {
     expect(resolve('/profile')).toBe('/settings/profile');
     expect(resolve('/settings?section=profile')).toBe('/settings/profile');
     expect(resolve('/settings?section=settings')).toBe('/settings/preferences');
-    expect(resolve('/settings?section=security')).toBe('/settings/security');
+    expect(resolve('/settings?section=security')).toBe('/settings/profile');
   });
 
   it('returns null for bare /settings so the caller applies its own fallback', () => {
     expect(resolve('/settings')).toBeNull();
   });
 
-  it('falls back to preferences for an unknown section', () => {
-    expect(resolve('/settings?section=nonsense')).toBe('/settings/preferences');
+  it('falls back to Profile & Account for an unknown section', () => {
+    expect(resolve('/settings?section=nonsense')).toBe('/settings/profile');
   });
 });
 

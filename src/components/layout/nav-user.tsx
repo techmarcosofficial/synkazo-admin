@@ -1,8 +1,9 @@
 'use client';
 
-import { ChevronsUpDown, LogOut, SlidersHorizontal, User } from 'lucide-react';
+import { ChevronsUpDown, LogOut, Moon, Settings2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
+import { useTheme } from '@/components/theme-provider';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -19,6 +20,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
+import { Switch } from '@/components/ui/switch';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { roleLabel } from '@/lib/permissions';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
@@ -30,11 +32,18 @@ export function NavUser({ variant = 'sidebar' }: UserMenuProps) {
   const navigate = useNavigate();
   const { isMobile } = useSidebar();
   const { confirm } = useConfirmDialog();
+  const { theme, setTheme } = useTheme();
   const isAvatarOnly = variant === 'avatar';
   const side = isAvatarOnly ? 'bottom' : isMobile ? 'bottom' : 'right';
 
   const align = isAvatarOnly ? 'end' : isMobile ? 'end' : 'start';
   if (!currentUser) return null;
+
+  const isDark =
+    theme === 'dark' ||
+    (theme === 'system' &&
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-color-scheme: dark)').matches);
 
   const displayName = currentUser.fullName || currentUser.email;
   const initials = displayName
@@ -116,19 +125,32 @@ export function NavUser({ variant = 'sidebar' }: UserMenuProps) {
 
             <DropdownMenuGroup>
               <DropdownMenuItem asChild>
-                <Link to="/settings/profile">
-                  <User />
-                  Profile
-                </Link>
-              </DropdownMenuItem>
-
-              <DropdownMenuItem asChild>
-                <Link to="/settings/preferences">
-                  <SlidersHorizontal />
-                  Preferences
+                <Link to="/settings">
+                  <Settings2 />
+                  Settings
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
+
+            <DropdownMenuSeparator />
+
+            <div className="flex items-center gap-2.5 px-3 py-2">
+              <Moon className="text-muted-foreground size-4 shrink-0" />
+              <label
+                htmlFor="user-menu-dark-mode"
+                className="flex-1 cursor-pointer text-sm font-medium"
+              >
+                Dark mode
+              </label>
+              <Switch
+                id="user-menu-dark-mode"
+                size="sm"
+                checked={isDark}
+                onCheckedChange={(checked) =>
+                  setTheme(checked ? 'dark' : 'light')
+                }
+              />
+            </div>
 
             <DropdownMenuSeparator />
 

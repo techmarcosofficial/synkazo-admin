@@ -41,7 +41,7 @@ export default function SetupJourneyCard({
       <CardContent className="px-4 py-4 sm:px-5">
         <div className="grid items-center gap-4 lg:grid-cols-[minmax(12rem,0.85fr)_minmax(0,1.65fr)_auto] lg:gap-5">
           <div className="min-w-0">
-            <div className="text-foreground text-[10px] font-medium tracking-wide uppercase">
+            <div className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
               {eyebrow}
             </div>
             <h2 className="mt-1 text-base font-semibold tracking-tight">
@@ -114,7 +114,14 @@ export default function SetupJourneyCard({
                       </span>
                     </span>
                     <span className="min-w-0">
-                      <span className="text-foreground text-xs font-semibold">
+                      <span
+                        className={cn(
+                          'text-xs',
+                          isComplete || isCurrent
+                            ? 'text-foreground font-semibold'
+                            : 'text-muted-foreground font-medium',
+                        )}
+                      >
                         {step.title}
                       </span>
                       <span className="text-muted-foreground mt-0.5 block text-[11px] leading-4">

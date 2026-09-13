@@ -216,7 +216,7 @@
   --shadow-sm: 0 1px 2px rgba(20, 21, 40, 0.05);
   --shadow-md: 0 4px 14px rgba(20, 21, 40, 0.07);
   --shadow-lg: 0 14px 40px rgba(20, 21, 40, 0.12);
-  --layout-surface-shadow: var(--shadow-md);
+  --layout-surface-shadow: var(--shadow-sm);
 }
 
 .dark {
@@ -323,7 +323,7 @@
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.35);
   --shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.5);
-  --layout-surface-shadow: var(--shadow-md);
+  --layout-surface-shadow: var(--shadow-sm);
 }
 
 @layer base {
@@ -479,8 +479,32 @@
   stroke: #ff6b39;
 }
 
+/* Compact brand-icon loader. The two halves trace at the same time from
+   opposite sides; unlike ordinary progress glyphs, the brand mark never spins. */
+.synkazo-action-loader {
+  overflow: visible;
+}
+
+.synkazo-action-loader path {
+  stroke: currentColor;
+  stroke-width: 1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  transform: scale(1.08);
+  transform-box: view-box;
+  transform-origin: center;
+  animation: synkazo-wordmark-draw 2.1s ease-in-out infinite;
+}
+
+.synkazo-action-loader path:nth-child(2) {
+  --synkazo-draw-start: -1;
+  --synkazo-draw-end: 1;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .synkazo-wordmark-loader path {
+  .synkazo-wordmark-loader path,
+  .synkazo-action-loader path {
     animation: none;
     stroke-dashoffset: 0;
     fill-opacity: 1;

@@ -119,7 +119,7 @@ export default function PageContextAlert({
 
       {/* Content */}
       <div className="min-w-0">
-        <AlertTitle className="text-xs leading-4 font-medium">
+        <AlertTitle className="text-xs leading-4 font-semibold">
           {title}
         </AlertTitle>
 

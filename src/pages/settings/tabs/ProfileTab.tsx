@@ -1,16 +1,20 @@
 import { Building2, Lock, Mail, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
+import SecurityTab from './SecurityTab';
+
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { roleLabel } from '@/lib/permissions';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { showToast } from '@/lib/toast';
-import { useMyOrgQuery } from '@/queries/useOrganisations';
 import { useUpdateMeMutation } from '@/queries/useUsers';
 
 const errorMessage = (err: unknown, fallback: string) =>
@@ -18,14 +22,12 @@ const errorMessage = (err: unknown, fallback: string) =>
     ?.message ?? fallback;
 
 /**
- * Who the signed-in user is. Strictly personal — the organisation name appears
- * only as read-only context so the user can tell which tenant they are in, and
- * plan, billing, team and invitations all live under /organization instead.
+ * Personal details and account security live together. Identity, role,
+ * organisation, and status are deliberately shown only in SettingsHeader.
  */
 export default function ProfileTab() {
   const { currentUser, refreshUser } = useSynkazoAuth();
   const updateMeMutation = useUpdateMeMutation();
-  const { data: org } = useMyOrgQuery();
 
   const [profile, setProfile] = useState({
     fullName: '',
@@ -44,15 +46,6 @@ export default function ProfileTab() {
       department: currentUser.department || '',
     });
   }, [currentUser]);
-
-  const avatarInitials = profile.fullName
-    ? profile.fullName
-        .split(' ')
-        .map((n) => n[0])
-        .join('')
-        .slice(0, 2)
-        .toUpperCase()
-    : profile.email?.charAt(0)?.toUpperCase() || '?';
 
   const handleSave = async () => {
     try {
@@ -97,44 +90,18 @@ export default function ProfileTab() {
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <Card>
-        <CardContent className="space-y-1">
-          <Avatar className="size-14">
-            <AvatarFallback className="bg-primary text-primary-foreground text-2xl font-semibold">
-              {avatarInitials}
-            </AvatarFallback>
-          </Avatar>
-          <p className="truncate text-base font-semibold">
-            {profile.fullName || profile.email}
-          </p>
-          <p className="text-muted-foreground truncate text-sm">
-            {profile.email}
-          </p>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            {currentUser?.role && (
-              <Badge className="bg-primary/10 text-primary">
-                {roleLabel(currentUser.role)}
-              </Badge>
-            )}
-            {org?.name && (
-              <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
-                <Building2 className="size-3" />
-                {org.name}
-              </span>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
+    <div className="grid w-full gap-4 lg:grid-cols-2">
+      <Card className="h-full">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <User className="text-muted-foreground size-4" /> Personal Details
           </CardTitle>
+          <CardDescription>
+            Keep your personal information accurate and up to date.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <FieldGroup className="max-w-lg">
+          <FieldGroup>
             <Field>
               <FieldLabel htmlFor="fullName">Full Name</FieldLabel>
               <Input
@@ -236,6 +203,8 @@ export default function ProfileTab() {
           </FieldGroup>
         </CardContent>
       </Card>
+
+      <SecurityTab />
     </div>
   );
 }

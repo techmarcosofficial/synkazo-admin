@@ -56,9 +56,8 @@ export const SETTINGS_SECTION: SectionDef = {
   title: 'Settings',
   description: 'Manage your personal account and application preferences.',
   tabs: [
+    { id: 'profile', label: 'Profile & Account' },
     { id: 'preferences', label: 'Preferences' },
-    { id: 'profile', label: 'Profile' },
-    { id: 'security', label: 'Security' },
   ],
 };
 

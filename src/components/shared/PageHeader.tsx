@@ -67,7 +67,7 @@ export default function PageHeader({
             </div>
 
             {description && (
-              <p className="text-muted-foreground mt-2 text-sm">
+              <p className="text-muted-foreground mt-1.5 max-w-3xl text-sm leading-5">
                 {description}
               </p>
             )}

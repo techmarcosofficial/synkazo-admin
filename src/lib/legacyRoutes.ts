@@ -29,7 +29,7 @@ const SECTION_TO_PATH: Record<string, string> = {
   settings: '/settings/preferences',
   preferences: '/settings/preferences',
   profile: '/settings/profile',
-  security: '/settings/security',
+  security: '/settings/profile',
 };
 
 /**
@@ -75,7 +75,7 @@ export function resolveLegacyLocation(
     case '/settings':
       if (section === 'billing') return billing();
       if (section)
-        return `${SECTION_TO_PATH[section] ?? '/settings/preferences'}${qs}`;
+        return `${SECTION_TO_PATH[section] ?? '/settings/profile'}${qs}`;
       return null;
     default:
       return null;

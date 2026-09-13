@@ -4,12 +4,28 @@ import { describe, expect, it } from 'vitest';
 import { ActionLoader, PageLoader } from './brand-loader';
 
 describe('brand loaders', () => {
-  it('renders the icon-only action loader with the two source mark paths', () => {
+  it('draws the icon-only loader from opposite sides without spinning', () => {
     const { container } = render(<ActionLoader />);
 
-    expect(screen.getByRole('status', { name: 'Loading' })).toHaveClass(
-      'animate-spin',
+    const loader = screen.getByRole('status', { name: 'Loading' });
+    expect(loader).toHaveClass('synkazo-action-loader', 'size-4');
+    expect(loader).not.toHaveClass('animate-spin');
+
+    const paths = container.querySelectorAll('path');
+    expect(paths).toHaveLength(2);
+    paths.forEach((path) => expect(path).toHaveAttribute('pathLength', '1'));
+  });
+
+  it('renders the same icon animation at 56px for page loading', () => {
+    const { container } = render(
+      <ActionLoader variant="page" aria-label="Loading registration" />,
     );
+
+    const loader = screen.getByRole('status', {
+      name: 'Loading registration',
+    });
+    expect(loader).toHaveClass('synkazo-action-loader', 'size-14');
+    expect(loader).not.toHaveClass('size-4', 'animate-spin');
     expect(container.querySelectorAll('path')).toHaveLength(2);
   });
 
