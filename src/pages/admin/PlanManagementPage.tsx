@@ -685,13 +685,16 @@ function CopyPriceIdButton({ priceId }: { priceId: string }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <button
+        <Button
           type="button"
           onClick={copy}
-          className="text-muted-foreground hover:text-foreground shrink-0 rounded-full p-1"
+          variant="ghost"
+          size="icon-xs"
+          className="text-muted-foreground hover:text-foreground rounded-full"
+          aria-label="Copy price ID"
         >
           <Copy className="size-3" />
-        </button>
+        </Button>
       </TooltipTrigger>
       <TooltipContent side="top" className="font-mono text-xs">
         {priceId} · click to copy
@@ -1487,14 +1490,17 @@ function PlanFormDialog(
                       )}
                       /{staged.interval}
                       {staged.discount.trim() && ` · ${staged.discount}% off`}
-                      <button
+                      <Button
                         type="button"
                         onClick={() => removeStagedPrice(i)}
-                        className="hover:text-destructive ml-1 rounded-full"
+                        variant="ghost"
+                        size="icon-xs"
+                        className="hover:text-destructive ml-1 size-5 rounded-full"
                         title="Remove"
+                        aria-label={`Remove ${staged.interval} staged price`}
                       >
                         <X className="size-3" />
-                      </button>
+                      </Button>
                     </Badge>
                   ))}
                 </div>

@@ -1,10 +1,10 @@
 import { differenceInSeconds } from 'date-fns';
-import { ArrowRight, Pause, Play, RotateCcw } from 'lucide-react';
+import { Activity, ArrowRight, Pause, Play, RotateCcw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Spinner } from '@/components/ui/spinner';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -87,36 +87,88 @@ export default function QueueStatusPanel({
   const checkpointJob = currentExecution?.job;
 
   return (
-    <Card>
-      <CardHeader className="flex-row items-center justify-between">
-        <CardTitle className="text-sm">Queue Status</CardTitle>
-        <Badge className={badgeClassName}>{displayStatus}</Badge>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <Card size="sm">
+      <CardContent className="space-y-3">
+        <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-lg">
+              <Activity className="size-4" aria-hidden="true" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold">Queue Status</p>
+              <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                <Badge className={badgeClassName}>{displayStatus}</Badge>
+                {!currentExecution && (
+                  <span className="text-muted-foreground text-xs">
+                    No job is currently running.
+                  </span>
+                )}
+                {currentExecution && (
+                  <span className="flex min-w-0 items-center gap-1.5 text-xs font-medium">
+                    <span className="truncate">
+                      {currentExecution.job?.sourceObject}
+                    </span>
+                    <ArrowRight
+                      className="size-3 shrink-0"
+                      aria-hidden="true"
+                    />
+                    <span className="truncate">
+                      {currentExecution.job?.destObject}
+                    </span>
+                    {activeCycle && (
+                      <span className="text-muted-foreground shrink-0">
+                        · Iteration {activeCycle.currentIteration}
+                      </span>
+                    )}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {queue.status === 'paused' ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onResume}
+                disabled={pausing}
+              >
+                {pausing ? <Spinner /> : <Play />}
+                Resume Queue
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onPause}
+                disabled={pausing}
+              >
+                {pausing ? <Spinner /> : <Pause />}
+                Pause Queue
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={handleClearAndRestartClick}
+              disabled={clearingAndRestarting}
+            >
+              {clearingAndRestarting ? <Spinner /> : <RotateCcw />}
+              Clear &amp; Restart Scheduler
+            </Button>
+          </div>
+        </div>
+
         {queue.status === 'paused' && queue.pauseReason === 'PLAN_LIMIT' && (
-          <p className="text-warning text-xs">
+          <p className="text-warning border-t pt-3 text-xs">
             Paused — plan limit reached. Upgrade your plan to resume.
           </p>
         )}
 
-        {currentExecution ? (
-          <>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-muted-foreground text-xs">Current Job</p>
-                <p className="flex items-center gap-1.5 text-sm font-medium">
-                  {currentExecution.job?.sourceObject}
-                  <ArrowRight size={13} />
-                  {currentExecution.job?.destObject}
-                </p>
-              </div>
-              {activeCycle && (
-                <p className="text-muted-foreground text-xs">
-                  Iteration {activeCycle.currentIteration}
-                </p>
-              )}
-            </div>
-
+        {currentExecution && (
+          <div className="grid gap-3 border-t pt-3 md:grid-cols-[minmax(0,2fr)_minmax(12rem,1fr)] md:items-center">
             <div className="space-y-1.5">
               <div className="text-muted-foreground flex justify-between text-xs">
                 <span>Execution</span>
@@ -128,7 +180,7 @@ export default function QueueStatusPanel({
               <Progress value={progressPct} />
             </div>
 
-            <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="grid grid-cols-2 gap-3 text-sm md:border-l md:pl-4">
               <div>
                 <p className="text-muted-foreground text-xs">
                   Records Processed
@@ -146,96 +198,62 @@ export default function QueueStatusPanel({
                 </div>
               )}
             </div>
-          </>
-        ) : (
-          <p className="text-muted-foreground text-sm">
-            No job is currently running.
-          </p>
-        )}
-
-        {nextQueueJob && (
-          <div className="border-t pt-3">
-            <p className="text-muted-foreground text-xs">Next Job</p>
-            <p className="flex items-center gap-1.5 text-sm">
-              {nextQueueJob.job?.sourceObject}
-              <ArrowRight size={13} />
-              {nextQueueJob.job?.destObject}
-            </p>
           </div>
         )}
 
-        {activeCycle && queue.associationQueueEnabled && (
-          <div className="border-t pt-3">
-            <div className="flex items-center justify-between">
-              <p className="text-muted-foreground text-xs">Association Queue</p>
-              <span className="text-xs font-medium">
-                {STAGE_LABEL[activeCycle.associationsStatus]}
-              </span>
-            </div>
-            {activeCycle.associationsStatus === 'waiting' &&
-              activeCycle.associationsDelayUntil && (
-                <p className="text-muted-foreground mt-1 text-xs">
-                  Starts{' '}
-                  {new Date(
-                    activeCycle.associationsDelayUntil,
-                  ).toLocaleString()}
+        {(nextQueueJob ||
+          (activeCycle && queue.associationQueueEnabled) ||
+          (activeCycle && queue.companyOwnerSyncEnabled)) && (
+          <div className="grid gap-3 border-t pt-3 sm:grid-cols-3">
+            {nextQueueJob && (
+              <div>
+                <p className="text-muted-foreground text-xs">Next Job</p>
+                <p className="mt-0.5 flex items-center gap-1.5 text-xs font-medium">
+                  {nextQueueJob.job?.sourceObject}
+                  <ArrowRight className="size-3" aria-hidden="true" />
+                  {nextQueueJob.job?.destObject}
                 </p>
-              )}
-          </div>
-        )}
+              </div>
+            )}
 
-        {activeCycle && queue.companyOwnerSyncEnabled && (
-          <div className="border-t pt-3">
-            <div className="flex items-center justify-between">
-              <p className="text-muted-foreground text-xs">
-                Company Owner Sync
-              </p>
-              <span className="text-xs font-medium">
-                {STAGE_LABEL[activeCycle.companyOwnerSyncStatus]}
-              </span>
-            </div>
-            {activeCycle.companyOwnerSyncErrorMessage &&
-              activeCycle.companyOwnerSyncStatus === 'failed' && (
-                <p className="text-destructive mt-1 text-xs">
-                  {activeCycle.companyOwnerSyncErrorMessage}
+            {activeCycle && queue.associationQueueEnabled && (
+              <div>
+                <p className="text-muted-foreground text-xs">
+                  Association Queue
                 </p>
-              )}
+                <p className="mt-0.5 text-xs font-medium">
+                  {STAGE_LABEL[activeCycle.associationsStatus]}
+                </p>
+                {activeCycle.associationsStatus === 'waiting' &&
+                  activeCycle.associationsDelayUntil && (
+                    <p className="text-muted-foreground mt-0.5 text-xs">
+                      Starts{' '}
+                      {new Date(
+                        activeCycle.associationsDelayUntil,
+                      ).toLocaleString()}
+                    </p>
+                  )}
+              </div>
+            )}
+
+            {activeCycle && queue.companyOwnerSyncEnabled && (
+              <div>
+                <p className="text-muted-foreground text-xs">
+                  Company Owner Sync
+                </p>
+                <p className="mt-0.5 text-xs font-medium">
+                  {STAGE_LABEL[activeCycle.companyOwnerSyncStatus]}
+                </p>
+                {activeCycle.companyOwnerSyncErrorMessage &&
+                  activeCycle.companyOwnerSyncStatus === 'failed' && (
+                    <p className="text-destructive mt-0.5 text-xs">
+                      {activeCycle.companyOwnerSyncErrorMessage}
+                    </p>
+                  )}
+              </div>
+            )}
           </div>
         )}
-
-        <div className="flex items-center gap-2 border-t pt-3">
-          {queue.status === 'paused' ? (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={onResume}
-              disabled={pausing}
-            >
-              {pausing ? <Spinner /> : <Play />}
-              Resume Queue
-            </Button>
-          ) : (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={onPause}
-              disabled={pausing}
-            >
-              {pausing ? <Spinner /> : <Pause />}
-              Pause Queue
-            </Button>
-          )}
-          <Button
-            size="sm"
-            variant="outline"
-            className="text-destructive hover:text-destructive"
-            onClick={handleClearAndRestartClick}
-            disabled={clearingAndRestarting}
-          >
-            {clearingAndRestarting ? <Spinner /> : <RotateCcw />}
-            Clear & Restart Scheduler
-          </Button>
-        </div>
       </CardContent>
     </Card>
   );

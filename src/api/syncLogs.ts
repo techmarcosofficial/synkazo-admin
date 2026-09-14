@@ -10,6 +10,13 @@ interface PaginationParams {
   limit?: number;
 }
 
+export interface RunLogFilters {
+  triggeredBy?: string;
+  status?: string;
+  since?: string;
+  search?: string;
+}
+
 export interface SyncPageLog {
   id: string;
   pageNumber: number;
@@ -67,11 +74,21 @@ export const syncLogsApi = {
       page = 1,
       limit = 20,
       triggeredBy,
-    }: PaginationParams & { triggeredBy?: string } = {},
+      status,
+      since,
+      search,
+    }: PaginationParams & RunLogFilters = {},
   ): Promise<PaginatedResponse<SyncRun>> =>
     apiClient
       .get(`/projects/${projectId}/jobs/${jobId}/sync-run-logs`, {
-        params: { page, limit, ...(triggeredBy && { triggeredBy }) },
+        params: {
+          page,
+          limit,
+          ...(triggeredBy && { triggeredBy }),
+          ...(status && { status }),
+          ...(since && { since }),
+          ...(search && { search }),
+        },
       })
       .then((r) => r.data),
 

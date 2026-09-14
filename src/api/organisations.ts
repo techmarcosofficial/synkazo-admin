@@ -8,6 +8,8 @@ const d = (r: any): any => r.data.data;
 export const organisationsApi = {
   listOrgs: (): Promise<Organisation[]> =>
     apiClient.get('/organisations').then(d),
+  getOrg: (id: string): Promise<Organisation> =>
+    apiClient.get(`/organisations/${id}`).then(d),
   getMyOrg: (): Promise<Organisation> =>
     apiClient.get('/organisations/me').then(d),
   setupOrg: (data: Partial<Organisation>): Promise<Organisation> =>

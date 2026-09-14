@@ -1,6 +1,7 @@
 import {
   AlertTriangle,
-  CheckCircle2,
+  CircleAlert,
+  CircleCheck,
   Info,
   type LucideIcon,
 } from 'lucide-react';
@@ -32,26 +33,32 @@ const VARIANT_META: Record<
   }
 > = {
   danger: {
-    icon: AlertTriangle,
+    icon: CircleAlert,
     iconClassName: 'text-destructive',
-    mediaClassName: 'bg-destructive/10',
-    actionClassName: 'bg-destructive hover:bg-destructive/90 text-white',
+    mediaClassName: 'bg-destructive/10 text-destructive',
+    actionClassName:
+      'bg-destructive text-white hover:bg-[color-mix(in_oklch,var(--destructive),white_10%)]',
   },
   warning: {
     icon: AlertTriangle,
     iconClassName: 'text-warning',
-    mediaClassName: 'bg-warning/10',
+    mediaClassName: 'bg-warning/10 text-warning',
+    actionClassName:
+      'bg-warning text-white hover:bg-[color-mix(in_oklch,var(--warning),black_8%)] dark:text-black',
   },
   success: {
-    icon: CheckCircle2,
+    icon: CircleCheck,
     iconClassName: 'text-success',
-    mediaClassName: 'bg-success/10',
-    actionClassName: 'bg-success hover:bg-success/90 text-white',
+    mediaClassName: 'bg-success/10 text-success',
+    actionClassName:
+      'bg-success text-white hover:bg-[color-mix(in_oklch,var(--success),black_8%)] dark:text-black',
   },
   info: {
     icon: Info,
     iconClassName: 'text-info',
-    mediaClassName: 'bg-info/10',
+    mediaClassName: 'bg-info/10 text-info',
+    actionClassName:
+      'bg-info text-white hover:bg-[color-mix(in_oklch,var(--info),white_10%)]',
   },
 };
 
@@ -80,7 +87,7 @@ export default function ConfirmDialog() {
       open={open}
       onOpenChange={(next) => !next && !isConfirming && close()}
     >
-      <AlertDialogContent>
+      <AlertDialogContent aria-busy={isConfirming || undefined}>
         <AlertDialogHeader>
           <AlertDialogMedia className={meta.mediaClassName}>
             <Icon className={meta.iconClassName} />
@@ -91,14 +98,20 @@ export default function ConfirmDialog() {
           )}
         </AlertDialogHeader>
 
-        {body}
+        {body && <div className="min-w-0">{body}</div>}
 
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isConfirming} onClick={close}>
+          <AlertDialogCancel
+            size="sm"
+            className="w-full"
+            disabled={isConfirming}
+            onClick={close}
+          >
             {cancelLabel}
           </AlertDialogCancel>
           <AlertDialogAction
             className={meta.actionClassName}
+            size="sm"
             disabled={isConfirming}
             onClick={(e) => {
               e.preventDefault();

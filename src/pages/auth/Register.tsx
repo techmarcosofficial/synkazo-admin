@@ -1,5 +1,14 @@
-import { ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Building2,
+  CheckCircle2,
+  Mail,
+  UserRound,
+} from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import {
   Link,
   useLocation,
@@ -8,17 +17,21 @@ import {
 } from 'react-router-dom';
 
 import { authApi } from '@/api/auth';
-import BrandMark from '@/components/auth/BrandMark';
+import AuthInput from '@/components/auth/AuthInput';
 import OtpInput from '@/components/auth/OtpInput';
 import PasswordInput from '@/components/auth/PasswordInput';
 import PasswordStrength from '@/components/auth/PasswordStrength';
 import SplitAuthLayout from '@/components/auth/SplitAuthLayout';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from '@/components/ui/field';
 import { Spinner } from '@/components/ui/spinner';
-import { getPasswordError } from '@/lib/passwordValidation';
+import { registerSchema, type RegisterFormValues } from '@/lib/authValidation';
 import { consumePendingPlan, savePendingPlan } from '@/lib/pendingPlan';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { showToast } from '@/lib/toast';
@@ -62,15 +75,28 @@ export default function Register() {
   }, [currentUser, isLoading, navigate]);
 
   const [step, setStep] = useState<Step>(seededEmail ? 'otp' : 'form');
-  const [form, setForm] = useState({
-    fullName: '',
-    email: seededEmail ?? '',
-    orgName: '',
-    password: '',
-    confirmPassword: '',
-  });
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [verificationEmail, setVerificationEmail] = useState(seededEmail ?? '');
+  const {
+    register: registerField,
+    handleSubmit,
+    watch,
+    trigger,
+    formState: { errors, isSubmitting, touchedFields },
+  } = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
+    mode: 'onBlur',
+    reValidateMode: 'onChange',
+    defaultValues: {
+      fullName: '',
+      email: seededEmail ?? '',
+      orgName: '',
+      password: '',
+      confirmPassword: '',
+    },
+  });
+  const password = watch('password');
+  const confirmPassword = watch('confirmPassword');
 
   // OTP step state
   const [code, setCode] = useState('');
@@ -88,41 +114,27 @@ export default function Register() {
     }
   }, [seededEmail]);
 
+  // Once confirmation has been touched, changing the original password should
+  // update the match error immediately rather than waiting for another blur.
+  useEffect(() => {
+    if (touchedFields.confirmPassword) {
+      void trigger();
+    }
+  }, [password, confirmPassword, touchedFields.confirmPassword, trigger]);
+
   if (isLoading || currentUser) return null;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (values: RegisterFormValues) => {
     setError('');
-    if (
-      !form.fullName ||
-      !form.email ||
-      !form.password ||
-      !form.orgName ||
-      !form.confirmPassword
-    ) {
-      setError('Please fill in all required fields.');
-      return;
-    }
-    const passwordError = getPasswordError(form.password);
-    if (passwordError) {
-      setError(passwordError);
-      return;
-    }
-    if (form.password !== form.confirmPassword) {
-      setError('Passwords do not match.');
-      return;
-    }
-    setLoading(true);
     try {
-      await register(form);
+      await register(values);
+      setVerificationEmail(values.email);
       setStep('otp');
     } catch (err) {
       const e = err as { response?: { data?: { message?: string } } };
       setError(
         e.response?.data?.message || 'Registration failed. Please try again.',
       );
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -132,7 +144,7 @@ export default function Register() {
     setOtpError('');
     try {
       // Auto-logs in and sets currentUser — the effect above handles redirect.
-      await verifyOtp(form.email, value);
+      await verifyOtp(verificationEmail, value);
       showToast.success('Email verified — welcome to synkazo!');
     } catch (err) {
       const e = err as { response?: { data?: { message?: string } } };
@@ -148,7 +160,7 @@ export default function Register() {
     setResendLoading(true);
     setOtpError('');
     try {
-      await authApi.resendVerification(form.email);
+      await authApi.resendVerification(verificationEmail);
     } catch {
       /* backend always returns success to avoid enumeration */
     } finally {
@@ -159,21 +171,24 @@ export default function Register() {
 
   if (step === 'otp') {
     return (
-      <SplitAuthLayout>
-        <BrandMark />
-
-        <div className="mt-9 space-y-1.5">
-          <h1 className="text-2xl font-bold tracking-tight">
-            Verify your email
-          </h1>
-          <p className="text-muted-foreground">
+      <SplitAuthLayout variant="immersive">
+        <div className="synkazo-login-heading synkazo-otp-heading">
+          <p className="synkazo-login-eyebrow">ONE LAST STEP.</p>
+          <h1>Verify your email</h1>
+          <p>
             Enter the 6-digit code we sent to{' '}
-            <span className="text-foreground font-medium">{form.email}</span>
+            <span className="synkazo-otp-email">
+              {verificationEmail}
+            </span>
           </p>
         </div>
 
         {otpError && (
-          <Alert variant="destructive" className="mt-6">
+          <Alert
+            id="otp-error"
+            variant="destructive"
+            className="synkazo-otp-alert"
+          >
             <AlertDescription>{otpError}</AlertDescription>
           </Alert>
         )}
@@ -183,29 +198,47 @@ export default function Register() {
             e.preventDefault();
             handleVerify(code);
           }}
-          className="mt-8"
+          className="synkazo-otp-form"
+          aria-busy={verifying}
+          noValidate
         >
-          <FieldGroup>
-            <Field>
-              <FieldLabel>Verification code</FieldLabel>
+          <FieldGroup className="synkazo-login-fields synkazo-otp-fields">
+            <Field data-invalid={!!otpError}>
+              <FieldLabel id="verification-code-label">
+                Verification code
+              </FieldLabel>
+              <p id="verification-code-instructions" className="sr-only">
+                Enter one digit in each field. You can also paste the full
+                6-digit code.
+              </p>
               <OtpInput
                 value={code}
                 onChange={(v) => {
                   setCode(v);
-                  if (v.length === 6) handleVerify(v);
+                  if (otpError) setOtpError('');
                 }}
                 disabled={verifying}
                 autoFocus
+                labelledBy="verification-code-label"
+                describedBy={
+                  otpError
+                    ? 'verification-code-instructions otp-error'
+                    : 'verification-code-instructions'
+                }
+                invalid={!!otpError}
               />
             </Field>
 
             <Button
               type="submit"
+              size="lg"
               disabled={verifying || code.length !== 6}
-              className="w-full"
+              className="synkazo-login-submit"
             >
               {verifying ? (
-                <Spinner />
+                <>
+                  <Spinner /> Verifying…
+                </>
               ) : (
                 <>
                   Verify &amp; Continue <ArrowRight />
@@ -215,19 +248,23 @@ export default function Register() {
           </FieldGroup>
         </form>
 
-        <div className="mt-6 space-y-3 text-center text-sm">
+        <div className="synkazo-otp-actions">
           {resendSent ? (
-            <p className="text-success flex items-center justify-center gap-2">
+            <p
+              className="synkazo-otp-resend-status"
+              role="status"
+              aria-live="polite"
+            >
               <CheckCircle2 className="size-4" /> New code sent — check your
               inbox.
             </p>
           ) : (
-            <p className="text-muted-foreground">
+            <p className="synkazo-otp-resend-prompt">
               Didn't get it?{' '}
               <Button
+                type="button"
                 variant="link"
                 size="sm"
-                className="h-auto p-0"
                 onClick={handleResend}
                 disabled={resendLoading}
               >
@@ -235,147 +272,184 @@ export default function Register() {
               </Button>
             </p>
           )}
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
+            className="synkazo-otp-change-email"
             onClick={() => {
               setStep('form');
               setCode('');
               setOtpError('');
               setResendSent(false);
             }}
-            className="text-muted-foreground inline-flex items-center gap-1 hover:underline"
           >
-            <ArrowLeft className="size-3.5" /> Use a different email
-          </button>
+            <ArrowLeft /> Use a different email
+          </Button>
         </div>
       </SplitAuthLayout>
     );
   }
 
   return (
-    <SplitAuthLayout>
-      <BrandMark />
-
-      <div className="mt-9 space-y-1.5">
-        <h1 className="text-2xl font-bold tracking-tight">
-          Create your account
-        </h1>
-        <p className="text-muted-foreground">
-          Get started — your first project is free
-        </p>
+    <SplitAuthLayout variant="immersive">
+      <div className="synkazo-login-heading">
+        <p className="synkazo-login-eyebrow">START. SYNC. SCALE.</p>
+        <h1>Create your account</h1>
       </div>
 
       {error && (
-        <Alert variant="destructive" className="mt-6">
+        <Alert variant="destructive" className="synkazo-register-alert">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
-      <form onSubmit={handleSubmit} className="mt-8">
-        <FieldGroup>
-          <Field>
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className="synkazo-login-form synkazo-register-form"
+        noValidate
+      >
+        <FieldGroup className="synkazo-login-fields synkazo-register-fields">
+          <Field data-invalid={!!errors.fullName}>
             <FieldLabel htmlFor="fullName" required>
               Full Name
             </FieldLabel>
-            <Input
+            <AuthInput
+              icon={UserRound}
               id="fullName"
-              value={form.fullName}
-              onChange={(e) => setForm({ ...form, fullName: e.target.value })}
               placeholder="Jane Smith"
               autoComplete="name"
+              aria-invalid={!!errors.fullName}
+              aria-describedby={
+                errors.fullName ? 'register-name-error' : undefined
+              }
+              {...registerField('fullName')}
             />
+            <FieldError id="register-name-error" errors={[errors.fullName]} />
           </Field>
 
-          <Field>
+          <Field data-invalid={!!errors.email}>
             <FieldLabel htmlFor="email" required>
               Email
             </FieldLabel>
-            <Input
+            <AuthInput
+              icon={Mail}
               id="email"
               type="email"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
               placeholder="you@company.com"
               autoComplete="email"
+              aria-invalid={!!errors.email}
+              aria-describedby={
+                errors.email ? 'register-email-error' : undefined
+              }
+              {...registerField('email')}
             />
+            <FieldError id="register-email-error" errors={[errors.email]} />
           </Field>
 
-          <Field>
+          <Field data-invalid={!!errors.orgName}>
             <FieldLabel htmlFor="orgName" required>
               Organization Name
             </FieldLabel>
-            <Input
+            <AuthInput
+              icon={Building2}
               id="orgName"
-              value={form.orgName}
-              onChange={(e) => setForm({ ...form, orgName: e.target.value })}
               placeholder="Acme Corp"
               autoComplete="organization"
+              aria-invalid={!!errors.orgName}
+              aria-describedby={
+                errors.orgName ? 'register-organization-error' : undefined
+              }
+              {...registerField('orgName')}
+            />
+            <FieldError
+              id="register-organization-error"
+              errors={[errors.orgName]}
             />
           </Field>
 
-          <Field>
+          <Field data-invalid={!!errors.password}>
             <FieldLabel htmlFor="password" required>
               Password
             </FieldLabel>
             <PasswordInput
               id="password"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
               placeholder="Min. 8 characters"
               autoComplete="new-password"
+              aria-invalid={!!errors.password}
+              aria-describedby={
+                errors.password ? 'register-password-error' : undefined
+              }
+              {...registerField('password')}
             />
-            <PasswordStrength password={form.password} />
+            <PasswordStrength password={password} />
+            <FieldError
+              id="register-password-error"
+              errors={[errors.password]}
+            />
           </Field>
 
-          <Field>
+          <Field data-invalid={!!errors.confirmPassword}>
             <FieldLabel htmlFor="confirmPassword" required>
               Confirm Password
             </FieldLabel>
             <PasswordInput
               id="confirmPassword"
-              value={form.confirmPassword}
-              onChange={(e) =>
-                setForm({ ...form, confirmPassword: e.target.value })
-              }
               placeholder="Repeat password"
               autoComplete="new-password"
+              aria-invalid={!!errors.confirmPassword}
+              aria-describedby={
+                errors.confirmPassword
+                  ? 'register-confirm-password-error'
+                  : undefined
+              }
+              {...registerField('confirmPassword')}
+            />
+            <FieldError
+              id="register-confirm-password-error"
+              errors={[errors.confirmPassword]}
             />
           </Field>
 
-          <Button type="submit" disabled={loading} className="w-full">
-            {loading ? (
-              <Spinner />
-            ) : (
-              <>
-                Create Account <ArrowRight />
-              </>
-            )}
-          </Button>
-
-          <p className="text-muted-foreground text-center text-xs">
+          <p className="synkazo-register-legal">
             By creating an account you agree to our{' '}
             <a
               href={`${import.meta.env.VITE_FRONTEND_URL}/terms`}
-              className="text-primary hover:underline"
+              className="synkazo-register-link"
             >
               Terms
             </a>{' '}
             and{' '}
             <a
               href={`${import.meta.env.VITE_FRONTEND_URL}/privacy`}
-              className="text-primary hover:underline"
+              className="synkazo-register-link"
             >
               Privacy Policy
             </a>
           </p>
+
+          <Button
+            type="submit"
+            size="lg"
+            loading={isSubmitting}
+            className="synkazo-login-submit"
+          >
+            {isSubmitting ? (
+              'Creating account…'
+            ) : (
+              <>
+                Create Account <ArrowRight />
+              </>
+            )}
+          </Button>
         </FieldGroup>
       </form>
 
-      <p className="text-muted-foreground mt-6 text-sm">
+      <p className="synkazo-register-signin">
         Already have an account?{' '}
         <Link
           to="/login"
-          className="text-primary font-semibold hover:underline"
+          className="synkazo-register-link"
         >
           Sign in
         </Link>

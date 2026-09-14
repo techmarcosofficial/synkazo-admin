@@ -4,6 +4,12 @@ import { z } from 'zod';
 
 import { createProjectSchema } from './utils';
 
+import type {
+  Project as BaseProject,
+  ProjectStatus,
+  ProjectSyncMode,
+} from '@/types';
+
 /**
  * Minimal Project type used by form callbacks.
  * Expanded with index signature to allow additional properties from API.
@@ -20,20 +26,16 @@ export interface Project {
 export type CreateProjectFormValues = z.infer<typeof createProjectSchema>;
 
 /**
- * Platform option used by the PlatformSelector component.
- */
-export interface PlatformOption {
-  id: string;
-  name: string;
-  description?: string;
-  iconUrl?: string;
-}
-
-/**
  * Props for CreateProjectForm.
  */
 export interface CreateProjectFormProps {
   onSuccess?: (project: Project) => void;
+  onSelectionChange?: (selection: CreateProjectSelection) => void;
+}
+
+export interface CreateProjectSelection {
+  sourcePlatformId: string;
+  syncMode: ProjectSyncMode | '';
 }
 
 /**
@@ -43,10 +45,7 @@ export interface CreateProjectFormRef {
   submit: () => void;
   reset: () => void;
 }
-import type { Project as BaseProject, ProjectStatus } from '@/types';
-
 export type { ProjectStatus };
-export type { Project as BaseProject } from '@/types';
 
 /**
  * Shape actually returned by the projects list endpoint today.
@@ -64,22 +63,16 @@ export type ProjectExtended = BaseProject & {
   description?: string;
 };
 
-export type ProjectViewMode = 'card' | 'list';
-
 export type ProjectStatusFilter = 'all' | ProjectStatus;
-
-export type ProjectEnvironmentFilter = 'all' | 'production' | 'sandbox';
 
 export interface ProjectFiltersState {
   search: string;
   status: ProjectStatusFilter;
-  environment: ProjectEnvironmentFilter;
 }
 
 export const DEFAULT_PROJECT_FILTERS: ProjectFiltersState = {
   search: '',
   status: 'all',
-  environment: 'all',
 };
 
 export const PROJECT_STATUS_OPTIONS: {
@@ -91,13 +84,4 @@ export const PROJECT_STATUS_OPTIONS: {
   { value: 'draft', label: 'Draft' },
   { value: 'paused', label: 'Paused' },
   { value: 'error', label: 'Has Errors' },
-];
-
-export const PROJECT_ENVIRONMENT_OPTIONS: {
-  value: ProjectEnvironmentFilter;
-  label: string;
-}[] = [
-  { value: 'all', label: 'All environments' },
-  { value: 'production', label: 'Live' },
-  { value: 'sandbox', label: 'Test Mode' },
 ];

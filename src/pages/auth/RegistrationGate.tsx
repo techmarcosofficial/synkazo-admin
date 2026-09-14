@@ -42,7 +42,7 @@ export default function RegistrationGate() {
   if (registrationEnabled === null) {
     return (
       <div className="fixed inset-0 z-[70] flex items-center justify-center bg-background">
-        <Spinner className="size-6" />
+        <Spinner variant="page" aria-label="Loading registration" />
       </div>
     );
   }

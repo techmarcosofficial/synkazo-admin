@@ -6,17 +6,17 @@ import {
   type ProjectDetailContextValue,
 } from './context';
 import ProjectHeader from './ProjectHeader';
+import ProjectOnboardingJourney from './ProjectOnboardingJourney';
 import ProjectTabContent from './ProjectTabContent';
 import ProjectTabs from './ProjectTabs';
-import { PageContextAlert } from './shared';
 
-import ActivationConfirmModal from '@/components/connections/ActivationConfirmModal';
+import AccountContextAlert from '@/components/shared/AccountContextAlert';
 import ErrorState from '@/components/shared/ErrorState';
 import { BackLink } from '@/components/shared/PageHeader';
+import StickyDetailHeader from '@/components/shared/StickyDetailHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs } from '@/components/ui/tabs';
-import { SetupBanner } from '@/features/projects/components/setup';
 import {
   useProjectDetailCacheHelpers,
   useProjectDetailQuery,
@@ -25,17 +25,11 @@ import {
   useProjectEnvironmentActivation,
 } from '@/features/projects/hooks';
 import type { ProjectDetailTabId } from '@/features/projects/lib/projectDetailTabs';
-import { hasBothConnections as computeHasBothConnections } from '@/features/projects/lib/projectSetupState';
-import { useSetupWizardStore } from '@/features/projects/store';
-import { useAlertDismissStore } from '@/stores/useAlertDismissStore';
+import { hasBothConnections as computeHasBothConnections } from '@/features/projects/lib/projectConnections';
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const projectId = id!;
-  const openSetupWizard = useSetupWizardStore((s) => s.open);
-  const dismissedMap = useAlertDismissStore((s) => s.dismissed);
-  const dismiss = useAlertDismissStore((s) => s.dismiss);
-  const envAlertId = `project-detail:${projectId}:env-not-activated`;
 
   const detailQuery = useProjectDetailQuery(projectId);
   const { patchProject, setConnections: setConnectionsCache } =
@@ -47,7 +41,6 @@ export default function ProjectDetailPage() {
   const jobs = detailQuery.data?.jobs ?? [];
   const connections = detailQuery.data?.connections ?? [];
   const logs = detailQuery.data?.logs ?? [];
-  const associationRules = detailQuery.data?.associationRules ?? [];
 
   const [showCreateJob, setShowCreateJob] = useState(false);
 
@@ -58,10 +51,6 @@ export default function ProjectDetailPage() {
     loading,
     hasBothConnections,
     hasJobs,
-    jobs,
-    connections,
-    associationRules,
-    logs,
   });
 
   const envActivation = useProjectEnvironmentActivation({
@@ -79,14 +68,14 @@ export default function ProjectDetailPage() {
     return (
       <div className="animate-fade-in-up space-y-6">
         <div className="space-y-3 pb-3">
-          <Skeleton className="h-4 w-28" />
+          <Skeleton className="size-9 rounded-3xl" />
           <div className="flex items-center gap-3.5">
             <Skeleton className="size-10 rounded-lg" />
             <Skeleton className="size-10 rounded-lg" />
             <Skeleton className="h-6 w-56" />
           </div>
           <div className="flex gap-1">
-            {Array.from({ length: 6 }).map((_, i) => (
+            {Array.from({ length: 5 }).map((_, i) => (
               <Skeleton key={i} className="h-8 w-20" />
             ))}
           </div>
@@ -114,26 +103,15 @@ export default function ProjectDetailPage() {
     );
   }
 
-  const totalRecordsSynced =
-    (project.totalRecordsSynced ?? 0) > 0
-      ? project.totalRecordsSynced!
-      : jobs.reduce((s, j) => s + (j.recordsSynced || 0), 0);
-  const totalErrors =
-    (project.totalErrorCount ?? 0) > 0
-      ? project.totalErrorCount!
-      : jobs.reduce((s, j) => s + (j.errorCount || 0), 0);
-
   const contextValue: ProjectDetailContextValue = {
     projectId,
     project,
     jobs,
     connections,
     logs,
-    associationRules,
     hasBothConnections,
     hasJobs,
-    totalRecordsSynced,
-    totalErrors,
+    activeTab,
     patchProject,
     setConnectionsCache,
     refetch,
@@ -146,7 +124,8 @@ export default function ProjectDetailPage() {
     },
     projectActiveEnv: envActivation.projectActiveEnv,
     envActivating: envActivation.envActivating,
-    envDiffLoading: envActivation.envDiffLoading,
+    environmentActivationError: envActivation.activationError,
+    clearEnvironmentActivationError: envActivation.clearActivationError,
     envFullyConnected: envActivation.envFullyConnected,
     envHasAnyConnected: envActivation.envHasAnyConnected,
     onActivateEnv: envActivation.handleActivateEnv,
@@ -158,52 +137,25 @@ export default function ProjectDetailPage() {
       <Tabs
         value={activeTab}
         onValueChange={(v) => handleTabChange(v as ProjectDetailTabId)}
-        className="gap-6"
+        className="gap-0"
       >
-        <div className="bg-background sticky top-8 z-20 space-y-6 border-b">
-          <ProjectHeader />
-          <ProjectTabs tabs={tabs} />
-        </div>
-
-        <SetupBanner
-          project={project}
-          connections={connections}
-          jobs={jobs}
-          onOpenSetup={() => openSetupWizard(project.id)}
-        />
-
-        {hasBothConnections &&
-          !envActivation.projectActiveEnv &&
-          !dismissedMap[envAlertId] && (
-            <PageContextAlert
-              variant="info"
-              title="Connections ready — activate to start syncing"
-              description={
-                <>
-                  Both connections are verified. Use the{' '}
-                  <strong>Sandbox</strong> / <strong>Production</strong> toggle
-                  above to activate an environment and enable scheduled syncs.
-                </>
-              }
-              dismissible
-              onDismiss={() => dismiss(envAlertId)}
-            />
-          )}
-
-        <ProjectTabContent />
+        <StickyDetailHeader
+          backLabel="Back to Projects"
+          backTo="/projects"
+          header={
+            <Card className="gap-0 space-y-3 overflow-hidden py-0">
+              <ProjectHeader />
+              <div className="overflow-x-auto px-5">
+                <ProjectTabs tabs={tabs} />
+              </div>
+            </Card>
+          }
+        >
+          <ProjectOnboardingJourney />
+          <AccountContextAlert />
+          <ProjectTabContent />
+        </StickyDetailHeader>
       </Tabs>
-
-      {envActivation.activationModal && (
-        <ActivationConfirmModal
-          projectId={projectId}
-          targetEnv={envActivation.activationModal.targetEnv}
-          currentEnv={envActivation.activationModal.currentEnv}
-          diff={envActivation.activationModal.diff}
-          onActivate={envActivation.doActivate}
-          activating={envActivation.envActivating}
-          onClose={envActivation.closeActivationModal}
-        />
-      )}
     </ProjectDetailProvider>
   );
 }

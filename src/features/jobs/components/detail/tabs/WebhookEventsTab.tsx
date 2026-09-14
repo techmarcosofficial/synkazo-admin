@@ -205,7 +205,7 @@ function EventRow({ event }: { event: WebhookEvent }) {
       open={open}
       onOpenChange={setOpen}
       className={cn(
-        'bg-card ring-foreground/10 overflow-hidden rounded-2xl ring-1',
+        'bg-card border-border overflow-hidden rounded-4xl border shadow-none',
         isFailedLike && 'ring-destructive/30',
       )}
     >
@@ -334,7 +334,7 @@ function EventRow({ event }: { event: WebhookEvent }) {
               <div className="text-muted-foreground mb-1 font-medium">
                 Raw HubSpot notification
               </div>
-              <pre className="bg-muted/50 overflow-x-auto rounded-md p-2 font-mono">
+              <pre className="bg-muted/50 overflow-x-auto rounded-4xl border p-2 font-mono">
                 {hubspotPayloadText}
               </pre>
             </div>
@@ -344,7 +344,7 @@ function EventRow({ event }: { event: WebhookEvent }) {
               <div className="text-muted-foreground mb-1 font-medium">
                 Payload sent
               </div>
-              <pre className="bg-muted/50 overflow-x-auto rounded-md p-2 font-mono">
+              <pre className="bg-muted/50 overflow-x-auto rounded-4xl border p-2 font-mono">
                 {mappedPayloadText}
               </pre>
             </div>
@@ -354,7 +354,7 @@ function EventRow({ event }: { event: WebhookEvent }) {
               <div className="text-muted-foreground mb-1 font-medium">
                 Destination response
               </div>
-              <pre className="bg-muted/50 overflow-x-auto rounded-md p-2 font-mono">
+              <pre className="bg-muted/50 overflow-x-auto rounded-4xl border p-2 font-mono">
                 {destResponseText}
               </pre>
             </div>
@@ -414,7 +414,7 @@ function DataCheckupPanel({
     : [];
 
   return (
-    <div className="bg-card ring-foreground/10 space-y-3 rounded-2xl p-4 ring-1">
+    <div className="bg-card border-border space-y-3 rounded-4xl border p-4 shadow-none">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="space-y-0.5">
           <p className="text-sm font-medium">Data Checkup</p>
@@ -433,7 +433,7 @@ function DataCheckupPanel({
         <div className="space-y-2">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {stats.map((s) => (
-              <div key={s.label} className="bg-muted/40 rounded-xl p-3">
+              <div key={s.label} className="bg-muted/40 rounded-4xl border p-3">
                 <div
                   className={cn(
                     'text-xl font-semibold tabular-nums',

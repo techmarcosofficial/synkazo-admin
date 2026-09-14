@@ -19,6 +19,7 @@ export interface JobDetailContextValue {
   hasConnection: boolean;
   pipelineRequired: boolean;
   pipelineConfigured: boolean;
+  activeTab: JobDetailTabId;
   patchJob: (patch: Partial<ExtJob>) => void;
   refetch: () => void;
   handleTabChange: (

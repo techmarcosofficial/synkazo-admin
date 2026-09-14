@@ -29,6 +29,8 @@ export interface DashboardStat {
   trend?: KpiTrend;
   chartData?: KpiSparklinePoint[];
   chartColor?: string;
+  chartLabel?: string;
+  chartSummary?: string;
   /** Where the whole card navigates to when clicked. */
   href?: string;
   /** Compact extra numbers shown under the main value, e.g. success rate + error count. */
@@ -50,14 +52,24 @@ export interface DashboardStatsJob {
 
 export interface OrgSyncLogMetadata {
   triggeredBy?: string;
-  status?: 'success' | 'partial' | 'failed' | 'cancelled';
+  status?:
+    | 'success'
+    | 'partial'
+    | 'failed'
+    | 'running'
+    | 'cancelled'
+    | 'time_limit_reached'
+    | 'limit_reached';
   jobName?: string;
   projectName?: string;
   sourceObject?: string;
   destObject?: string;
   sourcePlatformId?: string;
   destPlatformId?: string;
+  recordsFailed?: number;
 }
+
+export type ActivityFilter = 'all' | 'success' | 'warn' | 'error';
 
 export interface OrgSyncLog {
   id?: string;

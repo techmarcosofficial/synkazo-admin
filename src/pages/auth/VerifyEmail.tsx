@@ -3,12 +3,12 @@ import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 
 import { authApi } from '@/api/auth';
+import AuthInput from '@/components/auth/AuthInput';
 import AuthStatus from '@/components/auth/AuthStatus';
 import BrandMark from '@/components/auth/BrandMark';
 import SplitAuthLayout from '@/components/auth/SplitAuthLayout';
 import { Button } from '@/components/ui/button';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 
 type Status = 'pending' | 'verifying' | 'success' | 'error';
@@ -149,7 +149,8 @@ export default function VerifyEmail() {
                     <FieldLabel htmlFor="resend-email" required>
                       Email address
                     </FieldLabel>
-                    <Input
+                    <AuthInput
+                      icon={Mail}
                       id="resend-email"
                       type="email"
                       value={resendEmail}

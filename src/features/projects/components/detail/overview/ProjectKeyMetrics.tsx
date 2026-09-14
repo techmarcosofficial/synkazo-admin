@@ -1,36 +1,22 @@
 import { formatDistanceToNow } from 'date-fns';
+import { BriefcaseBusiness, CircleAlert, Clock3, Database } from 'lucide-react';
 
 import { StatCardGrid } from '../shared';
 
-import type { JobExt, ProjectActivityLog } from '@/features/projects/hooks';
+import type { JobExt } from '@/features/projects/hooks';
 import { formatNum } from '@/features/projects/utils';
 
 interface ProjectKeyMetricsProps {
   totalRecordsSynced: number;
   totalErrors: number;
   jobs: JobExt[];
-  logs: ProjectActivityLog[];
   lastSyncedAt?: string | null;
-}
-
-function computeSuccessRate(logs: ProjectActivityLog[]): string {
-  let success = 0;
-  let failed = 0;
-  for (const log of logs) {
-    const status = log.metadata?.status;
-    if (status === 'success' || status === 'partial') success += 1;
-    else if (status === 'failed') failed += 1;
-  }
-  const denominator = success + failed;
-  if (denominator === 0) return '—';
-  return `${Math.round((success / denominator) * 100)}%`;
 }
 
 export default function ProjectKeyMetrics({
   totalRecordsSynced,
   totalErrors,
   jobs,
-  logs,
   lastSyncedAt,
 }: ProjectKeyMetricsProps) {
   const enabledJobCount = jobs.filter((j) => j.isEnabled).length;
@@ -41,32 +27,56 @@ export default function ProjectKeyMetrics({
         {
           label: 'Records synced',
           value: formatNum(totalRecordsSynced),
-          tone: 'text-primary',
-        },
-        {
-          label: 'Success rate',
-          value: computeSuccessRate(logs),
-          tone: 'text-success',
+          tone: 'bg-muted text-muted-foreground',
+          icon: Database,
+          direction: {
+            positive: totalRecordsSynced > 0,
+            label:
+              totalRecordsSynced > 0
+                ? 'Records have synced'
+                : 'No records synced yet',
+          },
         },
         {
           label: 'Active sync jobs',
           value: `${enabledJobCount} of ${jobs.length}`,
-          tone: 'text-info',
+          tone: 'bg-muted text-muted-foreground',
+          icon: BriefcaseBusiness,
+          direction: {
+            positive: enabledJobCount > 0,
+            label:
+              enabledJobCount > 0
+                ? 'Sync jobs are active'
+                : 'No active sync jobs',
+          },
         },
         {
           label: 'Errors',
           value: formatNum(totalErrors),
-          tone: totalErrors > 0 ? 'text-destructive' : 'text-muted-foreground',
+          tone: 'bg-muted text-muted-foreground',
+          icon: CircleAlert,
+          direction: {
+            positive: totalErrors === 0,
+            label: totalErrors === 0 ? 'No errors' : 'Errors need review',
+          },
         },
         {
           label: 'Last synced',
           value: lastSyncedAt
             ? formatDistanceToNow(new Date(lastSyncedAt), { addSuffix: true })
             : 'Never',
-          tone: 'text-foreground',
+          tone: 'bg-muted text-muted-foreground',
+          icon: Clock3,
+          direction: {
+            positive: Boolean(lastSyncedAt),
+            label: lastSyncedAt
+              ? 'Project has synced'
+              : 'Project has not synced',
+          },
         },
       ]}
-      columns={5}
+      columns={4}
+      appearance="dashboard"
     />
   );
 }

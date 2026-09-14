@@ -244,6 +244,10 @@ export default function ActiveSyncs() {
                           <ListRow key={run.id ?? run.jobId} asChild>
                             <Link
                               to={`/projects/${pid}/jobs/${run.job?.id ?? run.jobId}`}
+                              state={{
+                                jobBackTo: '/active-syncs',
+                                jobBackLabel: 'Back to Live Activity',
+                              }}
                             >
                               <div className="bg-success/10 text-success flex size-9 shrink-0 items-center justify-center rounded-lg">
                                 <RefreshCw className="size-4.5 animate-spin" />
@@ -299,7 +303,13 @@ export default function ActiveSyncs() {
                     <ListPanel>
                       {idle.map((job) => (
                         <ListRow key={job.id} asChild>
-                          <Link to={`/projects/${pid}/jobs/${job.id}`}>
+                          <Link
+                            to={`/projects/${pid}/jobs/${job.id}`}
+                            state={{
+                              jobBackTo: '/active-syncs',
+                              jobBackLabel: 'Back to Live Activity',
+                            }}
+                          >
                             <div className="bg-muted text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-lg">
                               <ArrowLeftRight className="size-4" />
                             </div>

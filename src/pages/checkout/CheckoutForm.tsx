@@ -220,7 +220,7 @@ export function CheckoutForm({
     <div className="space-y-5">
       <div className="space-y-2">
         <Label required>Billing name &amp; address</Label>
-        <div className="border-border bg-muted/40 rounded-lg border p-3">
+        <div className="border-border bg-muted/40 rounded-4xl border p-3">
           <AddressElement
             options={{ mode: 'billing', autocomplete: { mode: 'automatic' } }}
             onChange={handleAddressChange}
@@ -242,7 +242,7 @@ export function CheckoutForm({
                   role="button"
                   tabIndex={0}
                   onClick={() => setSelectedId(c.id)}
-                  className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 ${
+                  className={`flex cursor-pointer items-center gap-3 rounded-3xl border p-3 ${
                     isSelected
                       ? 'border-primary ring-primary ring-1'
                       : 'border-border'
@@ -274,7 +274,7 @@ export function CheckoutForm({
                 role="button"
                 tabIndex={0}
                 onClick={() => setSelectedId(NEW_CARD)}
-                className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 ${
+                className={`flex cursor-pointer items-center gap-3 rounded-3xl border p-3 ${
                   selectedId === NEW_CARD
                     ? 'border-primary ring-primary ring-1'
                     : 'border-border'
@@ -293,7 +293,7 @@ export function CheckoutForm({
             )}
 
             {selectedId === NEW_CARD && (
-              <div className="border-border bg-muted/40 rounded-lg border p-3">
+              <div className="border-border bg-muted/40 rounded-4xl border p-3">
                 <PaymentElement options={{ layout: 'tabs' }} />
               </div>
             )}

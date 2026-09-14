@@ -215,7 +215,7 @@ export default function CustomObjectModal({
           </Button>
         )}
       >
-        <div className="bg-muted/40 flex items-start gap-3 rounded-xl border p-4">
+        <div className="bg-muted/40 flex items-start gap-3 rounded-4xl border p-4">
           <AlertCircle className="text-warning mt-0.5 size-4.5 shrink-0" />
           <div>
             <p className="mb-1 text-sm font-medium">
@@ -297,7 +297,7 @@ export default function CustomObjectModal({
                 'HubSpot rejected the last attempt to create a custom object on this connection.'}
             </p>
           </div>
-          <div className="bg-muted/40 text-muted-foreground w-full rounded-xl border p-3 text-xs">
+          <div className="bg-muted/40 text-muted-foreground w-full rounded-4xl border p-3 text-xs">
             If you've since upgraded your HubSpot plan, re-test your connection
             in synkazo to try again.
           </div>
@@ -413,7 +413,7 @@ export default function CustomObjectModal({
 
           <Field>
             <FieldLabel>Object Fields</FieldLabel>
-            <div className="overflow-hidden rounded-xl border">
+            <div className="overflow-hidden rounded-4xl border">
               {fields.map((f, i) => (
                 <div
                   key={i}

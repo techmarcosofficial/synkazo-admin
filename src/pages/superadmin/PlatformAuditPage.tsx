@@ -15,11 +15,11 @@ import DateRangePicker from '@/components/shared/DateRangePicker';
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
 import ManagementToolbar from '@/components/shared/ManagementToolbar';
+import PageContextAlert from '@/components/shared/PageContextAlert';
 import PageHeader from '@/components/shared/PageHeader';
 import PaginationBar from '@/components/shared/PaginationBar';
 import SkeletonTable from '@/components/shared/skeletons/SkeletonTable';
 import StatCardGrid from '@/components/shared/StatCardGrid';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
@@ -102,6 +102,8 @@ const SEVERITY_FILTER_OPTIONS: Array<{ value: string; label: string }> = [
 ];
 
 export default function PlatformAuditPage() {
+  const [activeTab, setActiveTab] = useState<'audit' | 'system'>('audit');
+
   // ── Audit Log tab state ──────────────────────────────────────────────────
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -155,6 +157,10 @@ export default function PlatformAuditPage() {
   const systemLogs = systemRes?.data ?? [];
   const systemTotal = systemRes?.total ?? systemLogs.length;
   const systemTotalPages = Math.max(1, Math.ceil(systemTotal / sysPageSize));
+  const isShowingStaleData =
+    activeTab === 'audit'
+      ? auditQuery.isError && Boolean(auditRes)
+      : systemQuery.isError && Boolean(systemRes);
 
   const auditStatsLogs = auditStatsQuery.data?.data ?? [];
   const systemStatsLogs = systemStatsQuery.data?.data ?? [];
@@ -229,6 +235,14 @@ export default function PlatformAuditPage() {
     <div className="animate-fade-in-up space-y-6">
       {header}
 
+      {isShowingStaleData && (
+        <PageContextAlert
+          variant="warning"
+          title="Unable to refresh platform activity"
+          description="You're viewing previously loaded data. Try refreshing again."
+        />
+      )}
+
       <StatCardGrid
         columns={3}
         stats={[
@@ -253,7 +267,10 @@ export default function PlatformAuditPage() {
         ]}
       />
 
-      <Tabs defaultValue="audit">
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as 'audit' | 'system')}
+      >
         <TabsList>
           <TabsTrigger value="audit">Audit Log</TabsTrigger>
           <TabsTrigger value="system">System Log</TabsTrigger>
@@ -268,15 +285,6 @@ export default function PlatformAuditPage() {
             <ErrorState onRetry={() => auditQuery.refetch()} />
           ) : (
             <>
-              {auditQuery.isError && (
-                <Alert variant="destructive">
-                  <AlertTriangle />
-                  <AlertDescription>
-                    Failed to refresh — showing the last loaded page.
-                  </AlertDescription>
-                </Alert>
-              )}
-
               {auditLogs.length === 0 &&
               !hasActiveAuditFilters &&
               page === 1 ? (
@@ -481,15 +489,6 @@ export default function PlatformAuditPage() {
             <ErrorState onRetry={() => systemQuery.refetch()} />
           ) : (
             <>
-              {systemQuery.isError && (
-                <Alert variant="destructive">
-                  <AlertTriangle />
-                  <AlertDescription>
-                    Failed to refresh — showing the last loaded page.
-                  </AlertDescription>
-                </Alert>
-              )}
-
               {systemLogs.length === 0 && !sysSearch.trim() && sysPage === 1 ? (
                 <EmptyState
                   icon={ClipboardList}

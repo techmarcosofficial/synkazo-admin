@@ -1,6 +1,7 @@
 import { Check, ChevronDown } from 'lucide-react';
 
 import StatusBadge from '@/components/shared/StatusBadge';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,7 +10,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { cn } from '@/lib/utils';
 
 export default function JobStatusDropdown({
   isActive,
@@ -35,15 +35,14 @@ export default function JobStatusDropdown({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild disabled={toggling}>
-        <div
-          className={cn(
-            'group bg-card flex items-center gap-2 rounded-full px-3 py-1.5 text-xs',
-            toggling && 'pointer-events-none opacity-60',
-          )}
+        <Button
+          variant="outline"
+          size="sm"
+          className="group h-7 rounded-full px-2.5"
         >
           <StatusBadge variant="menu" status={isActive ? 'active' : 'idle'} />
           <ChevronDown className="text-muted-foreground size-4 transition-transform group-data-[state=open]:rotate-180" />
-        </div>
+        </Button>
       </DropdownMenuTrigger>
 
       <DropdownMenuContent className="w-72" align="start">

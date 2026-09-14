@@ -1,2 +1,2 @@
-export { PlatformIcon as PlatformTile } from './PlatformTile';
 export { default as ProjectCard } from './ProjectCard';
+export { default as ProjectPlatformPair } from './ProjectPlatformPair';

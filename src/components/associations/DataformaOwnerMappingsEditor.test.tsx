@@ -7,6 +7,7 @@ import DataformaOwnerMappingsEditor from './DataformaOwnerMappingsEditor';
 import { associationsApi } from '@/api/associations';
 import type { CompanyOwnerMapping } from '@/api/associations';
 import { connectionsApi } from '@/api/connections';
+import { useConfirmDialogStore } from '@/stores/useConfirmDialogStore';
 
 vi.mock('@/api/associations', async () => {
   const actual =
@@ -46,9 +47,14 @@ const deleteMapping = vi.mocked(associationsApi.deleteCompanyOwnerMapping);
 const getObjectFields = vi.mocked(associationsApi.getObjectFields);
 const getProperties = vi.mocked(connectionsApi.getProperties);
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  useConfirmDialogStore.getState().close();
+});
 
-function makeMapping(overrides: Partial<CompanyOwnerMapping> = {}): CompanyOwnerMapping {
+function makeMapping(
+  overrides: Partial<CompanyOwnerMapping> = {},
+): CompanyOwnerMapping {
   return {
     id: 'mapping-1',
     projectId: 'project-1',
@@ -80,6 +86,25 @@ describe('DataformaOwnerMappingsEditor', () => {
     );
   });
 
+  it('keeps mapping load failures visible and retryable', async () => {
+    const user = userEvent.setup();
+    listMappings
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce([]);
+
+    render(<DataformaOwnerMappingsEditor projectId="project-1" />);
+
+    expect(
+      await screen.findByText('Owner mappings could not be loaded.'),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
+
+    await waitFor(() => expect(listMappings).toHaveBeenCalledTimes(2));
+    expect(
+      await screen.findByText(/no mappings configured/i),
+    ).toBeInTheDocument();
+  });
+
   it('lists configured mappings', async () => {
     listMappings.mockResolvedValue([makeMapping()]);
     render(<DataformaOwnerMappingsEditor projectId="project-1" />);
@@ -91,7 +116,9 @@ describe('DataformaOwnerMappingsEditor', () => {
 
   it('adds a new mapping', async () => {
     const user = userEvent.setup();
-    listMappings.mockResolvedValueOnce([]).mockResolvedValueOnce([makeMapping()]);
+    listMappings
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([makeMapping()]);
     createMapping.mockResolvedValue(makeMapping());
 
     render(<DataformaOwnerMappingsEditor projectId="project-1" />);
@@ -116,6 +143,13 @@ describe('DataformaOwnerMappingsEditor', () => {
     );
 
     await user.click(screen.getByTitle(/remove mapping/i));
+
+    expect(useConfirmDialogStore.getState()).toMatchObject({
+      open: true,
+      title: 'Remove owner mapping?',
+      confirmLabel: 'Remove mapping',
+    });
+    await useConfirmDialogStore.getState().onConfirm?.();
 
     await waitFor(() =>
       expect(deleteMapping).toHaveBeenCalledWith('project-1', 'mapping-1'),

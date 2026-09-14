@@ -73,7 +73,7 @@ export default function DisconnectImpactBody({
         </Card>
       )}
 
-      <p className="text-destructive bg-destructive/10 rounded-xl p-4 text-sm leading-relaxed">
+      <p className="text-destructive bg-destructive/10 rounded-4xl p-4 text-sm leading-relaxed">
         Disconnecting this environment will impact existing jobs, syncs,
         mappings, and automation processes. Some functionality may stop working
         until a valid connection is configured again.

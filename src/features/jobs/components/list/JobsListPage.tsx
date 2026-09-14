@@ -437,6 +437,10 @@ export default function JobsListPage() {
                                   <div className="flex items-center gap-2">
                                     <Link
                                       to={`/projects/${job.projectId}/jobs/${job.id}`}
+                                      state={{
+                                        jobBackTo: '/jobs',
+                                        jobBackLabel: 'Back to All Sync Jobs',
+                                      }}
                                       className="hover:text-primary block truncate text-sm font-medium transition-colors"
                                     >
                                       {job.name}
@@ -567,7 +571,12 @@ export default function JobsListPage() {
           onGoToPipeline={() => {
             const { projectId, id } = confirm.job;
             setConfirm(null);
-            navigate(`/projects/${projectId}/jobs/${id}?tab=pipeline`);
+            navigate(`/projects/${projectId}/jobs/${id}?tab=pipeline`, {
+              state: {
+                jobBackTo: '/jobs',
+                jobBackLabel: 'Back to All Sync Jobs',
+              },
+            });
           }}
           onConfirm={handleConfirmRun}
           onClose={() => setConfirm(null)}

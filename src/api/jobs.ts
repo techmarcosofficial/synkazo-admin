@@ -178,9 +178,9 @@ export const jobsApi = {
   getSchedulerHealth: (): Promise<unknown> =>
     apiClient.get('/jobs/scheduler-health').then(d),
 
-  pauseAllJobs: (projectId: string): Promise<void> =>
+  pauseAllJobs: (projectId: string): Promise<{ affected: number }> =>
     apiClient.patch(`${p(projectId)}/pause-all`).then(d),
-  resumeAllJobs: (projectId: string): Promise<void> =>
+  resumeAllJobs: (projectId: string): Promise<{ affected: number }> =>
     apiClient.patch(`${p(projectId)}/resume-all`).then(d),
   resetAllCheckpoints: (projectId: string): Promise<void> =>
     apiClient.post(`${p(projectId)}/reset-checkpoints`).then(d),

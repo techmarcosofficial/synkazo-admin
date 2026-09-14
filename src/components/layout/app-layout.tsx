@@ -3,9 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 
-import GlobalLoader from '../shared/GlobalLoader';
-import OverLimitBanner from '../shared/OverLimitBanner';
-import PastDueBanner from '../shared/PastDueBanner';
+import GlobalLoader, { PageLoader } from '../shared/GlobalLoader';
 import WelcomeGuideModal from '../shared/WelcomeGuideModal';
 
 import SiteHeader from './site-header';
@@ -13,9 +11,8 @@ import SiteHeader from './site-header';
 import SubscriptionPaywall from '@/components/billing/SubscriptionPaywall';
 import { AppSidebar } from '@/components/layout/app-sidebar';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
-import { Spinner } from '@/components/ui/spinner';
-import { SetupWizardDialog } from '@/features/projects/components/setup';
 import SourceSetupDialog from '@/features/projects/components/setup/SourceSetupDialog';
+import CreateProjectDialog from '@/features/projects/components/create/CreateProjectDialog';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { usePlanQuery } from '@/queries/useBilling';
 
@@ -27,7 +24,7 @@ import { usePlanQuery } from '@/queries/useBilling';
 const PAYWALL_STATUSES = new Set(['none', 'canceled', 'incomplete', 'unpaid']);
 
 export default function AppLayout() {
-  const { currentUser, isLoading, hasRole } = useSynkazoAuth();
+  const { currentUser, isLoading, hasRole, hasPermission } = useSynkazoAuth();
   const [showWelcome, setShowWelcome] = useState(false);
 
   // Platform operators are exempt from the paywall so they can't lock themselves out of
@@ -56,11 +53,7 @@ export default function AppLayout() {
   // we never flash the dashboard, then fail closed: only active/trialing orgs get through.
   if (!isSuperAdmin) {
     if (planQuery.isLoading) {
-      return (
-        <div className="bg-background fixed inset-0 z-[70] flex items-center justify-center">
-          <Spinner className="size-6" />
-        </div>
-      );
+      return <PageLoader className="z-[70]" label="Loading subscription" />;
     }
     if (PAYWALL_STATUSES.has(planQuery.data?.subscriptionStatus ?? 'none')) {
       return <SubscriptionPaywall />;
@@ -73,14 +66,12 @@ export default function AppLayout() {
         {showWelcome && (
           <WelcomeGuideModal onClose={() => setShowWelcome(false)} />
         )}
-        <SetupWizardDialog />
         <SourceSetupDialog />
+        {hasPermission('project.create') && <CreateProjectDialog />}
         <AppSidebar />
-        <SidebarInset>
+        <SidebarInset className="[--app-shell-header-height:--spacing(16)]">
           <SiteHeader />
           <main className="container mx-auto flex w-full flex-1 flex-col gap-6 px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
-            <PastDueBanner />
-            <OverLimitBanner />
             <Outlet />
           </main>
         </SidebarInset>

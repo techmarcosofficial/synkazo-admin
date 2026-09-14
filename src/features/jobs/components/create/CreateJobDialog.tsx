@@ -12,7 +12,7 @@ import { Spinner } from '@/components/ui/spinner';
 
 const DEFAULT_STATE: CreateJobFormState = {
   canGoBack: false,
-  isLastStep: false,
+  isLastStep: true,
   saving: false,
   isDirty: false,
   stepIndex: 0,
@@ -46,14 +46,14 @@ export default function CreateJobDialog({
       open={open}
       onOpenChange={(next) => !next && onClose()}
       title="Create New Sync Job"
-      description="Connect two applications and configure field synchronization."
-      size="xl"
+      description="Choose what to sync and how records should move."
+      size="md"
       isDirty={state.isDirty}
       currentStep={
-        state.stepLabels.length > 0 ? state.stepIndex + 1 : undefined
+        state.stepLabels.length > 1 ? state.stepIndex + 1 : undefined
       }
-      totalSteps={state.stepLabels.length > 0 ? state.totalSteps : undefined}
-      stepLabels={state.stepLabels.length > 0 ? state.stepLabels : undefined}
+      totalSteps={state.stepLabels.length > 1 ? state.totalSteps : undefined}
+      stepLabels={state.stepLabels.length > 1 ? state.stepLabels : undefined}
       footer={(requestClose) => (
         <>
           <Button
@@ -77,7 +77,7 @@ export default function CreateJobDialog({
             {state.saving
               ? 'Saving…'
               : state.isLastStep
-                ? 'Create Job'
+                ? 'Create Sync Job'
                 : 'Next'}
           </Button>
         </>
@@ -88,6 +88,7 @@ export default function CreateJobDialog({
         projectId={projectId}
         onCreated={onCreated}
         onStateChange={setState}
+        detailsOnly
       />
     </FormDialog>
   );

@@ -29,6 +29,7 @@ export function useJobHeaderAlert(): ResolvedJobHeaderAlert | undefined {
     jobId,
     job,
     project,
+    runLogs,
     jobFieldMappings,
     hasConnection,
     isSyncing,
@@ -48,6 +49,11 @@ export function useJobHeaderAlert(): ResolvedJobHeaderAlert | undefined {
     hasMatchField &&
     hasConnection &&
     isProjectActive;
+  const onboardingComplete =
+    Boolean(job.lastSyncedAt) ||
+    runLogs.some(
+      (run) => run.status === 'success' || run.status === 'completed',
+    );
 
   const candidates: JobHeaderAlertCandidate[] = [];
 
@@ -98,7 +104,7 @@ export function useJobHeaderAlert(): ResolvedJobHeaderAlert | undefined {
     });
   }
 
-  if (isProjectActive && !canActivate) {
+  if (isProjectActive && !canActivate && onboardingComplete) {
     candidates.push({
       key: 'setup-incomplete',
       variant: 'warning',

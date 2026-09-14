@@ -1,3 +1,4 @@
+import { LucideProvider } from 'lucide-react';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
@@ -8,10 +9,12 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ThemeProvider storageKey="sb-theme-v2" defaultTheme="light">
-      <TooltipProvider>
-        <App />
-      </TooltipProvider>
-    </ThemeProvider>
+    <LucideProvider strokeWidth={2.5}>
+      <ThemeProvider storageKey="sb-theme-v2" defaultTheme="light">
+        <TooltipProvider>
+          <App />
+        </TooltipProvider>
+      </ThemeProvider>
+    </LucideProvider>
   </StrictMode>,
 );

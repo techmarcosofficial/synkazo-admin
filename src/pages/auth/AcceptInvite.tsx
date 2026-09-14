@@ -1,8 +1,14 @@
-import { AlertCircle, ArrowRight, CheckCircle } from 'lucide-react';
+import {
+  AlertCircle,
+  ArrowRight,
+  CheckCircle,
+  UserRound,
+} from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { invitationsApi } from '@/api/invitations';
+import AuthInput from '@/components/auth/AuthInput';
 import AuthStatus from '@/components/auth/AuthStatus';
 import BrandMark from '@/components/auth/BrandMark';
 import PasswordInput from '@/components/auth/PasswordInput';
@@ -11,7 +17,6 @@ import SplitAuthLayout from '@/components/auth/SplitAuthLayout';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { getPasswordError } from '@/lib/passwordValidation';
 import { roleLabel } from '@/lib/permissions';
@@ -98,7 +103,8 @@ export default function AcceptInvite() {
                 <FieldLabel htmlFor="invite-name" required>
                   Full Name
                 </FieldLabel>
-                <Input
+                <AuthInput
+                  icon={UserRound}
                   id="invite-name"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}

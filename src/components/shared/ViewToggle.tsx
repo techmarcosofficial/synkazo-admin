@@ -1,8 +1,7 @@
-import { LayoutGrid, Table as TableIcon } from 'lucide-react';
+import { LayoutGrid, List } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import type { ManagementViewMode } from '@/hooks/useViewMode';
-import { cn } from '@/lib/utils';
 
 interface ViewToggleProps {
   value: ManagementViewMode;
@@ -11,35 +10,25 @@ interface ViewToggleProps {
 
 export default function ViewToggle({ value, onChange }: ViewToggleProps) {
   return (
-    <div className="bg-muted flex rounded-3xl p-1">
-      <Button
-        type="button"
-        variant="secondary"
-        size="icon-sm"
-        aria-label="Table view"
-        aria-pressed={value === 'table'}
-        onClick={() => onChange('table')}
-        className={cn(
-          'h-7 rounded-2xl p-0',
-          value === 'table' ? 'bg-primary text-white' : 'bg-muted',
-        )}
-      >
-        <TableIcon />
-      </Button>
-      <Button
-        type="button"
-        variant={'secondary'}
-        size="icon-sm"
-        aria-label="Card view"
-        aria-pressed={value === 'card'}
-        onClick={() => onChange('card')}
-        className={cn(
-          'h-7 rounded-2xl p-0',
-          value === 'card' ? 'bg-primary text-white' : 'bg-muted',
-        )}
-      >
+    <ToggleGroup
+      type="single"
+      value={value}
+      onValueChange={(nextValue) => {
+        if (nextValue === 'table' || nextValue === 'card') onChange(nextValue);
+      }}
+      variant="outline"
+      size="sm"
+      spacing={0}
+      aria-label="Display view"
+    >
+      <ToggleGroupItem value="table" aria-label="List view">
+        <List />
+        <span>List</span>
+      </ToggleGroupItem>
+      <ToggleGroupItem value="card" aria-label="Card view">
         <LayoutGrid />
-      </Button>
-    </div>
+        <span>Cards</span>
+      </ToggleGroupItem>
+    </ToggleGroup>
   );
 }

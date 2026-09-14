@@ -3,6 +3,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { queryKeys } from './queryKeys';
 
 import { dashboardApi } from '@/api/dashboard';
+import type { DashboardMetricsParams } from '@/api/dashboard';
 import { syncLogsApi } from '@/api/syncLogs';
 
 export function useDashboardSummaryQuery() {
@@ -44,5 +45,18 @@ export function useActiveSyncsQuery() {
     queryKey: queryKeys.dashboard.activeSyncs,
     queryFn: dashboardApi.getActiveSyncs,
     refetchInterval: 10_000,
+  });
+}
+
+export function useDashboardSyncMetricsQuery(params: DashboardMetricsParams) {
+  return useQuery({
+    queryKey: queryKeys.dashboard.syncMetrics(
+      params.period,
+      params.timezone,
+      params.start,
+      params.end,
+    ),
+    queryFn: () => dashboardApi.getSyncMetrics(params),
+    placeholderData: keepPreviousData,
   });
 }

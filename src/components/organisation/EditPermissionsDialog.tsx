@@ -155,7 +155,7 @@ export default function EditPermissionsDialog({
               <Label
                 key={r}
                 htmlFor={`edit-role-${r}`}
-                className="hover:bg-muted flex flex-1 cursor-pointer items-center gap-2 rounded-md border p-2 font-normal"
+                className="hover:bg-muted flex flex-1 cursor-pointer items-center gap-2 rounded-3xl border p-2 font-normal"
               >
                 <RadioGroupItem value={r} id={`edit-role-${r}`} />
                 <span className="text-sm">{roleLabel(r)}</span>
@@ -165,7 +165,7 @@ export default function EditPermissionsDialog({
         </div>
 
         {hasFullAccess ? (
-          <p className="text-muted-foreground bg-muted rounded-md p-3 text-sm">
+          <p className="text-muted-foreground bg-muted rounded-4xl p-3 text-sm">
             {role === 'super_admin'
               ? "Super Admins have unrestricted access to all functionality — granular permissions don't apply."
               : "Org Admins have full access to this organisation's functionality — granular permissions don't apply."}
@@ -181,7 +181,7 @@ export default function EditPermissionsDialog({
                   {group.perms.map((perm) => (
                     <Label
                       key={perm}
-                      className="hover:bg-muted flex cursor-pointer items-center gap-3 rounded-md p-2 font-normal"
+                      className="hover:bg-muted flex cursor-pointer items-center gap-3 rounded-3xl p-2 font-normal"
                     >
                       <Checkbox
                         checked={editPerms.includes(perm as Permission)}
@@ -205,8 +205,8 @@ export default function EditPermissionsDialog({
               </p>
               <ProjectMultiSelect value={projectIds} onChange={setProjectIds} />
               <p className="text-muted-foreground mt-1.5 text-xs">
-                Only the selected projects will be visible to this team
-                member. Leave empty to grant no project access.
+                Only the selected projects will be visible to this team member.
+                Leave empty to grant no project access.
               </p>
             </div>
           </>
