@@ -157,7 +157,7 @@ export default function FieldMappingStep({
       )}
 
       {(customSourceFields.length > 0 || customDestFields.length > 0) && (
-        <div className="bg-muted/40 rounded-xl p-4">
+        <div className="bg-muted/40 rounded-4xl border p-4">
           <p className="text-muted-foreground mb-2 text-xs font-semibold tracking-wider uppercase">
             Custom Fields Added
           </p>

@@ -360,8 +360,8 @@ export default function OrganisationsPage() {
                       <TableRow key={org.id}>
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <Avatar className="size-8 rounded-lg">
-                              <AvatarFallback className="bg-primary/10 text-primary rounded-lg text-xs font-bold">
+                            <Avatar className="size-8">
+                              <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
                                 {org.name?.charAt(0)?.toUpperCase()}
                               </AvatarFallback>
                             </Avatar>

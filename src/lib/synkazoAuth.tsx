@@ -20,9 +20,7 @@ import type {
   RegisterFormData,
 } from '@/types';
 
-const SynkazoAuthContext = createContext<SynkazoAuthContextValue | null>(
-  null,
-);
+const SynkazoAuthContext = createContext<SynkazoAuthContextValue | null>(null);
 
 export function SynkazoAuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -46,11 +44,10 @@ export function SynkazoAuthProvider({ children }: { children: ReactNode }) {
     else sseClient.disconnect();
   }, [currentUser]);
 
-  const resolveRole = (raw: string): UserRole => {
-    if (ROLE_HIERARCHY.includes(raw as UserRole)) return raw as UserRole;
-    if (raw === 'admin') return 'super_admin';
-    return 'editor';
-  };
+  // Unknown values fall back to the least-privileged role — the safe direction
+  // if the backend ever emits something outside the enum.
+  const resolveRole = (raw: string): UserRole =>
+    ROLE_HIERARCHY.includes(raw as UserRole) ? (raw as UserRole) : 'editor';
 
   const hasRole = (minRole: UserRole): boolean => {
     if (!currentUser) return false;

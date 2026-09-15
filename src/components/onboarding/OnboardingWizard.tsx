@@ -233,7 +233,7 @@ export default function OnboardingWizard({ onDismiss }: OnboardingWizardProps) {
                   setCreateError('');
                 }}
                 className={cn(
-                  'relative flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors',
+                  'relative flex items-center gap-3 rounded-3xl border px-3 py-2.5 text-left transition-colors',
                   selected
                     ? 'border-primary bg-primary/5'
                     : 'bg-muted/40 hover:bg-muted',
@@ -358,7 +358,7 @@ export default function OnboardingWizard({ onDismiss }: OnboardingWizardProps) {
                   <p className="text-muted-foreground mb-2 text-xs font-semibold tracking-wider uppercase">
                     Destination
                   </p>
-                  <div className="border-primary bg-primary/5 flex items-center gap-3 rounded-xl border px-3 py-2.5">
+                  <div className="border-primary bg-primary/5 flex items-center gap-3 rounded-4xl border px-3 py-2.5">
                     <PlatformIcon platformId="hubspot" size={28} />
                     <div>
                       <span className="text-xs font-medium">HubSpot</span>

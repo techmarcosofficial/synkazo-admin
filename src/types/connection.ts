@@ -54,6 +54,31 @@ export interface VerifiedAccessEntry {
   read: boolean;
 }
 
+/**
+ * Feature availability derived from a HubSpot connection's granted optional
+ * scopes. Populated only for `hubspot_oauth` kind connections — the admin
+ * uses it to grey out objects/features the user didn't grant access to and
+ * to render "Reconnect to enable" prompts (rescope flow, §3.1/§3.3).
+ */
+export interface HubSpotConnectionCapabilities {
+  grantedScopes: string[];
+  objects: {
+    contacts: { read: boolean; write: boolean };
+    companies: { read: boolean; write: boolean };
+    deals: { read: boolean; write: boolean };
+    appointments: { read: boolean; write: boolean };
+    invoices: { read: boolean; write: boolean };
+    line_items: { read: boolean; write: boolean };
+    projects: { read: boolean; write: boolean };
+    customObjects: { read: boolean; write: boolean };
+  };
+  features: {
+    ownerAssignment: boolean;
+    customObjectSchemas: { read: boolean; write: boolean };
+    appointmentSchemas: { read: boolean };
+  };
+}
+
 /** Scope/permission info for a connection's Permissions view — always real, never assumed. */
 export interface ConnectionPermissions {
   platformId: PlatformId;
@@ -70,6 +95,8 @@ export interface ConnectionPermissions {
   accountName: string | null;
   connectedAt: string | null;
   lastCheckedAt: string | null;
+  /** Present only for hubspot_oauth connections; drives §3.2 field-mapper filter + §3.3 hints. */
+  capabilities?: HubSpotConnectionCapabilities;
   webhookHealth?: { scope: 'connection'; subscriptions: WebhookSubscription[] };
 }
 

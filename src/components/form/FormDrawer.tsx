@@ -1,6 +1,7 @@
 import { XIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import {
   Sheet,
   SheetContent,
@@ -31,6 +32,9 @@ interface FormDrawerProps {
   // When true, closing via X/Cancel shows a "Discard changes?" confirmation
   // instead of closing immediately. Reserved for multi-step/large forms.
   isDirty?: boolean;
+  currentStep?: number;
+  totalSteps?: number;
+  stepLabels?: string[];
 }
 
 const SIZE_CLASSES: Record<NonNullable<FormDrawerProps['size']>, string> = {
@@ -51,11 +55,17 @@ export default function FormDrawer({
   contentClassName,
   preventOutsideClose = true,
   isDirty = false,
+  currentStep,
+  totalSteps,
+  stepLabels,
 }: FormDrawerProps) {
   const { requestClose } = useDialogCloseGuard({
     isDirty,
     onClose: () => onOpenChange(false),
   });
+  const isWizard =
+    typeof currentStep === 'number' && typeof totalSteps === 'number';
+  const currentStepLabel = isWizard ? stepLabels?.[currentStep - 1] : null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -79,6 +89,18 @@ export default function FormDrawer({
           <div className="flex flex-col gap-1.5">
             <SheetTitle>{title}</SheetTitle>
             {description && <SheetDescription>{description}</SheetDescription>}
+            {isWizard && (
+              <p className="text-muted-foreground text-xs">
+                Step {currentStep} of {totalSteps}
+                {currentStepLabel ? ` · ${currentStepLabel}` : ''}
+              </p>
+            )}
+            {isWizard && (
+              <Progress
+                value={(currentStep! / totalSteps!) * 100}
+                className="mt-1 h-1"
+              />
+            )}
           </div>
           <Button
             variant="ghost"

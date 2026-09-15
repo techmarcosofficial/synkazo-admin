@@ -24,11 +24,16 @@ export function useSort<T, K extends string>(
     }
   };
 
+  const setSort = (key: K | null, nextDirection: SortDirection = 'asc') => {
+    setSortKey(key);
+    setDirection(nextDirection);
+  };
+
   const sorted = useMemo(() => {
     if (!sortKey) return items;
     const factor = direction === 'asc' ? 1 : -1;
     return [...items].sort((a, b) => factor * compare(a, b, sortKey));
   }, [items, sortKey, direction, compare]);
 
-  return { sorted, sortKey, direction, toggleSort };
+  return { sorted, sortKey, direction, toggleSort, setSort };
 }

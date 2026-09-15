@@ -283,7 +283,7 @@ export default function ScheduleStep({
         </div>
       </div>
 
-      <div className="bg-muted/40 space-y-3 rounded-xl p-4 lg:sticky lg:top-0">
+      <div className="bg-muted/40 space-y-3 rounded-4xl border p-4 lg:sticky lg:top-0">
         <h3 className="text-sm font-medium">Summary</h3>
         <Table>
           <TableBody>

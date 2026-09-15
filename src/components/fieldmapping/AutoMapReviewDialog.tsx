@@ -1,4 +1,4 @@
-import { ArrowRight, Check, CheckCircle2, Wand2, X } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Wand2, X } from 'lucide-react';
 import { useState } from 'react';
 
 import type { FieldDef } from './FieldMappingCanvas';
@@ -172,7 +172,7 @@ export default function AutoMapReviewDialog({
                     high confidence — applied
                   </span>
                 </div>
-                <div className="divide-y rounded-lg border">
+                <div className="divide-y overflow-hidden rounded-4xl border">
                   {preview.matched.map((m) => (
                     <div
                       key={m.source.key}
@@ -279,17 +279,43 @@ export default function AutoMapReviewDialog({
                                 </Button>
                               </>
                             ) : (
-                              <span className="min-w-0 flex-1 truncate text-sm font-semibold">
-                                {destLabel}
-                              </span>
+                              <div className="flex min-w-0 flex-1 items-center gap-2">
+                                <span className="truncate text-sm font-semibold">
+                                  {destLabel}
+                                </span>
+                                {state.status === 'accepted' && (
+                                  <span
+                                    role="status"
+                                    className="text-success inline-flex shrink-0 items-center gap-1 text-xs font-medium"
+                                  >
+                                    <CheckCircle2
+                                      aria-hidden="true"
+                                      className="size-3.5"
+                                    />
+                                    Accepted
+                                  </span>
+                                )}
+                              </div>
                             )}
 
                             {state.status === 'accepted' ? (
-                              <div className="flex shrink-0 items-center gap-1.5">
-                                <span className="text-success flex items-center gap-1.5 text-xs font-semibold">
-                                  <Check className="size-3.5" />
-                                  Accepted
-                                </span>
+                              <div className="flex shrink-0 gap-1.5">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() =>
+                                    setReviewState((prev) => ({
+                                      ...prev,
+                                      [r.source.key]: {
+                                        status: 'pending',
+                                        destKey: r.dest.key,
+                                      },
+                                    }))
+                                  }
+                                  className="w-16"
+                                >
+                                  Undo
+                                </Button>
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -310,6 +336,7 @@ export default function AutoMapReviewDialog({
                               <div className="flex shrink-0 gap-1.5">
                                 <Button
                                   size="sm"
+                                  className="w-16"
                                   onClick={() =>
                                     setReviewState((prev) => ({
                                       ...prev,
@@ -342,6 +369,7 @@ export default function AutoMapReviewDialog({
                               <div className="flex shrink-0 gap-1.5">
                                 <Button
                                   size="sm"
+                                  className="w-16"
                                   onClick={() =>
                                     setReviewState((prev) => ({
                                       ...prev,
@@ -386,7 +414,7 @@ export default function AutoMapReviewDialog({
                     map manually after applying
                   </span>
                 </div>
-                <div className="divide-y rounded-lg border">
+                <div className="divide-y overflow-hidden rounded-4xl border">
                   {preview.unmatched.map((f) => (
                     <div
                       key={f.key}

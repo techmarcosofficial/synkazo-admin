@@ -65,6 +65,7 @@
 
   /* Synkazo semantic extensions: sync/job status colors */
   --color-success: var(--success);
+  --color-success-fill: var(--success-fill);
   --color-warning: var(--warning);
   --color-info: var(--info);
   --color-paused: var(--paused);
@@ -118,9 +119,8 @@
   --popover-foreground:
     #14151b;
 
-  /* Primary — buttons/CTAs use rich black in the light theme so they read as
-     confident action rather than brand-orange noise; brand orange still shows
-     up on the mark, sidebar accents, and dark-mode primary. */
+  /* Primary — rich black in light mode; brand orange is reserved for focused
+     accents and the dark-mode primary. */
   --primary:
     #14151b;
   --primary-foreground:
@@ -150,7 +150,10 @@
     #db4437;
   --destructive-foreground: #ffffff;
 
-  --success: #1f9d55;
+  /* Lime green — a green/yellow midpoint with enough contrast on light surfaces. */
+  --success: #65a30d;
+  /* Vivid fill only — too low-contrast on white for text/thin borders, use for solid blocks/badges. */
+  --success-fill: #52d500;
   --warning: #c77a0a;
   --info: #2f74d0;
   --paused: #7c5cd8;
@@ -164,17 +167,17 @@
   --ring:
     rgba(248, 85, 8, 0.35);
 
-  /* Charts */
+  /* Charts — neutral tones derived from the light theme's black primary. */
   --chart-1:
-    oklch(0.811 0.111 293.571);
+    #14151B;
   --chart-2:
-    oklch(0.606 0.25 292.717);
+    #3F4350;
   --chart-3:
-    oklch(0.541 0.281 293.009);
+    #626876;
   --chart-4:
-    oklch(0.491 0.27 292.581);
+    #8F95A3;
   --chart-5:
-    oklch(0.432 0.232 292.759);
+    #B8BDC8;
 
   /* Radius */
   --radius:
@@ -205,7 +208,7 @@
   --primary-soft: rgba(248, 85, 8, 0.1);
   --primary-soft2: rgba(248, 85, 8, 0.16);
 
-  --success-soft: rgba(31, 157, 85, 0.12);
+  --success-soft: rgba(101, 163, 13, 0.12);
   --warning-soft: rgba(199, 122, 10, 0.13);
   --info-soft: rgba(47, 116, 208, 0.12);
   --paused-soft: rgba(124, 92, 216, 0.13);
@@ -213,6 +216,7 @@
   --shadow-sm: 0 1px 2px rgba(20, 21, 40, 0.05);
   --shadow-md: 0 4px 14px rgba(20, 21, 40, 0.07);
   --shadow-lg: 0 14px 40px rgba(20, 21, 40, 0.12);
+  --layout-surface-shadow: var(--shadow-sm);
 }
 
 .dark {
@@ -260,7 +264,9 @@
     #f0685c;
   --destructive-foreground: #ffffff;
 
-  --success: #34c77b;
+  /* Brighter lime retains contrast against the dark app surfaces. */
+  --success: #a3e635;
+  --success-fill: #52d500;
   --warning: #e0a53c;
   --info: #5b9bf0;
   --paused: #a78bfa;
@@ -274,16 +280,17 @@
   --ring:
     rgba(248, 85, 8, 0.45);
 
+  /* Brighter orange tones retain separation against dark chart surfaces. */
   --chart-1:
-    oklch(0.811 0.111 293.571);
+    #FF6B24;
   --chart-2:
-    oklch(0.606 0.25 292.717);
+    #FF9A62;
   --chart-3:
-    oklch(0.541 0.281 293.009);
+    #E85D1C;
   --chart-4:
-    oklch(0.491 0.27 292.581);
+    #FFC09F;
   --chart-5:
-    oklch(0.432 0.232 292.759);
+    #C84A16;
 
   --sidebar:
     #14161f;
@@ -308,7 +315,7 @@
   --primary-soft: rgba(248, 85, 8, 0.16);
   --primary-soft2: rgba(248, 85, 8, 0.24);
 
-  --success-soft: rgba(52, 199, 123, 0.15);
+  --success-soft: rgba(163, 230, 53, 0.15);
   --warning-soft: rgba(224, 165, 60, 0.15);
   --info-soft: rgba(91, 155, 240, 0.15);
   --paused-soft: rgba(167, 139, 250, 0.16);
@@ -316,6 +323,7 @@
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.35);
   --shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.5);
+  --layout-surface-shadow: var(--shadow-sm);
 }
 
 @layer base {
@@ -327,6 +335,21 @@
   }
   html {
     @apply font-sans;
+  }
+
+  html[data-layout-style='shadow'] [data-layout-surface='outer'] {
+    border-color: transparent !important;
+    box-shadow: var(--layout-surface-shadow) !important;
+  }
+
+  /* Project connection states use their border as a status indicator. Keep that
+     indicator visible when the global shadow layout hides ordinary card borders. */
+  html[data-layout-style='shadow'] [data-project-connections-tab] [data-layout-surface='outer'][data-connection-state='connected'] {
+    border-color: color-mix(in oklab, var(--primary) 20%, transparent) !important;
+  }
+
+  html[data-layout-style='shadow'] [data-project-connections-tab] [data-layout-surface='outer'][data-connection-state='pending'] {
+    border-color: color-mix(in oklab, var(--primary) 20%, transparent) !important;
   }
   /* Tailwind v4 dropped the default `cursor: pointer` on <button>; restore it
      for every interactive surface so buttons/menus/links behave like the app
@@ -408,6 +431,83 @@
   }
   to {
     transform: scaleX(1);
+  }
+}
+
+/* Every logo path draws together. Alternating dash direction makes the
+   wordmark trace from both sides before the completed logo briefly holds. */
+@keyframes synkazo-wordmark-draw {
+  0%,
+  12% {
+    stroke-dashoffset: var(--synkazo-draw-start, 1);
+    fill-opacity: 0;
+  }
+  52% {
+    stroke-dashoffset: 0;
+    fill-opacity: 0;
+  }
+  68%,
+  88% {
+    stroke-dashoffset: 0;
+    fill-opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: var(--synkazo-draw-end, -1);
+    fill-opacity: 0;
+  }
+}
+
+.synkazo-wordmark-loader {
+  overflow: visible;
+}
+
+.synkazo-wordmark-loader path {
+  stroke: currentColor;
+  stroke-width: 0.65;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  animation: synkazo-wordmark-draw 2.1s ease-in-out infinite;
+}
+
+.synkazo-wordmark-loader path:nth-child(even) {
+  --synkazo-draw-start: -1;
+  --synkazo-draw-end: 1;
+}
+
+.synkazo-wordmark-loader path:nth-child(-n + 2) {
+  stroke: #ff6b39;
+}
+
+/* Compact brand-icon loader. The two halves trace at the same time from
+   opposite sides; unlike ordinary progress glyphs, the brand mark never spins. */
+.synkazo-action-loader {
+  overflow: visible;
+}
+
+.synkazo-action-loader path {
+  stroke: currentColor;
+  stroke-width: 1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  transform: scale(1.08);
+  transform-box: view-box;
+  transform-origin: center;
+  animation: synkazo-wordmark-draw 2.1s ease-in-out infinite;
+}
+
+.synkazo-action-loader path:nth-child(2) {
+  --synkazo-draw-start: -1;
+  --synkazo-draw-end: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .synkazo-wordmark-loader path,
+  .synkazo-action-loader path {
+    animation: none;
+    stroke-dashoffset: 0;
+    fill-opacity: 1;
   }
 }
 

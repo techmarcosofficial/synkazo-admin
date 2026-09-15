@@ -1,4 +1,4 @@
-import { FolderOpen, Plus } from 'lucide-react';
+import { FolderOpen, Plus, RotateCcw } from 'lucide-react';
 
 import EmptyState from '@/components/shared/EmptyState';
 import { useCreateProjectStore } from '@/features/projects/store';
@@ -8,12 +8,16 @@ interface ProjectEmptyStateProps {
   /** True when there are zero projects at all; false when filters just hide everything. */
   hasNoProjects: boolean;
   onCreated?: (project: ProjectExtended) => void;
+  onClearFilters?: () => void;
+  canCreate?: boolean;
   viewMode?: 'list' | 'table' | 'card';
 }
 
 export default function ProjectEmptyState({
   hasNoProjects,
   onCreated,
+  onClearFilters,
+  canCreate = true,
   viewMode,
 }: ProjectEmptyStateProps) {
   const openCreateProjectDialog = useCreateProjectStore((s) => s.open);
@@ -23,12 +27,20 @@ export default function ProjectEmptyState({
       <EmptyState
         icon={FolderOpen}
         title="No projects yet"
-        description="A project holds all sync settings for one integration."
-        action={{
-          label: 'Create your first project',
-          onClick: () => openCreateProjectDialog({ onCreated }),
-          icon: Plus,
-        }}
+        description={
+          canCreate
+            ? 'A project holds all sync settings for one integration.'
+            : 'No projects are available to you yet.'
+        }
+        action={
+          canCreate
+            ? {
+                label: 'Create your first project',
+                onClick: () => openCreateProjectDialog({ onCreated }),
+                icon: Plus,
+              }
+            : undefined
+        }
         viewMode={viewMode}
       />
     );
@@ -39,6 +51,15 @@ export default function ProjectEmptyState({
       icon={FolderOpen}
       title="No projects match your filters"
       description="Try a different search or status filter."
+      action={
+        onClearFilters
+          ? {
+              label: 'Clear filters',
+              onClick: onClearFilters,
+              icon: RotateCcw,
+            }
+          : undefined
+      }
       viewMode={viewMode}
     />
   );

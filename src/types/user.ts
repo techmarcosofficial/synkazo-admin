@@ -29,6 +29,12 @@ export interface User {
   isActive?: boolean;
   avatarInitials?: string;
   department?: string;
+  /**
+   * Personal notification preferences, persisted via PATCH /users/me. Stored as
+   * notify_sync_* columns but serialized camelCase by the entity.
+   */
+  notifySyncCompleted?: boolean;
+  notifySyncFailed?: boolean;
   joinedAt?: string;
   createdAt?: string;
   updatedAt?: string;

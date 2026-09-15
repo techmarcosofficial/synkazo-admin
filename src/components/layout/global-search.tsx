@@ -53,9 +53,9 @@ export default function GlobalSearch() {
     if (open) loadAll();
   }, [open, loadAll]);
 
-  const go = (path: string) => {
+  const go = (path: string, state?: Record<string, string>) => {
     setOpen(false);
-    navigate(path);
+    navigate(path, { state });
   };
 
   return (
@@ -117,7 +117,12 @@ export default function GlobalSearch() {
                 <CommandItem
                   key={j.id}
                   value={`job ${j.name}`}
-                  onSelect={() => go(`/projects/${j.projectId}/jobs/${j.id}`)}
+                  onSelect={() =>
+                    go(`/projects/${j.projectId}/jobs/${j.id}`, {
+                      jobBackTo: '/jobs',
+                      jobBackLabel: 'Back to All Sync Jobs',
+                    })
+                  }
                   className="gap-3 py-3"
                 >
                   <GitMerge className="text-primary h-4 w-4" />

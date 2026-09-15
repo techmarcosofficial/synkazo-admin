@@ -1,49 +1,56 @@
-import { ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { ArrowLeft, CheckCircle2, Mail } from 'lucide-react';
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { Link } from 'react-router-dom';
 
 import apiClient from '@/api/apiClient';
+import AuthInput from '@/components/auth/AuthInput';
 import AuthStatus from '@/components/auth/AuthStatus';
-import BrandMark from '@/components/auth/BrandMark';
 import SplitAuthLayout from '@/components/auth/SplitAuthLayout';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
-import { Spinner } from '@/components/ui/spinner';
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from '@/components/ui/field';
+import {
+  forgotPasswordSchema,
+  type ForgotPasswordFormValues,
+} from '@/lib/authValidation';
 
 export default function ForgotPassword() {
-  const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
-  const [error, setError] = useState('');
+  const [sentEmail, setSentEmail] = useState('');
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<ForgotPasswordFormValues>({
+    resolver: zodResolver(forgotPasswordSchema),
+    mode: 'onBlur',
+    reValidateMode: 'onChange',
+    defaultValues: { email: '' },
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    if (!email) {
-      setError('Please enter your email address.');
-      return;
-    }
-    setLoading(true);
+  const onSubmit = async (values: ForgotPasswordFormValues) => {
     try {
       await apiClient.post('/auth/forgot-password', {
-        email: email.trim().toLowerCase(),
+        email: values.email.toLowerCase(),
       });
     } catch {
       /* Always show success to avoid email enumeration */
     } finally {
-      setLoading(false);
+      setSentEmail(values.email);
       setSent(true);
     }
   };
 
   return (
-    <SplitAuthLayout>
-      <BrandMark />
-
+    <SplitAuthLayout variant="immersive">
       {sent ? (
-        <div className="mt-9">
+        <div>
           <AuthStatus
             icon={CheckCircle2}
             tone="success"
@@ -51,8 +58,8 @@ export default function ForgotPassword() {
             description={
               <>
                 If an account exists for{' '}
-                <span className="text-foreground font-medium">{email}</span>,
-                you'll receive a password reset link shortly.
+                <span className="text-foreground font-medium">{sentEmail}</span>
+                , you'll receive a password reset link shortly.
               </>
             }
           >
@@ -65,48 +72,46 @@ export default function ForgotPassword() {
         </div>
       ) : (
         <>
-          <div className="mt-9 space-y-1.5">
-            <h1 className="text-2xl font-bold tracking-tight">
-              Forgot password?
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              Enter your email and we'll send a reset link.
-            </p>
+          <div className="synkazo-login-heading">
+            <p className="synkazo-login-eyebrow">SECURE ACCOUNT RECOVERY.</p>
+            <h1>Forgot password?</h1>
+            <p>Enter your email and we'll send a reset link.</p>
           </div>
 
-          {error && (
-            <Alert variant="destructive" className="mt-6">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          <form onSubmit={handleSubmit} className="mt-8">
+          <form onSubmit={handleSubmit(onSubmit)} className="mt-8" noValidate>
             <FieldGroup>
-              <Field>
+              <Field data-invalid={!!errors.email}>
                 <FieldLabel htmlFor="email" required>
                   Email address
                 </FieldLabel>
-                <Input
+                <AuthInput
+                  icon={Mail}
                   id="email"
                   type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@company.com"
                   autoComplete="email"
                   autoFocus
+                  aria-invalid={!!errors.email}
+                  aria-describedby={
+                    errors.email ? 'forgot-email-error' : undefined
+                  }
+                  {...register('email')}
                 />
+                <FieldError id="forgot-email-error" errors={[errors.email]} />
               </Field>
-              <Button type="submit" disabled={loading} className="w-full">
-                {loading ? <Spinner /> : 'Send reset link'}
+              <Button type="submit" size="lg" loading={isSubmitting}>
+                {isSubmitting ? 'Sending…' : 'Send reset link'}
               </Button>
             </FieldGroup>
           </form>
 
-          <Button asChild variant="link" size="sm" className="mt-6 w-full">
-            <Link to="/login">
-              <ArrowLeft /> Back to sign in
-            </Link>
-          </Button>
+          <div className="mt-6 text-center">
+            <Button asChild variant="link" size="sm">
+              <Link to="/login">
+                <ArrowLeft /> Back to sign in
+              </Link>
+            </Button>
+          </div>
         </>
       )}
     </SplitAuthLayout>

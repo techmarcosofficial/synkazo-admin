@@ -316,7 +316,7 @@ function ChangePlanForm({ plan, price, onSuccess }: ChangePlanFormProps) {
                   role="button"
                   tabIndex={0}
                   onClick={() => setSelectedId(c.id)}
-                  className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 ${
+                  className={`flex cursor-pointer items-center gap-3 rounded-3xl border p-3 ${
                     isSelected
                       ? 'border-primary ring-primary ring-1'
                       : 'border-border'
@@ -348,7 +348,7 @@ function ChangePlanForm({ plan, price, onSuccess }: ChangePlanFormProps) {
                 role="button"
                 tabIndex={0}
                 onClick={() => setSelectedId(NEW_CARD)}
-                className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 ${
+                className={`flex cursor-pointer items-center gap-3 rounded-3xl border p-3 ${
                   selectedId === NEW_CARD
                     ? 'border-primary ring-primary ring-1'
                     : 'border-border'
@@ -367,7 +367,7 @@ function ChangePlanForm({ plan, price, onSuccess }: ChangePlanFormProps) {
             )}
 
             {selectedId === NEW_CARD && (
-              <div className="border-border bg-muted/40 rounded-lg border p-3">
+              <div className="border-border bg-muted/40 rounded-4xl border p-3">
                 <PaymentElement options={{ layout: 'tabs' }} />
               </div>
             )}

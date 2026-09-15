@@ -4,10 +4,11 @@ import { queryKeys } from './queryKeys';
 
 import { invitationsApi, type ProjectAccessGrant } from '@/api/invitations';
 
-export function useInvitationsQuery() {
+export function useInvitationsQuery(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: queryKeys.invitations.all,
     queryFn: invitationsApi.listInvitations,
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -30,6 +31,26 @@ export function useRevokeInvitationMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => invitationsApi.revokeInvitation(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.invitations.all });
+    },
+  });
+}
+
+export function useResendInvitationMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => invitationsApi.resendInvitation(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.invitations.all });
+    },
+  });
+}
+
+export function useDeleteInvitationMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => invitationsApi.deleteInvitation(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.invitations.all });
     },

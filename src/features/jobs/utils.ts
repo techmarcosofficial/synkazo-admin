@@ -4,8 +4,8 @@ import type { SyncFrequency } from '@/types';
 
 // Static copy shown wherever a two-way sync would otherwise offer schedule
 // configuration — two-way sync is not user-schedulable (it polls on a fixed,
-// admin-configured interval). Kept here so every surface (setup wizard schedule
-// step, job Schedule tab, project Scheduler tab) uses identical wording.
+// admin-configured interval). Kept here so the job Schedule tab and project
+// Scheduler tab use identical wording.
 export const TWO_WAY_SCHEDULE_MESSAGE =
   "Two-way syncs poll about every 2 minutes — there's no schedule to set. The exact interval is configured per source platform by your administrator.";
 export const TWO_WAY_SCHEDULER_TAB_MESSAGE =

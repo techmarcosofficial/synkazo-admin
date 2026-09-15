@@ -1,0 +1,1417 @@
+.synkazo-login-page {
+  --login-orange: #ff6232;
+  --login-orange-bright: #ff7448;
+  --login-ink: #090b0f;
+  display: grid;
+  width: 100%;
+  max-width: 100%;
+  height: 100svh;
+  min-height: 100svh;
+  grid-template-columns: minmax(520px, 41.25%) minmax(700px, 58.75%);
+  overflow: clip;
+  background: var(--login-ink);
+  color: #f4f5f7;
+  color-scheme: dark;
+}
+
+.synkazo-login-form-panel {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  min-width: 0;
+  height: 100svh;
+  min-height: 100svh;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid rgba(255, 255, 255, 0.075);
+  background:
+    radial-gradient(circle at 14% 8%, rgba(255, 98, 50, 0.075), transparent 30%),
+    radial-gradient(circle at 82% 54%, rgba(57, 68, 84, 0.13), transparent 38%),
+    var(--background);
+}
+
+.synkazo-login-form-panel::after {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(
+    rgba(255, 255, 255, 0.028) 0.7px,
+    transparent 0.7px
+  );
+  background-size: 5px 5px;
+  content: '';
+  opacity: 0.35;
+}
+
+.synkazo-login-form-header,
+.synkazo-login-form-scroll {
+  position: relative;
+  z-index: 1;
+  width: min(100% - 64px, 452px);
+  margin-inline: auto;
+}
+
+.synkazo-login-form-header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: clamp(26px, 3.8vh, 38px);
+}
+
+.synkazo-login-brand {
+  color: #fff;
+}
+
+.synkazo-login-brand > svg {
+  width: 40px;
+  height: 40px;
+  filter: drop-shadow(0 7px 14px rgba(255, 93, 40, 0.25));
+}
+
+.synkazo-login-brand > span {
+  font-size: 18px;
+}
+
+.synkazo-login-mobile-back {
+  display: none;
+  align-items: center;
+  gap: 7px;
+  color: #a9afbb;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.synkazo-login-mobile-actions {
+  display: none;
+  align-items: center;
+  gap: 10px;
+}
+
+.synkazo-login-mobile-actions button,
+.synkazo-showcase-header button {
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.035);
+  color: #c7cbd3;
+}
+
+.synkazo-login-mobile-back svg {
+  width: 14px;
+}
+
+.synkazo-login-form-scroll {
+  display: flex;
+  align-items: center;
+  min-height: 0;
+  flex: 1;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.synkazo-login-form-scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.synkazo-login-form-content {
+  position: relative;
+  width: 100%;
+  margin-block: auto;
+  padding-block: clamp(24px, 3.5vh, 36px);
+  animation: synkazo-login-enter 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.synkazo-login-eyebrow {
+  color: var(--login-orange-bright);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.185em;
+}
+
+.synkazo-login-heading h1 {
+  margin-top: 8px;
+  font-size: clamp(32px, 2.35vw, 38px);
+  line-height: 1.08;
+  font-weight: 720;
+  letter-spacing: -0.035em;
+}
+
+.synkazo-login-heading > p:last-child {
+  margin-top: 8px;
+  color: #9ca3b1;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.synkazo-login-form {
+  margin-top: 20px;
+}
+
+.synkazo-login-fields {
+  gap: 16px;
+}
+
+.synkazo-login-fields [data-slot='field'] {
+  gap: 7px;
+}
+
+.synkazo-login-fields [data-slot='field-label'] {
+  color: #d7dbe2;
+  font-size: 12px;
+  font-weight: 620;
+}
+
+.synkazo-login-fields [data-slot='input'],
+.synkazo-login-fields [data-slot='input-group'] {
+  min-height: 44px;
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.045);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease;
+}
+
+.synkazo-auth-input-group [data-align='inline-start'] {
+  padding-left: 13px;
+  color: #788291;
+  transition: color 160ms ease;
+}
+
+.synkazo-auth-input-group [data-align='inline-start'] svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.8;
+}
+
+.synkazo-auth-input-group:focus-within [data-align='inline-start'] {
+  color: var(--login-orange-bright);
+}
+
+.synkazo-login-fields [data-slot='input']:focus-visible,
+.synkazo-login-fields [data-slot='input-group']:focus-within {
+  border-color: rgba(255, 111, 61, 0.72);
+  background: rgba(255, 255, 255, 0.065);
+  box-shadow: 0 0 0 3px rgba(255, 98, 50, 0.12);
+}
+
+.synkazo-login-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: #b9c0cb;
+  font-size: 13px;
+}
+
+.synkazo-login-remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.synkazo-login-forgot {
+  color: var(--login-orange-bright);
+  font-weight: 600;
+  transition: color 160ms ease;
+}
+
+.synkazo-login-forgot:hover {
+  color: #ff8d68;
+}
+
+.synkazo-login-submit {
+  width: 100%;
+  min-height: 44px;
+}
+
+.synkazo-login-form-panel button[data-variant='default'] {
+  font-weight: 600;
+}
+
+.synkazo-login-register {
+  margin-top: 14px;
+  color: #8f98a7;
+  font-size: 13px;
+  text-align: center;
+}
+
+.synkazo-otp-heading > p:last-child {
+  max-width: 420px;
+}
+
+.synkazo-otp-email {
+  color: #e8ebf0;
+  font-weight: 620;
+  overflow-wrap: anywhere;
+}
+
+.synkazo-otp-alert {
+  margin-top: 18px;
+}
+
+.synkazo-otp-form {
+  margin-top: 22px;
+}
+
+.synkazo-otp-fields {
+  gap: 18px;
+}
+
+.synkazo-otp-inputs {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+
+.synkazo-otp-digit {
+  height: 56px;
+  border-radius: 14px;
+  border-color: rgba(255, 255, 255, 0.13);
+  background: rgba(255, 255, 255, 0.045);
+  color: #f6f7f9;
+  caret-color: var(--login-orange-bright);
+  font-size: 21px;
+  font-variant-numeric: tabular-nums;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.synkazo-otp-digit[data-filled='true'] {
+  border-color: rgba(255, 116, 72, 0.34);
+  background: rgba(255, 98, 50, 0.075);
+}
+
+.synkazo-otp-digit:focus-visible {
+  z-index: 1;
+  border-color: rgba(255, 116, 72, 0.82);
+  background: rgba(255, 255, 255, 0.075);
+  box-shadow:
+    0 0 0 3px rgba(255, 98, 50, 0.13),
+    0 10px 24px rgba(0, 0, 0, 0.16);
+  transform: translateY(-1px);
+}
+
+.synkazo-otp-inputs[aria-invalid='true'] .synkazo-otp-digit {
+  border-color: rgba(239, 68, 68, 0.56);
+}
+
+.synkazo-otp-actions {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 18px;
+  font-size: 13px;
+  text-align: center;
+}
+
+.synkazo-otp-resend-prompt {
+  color: #8f98a7;
+}
+
+.synkazo-otp-resend-prompt [data-slot='button'] {
+  height: auto;
+  padding-inline: 4px;
+  color: var(--login-orange-bright);
+}
+
+.synkazo-otp-resend-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: #42c985;
+}
+
+.synkazo-otp-change-email {
+  color: #a9b1be;
+}
+
+.synkazo-register-alert {
+  margin-top: 16px;
+}
+
+.synkazo-register-form {
+  margin-top: 18px;
+}
+
+.synkazo-register-fields {
+  gap: 14px;
+}
+
+.synkazo-register-fields [data-slot='field'] {
+  gap: 5px;
+}
+
+.synkazo-register-legal {
+  max-width: 390px;
+  margin: -1px auto 0;
+  color: #7f8998;
+  font-size: 11px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.synkazo-register-signin {
+  margin-top: 14px;
+  color: #8f98a7;
+  font-size: 13px;
+  text-align: center;
+}
+
+.synkazo-register-link {
+  color: var(--login-orange-bright);
+  font-weight: 620;
+}
+
+.synkazo-register-link:hover {
+  color: #ff8d68;
+  text-decoration: underline;
+}
+
+.synkazo-login-trust {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.synkazo-login-panel-footer {
+  position: relative;
+  z-index: 1;
+  width: min(100% - 64px, 452px);
+  flex: 0 0 auto;
+  margin-inline: auto;
+  padding-bottom: clamp(22px, 3.6vh, 36px);
+}
+
+.synkazo-login-trust > div {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+.synkazo-login-trust svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  color: #b0b7c4;
+  stroke-width: 1.6;
+}
+
+.synkazo-login-trust span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.synkazo-login-trust strong {
+  overflow: hidden;
+  color: #e3e6eb;
+  font-size: 9.5px;
+  font-weight: 620;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.synkazo-login-trust small {
+  overflow: hidden;
+  margin-top: 3px;
+  color: #747c89;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.synkazo-login-showcase {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  min-width: 0;
+  height: 100svh;
+  min-height: 100svh;
+  flex-direction: column;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      ellipse 72% 54% at 59% 53%,
+      rgba(255, 92, 36, 0.085),
+      transparent 68%
+    ),
+    linear-gradient(145deg, #0b0e13 0%, #090b0f 68%, #0c0d11 100%);
+}
+
+.synkazo-showcase-grid {
+  position: absolute;
+  z-index: -3;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(125, 134, 149, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(125, 134, 149, 0.07) 1px, transparent 1px),
+    radial-gradient(rgba(188, 196, 209, 0.12) 0.7px, transparent 0.8px);
+  background-position:
+    0 0,
+    0 0,
+    0 0;
+  background-size:
+    64px 64px,
+    64px 64px,
+    18px 18px;
+  mask-image: radial-gradient(
+    ellipse 78% 72% at 50% 46%,
+    #000 22%,
+    transparent 88%
+  );
+  opacity: 0.75;
+}
+
+.synkazo-showcase-glow {
+  position: absolute;
+  z-index: -2;
+  top: 32%;
+  left: 33%;
+  width: 48%;
+  height: 35%;
+  border-radius: 50%;
+  background: rgba(255, 93, 39, 0.065);
+  filter: blur(75px);
+}
+
+.synkazo-showcase-horizon {
+  position: absolute;
+  z-index: -1;
+  right: -20%;
+  bottom: -21%;
+  width: 86%;
+  height: 38%;
+  border-top: 1px solid rgba(255, 113, 63, 0.32);
+  border-radius: 50% 50% 0 0;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 87, 31, 0.045),
+    rgba(19, 20, 26, 0.78) 22%,
+    #0b0d11 57%
+  );
+  box-shadow:
+    0 -3px 14px rgba(255, 81, 27, 0.12),
+    inset 0 12px 32px rgba(255, 101, 43, 0.035);
+  transform: rotate(-7deg);
+}
+
+.synkazo-showcase-header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: clamp(34px, 4.8vh, 48px) clamp(40px, 5.1vw, 76px) 0;
+}
+
+.synkazo-showcase-header a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #c7cbd3;
+  font-size: 12px;
+  font-weight: 550;
+  transition: color 160ms ease;
+}
+
+.synkazo-showcase-header a:hover {
+  color: #fff;
+}
+
+.synkazo-showcase-header svg {
+  width: 14px;
+  height: 14px;
+}
+
+.synkazo-showcase-content {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: min(100% - 80px, 860px);
+  flex: 1;
+  grid-template-rows: auto minmax(300px, 1fr) auto;
+  margin-inline: auto;
+  padding: clamp(24px, 3vh, 36px) 0;
+  animation: synkazo-login-enter 720ms 100ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.synkazo-showcase-intro h2 {
+  margin-top: 17px;
+  color: #f7f7f8;
+  font-size: clamp(25px, 1.95vw, 31px);
+  line-height: 1.08;
+  font-weight: 720;
+  letter-spacing: -0.038em;
+}
+
+.synkazo-showcase-message {
+  min-height: 2.2em;
+}
+
+.synkazo-showcase-message-copy {
+  display: block;
+}
+
+.synkazo-showcase-source-name {
+  display: inline-flex;
+  vertical-align: baseline;
+}
+
+.synkazo-showcase-source-name > strong {
+  overflow: hidden;
+  max-width: 0;
+  opacity: 0;
+  white-space: nowrap;
+  animation-duration: 6s;
+  animation-timing-function: steps(1, end);
+  animation-iteration-count: infinite;
+  animation-fill-mode: both;
+}
+
+.synkazo-showcase-source-name > strong:nth-child(1) {
+  animation-name: synkazo-source-name-one;
+}
+
+.synkazo-showcase-source-name > strong:nth-child(2) {
+  animation-name: synkazo-source-name-two;
+}
+
+.synkazo-showcase-source-name > strong:nth-child(3) {
+  animation-name: synkazo-source-name-three;
+}
+
+.synkazo-showcase-source-name > strong {
+  color: var(--login-orange-bright);
+  font-weight: inherit;
+}
+
+.synkazo-showcase-intro h2 em {
+  color: var(--login-orange-bright);
+  font-style: normal;
+}
+
+.synkazo-sync-stage {
+  position: relative;
+  width: min(100%, 760px);
+  height: 300px;
+  align-self: center;
+  margin-inline: auto;
+}
+
+.synkazo-sync-lines {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.synkazo-sync-line-base path,
+.synkazo-sync-line-flow path {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.synkazo-sync-line-base path {
+  stroke: rgba(255, 109, 57, 0.23);
+  stroke-width: 1.2;
+}
+
+.synkazo-sync-line-flow path {
+  stroke: #ff713f;
+  stroke-width: 1.35;
+  stroke-dasharray: 3 8;
+  animation: synkazo-sync-flow 1.25s linear infinite;
+}
+
+.synkazo-sync-points circle {
+  fill: #fff0e9;
+  stroke: #ff6734;
+  stroke-width: 3;
+  filter: drop-shadow(0 0 5px #ff5e29);
+}
+
+.synkazo-sync-sources {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  left: 6.842%;
+  width: 27.632%;
+  height: 84px;
+  perspective: 500px;
+}
+
+.synkazo-sync-tool.synkazo-sync-source-card {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  height: 84px;
+  padding: 0;
+  pointer-events: none;
+  opacity: 1;
+  transform-origin: 50% 50%;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  will-change: transform;
+  animation: synkazo-source-card-flip 6s linear infinite both;
+  transition: transform 240ms ease-out;
+}
+
+.synkazo-sync-source-card > .synkazo-sync-source-face {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 14px 17px;
+  opacity: 0;
+  backface-visibility: hidden;
+  animation-duration: 6s;
+  animation-timing-function: steps(1, end);
+  animation-iteration-count: infinite;
+  animation-fill-mode: both;
+}
+
+.synkazo-sync-source-face:nth-child(1) {
+  animation-name: synkazo-source-content-one;
+}
+
+.synkazo-sync-source-face:nth-child(2) {
+  animation-name: synkazo-source-content-two;
+}
+
+.synkazo-sync-source-face:nth-child(3) {
+  animation-name: synkazo-source-content-three;
+}
+
+.synkazo-sync-source-card .synkazo-sync-tool-logo {
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+}
+
+.synkazo-sync-source-card .synkazo-sync-tool-logo img {
+  width: 32px;
+  height: 32px;
+}
+
+.synkazo-sync-sources:hover .synkazo-sync-source-card,
+.synkazo-sync-sources:hover .synkazo-sync-source-face,
+.synkazo-showcase-content:has(.synkazo-sync-sources:hover)
+  .synkazo-showcase-source-name > strong {
+  animation-play-state: paused;
+}
+
+.synkazo-sync-tool {
+  position: relative;
+  display: flex;
+  height: 84px;
+  align-items: center;
+  gap: 13px;
+  overflow: hidden;
+  border-radius: 15px;
+  padding: 14px 17px;
+}
+
+.synkazo-sync-tool > * {
+  position: relative;
+  z-index: 1;
+}
+
+.synkazo-sync-tool-logo {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 11px;
+  background: rgba(31, 37, 47, 0.68);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 8px 18px rgba(0, 0, 0, 0.18);
+}
+
+.synkazo-sync-tool-logo img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.synkazo-sync-tool-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.synkazo-sync-tool-copy strong {
+  overflow: hidden;
+  color: #f0f1f3;
+  font-size: 12px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.synkazo-sync-tool-copy small {
+  overflow: hidden;
+  margin-top: 3px;
+  color: #7f8794;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.synkazo-sync-state {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  color: #c6cbd3;
+  font-size: 9px;
+}
+
+.synkazo-sync-state i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #2ed47a;
+  box-shadow: 0 0 7px #2ed47a;
+}
+
+.is-servicetitan .synkazo-sync-tool-logo {
+  background: #08090b;
+}
+
+.is-dataforma .synkazo-sync-tool-logo {
+  background: #fb173f;
+}
+
+.is-texada .synkazo-sync-tool-logo {
+  background: #383b3e;
+}
+
+.synkazo-sync-core {
+  position: absolute;
+  z-index: 2;
+  top: 88px;
+  left: 44.737%;
+  display: flex;
+  width: 17.368%;
+  height: 126px;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(255, 132, 86, 0.68);
+  border-radius: 21px;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.synkazo-sync-core-mark {
+  width: 49px;
+  height: 49px;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 8px 14px rgba(255, 89, 35, 0.25));
+}
+
+.synkazo-sync-core strong {
+  color: #f5f5f6;
+  font-size: 16px;
+  line-height: 1;
+  letter-spacing: -0.025em;
+}
+
+.synkazo-sync-core span {
+  margin-top: 5px;
+  color: #7e8490;
+  font-size: 9px;
+}
+
+.synkazo-sync-destination {
+  position: absolute;
+  z-index: 1;
+  top: 216px;
+  left: 72.368%;
+  width: 27.632%;
+}
+
+.is-hubspot .synkazo-sync-tool-logo {
+  background: linear-gradient(145deg, #ff784f, #ff5f34);
+}
+
+.is-hubspot .synkazo-sync-tool-logo img {
+  filter: none;
+}
+
+.synkazo-showcase-footer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 32px;
+  padding-top: 28px;
+}
+
+.synkazo-showcase-footer blockquote {
+  max-width: 340px;
+  color: #b8bec8;
+  font-size: 12px;
+  line-height: 1.55;
+  font-style: italic;
+}
+
+.synkazo-showcase-footer cite {
+  display: block;
+  margin-top: 11px;
+  color: #979eaa;
+  font-style: normal;
+}
+
+.synkazo-showcase-metrics {
+  display: flex;
+  align-items: flex-start;
+}
+
+.synkazo-showcase-metrics > div {
+  display: flex;
+  min-width: 102px;
+  flex-direction: column;
+  padding-inline: 18px;
+}
+
+.synkazo-showcase-metrics > div + div {
+  border-left: 1px solid rgba(151, 160, 176, 0.22);
+}
+
+.synkazo-showcase-metrics strong {
+  color: #f3f4f6;
+  font-size: 19px;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.synkazo-showcase-metrics span {
+  margin-top: 9px;
+  color: #9ca3ae;
+  font-size: 9.5px;
+  white-space: nowrap;
+}
+
+/* Light-mode palette. The layout and orange brand accents stay consistent,
+   while the surfaces switch to translucent pearl glass. */
+.light .synkazo-login-page {
+  --login-ink: #edf1f6;
+  background: #edf1f6;
+  color: #171b24;
+  color-scheme: light;
+}
+
+.light .synkazo-login-form-panel {
+  border-right-color: rgba(39, 49, 66, 0.11);
+  background:
+    radial-gradient(circle at 14% 8%, rgba(255, 98, 50, 0.07), transparent 30%),
+    radial-gradient(circle at 82% 54%, rgba(255, 116, 72, 0.035), transparent 38%),
+    #fff;
+}
+
+.light .synkazo-login-fields [data-slot='field-label'] {
+  color: #394252;
+}
+
+.light .synkazo-auth-input-group [data-align='inline-start'] {
+  color: #7a8595;
+}
+
+.light .synkazo-auth-input-group:focus-within [data-align='inline-start'] {
+  color: #e85827;
+}
+
+.light .synkazo-login-options {
+  color: #596475;
+}
+
+.light .synkazo-login-register {
+  color: #6d7787;
+}
+
+.light .synkazo-otp-email {
+  color: #283140;
+}
+
+.light .synkazo-otp-digit {
+  border-color: #cbd2dc;
+  background: rgba(255, 255, 255, 0.88);
+  color: #202734;
+}
+
+.light .synkazo-otp-digit[data-filled='true'] {
+  border-color: rgba(232, 88, 39, 0.38);
+  background: rgba(255, 103, 53, 0.075);
+}
+
+.light .synkazo-otp-digit:focus-visible {
+  border-color: rgba(232, 88, 39, 0.78);
+  background: #fff;
+  box-shadow:
+    0 0 0 3px rgba(255, 98, 50, 0.12),
+    0 10px 24px rgba(47, 58, 76, 0.11);
+}
+
+.light .synkazo-otp-resend-prompt,
+.light .synkazo-otp-change-email {
+  color: #697485;
+}
+
+.light .synkazo-register-legal,
+.light .synkazo-register-signin {
+  color: #6d7787;
+}
+
+.light .synkazo-login-form-panel::after {
+  display: none;
+}
+
+.light .synkazo-login-form-panel [data-slot='input'],
+.light .synkazo-login-form-panel [data-slot='input-group'] {
+  border-color: #cbd2dc;
+  background: #fff;
+}
+
+.light .synkazo-login-brand > span {
+  color: #171b24;
+}
+
+.light .synkazo-login-mobile-back,
+.light .synkazo-showcase-header a {
+  color: #596273;
+}
+
+.light .synkazo-login-mobile-actions button,
+.light .synkazo-showcase-header button {
+  border-color: rgba(34, 43, 58, 0.12);
+  background: rgba(255, 255, 255, 0.58);
+  color: #3c4657;
+  box-shadow: 0 5px 16px rgba(39, 50, 69, 0.08);
+}
+
+.light .synkazo-login-heading > p:last-child {
+  color: #667083;
+}
+
+.light .synkazo-login-trust svg {
+  color: #667184;
+}
+
+.light .synkazo-login-trust strong {
+  color: #303847;
+}
+
+.light .synkazo-login-trust small {
+  color: #7c8594;
+}
+
+.light .synkazo-login-showcase {
+  background:
+    radial-gradient(
+      ellipse 72% 54% at 59% 53%,
+      rgba(255, 103, 56, 0.13),
+      transparent 68%
+    ),
+    linear-gradient(145deg, #f8fafc 0%, #eef2f7 68%, #e8edf3 100%);
+}
+
+.light .synkazo-showcase-grid {
+  background-image:
+    linear-gradient(rgba(49, 61, 80, 0.085) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(49, 61, 80, 0.085) 1px, transparent 1px),
+    radial-gradient(rgba(57, 69, 88, 0.14) 0.7px, transparent 0.8px);
+  opacity: 0.62;
+}
+
+.light .synkazo-showcase-glow {
+  background: rgba(255, 104, 53, 0.08);
+}
+
+.light .synkazo-showcase-horizon {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 105, 54, 0.045),
+    rgba(232, 225, 222, 0.72) 22%,
+    #dde4ec 57%
+  );
+}
+
+.light .synkazo-showcase-intro h2 {
+  color: #171b24;
+}
+
+.light .synkazo-sync-line-base path {
+  stroke: rgba(225, 80, 29, 0.26);
+}
+
+.light .synkazo-sync-tool-logo {
+  border-color: rgba(255, 255, 255, 0.76);
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 8px 18px rgba(46, 56, 73, 0.1);
+}
+
+.light .is-servicetitan .synkazo-sync-tool-logo {
+  background: #08090b;
+}
+
+.light .is-dataforma .synkazo-sync-tool-logo {
+  background: #fb173f;
+}
+
+.light .is-texada .synkazo-sync-tool-logo {
+  background: #383b3e;
+}
+
+.light .is-hubspot .synkazo-sync-tool-logo {
+  background: linear-gradient(145deg, #ff784f, #ff5f34);
+}
+
+.light .synkazo-sync-tool-copy strong {
+  color: #252c39;
+}
+
+.light .synkazo-sync-tool-copy small,
+.light .synkazo-sync-core span {
+  color: #7b8493;
+}
+
+.light .synkazo-sync-state {
+  color: #596374;
+}
+
+.light .synkazo-sync-core strong {
+  color: #242a36;
+}
+
+.light .synkazo-sync-core {
+  border-color: rgba(255, 111, 61, 0.64);
+}
+
+.light .synkazo-showcase-footer blockquote {
+  color: #5d6779;
+}
+
+.light .synkazo-showcase-footer cite,
+.light .synkazo-showcase-metrics span {
+  color: #717b8c;
+}
+
+.light .synkazo-showcase-metrics > div + div {
+  border-left-color: rgba(54, 65, 83, 0.16);
+}
+
+.light .synkazo-showcase-metrics strong {
+  color: #242b38;
+}
+
+@keyframes synkazo-login-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes synkazo-sync-flow {
+  to {
+    stroke-dashoffset: -22;
+  }
+}
+
+@keyframes synkazo-source-card-flip {
+  0%,
+  26% {
+    transform: rotateX(0deg);
+    animation-timing-function: cubic-bezier(0.55, 0.06, 0.68, 0.19);
+  }
+  30.5% {
+    transform: rotateX(-90deg);
+  }
+  30.51% {
+    transform: rotateX(90deg);
+    animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  34%,
+  59.33% {
+    transform: rotateX(0deg);
+  }
+  59.33% {
+    animation-timing-function: cubic-bezier(0.55, 0.06, 0.68, 0.19);
+  }
+  63.83% {
+    transform: rotateX(-90deg);
+  }
+  63.84% {
+    transform: rotateX(90deg);
+    animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  67.33%,
+  92.66% {
+    transform: rotateX(0deg);
+  }
+  92.66% {
+    animation-timing-function: cubic-bezier(0.55, 0.06, 0.68, 0.19);
+  }
+  97.16% {
+    transform: rotateX(-90deg);
+  }
+  97.17% {
+    transform: rotateX(90deg);
+    animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  100% {
+    transform: rotateX(0deg);
+  }
+}
+
+@keyframes synkazo-source-content-one {
+  0%,
+  30.5% {
+    opacity: 1;
+  }
+  30.51%,
+  97.16% {
+    opacity: 0;
+  }
+  97.17%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes synkazo-source-content-two {
+  0%,
+  30.5% {
+    opacity: 0;
+  }
+  30.51%,
+  63.83% {
+    opacity: 1;
+  }
+  63.84%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes synkazo-source-content-three {
+  0%,
+  63.83% {
+    opacity: 0;
+  }
+  63.84%,
+  97.16% {
+    opacity: 1;
+  }
+  97.17%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes synkazo-source-name-one {
+  0%,
+  30.5%,
+  97.17%,
+  100% {
+    max-width: 20ch;
+    opacity: 1;
+  }
+  30.51%,
+  97.16% {
+    max-width: 0;
+    opacity: 0;
+  }
+}
+
+@keyframes synkazo-source-name-two {
+  0%,
+  30.5%,
+  63.84%,
+  100% {
+    max-width: 0;
+    opacity: 0;
+  }
+  30.51%,
+  63.83% {
+    max-width: 20ch;
+    opacity: 1;
+  }
+}
+
+@keyframes synkazo-source-name-three {
+  0%,
+  63.83%,
+  97.17%,
+  100% {
+    max-width: 0;
+    opacity: 0;
+  }
+  63.84%,
+  97.16% {
+    max-width: 20ch;
+    opacity: 1;
+  }
+}
+
+@media (max-height: 820px) and (min-width: 1181px) {
+  .synkazo-login-form-content {
+    min-height: auto;
+    padding-block: 28px 22px;
+  }
+
+  .synkazo-showcase-content {
+    padding-block: 28px 30px;
+  }
+
+}
+
+@media (max-width: 1420px) {
+  .synkazo-login-page {
+    grid-template-columns: minmax(500px, 43%) minmax(680px, 57%);
+  }
+
+  .synkazo-showcase-content {
+    width: min(100% - 64px, 760px);
+  }
+}
+
+@media (max-width: 1180px) {
+  .synkazo-login-page {
+    display: block;
+    overflow: hidden;
+  }
+
+  .synkazo-login-form-panel {
+    min-height: 100svh;
+    border-right: 0;
+  }
+
+  .synkazo-login-form-header,
+  .synkazo-login-form-scroll,
+  .synkazo-login-panel-footer {
+    width: min(100% - 48px, 500px);
+  }
+
+  .synkazo-login-form-content {
+    min-height: auto;
+    margin-block: auto;
+    padding-block: 32px 26px;
+  }
+
+  .synkazo-login-mobile-back {
+    display: inline-flex;
+  }
+
+  .synkazo-login-mobile-actions {
+    display: flex;
+  }
+
+  .synkazo-login-showcase {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .synkazo-login-form-header,
+  .synkazo-login-form-scroll,
+  .synkazo-login-panel-footer {
+    width: min(100% - 40px, 500px);
+  }
+
+  .synkazo-login-form-header {
+    padding-top: 22px;
+  }
+
+  .synkazo-login-brand > svg {
+    width: 35px;
+    height: 35px;
+  }
+
+  .synkazo-login-form-content {
+    padding-block: 30px 24px;
+  }
+
+  .synkazo-login-heading h1 {
+    font-size: 34px;
+  }
+
+  .synkazo-login-heading > p:last-child {
+    font-size: 14px;
+  }
+
+  .synkazo-otp-inputs {
+    gap: 6px;
+  }
+
+  .synkazo-otp-digit {
+    height: 48px;
+    border-radius: 12px;
+    font-size: 19px;
+  }
+
+  .synkazo-login-trust {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .synkazo-login-panel-footer {
+    padding-bottom: 18px;
+  }
+
+  .synkazo-login-trust strong,
+  .synkazo-login-trust small {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .synkazo-login-form-content,
+  .synkazo-showcase-content,
+  .synkazo-sync-source-card,
+  .synkazo-sync-source-face,
+  .synkazo-showcase-source-name > strong,
+  .synkazo-sync-line-flow path {
+    animation: none;
+  }
+
+  .synkazo-sync-source-card,
+  .synkazo-sync-source-face:first-child,
+  .synkazo-showcase-source-name > strong:first-child {
+    opacity: 1;
+    transform: none;
+  }
+
+  .synkazo-sync-source-face:not(:first-child),
+  .synkazo-showcase-source-name > strong:not(:first-child) {
+    display: none;
+  }
+}

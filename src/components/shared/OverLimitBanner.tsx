@@ -4,8 +4,7 @@ import { usePlanQuery } from '@/queries/useBilling';
 /**
  * Soft-lock notice shown when an org holds more resources than its current plan allows
  * (e.g. after a downgrade). Backend already blocks new creation / extra runs; this just
- * tells the user why and how to resolve it. Non-dismissible — reflects an unresolved
- * account-level state, not a transient page condition.
+ * tells the user why and how to resolve it.
  */
 export default function OverLimitBanner() {
   const { data } = usePlanQuery();
@@ -27,7 +26,7 @@ export default function OverLimitBanner() {
   return (
     <PageContextAlert
       variant="warning"
-      className="mb-4"
+      dismissKey="account:over-plan-limit"
       title={`You're over your ${data.planName} plan limit`}
       description={
         <>

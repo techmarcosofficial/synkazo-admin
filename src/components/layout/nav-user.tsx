@@ -1,8 +1,9 @@
 'use client';
 
-import { ChevronsUpDown, LogOut, Settings, Shield, User } from 'lucide-react';
+import { ChevronsUpDown, LogOut, Moon, Settings2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
+import { useTheme } from '@/components/theme-provider';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -19,6 +20,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
+import { Switch } from '@/components/ui/switch';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { roleLabel } from '@/lib/permissions';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
@@ -30,11 +32,18 @@ export function NavUser({ variant = 'sidebar' }: UserMenuProps) {
   const navigate = useNavigate();
   const { isMobile } = useSidebar();
   const { confirm } = useConfirmDialog();
+  const { theme, setTheme } = useTheme();
   const isAvatarOnly = variant === 'avatar';
   const side = isAvatarOnly ? 'bottom' : isMobile ? 'bottom' : 'right';
 
   const align = isAvatarOnly ? 'end' : isMobile ? 'end' : 'start';
   if (!currentUser) return null;
+
+  const isDark =
+    theme === 'dark' ||
+    (theme === 'system' &&
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-color-scheme: dark)').matches);
 
   const displayName = currentUser.fullName || currentUser.email;
   const initials = displayName
@@ -55,7 +64,7 @@ export function NavUser({ variant = 'sidebar' }: UserMenuProps) {
             {isAvatarOnly ? (
               <div className="flex items-center gap-2">
                 <Avatar>
-                  <AvatarFallback className="bg-primary text-primary-foreground rounded-2xl font-semibold">
+                  <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
                     {initials}
                   </AvatarFallback>
                 </Avatar>
@@ -71,8 +80,8 @@ export function NavUser({ variant = 'sidebar' }: UserMenuProps) {
                 size="lg"
                 className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
               >
-                <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarFallback className="bg-primary text-primary-foreground rounded-lg font-semibold">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
                     {initials}
                   </AvatarFallback>
                 </Avatar>
@@ -90,15 +99,15 @@ export function NavUser({ variant = 'sidebar' }: UserMenuProps) {
           </DropdownMenuTrigger>
 
           <DropdownMenuContent
-            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-3xl"
             side={side}
             align={align}
             sideOffset={6}
           >
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarFallback className="bg-primary text-primary-foreground rounded-lg font-semibold">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
                     {initials}
                   </AvatarFallback>
                 </Avatar>
@@ -115,29 +124,33 @@ export function NavUser({ variant = 'sidebar' }: UserMenuProps) {
             <DropdownMenuSeparator />
 
             <DropdownMenuGroup>
-              {currentUser.role === 'super_admin' && (
-                <DropdownMenuItem asChild>
-                  <Link to="/super-admin">
-                    <Shield />
-                    Super Admin
-                  </Link>
-                </DropdownMenuItem>
-              )}
-
-              <DropdownMenuItem asChild>
-                <Link to="/settings?section=profile">
-                  <User />
-                  Profile
-                </Link>
-              </DropdownMenuItem>
-
               <DropdownMenuItem asChild>
                 <Link to="/settings">
-                  <Settings />
+                  <Settings2 />
                   Settings
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
+
+            <DropdownMenuSeparator />
+
+            <div className="flex items-center gap-2.5 px-3 py-2">
+              <Moon className="text-muted-foreground size-4 shrink-0" />
+              <label
+                htmlFor="user-menu-dark-mode"
+                className="flex-1 cursor-pointer text-sm font-medium"
+              >
+                Dark mode
+              </label>
+              <Switch
+                id="user-menu-dark-mode"
+                size="sm"
+                checked={isDark}
+                onCheckedChange={(checked) =>
+                  setTheme(checked ? 'dark' : 'light')
+                }
+              />
+            </div>
 
             <DropdownMenuSeparator />
 

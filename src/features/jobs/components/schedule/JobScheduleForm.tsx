@@ -46,13 +46,13 @@ function JobScheduleSkeleton() {
     <div className="space-y-5">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="rounded-xl border p-3">
+          <div key={i} className="rounded-4xl border p-3">
             <Skeleton className="mb-2 h-4 w-20" />
             <Skeleton className="h-3 w-32" />
           </div>
         ))}
       </div>
-      <Skeleton className="h-40 w-full rounded-xl" />
+      <Skeleton className="h-40 w-full rounded-4xl" />
     </div>
   );
 }
@@ -71,13 +71,12 @@ interface JobScheduleFormProps {
   projectId: string;
   jobId: string;
   onSaved: () => void;
-  /** When true, hides the form's own "Save Schedule" button — a host (e.g. the Project Setup Wizard) drives saving via the ref instead. */
+  /** When true, a parent surface drives saving through the form ref. */
   embedded?: boolean;
   onStateChange?: (state: JobScheduleFormState) => void;
 }
 
-// The reusable schedule-editing form — rendered by the Project Setup Wizard's
-// "Configure Schedule" step (embedded) and by JobScheduleDrawer. Edits the
+// Reusable schedule-editing form used by embedded and drawer surfaces. Edits the
 // same sync-based schedule model (daily_time / interval / day_specific) as
 // the Job Detail page's Schedule tab, so a schedule set up here reads back
 // identically there.
@@ -91,8 +90,7 @@ export const JobScheduleForm = forwardRef<
   const jobQuery = useJobQuery(projectId, jobId);
   const updateJobMutation = useUpdateJobMutation(projectId, jobId);
   // Two-way sync is not user-schedulable — it polls on a fixed, admin-configured
-  // interval. Show a static notice instead of the schedule editor and make save
-  // a no-op so the setup wizard can still advance ("Finish Setup").
+  // interval. Show a static notice instead of the schedule editor.
   const isTwoWay = jobQuery.data?.syncDirection === 'two_way';
 
   const [mode, setMode] = useState('daily_time');

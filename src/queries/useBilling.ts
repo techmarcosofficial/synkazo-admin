@@ -160,10 +160,11 @@ export function usePaymentHistoryQuery(page = 1, limit = 50) {
   });
 }
 
-export function useUsageQuery() {
+export function useUsageQuery(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: queryKeys.billing.usage,
     queryFn: billingApi.getUsage,
+    enabled: options?.enabled ?? true,
   });
 }
 

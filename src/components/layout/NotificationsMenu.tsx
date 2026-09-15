@@ -104,7 +104,7 @@ function notificationLink(n: Notification): string {
     n.type === 'subscription_past_due' ||
     n.type === 'subscription_canceled'
   ) {
-    return '/settings?section=billing';
+    return '/organization/billing/overview';
   }
   return '/scheduler';
 }
@@ -187,6 +187,14 @@ function NotificationItem({
     >
       <Link
         to={notificationLink(notification)}
+        state={
+          notification.data?.jobId && notification.data?.projectId
+            ? {
+                jobBackTo: `/projects/${notification.data.projectId}?tab=sync-rules`,
+                jobBackLabel: 'Back to Sync Jobs',
+              }
+            : undefined
+        }
         onClick={() => {
           if (isUnread) onRead(notification.id);
           onNavigate();
@@ -336,37 +344,11 @@ export default function NotificationsMenu() {
               )}
             </div>
           </SheetHeader>
-          <TabsList variant="line" className="grid w-full grid-cols-4 border-b">
-            <TabsTrigger
-              value="all"
-              className="data-active:text-primary after:bg-primary"
-            >
-              All{' '}
-              <span className="text-muted-foreground/70">
-                {notifications.length}
-              </span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="unread"
-              className="data-active:text-primary after:bg-primary"
-            >
-              Unread{' '}
-              <span className="text-muted-foreground/70">{unread.length}</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="sync"
-              className="data-active:text-primary after:bg-primary"
-            >
-              Sync{' '}
-              <span className="text-muted-foreground/70">{sync.length}</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="system"
-              className="data-active:text-primary after:bg-primary"
-            >
-              System{' '}
-              <span className="text-muted-foreground/70">{system.length}</span>
-            </TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="unread">Unread</TabsTrigger>
+            <TabsTrigger value="sync">Sync</TabsTrigger>
+            <TabsTrigger value="system">System</TabsTrigger>
           </TabsList>
 
           <ScrollArea className="min-h-0 flex-1">

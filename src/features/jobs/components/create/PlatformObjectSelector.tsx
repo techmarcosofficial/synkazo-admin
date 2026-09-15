@@ -1,4 +1,4 @@
-import { Lock, Plus } from 'lucide-react';
+import { KeyRound, Lock, Plus } from 'lucide-react';
 
 import { PlatformIcon } from '@/components/platform';
 import { usePlanUpgradePrompt } from '@/components/shared/PlanGate';
@@ -23,12 +23,29 @@ import { useEntitlements } from '@/queries/useEntitlements';
 
 // Objects outside the plan's `objects_synced` scope stay listed but unselectable, so the
 // user can see what upgrading would unlock rather than wondering why an object is missing.
+// Same idea for HubSpot objects the connection wasn't granted read scope for (plan §3.2, §3.3) —
+// the item stays visible with a KeyRound icon so the user knows a reconnect will unlock it.
 function ObjectOption({ obj, allowed }: { obj: ObjectItem; allowed: boolean }) {
+  const scopeMissing =
+    obj.scopeGranted !== undefined && obj.scopeGranted.read === false;
+  const disabled = !allowed || scopeMissing;
   return (
-    <SelectItem value={obj.id} disabled={!allowed}>
+    <SelectItem value={obj.id} disabled={disabled}>
       <span className="flex w-full items-center gap-2">
         {obj.label}
-        {!allowed && <Lock className="text-muted-foreground size-3" />}
+        {scopeMissing ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <KeyRound className="text-muted-foreground size-3" />
+            </TooltipTrigger>
+            <TooltipContent>
+              HubSpot access not granted for this object. Reconnect HubSpot to
+              unlock.
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          !allowed && <Lock className="text-muted-foreground size-3" />
+        )}
       </span>
     </SelectItem>
   );
@@ -159,7 +176,15 @@ export default function PlatformObjectSelector({
       <Field>
         <FieldLabel>
           <PlatformIcon platformId={platformId} size={16} />
-          {platformLabel}
+          <span className="flex items-center gap-0.5">
+            {label}
+            <span className="text-destructive" aria-hidden="true">
+              *
+            </span>
+          </span>
+          <span className="text-muted-foreground font-normal">
+            · {platformLabel}
+          </span>
           <Tooltip>
             <TooltipTrigger asChild>
               {/* span wrapper: a disabled button emits no pointer events, so the tooltip

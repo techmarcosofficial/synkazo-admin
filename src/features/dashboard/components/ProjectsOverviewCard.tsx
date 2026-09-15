@@ -23,8 +23,11 @@ export default function ProjectsOverviewCard({
   projects,
 }: ProjectsOverviewCardProps) {
   return (
-    <div className="bg-card overflow-hidden rounded-4xl border">
-      <div className="bg-muted flex flex-row items-center justify-between border-b px-3 py-2">
+    <div
+      data-layout-surface="outer"
+      className="bg-card overflow-hidden rounded-4xl border"
+    >
+      <div className="bg-muted flex flex-row items-center justify-between px-3 py-2">
         <h3 className="text-md font-semibold">Your projects</h3>
         <Button asChild variant="link" size="sm">
           <Link to="/projects">

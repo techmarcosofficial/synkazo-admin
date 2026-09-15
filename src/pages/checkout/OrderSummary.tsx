@@ -127,17 +127,19 @@ function CouponInput({
         <div className="flex items-center justify-between gap-2">
           <span className="bg-primary/10 text-primary inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold">
             {appliedCode}
-            <button
+            <Button
               type="button"
               aria-label={`Remove promo code ${appliedCode}`}
               onClick={() => {
                 onChange(undefined);
                 setError(null);
               }}
-              className="hover:text-foreground"
+              variant="ghost"
+              size="icon-xs"
+              className="size-5 rounded-full"
             >
               <X className="size-3" />
-            </button>
+            </Button>
           </span>
           <span className="text-muted-foreground text-xs">
             Promo code applied

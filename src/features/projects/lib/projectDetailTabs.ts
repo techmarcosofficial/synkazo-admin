@@ -1,19 +1,5 @@
-import type { AssociationRule } from '@/api/associations';
-import type {
-  ConnectionExt,
-  JobExt,
-  ProjectActivityLog,
-} from '@/features/projects/hooks/useProjectDetail';
-
 export type ProjectDetailTabId =
-  | 'overview'
-  | 'connections'
-  | 'sync-rules'
-  | 'scheduler'
-  | 'associations'
-  | 'environment-sync'
-  | 'activity'
-  | 'settings';
+  'overview' | 'connections' | 'sync-rules' | 'activity' | 'settings';
 
 export interface ProjectDetailTabRequirements {
   connections: boolean;
@@ -24,50 +10,22 @@ export interface ProjectDetailTabDef {
   id: ProjectDetailTabId;
   label: string;
   requires?: ProjectDetailTabRequirements;
-  badge?: (data: {
-    jobs: JobExt[];
-    connections: ConnectionExt[];
-    associationRules: AssociationRule[];
-    logs: ProjectActivityLog[];
-  }) => number | null;
 }
 
 export const DEFAULT_TAB_ID: ProjectDetailTabId = 'overview';
 
 export const TAB_DEFS: ProjectDetailTabDef[] = [
   { id: 'overview', label: 'Overview' },
-  {
-    id: 'connections',
-    label: 'Connections',
-    badge: ({ connections }) => connections.length || null,
-  },
+  { id: 'connections', label: 'Connections' },
   {
     id: 'sync-rules',
     label: 'Sync Jobs',
     requires: { connections: true, jobs: false },
-    badge: ({ jobs }) => jobs.length || null,
-  },
-  {
-    id: 'scheduler',
-    label: 'Scheduler',
-    requires: { connections: true, jobs: true },
-  },
-  {
-    id: 'associations',
-    label: 'Associations',
-    requires: { connections: true, jobs: true },
-    badge: ({ associationRules }) => associationRules.length || null,
-  },
-  {
-    id: 'environment-sync',
-    label: 'Environment Sync',
-    requires: { connections: true, jobs: true },
   },
   {
     id: 'activity',
     label: 'Activity',
     requires: { connections: true, jobs: true },
-    badge: ({ logs }) => logs.length || null,
   },
   { id: 'settings', label: 'Settings' },
 ];

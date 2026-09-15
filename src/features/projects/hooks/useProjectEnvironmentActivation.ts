@@ -4,20 +4,7 @@ import { toast } from 'sonner';
 import type { ConnectionExt, ProjectExt } from './useProjectDetail';
 
 import { connectionsApi } from '@/api/connections';
-import { migrationApi, type MigrationDiffItem } from '@/api/migration';
 import type { ProjectEnvironment } from '@/types';
-
-export interface MigrationDiffResult {
-  customObjects?: MigrationDiffItem[];
-  properties?: MigrationDiffItem[];
-  associations?: MigrationDiffItem[];
-}
-
-export interface ActivationModalState {
-  targetEnv: ProjectEnvironment;
-  currentEnv: ProjectEnvironment;
-  diff: MigrationDiffResult;
-}
 
 interface UseProjectEnvironmentActivationInput {
   projectId: string;
@@ -46,9 +33,7 @@ export function useProjectEnvironmentActivation({
   const [projectActiveEnv, setProjectActiveEnv] =
     useState<ProjectEnvironment | null>(null);
   const [envActivating, setEnvActivating] = useState(false);
-  const [envDiffLoading, setEnvDiffLoading] = useState(false);
-  const [activationModal, setActivationModal] =
-    useState<ActivationModalState | null>(null);
+  const [activationError, setActivationError] = useState<string | null>(null);
   const [connReloadKey, setConnReloadKey] = useState(0);
 
   useEffect(() => {
@@ -81,6 +66,7 @@ export function useProjectEnvironmentActivation({
 
   const doActivate = async (env: ProjectEnvironment) => {
     setEnvActivating(true);
+    setActivationError(null);
     const envLabel = env === 'sandbox' ? 'Sandbox' : 'Production';
     const toastId = toast.loading(
       `Switching to ${envLabel}… validating connections`,
@@ -92,58 +78,19 @@ export function useProjectEnvironmentActivation({
         activeEnvironment: env,
         environmentActivatedAt: new Date().toISOString(),
       });
-      setActivationModal(null);
       toast.success(`${envLabel} activated`, { id: toastId });
       setConnReloadKey((k) => k + 1);
       refetch();
     } catch (err) {
       const e = err as { response?: { data?: { message?: string } } };
-      toast.error(
+      const message =
         e?.response?.data?.message ??
-          'Activation blocked — credentials did not verify',
-        { id: toastId },
-      );
+        'Activation blocked — credentials did not verify';
+      setActivationError(message);
+      toast.error(message, { id: toastId });
+      throw err;
     } finally {
       setEnvActivating(false);
-    }
-  };
-
-  const handleActivateEnv = async (env: ProjectEnvironment) => {
-    if (env === projectActiveEnv) return;
-    const otherEnv: ProjectEnvironment =
-      env === 'sandbox' ? 'production' : 'sandbox';
-    const otherEnvConnected = connections.some(
-      (c) => envOf(c) === otherEnv && c.status === 'connected',
-    );
-    if (!projectActiveEnv || !otherEnvConnected) {
-      doActivate(env);
-      return;
-    }
-    setEnvDiffLoading(true);
-    try {
-      const diffData = (await migrationApi.diff(
-        projectId,
-        projectActiveEnv,
-        env,
-      )) as unknown as MigrationDiffResult;
-      const missing = [
-        ...(diffData.customObjects ?? []),
-        ...(diffData.properties ?? []),
-        ...(diffData.associations ?? []),
-      ].filter((i) => i.status === 'missing');
-      if (missing.length === 0) {
-        doActivate(env);
-        return;
-      }
-      setActivationModal({
-        targetEnv: env,
-        currentEnv: projectActiveEnv,
-        diff: diffData,
-      });
-    } catch {
-      doActivate(env);
-    } finally {
-      setEnvDiffLoading(false);
     }
   };
 
@@ -163,20 +110,21 @@ export function useProjectEnvironmentActivation({
         : null;
     if (readyEnv) {
       autoActivatedRef.current = true;
-      doActivate(readyEnv);
+      void doActivate(readyEnv).catch(() => {
+        autoActivatedRef.current = false;
+      });
     }
   }, [connections, loading, projectActiveEnv, project]);
 
   return {
     projectActiveEnv,
     envActivating,
-    envDiffLoading,
-    activationModal,
+    activationError,
     connReloadKey,
     envHasAnyConnected,
     envFullyConnected,
-    handleActivateEnv,
+    handleActivateEnv: doActivate,
     doActivate,
-    closeActivationModal: () => setActivationModal(null),
+    clearActivationError: () => setActivationError(null),
   };
 }

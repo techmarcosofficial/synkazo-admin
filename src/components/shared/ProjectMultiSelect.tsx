@@ -103,13 +103,16 @@ export default function ProjectMultiSelect({
           {selected.map((project) => (
             <Badge key={project.id} variant="secondary">
               {project.name}
-              <button
+              <Button
                 type="button"
                 onClick={() => remove(project.id)}
-                className="hover:bg-muted-foreground/20 ml-0.5 rounded-full"
+                variant="ghost"
+                size="icon-xs"
+                className="hover:bg-muted-foreground/20 ml-0.5 size-5 rounded-full"
+                aria-label={`Remove ${project.name}`}
               >
                 <X className="size-3" />
-              </button>
+              </Button>
             </Badge>
           ))}
         </div>

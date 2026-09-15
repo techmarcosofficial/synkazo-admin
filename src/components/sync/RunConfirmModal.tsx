@@ -151,8 +151,8 @@ export default function RunConfirmModal({
 
   const headerNode = (
     <div className="flex items-center gap-3">
-      <div className="bg-success/10 flex size-8 items-center justify-center rounded-lg">
-        <Play className="text-success size-4" />
+      <div className="bg-muted text-foreground flex size-8 items-center justify-center rounded-lg">
+        <Play className="size-4" />
       </div>
       <div>
         <div className="font-heading text-base font-medium">{title}</div>
@@ -242,7 +242,7 @@ export default function RunConfirmModal({
     <div className="space-y-4">
       {pipelineAlert}
 
-      <div className="overflow-hidden rounded-xl border">
+      <div className="overflow-hidden rounded-4xl border">
         <div className="bg-muted/40 flex items-center gap-3 border-b px-4 py-3">
           <Clock className="text-muted-foreground size-3.5 shrink-0" />
           <span className="text-muted-foreground text-xs">Last synced</span>
@@ -416,7 +416,6 @@ export default function RunConfirmModal({
       <Button
         onClick={handleConfirm}
         disabled={pipelineBlocked || customPeriodMissing}
-        className="bg-success hover:bg-success/90"
       >
         <Play /> {cta}
       </Button>

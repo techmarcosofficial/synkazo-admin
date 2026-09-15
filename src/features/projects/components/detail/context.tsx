@@ -1,12 +1,12 @@
 import { createContext, useContext, type ReactNode } from 'react';
 
-import type { AssociationRule } from '@/api/associations';
 import type {
   ConnectionExt,
   JobExt,
   ProjectActivityLog,
   ProjectExt,
 } from '@/features/projects/hooks';
+import type { ProjectDetailTabChangeOptions } from '@/features/projects/hooks/useProjectDetailTabs';
 import type { ProjectDetailTabId } from '@/features/projects/lib/projectDetailTabs';
 import type { ProjectEnvironment } from '@/types';
 
@@ -16,23 +16,19 @@ export interface ProjectDetailContextValue {
   jobs: JobExt[];
   connections: ConnectionExt[];
   logs: ProjectActivityLog[];
-  associationRules: AssociationRule[];
   hasBothConnections: boolean;
   hasJobs: boolean;
-  totalRecordsSynced: number;
-  totalErrors: number;
+  activeTab: ProjectDetailTabId;
   patchProject: (patch: Partial<ProjectExt>) => void;
   setConnectionsCache: (conns: ConnectionExt[]) => void;
   refetch: () => void;
   handleTabChange: (
     id: ProjectDetailTabId,
-    options?: { replace?: boolean },
+    options?: ProjectDetailTabChangeOptions,
   ) => void;
 
-  // Sync-job creation is triggered from three places (Sync Jobs tab's
-  // registered header action, Overview's step-2 nudge, Connections tab's
-  // ready banner) so the open state + the combined "switch tab and open the
-  // dialog" action live here.
+  // Sync-job creation is triggered from the Sync Jobs tab and the Connections
+  // tab's ready state, so the open state + combined navigation action live here.
   showCreateJob: boolean;
   setShowCreateJob: (open: boolean) => void;
   onCreateSyncRule: () => void;
@@ -41,10 +37,11 @@ export interface ProjectDetailContextValue {
   // Connections tab (to pass through to ConnectionsManager).
   projectActiveEnv: ProjectEnvironment | null;
   envActivating: boolean;
-  envDiffLoading: boolean;
+  environmentActivationError: string | null;
+  clearEnvironmentActivationError: () => void;
   envFullyConnected: (env: string) => boolean;
   envHasAnyConnected: (env: string) => boolean;
-  onActivateEnv: (env: ProjectEnvironment) => void;
+  onActivateEnv: (env: ProjectEnvironment) => Promise<void>;
   connReloadKey: number;
 }
 

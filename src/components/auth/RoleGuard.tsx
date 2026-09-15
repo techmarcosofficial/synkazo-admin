@@ -1,57 +1,46 @@
-import { type ReactNode } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 
+import { Spinner } from '@/components/ui/spinner';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
-import { type UserRole, type Permission } from '@/types';
+import { type UserRole } from '@/types';
 
 /**
- * RoleGuard — wraps routes or UI sections to enforce role/permission checks.
+ * Route guard for whole areas that a role cannot reach at all.
  *
- * Usage as route guard:
  *   <Route element={<RoleGuard minRole="org_admin" redirectTo="/dashboard" />}>
- *     <Route path="/admin" element={<AdminPage />} />
+ *     <Route path="/audit-logs" element={<AuditLogPage />} />
  *   </Route>
  *
- * Usage as UI guard (hides children instead of redirecting):
- *   <RoleGuard permission="user.invite" silent>
- *     <InviteButton />
- *   </RoleGuard>
+ * Not for gating parts of a page. Sections whose tabs vary by role
+ * (/settings, /organization) are driven by lib/sectionTabs instead, so the tab
+ * strip and the route protection read one rule rather than two; use
+ * useSectionAccess() for view-vs-edit within a tab.
  */
-
 interface RoleGuardProps {
-  minRole?: UserRole;
-  permission?: Permission;
-  children?: ReactNode;
-  silent?: boolean;
+  minRole: UserRole;
   redirectTo?: string;
-  fallback?: ReactNode;
 }
 
 export default function RoleGuard({
   minRole,
-  permission,
-  children,
-  silent = false,
   redirectTo = '/dashboard',
-  fallback = null,
 }: RoleGuardProps) {
-  const { currentUser, isLoading, hasRole, hasPermission } = useSynkazoAuth();
+  const { currentUser, isLoading, hasRole } = useSynkazoAuth();
 
-  if (isLoading) return null;
-
-  const allowed = (() => {
-    if (!currentUser) return false;
-    if (minRole && !hasRole(minRole)) return false;
-    if (permission && !hasPermission(permission)) return false;
-    return true;
-  })();
-
-  if (!allowed) {
-    if (!silent && !children) return <Navigate to={redirectTo} replace />;
-    return fallback || null;
+  // Unreachable in practice — AppLayout resolves the session before rendering
+  // any of these routes. Kept as a shell-consistent fallback rather than a bare
+  // null, so a future route restructure cannot produce a blank main region.
+  if (isLoading) {
+    return (
+      <div className="flex min-h-64 items-center justify-center">
+        <Spinner className="size-5" />
+      </div>
+    );
   }
 
-  if (!children) return <Outlet />;
+  if (!currentUser || !hasRole(minRole)) {
+    return <Navigate to={redirectTo} replace />;
+  }
 
-  return <>{children}</>;
+  return <Outlet />;
 }
