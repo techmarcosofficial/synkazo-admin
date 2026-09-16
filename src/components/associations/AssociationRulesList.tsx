@@ -438,6 +438,39 @@ export function RuleRecordsList({
   );
 }
 
+type RuleOutcomeMetricProps = {
+  label: string;
+  value: number | string;
+  icon: LucideIcon;
+  iconClassName?: string;
+};
+
+function RuleOutcomeMetric({
+  label,
+  value,
+  icon: Icon,
+  iconClassName = 'text-muted-foreground',
+}: RuleOutcomeMetricProps) {
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <div className="flex min-w-0 items-center gap-1.5">
+        <Icon
+          aria-hidden="true"
+          className={cn('size-3.5 shrink-0', iconClassName)}
+        />
+
+        <span className="text-foreground text-sm font-semibold tabular-nums">
+          {typeof value === 'number' ? value.toLocaleString() : value}
+        </span>
+      </div>
+
+      <span className="text-muted-foreground text-[11px] leading-4">
+        {label}
+      </span>
+    </div>
+  );
+}
+
 function RuleCard({
   rule,
   projectId,
@@ -456,11 +489,7 @@ function RuleCard({
   const [stats, setStats] = useState<AssociationRuleStats | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
-  const queryClient = useQueryClient();
-  const runsQuery = useAssociationRunLogsQuery(projectId, rule.id);
-  const latestRun = runsQuery.data?.data?.[0];
 
-  // Consolidating loading states for actions
   const [isProcessing, setIsProcessing] = useState({
     stats: false,
     run: false,
@@ -469,17 +498,31 @@ function RuleCard({
     delete: false,
   });
 
+  const queryClient = useQueryClient();
   const { confirm } = useConfirmDialog();
 
+  const runsQuery = useAssociationRunLogsQuery(projectId, rule.id);
+
+  const latestRun = runsQuery.data?.data?.[0];
+
   const loadStats = useCallback(() => {
-    setIsProcessing((prev) => ({ ...prev, stats: true }));
+    setIsProcessing((prev) => ({
+      ...prev,
+      stats: true,
+    }));
+
     associationsApi
       .getRuleStats(projectId, rule.id)
       .then((nextStats) => {
         setStats(nextStats);
       })
       .catch(() => {})
-      .finally(() => setIsProcessing((prev) => ({ ...prev, stats: false })));
+      .finally(() => {
+        setIsProcessing((prev) => ({
+          ...prev,
+          stats: false,
+        }));
+      });
   }, [projectId, rule.id]);
 
   useEffect(() => {
@@ -490,47 +533,73 @@ function RuleCard({
     queryClient.invalidateQueries({
       queryKey: ['associations', 'records', projectId, rule.id],
     });
+
     queryClient.invalidateQueries({
       queryKey: ['associations', 'logs', projectId, rule.id],
     });
+
     queryClient.invalidateQueries({
       queryKey: ['associations', 'project-runs', projectId],
     });
   }, [queryClient, projectId, rule.id]);
 
   const isEnabled = rule.isEnabled ?? true;
-  const associationName = `${associationObjectLabel(rule.sourceObject)} → ${associationObjectLabel(rule.targetObject)}`;
+
+  const associationName =
+    `${associationObjectLabel(rule.sourceObject)} → ` +
+    associationObjectLabel(rule.targetObject);
+
   const associationType =
     rule.assocLabel ||
     rule.cardinality?.replace(/_/g, ' ') ||
     'Primary association';
+
   const latestStatus = latestRun
     ? latestRun.status === 'completed' &&
       (latestRun.failed > 0 || latestRun.pendingCreated > 0)
       ? 'partial'
       : latestRun.status
     : null;
+
   const latestProcessed = latestRun
     ? (latestRun.totalAttempted ??
-      latestRun.succeeded + latestRun.pendingCreated + latestRun.failed)
-    : (stats?.total ?? 0);
-  const latestAssociated = latestRun?.succeeded ?? stats?.resolved ?? 0;
-  const latestPending = latestRun?.pendingCreated ?? stats?.pending ?? 0;
-  const latestFailed = latestRun?.failed ?? stats?.failed ?? 0;
+      latestRun.succeeded +
+        latestRun.pendingCreated +
+        latestRun.failed)
+    : null;
+
+  const latestAssociated = latestRun?.succeeded ?? null;
+  const latestPending = latestRun?.pendingCreated ?? null;
+  const latestFailed = latestRun?.failed ?? null;
 
   const handleRun = async () => {
     setActionError(null);
-    setIsProcessing((prev) => ({ ...prev, run: true }));
+
+    setIsProcessing((prev) => ({
+      ...prev,
+      run: true,
+    }));
+
     try {
       const result: AssociationRunResult = await associationsApi.runRule(
         projectId,
         rule.id,
       );
-      const parts = [];
-      if (result?.succeeded > 0) parts.push(`${result.succeeded} linked`);
-      if (result?.pendingCreated > 0)
+
+      const parts: string[] = [];
+
+      if (result?.succeeded > 0) {
+        parts.push(`${result.succeeded} linked`);
+      }
+
+      if (result?.pendingCreated > 0) {
         parts.push(`${result.pendingCreated} pending`);
-      if (result?.failed > 0) parts.push(`${result.failed} failed`);
+      }
+
+      if (result?.failed > 0) {
+        parts.push(`${result.failed} failed`);
+      }
+
       toast.success(
         `"${rule.name}": ${parts.length ? parts.join(', ') : 'complete'}`,
       );
@@ -539,53 +608,83 @@ function RuleCard({
       invalidateRuleData();
     } catch (err) {
       const e = err as ApiError;
+
       const message =
-        (e?.response?.data?.message as string) ?? 'Failed to run this rule.';
+        (e?.response?.data?.message as string) ??
+        'Failed to run this rule.';
+
       setActionError(message);
       toast.error(message);
     } finally {
-      setIsProcessing((prev) => ({ ...prev, run: false }));
+      setIsProcessing((prev) => ({
+        ...prev,
+        run: false,
+      }));
     }
   };
 
   const handleRetry = async () => {
     setActionError(null);
-    setIsProcessing((prev) => ({ ...prev, retry: true }));
+
+    setIsProcessing((prev) => ({
+      ...prev,
+      retry: true,
+    }));
+
     try {
       await associationsApi.retryFailed(projectId, rule.id);
+
       toast.success('Failed associations queued for retry');
+
       loadStats();
       invalidateRuleData();
     } catch (err) {
       const e = err as ApiError;
+
       const message =
         (e?.response?.data?.message as string) ??
         'Failed associations could not be queued.';
+
       setActionError(message);
       toast.error(message);
     } finally {
-      setIsProcessing((prev) => ({ ...prev, retry: false }));
+      setIsProcessing((prev) => ({
+        ...prev,
+        retry: false,
+      }));
     }
   };
 
   const handleToggle = async () => {
     setActionError(null);
-    setIsProcessing((prev) => ({ ...prev, toggle: true }));
+
+    setIsProcessing((prev) => ({
+      ...prev,
+      toggle: true,
+    }));
+
     try {
       await associationsApi.updateRule(projectId, rule.id, {
         isEnabled: !isEnabled,
       } as Partial<BaseAssociationRule>);
+
       toast.success(isEnabled ? 'Rule disabled' : 'Rule enabled');
+
       onRefresh();
     } catch (err) {
       const e = err as ApiError;
+
       const message =
         (e?.response?.data?.message as string) ??
         `Failed to ${isEnabled ? 'disable' : 'enable'} this rule.`;
+
       setActionError(message);
       toast.error(message);
     } finally {
-      setIsProcessing((prev) => ({ ...prev, toggle: false }));
+      setIsProcessing((prev) => ({
+        ...prev,
+        toggle: false,
+      }));
     }
   };
 
@@ -621,22 +720,35 @@ function RuleCard({
       description: `"${rule.name}" will be permanently deleted. This cannot be undone.`,
       confirmLabel: 'Delete',
       onConfirm: async () => {
-        setIsProcessing((prev) => ({ ...prev, delete: true }));
+        setIsProcessing((prev) => ({
+          ...prev,
+          delete: true,
+        }));
+
         try {
           setActionError(null);
+
           await associationsApi.deleteRule(projectId, rule.id);
+
           toast.success('Rule deleted');
+
           onRefresh();
         } catch (err) {
           const e = err as ApiError;
+
           const message =
             (e?.response?.data?.message as string) ??
             'Failed to delete this rule.';
+
           setActionError(message);
           toast.error(message);
+
           throw new Error(message);
         } finally {
-          setIsProcessing((prev) => ({ ...prev, delete: false }));
+          setIsProcessing((prev) => ({
+            ...prev,
+            delete: false,
+          }));
         }
       },
     });
@@ -645,210 +757,177 @@ function RuleCard({
   return (
     <Collapsible open={expanded} onOpenChange={onExpandedChange}>
       <Card className="overflow-hidden py-0 shadow-none">
-        <CardContent className="space-y-0 p-0">
-          <div className="hover:bg-muted/20 flex flex-col transition-colors sm:flex-row sm:items-center">
-            <CollapsibleTrigger asChild>
-              <button
-                type="button"
-                className={cn(
-                  'group grid w-full min-w-0',
-                  'grid-cols-[minmax(0,1fr)_auto]',
-                  'items-center gap-x-3 gap-y-3',
-                  'p-3 text-left sm:p-4',
+        <CardContent className="p-0">
+          {/* Association header */}
 
-                  // Four-column desktop layout.
-                  'xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,0.64fr)_32px]',
+          <div
+            className={cn(
+              'grid min-w-0 grid-cols-1',
+              'items-center gap-x-4 gap-y-3',
+              'p-3 sm:p-4',
+              'lg:grid-cols-[minmax(0,1fr)_auto]',
+              '2xl:grid-cols-[minmax(0,1.1fr)_minmax(344px,1fr)_minmax(165px,0.55fr)_auto]',
+              'transition-colors hover:bg-muted/20',
+            )}
+          >
+            {/* Association identity */}
 
-                  'transition-colors duration-150',
-                  'hover:bg-muted/30',
-                  'focus-visible:outline-none',
-                  'focus-visible:ring-ring focus-visible:ring-2',
-                  'focus-visible:ring-inset',
-                )}
-                aria-expanded={expanded}
-                aria-label={`${expanded ? 'Collapse' : 'Expand'} ${associationName}`}
-              >
-                {/* ===================================
-        1. ASSOCIATION IDENTITY
-       =================================== */}
+            <div
+              className={cn(
+                'flex min-w-0 items-start gap-3',
+                'lg:col-start-1 lg:row-start-1',
+                '2xl:col-start-1 2xl:row-start-1',
+              )}
+            >
+              <div className="bg-muted/60 text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-full">
+                <Link2 aria-hidden="true" className="size-4" />
+              </div>
 
-                <div className="col-start-1 row-start-1 flex min-w-0 items-start gap-2.5">
-                  {/* Neutral icon — no colored square */}
-
-                  <span
-                    className={cn(
-                      'bg-muted/60 text-muted-foreground',
-                      'flex size-8 shrink-0 items-center',
-                      'justify-center rounded-full',
-                      'group-hover:text-foreground',
-                    )}
-                  >
-                    <Link2 aria-hidden="true" className="size-4" />
+              <div className="min-w-0 flex-1">
+                <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="text-foreground min-w-0 text-sm leading-5 font-semibold break-words">
+                    {associationName}
                   </span>
 
-                  <div className="min-w-0 flex-1 space-y-1.5">
-                    {/* Name + status */}
-
-                    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className="text-foreground min-w-0 text-sm leading-5 font-semibold break-words">
-                        {associationName}
-                      </span>
-
-                      <StatusBadge
-                        status={isEnabled ? 'active' : 'disabled'}
-                        size="sm"
-                      />
-                    </div>
-
-                    {/* Association type + conditions */}
-
-                    <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-                      <span className="capitalize">{associationType}</span>
-
-                      {rule.conditions != null &&
-                        rule.conditions.length > 0 && (
-                          <>
-                            <span aria-hidden="true" className="text-border">
-                              |
-                            </span>
-
-                            <span className="inline-flex items-center gap-1">
-                              {rule.conditions.length} condition
-                              {rule.conditions.length !== 1 && 's'}
-                            </span>
-                          </>
-                        )}
-                    </div>
-
-                    {/* Actual field relationship */}
-
-                    <div className="text-muted-foreground flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px]">
-                      <span className="min-w-0 font-mono break-all">
-                        {rule.sourceObject}.{rule.sourceMatchField}
-                      </span>
-
-                      <ArrowRight
-                        aria-hidden="true"
-                        className="size-3 shrink-0"
-                      />
-
-                      <span className="min-w-0 font-mono break-all">
-                        {rule.targetObject}.{rule.targetMatchField}
-                      </span>
-                    </div>
-                  </div>
+                  <StatusBadge
+                    status={isEnabled ? 'active' : 'disabled'}
+                    size="sm"
+                  />
                 </div>
 
-                {/* ===================================
-        2. LATEST RUN OUTCOMES
-       =================================== */}
+                <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                  <span className="capitalize">{associationType}</span>
 
-                <div
-                  className={cn(
-                    'col-span-2 row-start-2 min-w-0',
+                  {rule.conditions != null &&
+                    rule.conditions.length > 0 && (
+                      <>
+                        <span aria-hidden="true">·</span>
 
-                    // Mobile: separate metrics using
-                    // subtle horizontal dividers.
-                    'border-border/60 border-y py-2.5',
-
-                    // Desktop: metrics sit between
-                    // association and latest run.
-                    'xl:col-span-1 xl:col-start-2 xl:row-start-1',
-                    'xl:border-x xl:border-y-0 xl:px-4 xl:py-0',
-                  )}
-                >
-                  <p className="text-muted-foreground mb-2 text-[11px] font-medium xl:sr-only">
-                    Latest run outcomes
-                  </p>
-
-                  <div className="grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-4 sm:gap-x-4 xl:gap-x-2">
-                    <AssociationMetric
-                      label="Processed"
-                      value={latestRun ? latestProcessed : '—'}
-                      icon={Layers3}
-                    />
-
-                    <AssociationMetric
-                      label="Associated"
-                      value={latestRun ? latestAssociated : '—'}
-                      icon={Link2}
-                      iconClassName="text-success"
-                    />
-
-                    <AssociationMetric
-                      label="Pending"
-                      value={latestRun ? latestPending : '—'}
-                      icon={Clock3}
-                      iconClassName="text-warning"
-                    />
-
-                    <AssociationMetric
-                      label="Failed"
-                      value={latestRun ? latestFailed : '—'}
-                      icon={CircleAlert}
-                      iconClassName="text-destructive"
-                    />
-                  </div>
-                </div>
-
-                {/* ===================================
-        3. LATEST RUN STATUS
-       =================================== */}
-
-                <div
-                  className={cn(
-                    'col-span-2 row-start-3 min-w-0',
-
-                    'flex flex-wrap items-center justify-between gap-2',
-
-                    'xl:col-span-1 xl:col-start-3 xl:row-start-1',
-                    'xl:block',
-                  )}
-                >
-                  <span className="text-muted-foreground text-[11px] font-medium">
-                    Latest run
-                  </span>
-
-                  {latestRun && latestStatus ? (
-                    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 xl:mt-1.5">
-                      <StatusBadge status={latestStatus} size="sm" />
-
-                      <span className="text-muted-foreground inline-flex min-w-0 items-center gap-1 text-[11px]">
-                        <CalendarClock
-                          aria-hidden="true"
-                          className="size-3 shrink-0"
-                        />
-
-                        <span className="min-w-0 break-words">
-                          {formatTimestamp(latestRun.startedAt)}
+                        <span>
+                          {rule.conditions.length}{' '}
+                          {rule.conditions.length === 1
+                            ? 'condition'
+                            : 'conditions'}
                         </span>
-                      </span>
-                    </div>
-                  ) : (
-                    <span className="text-muted-foreground text-xs xl:mt-1.5 xl:block">
-                      {runsQuery.isLoading ? 'Loading…' : 'No runs yet'}
-                    </span>
-                  )}
+                      </>
+                    )}
                 </div>
 
-                {/* ===================================
-        4. EXPAND / COLLAPSE
-       =================================== */}
+                <div className="text-muted-foreground mt-1.5 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 font-mono text-[11px] leading-4">
+                  <span className="min-w-0 break-all">
+                    {rule.sourceObject}.{rule.sourceMatchField}
+                  </span>
 
-                <span
-                  className={cn(
-                    'col-start-2 row-start-1',
+                  <ArrowRight
+                    aria-hidden="true"
+                    className="size-3 shrink-0"
+                  />
 
-                    'flex size-8 shrink-0 items-center justify-center',
-                    'border-border/60 rounded-full border',
-                    'bg-muted/40 text-muted-foreground',
+                  <span className="min-w-0 break-all">
+                    {rule.targetObject}.{rule.targetMatchField}
+                  </span>
+                </div>
+              </div>
+            </div>
 
-                    'transition-colors duration-150',
-                    'group-hover:bg-muted',
-                    'group-hover:text-foreground',
+            {/* Latest run metrics */}
 
-                    'xl:col-start-4 xl:row-start-1',
-                  )}
+            <div
+              className={cn(
+                'min-w-0 border-border/60 border-t pt-3',
+                'lg:col-start-1 lg:row-start-2',
+                '2xl:col-start-2 2xl:row-start-1',
+                '2xl:border-x 2xl:border-t-0 2xl:px-4 2xl:py-0',
+              )}
+            >
+              <div
+                className="grid min-w-0 grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-4"
+                aria-label="Latest run outcomes"
+              >
+                <RuleOutcomeMetric
+                  label="Processed"
+                  value={latestProcessed ?? '—'}
+                  icon={Layers3}
+                />
+
+                <RuleOutcomeMetric
+                  label="Associated"
+                  value={latestAssociated ?? '—'}
+                  icon={Link2}
+                  iconClassName="text-success"
+                />
+
+                <RuleOutcomeMetric
+                  label="Pending"
+                  value={latestPending ?? '—'}
+                  icon={Clock3}
+                  iconClassName="text-warning"
+                />
+
+                <RuleOutcomeMetric
+                  label="Failed"
+                  value={latestFailed ?? '—'}
+                  icon={CircleAlert}
+                  iconClassName="text-destructive"
+                />
+              </div>
+            </div>
+
+            {/* Latest run status */}
+
+            <div
+              className={cn(
+                'flex min-w-0 flex-col gap-1',
+                'border-border/60 border-t pt-3',
+                'lg:col-start-2 lg:row-start-2 lg:border-t-0 lg:pt-0',
+                '2xl:col-start-3 2xl:row-start-1',
+              )}
+            >
+              <span className="text-muted-foreground text-[11px] font-medium">
+                Latest run
+              </span>
+
+              {latestRun && latestStatus ? (
+                <>
+                  <div>
+                    <StatusBadge status={latestStatus} size="sm" />
+                  </div>
+
+                  <span className="text-muted-foreground flex min-w-0 items-center gap-1 text-[11px] leading-4">
+                    <CalendarClock
+                      aria-hidden="true"
+                      className="size-3 shrink-0"
+                    />
+
+                    <span className="min-w-0 break-words tabular-nums">
+                      {formatTimestamp(latestRun.startedAt)}
+                    </span>
+                  </span>
+                </>
+              ) : (
+                <span className="text-muted-foreground text-xs">
+                  {runsQuery.isLoading ? 'Loading…' : 'No runs yet'}
+                </span>
+              )}
+            </div>
+
+            {/* Actions */}
+
+            <div
+              className={cn(
+                'flex shrink-0 items-center justify-end gap-1.5',
+                'lg:col-start-2 lg:row-start-1',
+                '2xl:col-start-4 2xl:row-start-1',
+              )}
+            >
+              <CollapsibleTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon-sm"
+                  className="shrink-0 rounded-full"
+                  aria-label={`${expanded ? 'Collapse' : 'Expand'} ${associationName}`}
+                  aria-expanded={expanded}
                 >
                   <ChevronDown
                     aria-hidden="true"
@@ -857,40 +936,59 @@ function RuleCard({
                       expanded && 'rotate-180',
                     )}
                   />
-                </span>
-              </button>
-            </CollapsibleTrigger>
+                </Button>
+              </CollapsibleTrigger>
 
-            <div className="flex shrink-0 items-center justify-end gap-1.5 border-t px-3 py-2 sm:border-t-0 sm:pr-4 sm:pl-0">
               <Button
+                type="button"
                 variant="outline"
                 size="sm"
                 onClick={requestRun}
                 disabled={isProcessing.run || !isEnabled}
+                className="shrink-0 gap-1.5"
               >
-                {isProcessing.run ? <Spinner className="size-3" /> : <Play />}
+                {isProcessing.run ? (
+                  <Spinner className="size-3.5" />
+                ) : (
+                  <Play className="size-3.5" />
+                )}
+
                 Run now
               </Button>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
+                    type="button"
                     variant="ghost"
                     size="icon-sm"
+                    className="shrink-0"
                     aria-label={`More actions for ${rule.name}`}
                   >
-                    <MoreHorizontal />
+                    <MoreHorizontal className="size-4" />
                   </Button>
                 </DropdownMenuTrigger>
+
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onSelect={() => setShowEditModal(true)}>
+                  <DropdownMenuItem
+                    onSelect={() => setShowEditModal(true)}
+                  >
                     <Pencil />
                     Edit association
                   </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={loadStats}>
-                    <RefreshCw />
+
+                  <DropdownMenuItem
+                    onSelect={loadStats}
+                    disabled={isProcessing.stats}
+                  >
+                    <RefreshCw
+                      className={cn(
+                        isProcessing.stats && 'animate-spin',
+                      )}
+                    />
                     Refresh counts
                   </DropdownMenuItem>
+
                   {stats != null && stats.failed > 0 && (
                     <DropdownMenuItem
                       onSelect={() => void handleRetry()}
@@ -900,13 +998,16 @@ function RuleCard({
                       Retry {stats.failed} failed
                     </DropdownMenuItem>
                   )}
+
                   <DropdownMenuItem
                     onSelect={requestToggle}
                     disabled={isProcessing.toggle}
                   >
                     {isEnabled ? 'Disable rule' : 'Enable rule'}
                   </DropdownMenuItem>
+
                   <DropdownMenuSeparator />
+
                   <DropdownMenuItem
                     variant="destructive"
                     onSelect={handleDelete}
@@ -920,14 +1021,21 @@ function RuleCard({
             </div>
           </div>
 
+          {/* Action error */}
+
           {actionError && (
-            <div className="px-4 pb-4">
+            <div className="px-3 pb-3 sm:px-4 sm:pb-4">
               <Alert variant="destructive">
                 <AlertCircle />
-                <AlertDescription>{actionError}</AlertDescription>
+
+                <AlertDescription>
+                  {actionError}
+                </AlertDescription>
               </Alert>
             </div>
           )}
+
+          {/* Expanded association runs */}
 
           <CollapsibleContent className="bg-muted/20 overflow-hidden border-t p-3 sm:p-4">
             <AssociationRunsList
@@ -938,6 +1046,7 @@ function RuleCard({
             />
           </CollapsibleContent>
         </CardContent>
+
         {showEditModal && (
           <EditAssociationRuleModal
             projectId={projectId}
