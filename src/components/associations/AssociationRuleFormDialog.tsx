@@ -7,7 +7,11 @@ import {
 import { useEffect, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 
-import { associationsApi, type AssociationCondition } from '@/api/associations';
+import {
+  associationsApi,
+  type AssociationCondition,
+  type AssociationRule,
+} from '@/api/associations';
 import AssociationConditionsEditor, {
   validateConditions,
 } from '@/components/associations/AssociationConditionsEditor';
@@ -48,11 +52,14 @@ interface AssociationType {
   label: string;
 }
 
-interface CreateAssociationRuleModalProps {
+interface AssociationRuleFormDialogBaseProps {
   projectId: string;
-  onCreated: () => void;
+  onSuccess: () => void;
   onClose: () => void;
 }
+
+type AssociationRuleFormDialogProps = AssociationRuleFormDialogBaseProps &
+  ({ mode: 'create'; rule?: never } | { mode: 'edit'; rule: AssociationRule });
 
 interface FormErrors {
   sourceObject?: string;
@@ -93,12 +100,14 @@ function HelpTooltip({
   );
 }
 
-export default function CreateAssociationRuleModal({
+export default function AssociationRuleFormDialog({
+  mode,
   projectId,
-  onCreated,
+  rule,
+  onSuccess,
   onClose,
-}: CreateAssociationRuleModalProps) {
-  const [step, setStep] = useState(0);
+}: AssociationRuleFormDialogProps) {
+  const [step, setStep] = useState(mode === 'edit' ? 1 : 0);
   const [saving, setSaving] = useState(false);
   const [loadingTypes, setLoadingTypes] = useState(false);
 
@@ -111,33 +120,45 @@ export default function CreateAssociationRuleModal({
     [],
   );
 
-  const [form, setForm] = useState({
-    name: '',
-    sourceObject: '',
-    sourceMatchField: '',
-    hsSourceObjectType: '',
-    targetObject: '',
-    targetMatchField: '',
-    hsTargetObjectType: '',
-    hsAssociationTypeId: '',
-    hsAssociationCategory: 'HUBSPOT_DEFINED',
-    hsAssociationLabel: '',
-    cardinality: 'many_to_many',
-  });
-  const [conditions, setConditions] = useState<AssociationCondition[]>([]);
-  const [conditionLogic, setConditionLogic] = useState<'AND' | 'OR'>('AND');
+  const [form, setForm] = useState(() => ({
+    name: rule?.name ?? '',
+    sourceObject: rule?.sourceObject ?? '',
+    sourceMatchField: rule?.sourceMatchField ?? '',
+    hsSourceObjectType:
+      rule?.destSourceObjectType ?? rule?.hsSourceObjectType ?? '',
+    targetObject: rule?.targetObject ?? '',
+    targetMatchField: rule?.targetMatchField ?? '',
+    hsTargetObjectType:
+      rule?.destTargetObjectType ?? rule?.hsTargetObjectType ?? '',
+    hsAssociationTypeId: String(
+      rule?.assocTypeId ?? rule?.hsAssociationTypeId ?? '',
+    ),
+    hsAssociationCategory: rule?.assocCategory ?? 'HUBSPOT_DEFINED',
+    hsAssociationLabel: rule?.assocLabel ?? '',
+    cardinality: rule?.cardinality ?? 'many_to_many',
+  }));
+  const [conditions, setConditions] = useState<AssociationCondition[]>(
+    rule?.conditions ?? [],
+  );
+  const [conditionLogic, setConditionLogic] = useState<'AND' | 'OR'>(
+    rule?.conditionLogic ?? 'AND',
+  );
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Dirty once the user has advanced past step 0 or filled in any field —
   // drives the "Discard changes?" confirmation on close.
   const isDirty =
-    step > 0 ||
-    conditions.length > 0 ||
-    conditionLogic !== 'AND' ||
-    Object.values(form).some(
-      (v) => v !== '' && v !== 'many_to_many' && v !== 'HUBSPOT_DEFINED',
-    );
+    mode === 'edit'
+      ? form.name !== (rule.name ?? '') ||
+        conditionLogic !== (rule.conditionLogic ?? 'AND') ||
+        JSON.stringify(conditions) !== JSON.stringify(rule.conditions ?? [])
+      : step > 0 ||
+        conditions.length > 0 ||
+        conditionLogic !== 'AND' ||
+        Object.values(form).some(
+          (v) => v !== '' && v !== 'many_to_many' && v !== 'HUBSPOT_DEFINED',
+        );
 
   useEffect(() => {
     associationsApi
@@ -184,9 +205,16 @@ export default function CreateAssociationRuleModal({
   }, [form.targetObject, projectId]);
 
   useEffect(() => {
-    if (!form.hsSourceObjectType || !form.hsTargetObjectType) return;
+    if (mode === 'edit' || form.name) return;
     const autoName = `${form.sourceObject} ↔ ${form.targetObject}`;
-    if (!form.name) setForm((f) => ({ ...f, name: autoName }));
+    if (form.sourceObject && form.targetObject) {
+      setForm((f) => ({ ...f, name: autoName }));
+    }
+  }, [form.name, form.sourceObject, form.targetObject, mode]);
+
+  useEffect(() => {
+    if (!form.hsSourceObjectType || !form.hsTargetObjectType) return;
+    if (mode === 'edit') return;
     setLoadingTypes(true);
     associationsApi
       .getAssociationTypes(
@@ -197,7 +225,7 @@ export default function CreateAssociationRuleModal({
       .then((data: unknown) => setAssociationTypes(data as AssociationType[]))
       .catch(() => setAssociationTypes([]))
       .finally(() => setLoadingTypes(false));
-  }, [form.hsSourceObjectType, form.hsTargetObjectType]);
+  }, [form.hsSourceObjectType, form.hsTargetObjectType, mode, projectId]);
 
   const validate = () => {
     const errs: FormErrors = {};
@@ -215,7 +243,7 @@ export default function CreateAssociationRuleModal({
       const condErr = validateConditions(conditions);
       if (condErr) errs.conditions = condErr;
       if (!form.name.trim()) errs.name = 'Name is required';
-      if (!form.hsAssociationTypeId)
+      if (mode === 'create' && !form.hsAssociationTypeId)
         errs.hsAssociationTypeId = 'Select an association type';
     }
     setErrors(errs);
@@ -231,30 +259,41 @@ export default function CreateAssociationRuleModal({
     setSaving(true);
     setSubmitError(null);
     try {
-      const selectedType = associationTypes.find(
-        (t) => String(t.typeId) === String(form.hsAssociationTypeId),
-      );
-      await associationsApi.createRule(projectId, {
-        name: form.name.trim(),
-        sourceObject: form.sourceObject,
-        sourceMatchField: form.sourceMatchField,
-        destSourceObjectType: form.hsSourceObjectType,
-        targetObject: form.targetObject,
-        targetMatchField: form.targetMatchField,
-        destTargetObjectType: form.hsTargetObjectType,
-        assocTypeId: Number(form.hsAssociationTypeId),
-        assocCategory: selectedType?.category ?? 'HUBSPOT_DEFINED',
-        assocLabel: selectedType?.label ?? null,
-        cardinality: form.cardinality,
-        conditions: conditions.length > 0 ? conditions : undefined,
-        conditionLogic,
-      });
-      toast.success('Association rule created');
-      onCreated();
+      if (mode === 'edit') {
+        await associationsApi.updateRule(projectId, rule.id, {
+          name: form.name.trim(),
+          conditions,
+          conditionLogic,
+        });
+        toast.success('Association rule saved');
+      } else {
+        const selectedType = associationTypes.find(
+          (t) => String(t.typeId) === String(form.hsAssociationTypeId),
+        );
+        await associationsApi.createRule(projectId, {
+          name: form.name.trim(),
+          sourceObject: form.sourceObject,
+          sourceMatchField: form.sourceMatchField,
+          destSourceObjectType: form.hsSourceObjectType,
+          targetObject: form.targetObject,
+          targetMatchField: form.targetMatchField,
+          destTargetObjectType: form.hsTargetObjectType,
+          assocTypeId: Number(form.hsAssociationTypeId),
+          assocCategory: selectedType?.category ?? 'HUBSPOT_DEFINED',
+          assocLabel: selectedType?.label ?? null,
+          cardinality: form.cardinality,
+          conditions: conditions.length > 0 ? conditions : undefined,
+          conditionLogic,
+        });
+        toast.success('Association rule created');
+      }
+      onSuccess();
       onClose();
     } catch (err) {
       const e = err as { response?: { data?: { message?: string } } };
-      const message = e?.response?.data?.message ?? 'Failed to create rule';
+      const message =
+        e?.response?.data?.message ??
+        (mode === 'edit' ? 'Failed to save rule' : 'Failed to create rule');
       setSubmitError(message);
       toast.error(message);
     } finally {
@@ -266,12 +305,15 @@ export default function CreateAssociationRuleModal({
     <FormDialog
       open
       onOpenChange={(open) => !open && onClose()}
-      title="New association rule"
+      title={mode === 'edit' ? 'Edit association rule' : 'New association rule'}
       size="lg"
       isDirty={isDirty}
       currentStep={step + 1}
       totalSteps={STEPS.length}
       stepLabels={STEPS}
+      onStepClick={
+        mode === 'edit' ? (nextStep) => setStep(nextStep - 1) : undefined
+      }
       footer={(requestClose) => (
         <>
           <Button
@@ -288,10 +330,18 @@ export default function CreateAssociationRuleModal({
           ) : (
             <Button
               onClick={handleSubmit}
-              disabled={saving || !form.hsAssociationTypeId}
+              disabled={
+                saving || (mode === 'create' && !form.hsAssociationTypeId)
+              }
             >
               {saving && <Spinner />}
-              {saving ? 'Creating…' : 'Create Rule'}
+              {saving
+                ? mode === 'edit'
+                  ? 'Saving…'
+                  : 'Creating…'
+                : mode === 'edit'
+                  ? 'Save changes'
+                  : 'Create Rule'}
             </Button>
           )}
         </>
@@ -304,11 +354,11 @@ export default function CreateAssociationRuleModal({
             <AlertDescription>{submitError}</AlertDescription>
           </Alert>
         )}
-        {loadingObjects ? (
+        {mode === 'create' && loadingObjects ? (
           <div className="text-muted-foreground flex items-center justify-center gap-2 py-10 text-sm">
             <Spinner /> Loading synced objects…
           </div>
-        ) : projectObjects.length === 0 ? (
+        ) : mode === 'create' && projectObjects.length === 0 ? (
           <Alert variant="destructive">
             <AlertCircle />
             <AlertDescription>
@@ -335,6 +385,7 @@ export default function CreateAssociationRuleModal({
                         <FieldLabel required>Source object</FieldLabel>
                         <Select
                           value={form.sourceObject}
+                          disabled={mode === 'edit'}
                           onValueChange={(v) => {
                             const obj = projectObjects.find(
                               (o) => o.sourceObject === v,
@@ -399,6 +450,7 @@ export default function CreateAssociationRuleModal({
                             <>
                               <Select
                                 value={form.sourceMatchField}
+                                disabled={mode === 'edit'}
                                 onValueChange={(v) =>
                                   setForm((f) => ({
                                     ...f,
@@ -431,6 +483,7 @@ export default function CreateAssociationRuleModal({
                           ) : (
                             <Input
                               value={form.sourceMatchField}
+                              disabled={mode === 'edit'}
                               onChange={(e) =>
                                 setForm((f) => ({
                                   ...f,
@@ -465,6 +518,7 @@ export default function CreateAssociationRuleModal({
                         <FieldLabel required>Target object</FieldLabel>
                         <Select
                           value={form.targetObject}
+                          disabled={mode === 'edit'}
                           onValueChange={(v) => {
                             const obj = projectObjects.find(
                               (o) => o.sourceObject === v,
@@ -520,6 +574,7 @@ export default function CreateAssociationRuleModal({
                           {targetFields.length > 0 ? (
                             <Select
                               value={form.targetMatchField}
+                              disabled={mode === 'edit'}
                               onValueChange={(v) =>
                                 setForm((f) => ({
                                   ...f,
@@ -542,6 +597,7 @@ export default function CreateAssociationRuleModal({
                           ) : (
                             <Input
                               value={form.targetMatchField}
+                              disabled={mode === 'edit'}
                               onChange={(e) =>
                                 setForm((f) => ({
                                   ...f,
@@ -622,6 +678,7 @@ export default function CreateAssociationRuleModal({
                         </FieldLabel>
                         <Select
                           value={form.cardinality}
+                          disabled={mode === 'edit'}
                           onValueChange={(v) =>
                             setForm((f) => ({ ...f, cardinality: v }))
                           }
@@ -664,7 +721,25 @@ export default function CreateAssociationRuleModal({
                         The relationship label HubSpot applies to this link.
                       </HelpTooltip>
                     </div>
-                    {loadingTypes ? (
+                    {mode === 'edit' ? (
+                      <Field>
+                        <FieldLabel>Association type</FieldLabel>
+                        <div className="bg-muted/30 rounded-3xl px-3 py-2 text-sm">
+                          <div className="font-medium">
+                            {form.hsAssociationLabel ||
+                              (form.hsAssociationTypeId
+                                ? `Type ${form.hsAssociationTypeId}`
+                                : 'Configured in HubSpot')}
+                          </div>
+                          <div className="text-muted-foreground mt-0.5 text-xs">
+                            {form.hsAssociationCategory}
+                            {form.hsAssociationTypeId
+                              ? ` · ID ${form.hsAssociationTypeId}`
+                              : ''}
+                          </div>
+                        </div>
+                      </Field>
+                    ) : loadingTypes ? (
                       <div className="text-muted-foreground flex items-center gap-2 py-6 text-sm">
                         <Spinner /> Loading association types from HubSpot…
                       </div>

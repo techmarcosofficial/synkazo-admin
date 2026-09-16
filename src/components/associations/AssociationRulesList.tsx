@@ -31,8 +31,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import CompanyOwnerSection from './CompanyOwnerSection';
-import CreateAssociationRuleModal from './CreateAssociationRuleModal';
-import EditAssociationRuleModal from './EditAssociationRuleModal';
+import AssociationRuleFormDialog from './AssociationRuleFormDialog';
 import AssociationRunsList, {
   type AssociationResultFilter,
   type AssociationRunFilters,
@@ -561,17 +560,6 @@ function RuleCard({
       : latestRun.status
     : null;
 
-  const latestProcessed = latestRun
-    ? (latestRun.totalAttempted ??
-      latestRun.succeeded +
-        latestRun.pendingCreated +
-        latestRun.failed)
-    : null;
-
-  const latestAssociated = latestRun?.succeeded ?? null;
-  const latestPending = latestRun?.pendingCreated ?? null;
-  const latestFailed = latestRun?.failed ?? null;
-
   const handleRun = async () => {
     setActionError(null);
 
@@ -610,8 +598,7 @@ function RuleCard({
       const e = err as ApiError;
 
       const message =
-        (e?.response?.data?.message as string) ??
-        'Failed to run this rule.';
+        (e?.response?.data?.message as string) ?? 'Failed to run this rule.';
 
       setActionError(message);
       toast.error(message);
@@ -761,13 +748,15 @@ function RuleCard({
           {/* Association header */}
 
           <div
+            data-testid={`association-rule-item-${rule.id}`}
+            onClick={() => onExpandedChange(!expanded)}
             className={cn(
               'grid min-w-0 grid-cols-1',
               'items-center gap-x-4 gap-y-3',
               'p-3 sm:p-4',
               'lg:grid-cols-[minmax(0,1fr)_auto]',
-              '2xl:grid-cols-[minmax(0,1.1fr)_minmax(344px,1fr)_minmax(165px,0.55fr)_auto]',
-              'transition-colors hover:bg-muted/20',
+              '2xl:grid-cols-[minmax(0,1.2fr)_minmax(130px,0.35fr)_minmax(165px,0.55fr)_auto]',
+              'hover:bg-muted/20 cursor-pointer transition-colors',
             )}
           >
             {/* Association identity */}
@@ -798,19 +787,18 @@ function RuleCard({
                 <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
                   <span className="capitalize">{associationType}</span>
 
-                  {rule.conditions != null &&
-                    rule.conditions.length > 0 && (
-                      <>
-                        <span aria-hidden="true">·</span>
+                  {rule.conditions != null && rule.conditions.length > 0 && (
+                    <>
+                      <span aria-hidden="true">·</span>
 
-                        <span>
-                          {rule.conditions.length}{' '}
-                          {rule.conditions.length === 1
-                            ? 'condition'
-                            : 'conditions'}
-                        </span>
-                      </>
-                    )}
+                      <span>
+                        {rule.conditions.length}{' '}
+                        {rule.conditions.length === 1
+                          ? 'condition'
+                          : 'conditions'}
+                      </span>
+                    </>
+                  )}
                 </div>
 
                 <div className="text-muted-foreground mt-1.5 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 font-mono text-[11px] leading-4">
@@ -818,10 +806,7 @@ function RuleCard({
                     {rule.sourceObject}.{rule.sourceMatchField}
                   </span>
 
-                  <ArrowRight
-                    aria-hidden="true"
-                    className="size-3 shrink-0"
-                  />
+                  <ArrowRight aria-hidden="true" className="size-3 shrink-0" />
 
                   <span className="min-w-0 break-all">
                     {rule.targetObject}.{rule.targetMatchField}
@@ -830,45 +815,21 @@ function RuleCard({
               </div>
             </div>
 
-            {/* Latest run metrics */}
+            {/* Cumulative association total */}
 
             <div
               className={cn(
-                'min-w-0 border-border/60 border-t pt-3',
+                'border-border/60 min-w-0 border-t pt-3',
                 'lg:col-start-1 lg:row-start-2',
                 '2xl:col-start-2 2xl:row-start-1',
                 '2xl:border-x 2xl:border-t-0 2xl:px-4 2xl:py-0',
               )}
             >
-              <div
-                className="grid min-w-0 grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-4"
-                aria-label="Latest run outcomes"
-              >
+              <div aria-label="Total association records">
                 <RuleOutcomeMetric
-                  label="Processed"
-                  value={latestProcessed ?? '—'}
+                  label="Total records"
+                  value={stats?.total ?? '—'}
                   icon={Layers3}
-                />
-
-                <RuleOutcomeMetric
-                  label="Associated"
-                  value={latestAssociated ?? '—'}
-                  icon={Link2}
-                  iconClassName="text-success"
-                />
-
-                <RuleOutcomeMetric
-                  label="Pending"
-                  value={latestPending ?? '—'}
-                  icon={Clock3}
-                  iconClassName="text-warning"
-                />
-
-                <RuleOutcomeMetric
-                  label="Failed"
-                  value={latestFailed ?? '—'}
-                  icon={CircleAlert}
-                  iconClassName="text-destructive"
                 />
               </div>
             </div>
@@ -914,6 +875,7 @@ function RuleCard({
             {/* Actions */}
 
             <div
+              onClick={(event) => event.stopPropagation()}
               className={cn(
                 'flex shrink-0 items-center justify-end gap-1.5',
                 'lg:col-start-2 lg:row-start-1',
@@ -952,7 +914,6 @@ function RuleCard({
                 ) : (
                   <Play className="size-3.5" />
                 )}
-
                 Run now
               </Button>
 
@@ -970,9 +931,7 @@ function RuleCard({
                 </DropdownMenuTrigger>
 
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onSelect={() => setShowEditModal(true)}
-                  >
+                  <DropdownMenuItem onSelect={() => setShowEditModal(true)}>
                     <Pencil />
                     Edit association
                   </DropdownMenuItem>
@@ -982,9 +941,7 @@ function RuleCard({
                     disabled={isProcessing.stats}
                   >
                     <RefreshCw
-                      className={cn(
-                        isProcessing.stats && 'animate-spin',
-                      )}
+                      className={cn(isProcessing.stats && 'animate-spin')}
                     />
                     Refresh counts
                   </DropdownMenuItem>
@@ -1028,9 +985,7 @@ function RuleCard({
               <Alert variant="destructive">
                 <AlertCircle />
 
-                <AlertDescription>
-                  {actionError}
-                </AlertDescription>
+                <AlertDescription>{actionError}</AlertDescription>
               </Alert>
             </div>
           )}
@@ -1048,10 +1003,11 @@ function RuleCard({
         </CardContent>
 
         {showEditModal && (
-          <EditAssociationRuleModal
+          <AssociationRuleFormDialog
+            mode="edit"
             projectId={projectId}
             rule={rule}
-            onSaved={onRefresh}
+            onSuccess={onRefresh}
             onClose={() => setShowEditModal(false)}
           />
         )}
@@ -1336,9 +1292,10 @@ export default function AssociationRulesList({
       )}
 
       {showCreate && (
-        <CreateAssociationRuleModal
+        <AssociationRuleFormDialog
+          mode="create"
           projectId={projectId}
-          onCreated={load}
+          onSuccess={load}
           onClose={() => setShowCreate(false)}
         />
       )}

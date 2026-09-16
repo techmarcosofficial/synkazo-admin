@@ -109,16 +109,19 @@ function RunMetric({
   iconClassName: string;
 }) {
   return (
-    <div className="border-border bg-background flex min-w-0 items-center gap-2.5 rounded-2xl border px-3 py-2.5">
-      <div className="bg-muted flex size-7 shrink-0 items-center justify-center rounded-full">
-        <Icon className={cn('size-3.5', iconClassName)} />
-      </div>
-      <div>
-        <div className="text-base leading-none font-semibold tabular-nums">
+    <div className="flex min-w-0 shrink-0 flex-col gap-0.5">
+      <div className="flex min-w-0 items-center gap-1.5">
+        <Icon
+          aria-hidden="true"
+          className={cn('size-3.5 shrink-0', iconClassName)}
+        />
+        <span className="text-foreground text-sm font-semibold tabular-nums">
           {value.toLocaleString()}
-        </div>
-        <div className="text-muted-foreground mt-1 text-xs">{label}</div>
+        </span>
       </div>
+      <span className="text-muted-foreground text-[11px] leading-4">
+        {label}
+      </span>
     </div>
   );
 }
@@ -370,81 +373,74 @@ function AssociationRunRow({
       onOpenChange={setExpanded}
       className="bg-card overflow-hidden rounded-3xl border"
     >
-      <CollapsibleTrigger className="group hover:bg-muted/30 grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 text-left transition-colors lg:grid-cols-[minmax(150px,1fr)_180px_140px_100px_auto]">
-        <div className="min-w-0">
+      <CollapsibleTrigger className="group hover:bg-muted/30 grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-3 px-4 py-3 text-left transition-colors lg:grid-cols-[minmax(170px,1fr)_210px_auto_4rem]">
+        <div className="min-w-0 lg:col-start-1 lg:row-start-1">
           <div className="flex min-w-0 items-center gap-2">
             <StatusBadge status={runStatus(run)} size="sm" />
             <span className="text-muted-foreground truncate font-mono text-xs">
               #{run.id.slice(0, 8)}
             </span>
           </div>
-          <div className="text-muted-foreground mt-1.5 flex flex-wrap items-center gap-1.5 text-xs lg:hidden">
-            <span>{formatTimestamp(run.startedAt)}</span>
-            <span aria-hidden="true">·</span>
-            <span>{processed.toLocaleString()} processed</span>
-            <span aria-hidden="true">·</span>
-            <span>{formatDuration(run)}</span>
-          </div>
         </div>
 
-        <div className="hidden border-l pl-4 lg:block">
-          <div className="text-muted-foreground text-xs">Started</div>
-          <div className="mt-0.5 text-sm font-medium">
+        <div className="text-muted-foreground col-span-2 flex flex-wrap items-center gap-1.5 text-xs lg:col-span-1 lg:col-start-2 lg:row-start-1 lg:block lg:border-l lg:pl-3">
+          <div className="hidden text-xs lg:block">Started</div>
+          <div className="text-xs font-medium lg:mt-0.5 lg:text-sm">
             {formatTimestamp(run.startedAt)}
           </div>
-        </div>
-        <div className="hidden border-l pl-4 lg:block">
-          <div className="text-muted-foreground text-xs">Processed</div>
-          <div className="mt-0.5 text-sm font-medium tabular-nums">
-            {processed.toLocaleString()}
-          </div>
-        </div>
-        <div className="hidden border-l pl-4 lg:block">
-          <div className="text-muted-foreground text-xs">Duration</div>
-          <div className="mt-0.5 text-sm font-medium">
-            {formatDuration(run)}
+          <span aria-hidden="true" className="lg:hidden">
+            ·
+          </span>
+          <div className="text-xs lg:mt-1">
+            <span className="lg:text-muted-foreground lg:mr-1">Duration</span>
+            <span className="font-medium">{formatDuration(run)}</span>
           </div>
         </div>
 
-        <span className="border-border/60 bg-muted/50 text-muted-foreground group-hover:text-foreground flex size-7 items-center justify-center rounded-full border">
-          <ChevronRight
-            className={cn(
-              'size-4 transition-transform duration-200',
-              expanded && 'rotate-90',
-            )}
+        <div
+          className="border-border/60 col-span-2 grid grid-cols-2 gap-x-2 gap-y-2 border-t pt-3 sm:grid-cols-4 lg:col-span-1 lg:col-start-3 lg:row-start-1 lg:ml-3 lg:flex lg:w-auto lg:items-center lg:justify-end lg:gap-3 lg:justify-self-end lg:border-t-0 lg:border-l lg:pt-0 lg:pl-3"
+          aria-label={`Run outcomes for #${run.id.slice(0, 8)}`}
+        >
+          <RunMetric
+            icon={FileText}
+            label="Processed"
+            value={processed}
+            iconClassName="text-muted-foreground"
           />
+          <RunMetric
+            icon={Link2}
+            label="Associated"
+            value={run.succeeded}
+            iconClassName="text-success"
+          />
+          <RunMetric
+            icon={Clock3}
+            label="Pending"
+            value={run.pendingCreated}
+            iconClassName="text-warning"
+          />
+          <RunMetric
+            icon={CircleAlert}
+            label="Failed"
+            value={run.failed}
+            iconClassName="text-destructive"
+          />
+        </div>
+
+        <span className="border-border/60 col-start-2 row-start-1 flex items-center justify-end self-stretch border-l pl-2 lg:col-start-4 lg:ml-3 lg:pl-3">
+          <span className="border-border/60 bg-muted/50 text-muted-foreground group-hover:text-foreground flex size-7 items-center justify-center rounded-full border">
+            <ChevronRight
+              className={cn(
+                'size-4 transition-transform duration-200',
+                expanded && 'rotate-90',
+              )}
+            />
+          </span>
         </span>
       </CollapsibleTrigger>
 
       <CollapsibleContent className="bg-muted/35 border-t">
         <div className="space-y-4 p-4">
-          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-            <RunMetric
-              icon={FileText}
-              label="Processed"
-              value={processed}
-              iconClassName="text-muted-foreground"
-            />
-            <RunMetric
-              icon={Link2}
-              label="Associated"
-              value={run.succeeded}
-              iconClassName="text-success"
-            />
-            <RunMetric
-              icon={Clock3}
-              label="Pending"
-              value={run.pendingCreated}
-              iconClassName="text-warning"
-            />
-            <RunMetric
-              icon={CircleAlert}
-              label="Failed"
-              value={run.failed}
-              iconClassName="text-destructive"
-            />
-          </div>
-
           {run.errorMessage && (
             <div className="border-destructive/25 bg-destructive/5 text-destructive flex gap-2.5 rounded-2xl border px-3.5 py-2.5 text-sm">
               <CircleAlert className="mt-0.5 size-4 shrink-0" />

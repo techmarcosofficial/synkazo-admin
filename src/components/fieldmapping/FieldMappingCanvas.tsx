@@ -67,6 +67,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Progress } from '@/components/ui/progress';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
@@ -567,7 +568,11 @@ function DirectionArrow({ direction }: { direction: MappingDirection }) {
 function TypeChip({ type }: { type?: string }) {
   if (!type) return null;
   return (
-    <Badge variant="outline" className="text-[10.5px] font-semibold capitalize">
+    <Badge
+      variant="outline"
+      className="max-w-20 shrink-0 truncate text-[10.5px] font-semibold capitalize"
+      title={type.toLowerCase()}
+    >
       {type.toLowerCase()}
     </Badge>
   );
@@ -677,6 +682,8 @@ export function FieldSelect({
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [insideDialog, setInsideDialog] = useState(false);
   // Required fields surface first so they're not buried in a long list.
   const sorted = highlightRequired
     ? [...fields].sort((a, b) => Number(!!b.required) - Number(!!a.required))
@@ -684,9 +691,20 @@ export function FieldSelect({
   const selected = fields.find((f) => f.key === value);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (nextOpen) {
+          setInsideDialog(
+            !!triggerRef.current?.closest('[data-slot="dialog-content"]'),
+          );
+        }
+        setOpen(nextOpen);
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
+          ref={triggerRef}
           type="button"
           variant="outline"
           role="combobox"
@@ -704,43 +722,61 @@ export function FieldSelect({
           <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-(--radix-popover-trigger-width) p-0">
+      <PopoverContent className="max-h-(--radix-popover-content-available-height) w-(--radix-popover-trigger-width) overflow-hidden p-0">
         <Command
           filter={(itemValue, search) =>
             itemValue.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
           }
         >
           <CommandInput placeholder="Search fields…" />
-          <CommandList>
-            <CommandEmpty>No fields found.</CommandEmpty>
-            <CommandGroup>
-              {sorted.map((f) => (
-                <CommandItem
-                  key={f.key}
-                  // cmdk matches on this string, so both the label and the raw
-                  // key are searchable.
-                  value={`${f.label || f.key} ${f.key}`}
-                  onSelect={() => {
-                    onChange(f.key);
-                    setOpen(false);
-                  }}
-                >
-                  <span className="flex min-w-0 flex-1 items-center justify-between gap-2.5">
-                    <span className="truncate">
-                      {f.label || f.key}
-                      {highlightRequired && f.required && (
-                        <span className="text-destructive ml-0.5">*</span>
-                      )}
+          <ScrollArea
+            className="h-64 max-h-[calc(var(--radix-popover-content-available-height)-3rem)]"
+            viewportClassName="[&>div]:!block [&>div]:!w-full [&>div]:!min-w-0"
+            onWheelCapture={(event) => {
+              // Radix Dialog uses react-remove-scroll. Because Popover.Content is
+              // correctly portaled to the body for positioning, that library can
+              // cancel wheel input before it reaches this nested list. Only replace
+              // the cancelled native scroll; outside a modal, the browser remains in
+              // charge and this branch does nothing.
+              if (!insideDialog || event.deltaY === 0) return;
+              const viewport = event.currentTarget.querySelector<HTMLElement>(
+                '[data-slot="scroll-area-viewport"]',
+              );
+              if (viewport) viewport.scrollTop += event.deltaY;
+            }}
+          >
+            <CommandList className="max-h-none w-full max-w-full min-w-0">
+              <CommandEmpty>No fields found.</CommandEmpty>
+              <CommandGroup className="w-full max-w-full min-w-0">
+                {sorted.map((f) => (
+                  <CommandItem
+                    key={f.key}
+                    className="min-w-0 overflow-hidden"
+                    // cmdk matches on this string, so both the label and the raw
+                    // key are searchable.
+                    value={`${f.label || f.key} ${f.key}`}
+                    onSelect={() => {
+                      onChange(f.key);
+                      setOpen(false);
+                    }}
+                  >
+                    <span className="flex min-w-0 flex-1 items-center justify-between gap-2.5 overflow-hidden">
+                      <span className="truncate">
+                        {f.label || f.key}
+                        {highlightRequired && f.required && (
+                          <span className="text-destructive ml-0.5">*</span>
+                        )}
+                      </span>
+                      <TypeChip type={f.type} />
                     </span>
-                    <TypeChip type={f.type} />
-                  </span>
-                  {f.key === value && (
-                    <Check className="ml-2 size-3.5 shrink-0" />
-                  )}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
+                    {f.key === value && (
+                      <Check className="ml-2 size-3.5 shrink-0" />
+                    )}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </ScrollArea>
         </Command>
       </PopoverContent>
     </Popover>

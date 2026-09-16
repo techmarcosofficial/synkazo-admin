@@ -103,7 +103,15 @@ describe('AssociationRunsList', () => {
     renderList();
 
     expect(await screen.findByText('#run-1')).toBeInTheDocument();
-    expect(screen.getByText('206')).toBeInTheDocument();
+    const outcomes = screen.getByLabelText('Run outcomes for #run-1');
+    expect(outcomes).toHaveTextContent('206');
+    expect(outcomes).toHaveTextContent('Processed');
+    expect(outcomes).toHaveTextContent('200');
+    expect(outcomes).toHaveTextContent('Associated');
+    expect(outcomes).toHaveTextContent('4');
+    expect(outcomes).toHaveTextContent('Pending');
+    expect(outcomes).toHaveTextContent('2');
+    expect(outcomes).toHaveTextContent('Failed');
 
     await user.click(screen.getByRole('button', { name: /#run-1/ }));
 

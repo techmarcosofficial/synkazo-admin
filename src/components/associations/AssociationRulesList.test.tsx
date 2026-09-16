@@ -362,7 +362,7 @@ describe('AssociationRulesList', () => {
     vi.clearAllMocks();
   });
 
-  it('shows a compact association row with outcomes and run actions', async () => {
+  it('shows the cumulative total on the association row with run actions', async () => {
     renderWithClient(
       <AssociationRulesList projectId="p1" showCompanyOwnerSection={false} />,
     );
@@ -373,24 +373,22 @@ describe('AssociationRulesList', () => {
     ).toBeInTheDocument();
     await waitFor(() => {
       expect(
-        screen.getByLabelText('Latest association outcomes'),
+        screen.getByLabelText('Total association records'),
       ).toHaveTextContent('12');
       expect(
-        screen.getByLabelText('Latest association outcomes'),
-      ).toHaveTextContent('7');
-      expect(
-        screen.getByLabelText('Latest association outcomes'),
-      ).toHaveTextContent('3');
-      expect(
-        screen.getByLabelText('Latest association outcomes'),
-      ).toHaveTextContent('2');
+        screen.getByLabelText('Total association records'),
+      ).toHaveTextContent('Total records');
     });
+    expect(
+      screen.queryByLabelText('Latest association outcomes'),
+    ).not.toBeInTheDocument();
 
     const associationTrigger = screen.getByRole('button', {
       name: 'Expand Contact → Company',
     });
-    expect(associationTrigger).toHaveTextContent('contacts.company_domain');
-    expect(associationTrigger).toHaveTextContent('companies.domain');
+    const associationItem = screen.getByTestId('association-rule-item-rule-1');
+    expect(associationItem).toHaveTextContent('contacts.company_domain');
+    expect(associationItem).toHaveTextContent('companies.domain');
     expect(screen.getByText('Latest run')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Run now' })).toBeInTheDocument();
     expect(
@@ -405,9 +403,11 @@ describe('AssociationRulesList', () => {
       <AssociationRulesList projectId="p1" showCompanyOwnerSection={false} />,
     );
 
-    await user.click(
-      await screen.findByRole('button', { name: 'Expand Contact → Company' }),
-    );
+    await user.click(await screen.findByText('Contact → Company'));
+
+    expect(
+      screen.getByRole('button', { name: 'Collapse Contact → Company' }),
+    ).toBeInTheDocument();
 
     expect(
       screen.queryByText(
