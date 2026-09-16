@@ -113,6 +113,33 @@ describe('AssociationConditionsEditor', () => {
     expect(lastCall[0][0].value).toBe('0');
   });
 
+  it('keeps advanced formatting controls in a compact popover', async () => {
+    const user = userEvent.setup();
+    render(
+      <AssociationConditionsEditor
+        fields={FIELDS}
+        conditions={[
+          {
+            field: 'df_main_contact_id',
+            operator: 'equals',
+            value: '1',
+            normalization: { trim: true },
+          },
+        ]}
+        conditionLogic="AND"
+        onChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText('Trim outer whitespace')).not.toBeInTheDocument();
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Formatting options for condition 1',
+      }),
+    );
+    expect(screen.getByText('Trim outer whitespace')).toBeInTheDocument();
+  });
+
   it('shows the AND/OR selector only once there are multiple conditions', () => {
     const { rerender } = render(
       <AssociationConditionsEditor
@@ -122,7 +149,9 @@ describe('AssociationConditionsEditor', () => {
         onChange={vi.fn()}
       />,
     );
-    expect(screen.queryByText(/combine conditions with/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/combine conditions with/i),
+    ).not.toBeInTheDocument();
 
     rerender(
       <AssociationConditionsEditor

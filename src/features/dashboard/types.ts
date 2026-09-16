@@ -18,6 +18,12 @@ export interface KpiSecondaryStat {
   tone?: 'default' | 'success' | 'danger';
 }
 
+export interface KpiPieStat {
+  label: string;
+  value: number;
+  color: string;
+}
+
 export interface DashboardStat {
   id: string;
   label: string;
@@ -31,6 +37,10 @@ export interface DashboardStat {
   chartColor?: string;
   chartLabel?: string;
   chartSummary?: string;
+  statusLabel?: string;
+  statusTone?: 'success' | 'neutral';
+  activityActive?: boolean;
+  pieData?: KpiPieStat[];
   /** Where the whole card navigates to when clicked. */
   href?: string;
   /** Compact extra numbers shown under the main value, e.g. success rate + error count. */

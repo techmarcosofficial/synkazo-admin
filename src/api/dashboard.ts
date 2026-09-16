@@ -9,6 +9,9 @@ export interface DashboardSummary {
   connectedConnections: number;
   totalRecordsSynced: number;
   totalErrors: number;
+  totalRecordsCreated: number;
+  totalRecordsUpdated: number;
+  totalRecordsFailed: number;
 }
 
 export interface ActiveSync {

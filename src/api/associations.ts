@@ -102,13 +102,27 @@ export interface AssociationRunResult {
 
 export interface AssociationRunLog {
   id: string;
+  associationRuleId?: string;
   status: string;
   startedAt: string;
   triggeredBy: string;
+  totalAttempted?: number;
   succeeded: number;
   failed: number;
   pendingCreated: number;
+  completedAt?: string | null;
   errorMessage?: string | null;
+  associationRule?: AssociationRule;
+}
+
+export interface AssociationRunsParams {
+  ruleId?: string;
+  status?: string;
+  result?: string;
+  days?: number;
+  search?: string;
+  page?: number;
+  limit?: number;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -116,6 +130,12 @@ const d = (r: any): any => r.data.data;
 const base = (projectId: string) => `/projects/${projectId}/associations`;
 
 export const associationsApi = {
+  getProjectRuns: (
+    projectId: string,
+    params: AssociationRunsParams = {},
+  ): Promise<PaginatedResponse<AssociationRunLog>> =>
+    apiClient.get(`${base(projectId)}/runs`, { params }).then((r) => r.data),
+
   listRules: (projectId: string): Promise<AssociationRule[]> =>
     apiClient.get(`${base(projectId)}/rules`).then(d),
 
@@ -157,6 +177,7 @@ export const associationsApi = {
       page?: number;
       limit?: number;
       search?: string;
+      runId?: string;
     } = {},
   ): Promise<PaginatedResponse<AssociationRecord>> =>
     apiClient
@@ -169,6 +190,7 @@ export const associationsApi = {
           page: params.page,
           limit: params.limit,
           search: params.search || undefined,
+          runId: params.runId,
         },
       })
       .then((r) => r.data),

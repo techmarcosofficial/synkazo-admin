@@ -31,12 +31,14 @@ vi.mock('@/api/associations', async () => {
       listRules: vi.fn(),
       getRuleStats: vi.fn(),
       getRuleRecords: vi.fn(),
+      getProjectRuns: vi.fn(),
       getRunLogs: vi.fn(),
     },
   };
 });
 
 const getRuleRecords = vi.mocked(associationsApi.getRuleRecords);
+const getProjectRuns = vi.mocked(associationsApi.getProjectRuns);
 const getRunLogs = vi.mocked(associationsApi.getRunLogs);
 const listRules = vi.mocked(associationsApi.listRules);
 const getRuleStats = vi.mocked(associationsApi.getRuleStats);
@@ -347,43 +349,77 @@ describe('AssociationRulesList', () => {
       ],
       total: 1,
     });
+    getProjectRuns.mockResolvedValue({
+      success: true,
+      data: [],
+      total: 0,
+      page: 1,
+      limit: 5,
+    });
   });
 
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  it('shows the section action, real metrics, mapping, and latest run summary', async () => {
+  it('shows a compact association row with outcomes and run actions', async () => {
     renderWithClient(
       <AssociationRulesList projectId="p1" showCompanyOwnerSection={false} />,
     );
 
-    expect(await screen.findByText('Contact to company')).toBeInTheDocument();
+    expect(await screen.findByText('Contact → Company')).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'New association' }),
     ).toBeInTheDocument();
-    expect(screen.getByText('Total rules').parentElement).toHaveTextContent(
-      '1',
-    );
-    expect(screen.getByText('Enabled').parentElement).toHaveTextContent('1');
-
     await waitFor(() => {
       expect(
-        screen.getByText('Pending records').parentElement,
+        screen.getByLabelText('Latest association outcomes'),
+      ).toHaveTextContent('12');
+      expect(
+        screen.getByLabelText('Latest association outcomes'),
+      ).toHaveTextContent('7');
+      expect(
+        screen.getByLabelText('Latest association outcomes'),
       ).toHaveTextContent('3');
       expect(
-        screen.getByText('Failed records').parentElement,
+        screen.getByLabelText('Latest association outcomes'),
       ).toHaveTextContent('2');
     });
 
-    expect(screen.getByText('company_domain')).toBeInTheDocument();
-    expect(screen.getByText('domain')).toBeInTheDocument();
-    expect(screen.getByText(/Last run/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Run' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
+    const associationTrigger = screen.getByRole('button', {
+      name: 'Expand Contact → Company',
+    });
+    expect(associationTrigger).toHaveTextContent('contacts.company_domain');
+    expect(associationTrigger).toHaveTextContent('companies.domain');
+    expect(screen.getByText('Latest run')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Run now' })).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Show diagnostics' }),
+      screen.getByRole('button', { name: /More actions for/ }),
     ).toBeInTheDocument();
+    expect(associationTrigger).toBeInTheDocument();
+  });
+
+  it('embeds related runs directly inside the expanded association row', async () => {
+    const user = userEvent.setup();
+    renderWithClient(
+      <AssociationRulesList projectId="p1" showCompanyOwnerSection={false} />,
+    );
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Expand Contact → Company' }),
+    );
+
+    expect(
+      screen.queryByText(
+        'View association runs and the records processed in each run.',
+      ),
+    ).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(getProjectRuns).toHaveBeenCalledWith(
+        'p1',
+        expect.objectContaining({ ruleId: 'rule-1' }),
+      );
+    });
   });
 
   it('keeps a recoverable error state with a retry action', async () => {
