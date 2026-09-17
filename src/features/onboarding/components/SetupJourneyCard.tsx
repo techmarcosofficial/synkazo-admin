@@ -138,7 +138,7 @@ export default function SetupJourneyCard({
             <span className="text-muted-foreground text-[11px] font-medium whitespace-nowrap">
               {completedCount} of {requiredSteps.length} complete
             </span>
-            {onContinue && (
+            {onContinue && actionLabel && (
               <Button size="sm" onClick={onContinue}>
                 {actionLabel}
                 <ArrowRight data-icon="inline-end" aria-hidden="true" />

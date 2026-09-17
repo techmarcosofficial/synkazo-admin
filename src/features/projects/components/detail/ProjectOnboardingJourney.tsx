@@ -61,7 +61,7 @@ export default function ProjectOnboardingJourney() {
     previousPage: stage === 'create_first_job' ? 'connections' : null,
   });
 
-  if (action === 'none') return null;
+  // if (action === 'none') return null;
 
   return (
     <SetupJourneyCard
@@ -77,7 +77,7 @@ export default function ProjectOnboardingJourney() {
           : 'Create a sync job to choose what data should move between your platforms.'
       }
       steps={steps}
-      actionLabel={action === 'next' ? 'Next' : 'Continue setup'}
+      actionLabel={action === 'next' ? 'Next' : action === 'none' ? '' : 'Continue setup'}
       onContinue={() => handleTabChange(targetTab)}
     />
   );

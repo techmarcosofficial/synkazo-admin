@@ -97,7 +97,7 @@ export default function FormDialog({
             />
           ) : (
             <>
-              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <DialogTitle>{title}</DialogTitle>
                 {description && (
                   <DialogDescription>{description}</DialogDescription>

@@ -75,7 +75,7 @@ export default function KpiStatCard({
   const card = (
     <Card
       className={cn(
-        'h-full min-h-[228px] shadow-sm transition-all duration-200 ease-out',
+        'h-full min-h-[228px] transition-all duration-200 ease-out',
         href &&
           'hover:border-foreground/20 cursor-pointer hover:-translate-y-0.5 hover:shadow-md',
       )}
@@ -94,7 +94,7 @@ export default function KpiStatCard({
           </div>
 
           {statusLabel && (
-            <span className="bg-muted text-muted-foreground inline-flex h-7 items-center gap-2 rounded-3xl px-3 text-xs font-medium">
+            <span className="bg-muted text-muted-foreground inline-flex h-5.5 items-center gap-2 rounded-3xl px-3 text-xs font-medium">
               {statusTone === 'success' && (
                 <span
                   aria-hidden="true"
