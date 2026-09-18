@@ -56,10 +56,13 @@ import PreferencesTab from '@/pages/settings/tabs/PreferencesTab';
 import ProfileTab from '@/pages/settings/tabs/ProfileTab';
 import SettingsLayout from '@/pages/settings/SettingsLayout';
 import OrganisationsPage from '@/pages/superadmin/OrganisationsPage';
+import OrganisationDetailPage from '@/pages/superadmin/OrganisationDetailPage';
+import OrganisationMembersPage from '@/pages/superadmin/OrganisationMembersPage';
 import MarketingPage from '@/pages/superadmin/MarketingPage';
+import OverviewPage from '@/pages/superadmin/OverviewPage';
 import PlatformAuditPage from '@/pages/superadmin/PlatformAuditPage';
+import SuperAdminLayout from '@/pages/superadmin/SuperAdminLayout';
 import SuperAdminProjectsPage from '@/pages/superadmin/ProjectsPage';
-import SuperAdminPage from '@/pages/superadmin/SuperAdminPage';
 import SystemSettingsPage from '@/pages/superadmin/SystemSettingsPage';
 import UsersPage from '@/pages/superadmin/UsersPage';
 
@@ -67,6 +70,7 @@ import UsersPage from '@/pages/superadmin/UsersPage';
 import ActiveSyncs from '@/pages/sync/ActiveSyncs';
 import LogsPage from '@/pages/sync/LogsPage';
 import WelcomeOnboarding from '@/pages/WelcomeOnboarding';
+import ExactRoleGuard from '@/components/auth/ExactRoleGuard';
 import RoleGuard from '@/components/auth/RoleGuard';
 import LegacyRedirect from '@/components/routing/LegacyRedirect';
 
@@ -204,41 +208,37 @@ function App() {
                 <Route path="/org-admin" element={<OrgAdminDashboard />} />
               </Route>
 
-              {/* Platform administration — super_admin only */}
-              <Route
-                element={
-                  <RoleGuard minRole="super_admin" redirectTo="/dashboard" />
-                }
-              >
-                <Route path="/super-admin" element={<SuperAdminPage />} />
+            </Route>
+
+            {/* Platform administration — dedicated shell outside AppLayout.
+                Exact-role guard so a future higher role does not inherit access
+                by hierarchy, plus its own sidebar/header/banner (SA-100..107). */}
+            <Route element={<ExactRoleGuard role="super_admin" />}>
+              <Route path="/super-admin" element={<SuperAdminLayout />}>
                 <Route
-                  path="/super-admin/organisations"
-                  element={<OrganisationsPage />}
+                  index
+                  element={<Navigate to="/super-admin/overview" replace />}
                 />
-                <Route path="/super-admin/users" element={<UsersPage />} />
+                <Route path="overview" element={<OverviewPage />} />
+                <Route path="organisations" element={<OrganisationsPage />} />
                 <Route
-                  path="/super-admin/marketing"
-                  element={<MarketingPage />}
-                />
-                <Route
-                  path="/super-admin/projects"
-                  element={<SuperAdminProjectsPage />}
+                  path="organisations/:organisationId/overview"
+                  element={<OrganisationDetailPage />}
                 />
                 <Route
-                  path="/super-admin/plans"
-                  element={<PlanManagementPage />}
+                  path="organisations/:organisationId/members"
+                  element={<OrganisationMembersPage />}
                 />
+                <Route path="users" element={<UsersPage />} />
+                <Route path="marketing" element={<MarketingPage />} />
+                <Route path="projects" element={<SuperAdminProjectsPage />} />
+                <Route path="plans" element={<PlanManagementPage />} />
+                <Route path="discounts" element={<DiscountManagementPage />} />
+                <Route path="system" element={<SystemSettingsPage />} />
+                <Route path="audit-log" element={<PlatformAuditPage />} />
                 <Route
-                  path="/super-admin/discounts"
-                  element={<DiscountManagementPage />}
-                />
-                <Route
-                  path="/super-admin/system"
-                  element={<SystemSettingsPage />}
-                />
-                <Route
-                  path="/super-admin/audit-log"
-                  element={<PlatformAuditPage />}
+                  path="*"
+                  element={<Navigate to="/super-admin/overview" replace />}
                 />
               </Route>
             </Route>
