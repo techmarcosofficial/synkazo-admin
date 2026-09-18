@@ -308,9 +308,12 @@ export function useRunSuperAdminJobMutation(
   });
 }
 
-// Poll status of a run triggered from the workspace. Suitable for a
-// short-lived useQuery with refetchInterval. Caller controls stop by
-// setting enabled: false once state === 'completed' | 'failed'.
+// Poll status of a run triggered from the workspace. Auto-stops
+// polling once BullMQ reports a terminal state (completed/failed);
+// the query row stays in cache so the UI can render the final result
+// without another network hit.
+const TERMINAL_BULL_STATES = new Set(['completed', 'failed']);
+
 export function useSuperAdminRunStatusQuery(
   organisationId: string,
   projectId: string,
@@ -335,7 +338,11 @@ export function useSuperAdminRunStatusQuery(
         bullJobId!,
       ),
     enabled: !!bullJobId,
-    refetchInterval: refetchIntervalMs,
+    refetchInterval: (query) => {
+      const state = query.state.data?.state;
+      if (state && TERMINAL_BULL_STATES.has(state)) return false;
+      return refetchIntervalMs;
+    },
   });
 }
 
