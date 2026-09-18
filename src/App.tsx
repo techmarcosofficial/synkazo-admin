@@ -56,6 +56,7 @@ import PreferencesTab from '@/pages/settings/tabs/PreferencesTab';
 import ProfileTab from '@/pages/settings/tabs/ProfileTab';
 import SettingsLayout from '@/pages/settings/SettingsLayout';
 import OrganisationsPage from '@/pages/superadmin/OrganisationsPage';
+import OrganisationDetailPage from '@/pages/superadmin/OrganisationDetailPage';
 import MarketingPage from '@/pages/superadmin/MarketingPage';
 import OverviewPage from '@/pages/superadmin/OverviewPage';
 import PlatformAuditPage from '@/pages/superadmin/PlatformAuditPage';
@@ -219,6 +220,10 @@ function App() {
                 />
                 <Route path="overview" element={<OverviewPage />} />
                 <Route path="organisations" element={<OrganisationsPage />} />
+                <Route
+                  path="organisations/:organisationId/overview"
+                  element={<OrganisationDetailPage />}
+                />
                 <Route path="users" element={<UsersPage />} />
                 <Route path="marketing" element={<MarketingPage />} />
                 <Route path="projects" element={<SuperAdminProjectsPage />} />

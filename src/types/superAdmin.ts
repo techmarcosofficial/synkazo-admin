@@ -14,31 +14,58 @@ export type OrgStatus = 'active' | 'suspended' | 'pending' | 'archived';
 
 export type { SubscriptionStatus };
 
+export interface SuperAdminOwnerSummary {
+  id: string;
+  fullName: string | null;
+  email: string;
+  isActive: boolean;
+}
+
 export interface SuperAdminOrganisationListItem {
   id: string;
   name: string;
   slug: string;
   status: OrgStatus;
   subscriptionStatus: SubscriptionStatus;
-  plan: string;
-  ownerEmail: string;
+  owner: SuperAdminOwnerSummary | null;
+  plan: { id: string | null; name: string };
   memberCount: number;
   projectCount: number;
   createdAt: string;
-  updatedAt: string;
 }
 
-export interface SuperAdminOrganisationDetail
-  extends SuperAdminOrganisationListItem {
+export interface SuperAdminOrganisationDetail {
+  id: string;
+  name: string;
+  slug: string;
   description: string | null;
   logoUrl: string | null;
-  trialEndsAt: string | null;
-  currentPeriodEnd: string | null;
-  cancelAtPeriodEnd: boolean;
-  stripeCustomerId: string | null;
-  paymentHoldActive: boolean;
-  paymentHoldSince: string | null;
-  manualHoldReason: string | null;
+  status: OrgStatus;
+  owner: SuperAdminOwnerSummary | null;
+  settings: { defaultCurrency: string | null };
+  plan: {
+    id: string | null;
+    name: string;
+    subscriptionStatus: SubscriptionStatus;
+  };
+  access: {
+    mode: 'super_admin_organisation_access';
+    planRestrictionsBypassed: boolean;
+    canManage: boolean;
+  };
+  usage: {
+    members: { total: number; active: number; limit: number | null };
+    projects: { count: number; limit: number | null; over: boolean };
+    jobs: { count: number; limit: number | null; over: boolean };
+    records: {
+      used: number;
+      limit: number | null;
+      remaining: number | null;
+      periodStart: string | null;
+    };
+  };
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface SuperAdminMemberListItem {
