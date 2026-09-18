@@ -20,6 +20,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
+import OrganisationLifecycleActions from '@/pages/superadmin/lifecycle/OrganisationLifecycleActions';
 import {
   useSuperAdminActivityQuery,
   useSuperAdminOrganisationQuery,
@@ -116,11 +117,22 @@ export default function OrganisationDetailPage() {
           <ArrowLeft className="size-3.5" aria-hidden />
           All organisations
         </Link>
-        <PageHeader title={org.name} description={org.slug} />
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <Badge variant="secondary">{org.status}</Badge>
-          <Badge variant="outline">{org.plan.name}</Badge>
-          <Badge variant="outline">{org.plan.subscriptionStatus}</Badge>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <PageHeader title={org.name} description={org.slug} />
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <Badge variant="secondary">{org.status}</Badge>
+              <Badge variant="outline">{org.plan.name}</Badge>
+              <Badge variant="outline">{org.plan.subscriptionStatus}</Badge>
+              {org.paymentHoldActive ? (
+                <Badge className="bg-red-100 text-red-900">Payment hold</Badge>
+              ) : null}
+              {org.manualHoldReason ? (
+                <Badge className="bg-amber-100 text-amber-900">Manual hold</Badge>
+              ) : null}
+            </div>
+          </div>
+          <OrganisationLifecycleActions organisation={org} />
         </div>
       </div>
 
@@ -130,8 +142,32 @@ export default function OrganisationDetailPage() {
           <AlertTitle>Organisation is suspended</AlertTitle>
           <AlertDescription>
             All tenant access is rejected. Scheduled jobs are paused and queued
-            runs were cancelled at the suspension moment. Reactivation actions
-            arrive with the Phase 0 lifecycle backend.
+            runs were cancelled at the suspension moment. Use the Reactivate
+            action to lift the suspension — jobs stay paused until members
+            re-enable them.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {org.status === 'archived' ? (
+        <Alert variant="destructive">
+          <ShieldCheck className="size-4" />
+          <AlertTitle>Organisation is archived</AlertTitle>
+          <AlertDescription>
+            Soft-deleted. Retained for the recovery window then hard-deleted by
+            the reaper. Unarchive routes through suspended first — you cannot
+            go straight back to active.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      {org.paymentHoldActive ? (
+        <Alert variant="destructive">
+          <ShieldCheck className="size-4" />
+          <AlertTitle>Payment hold active</AlertTitle>
+          <AlertDescription>
+            Scheduler skipped for this organisation.
+            {org.manualHoldReason ? ` Reason: "${org.manualHoldReason}"` : ''}
           </AlertDescription>
         </Alert>
       ) : null}

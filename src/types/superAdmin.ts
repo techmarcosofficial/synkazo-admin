@@ -64,6 +64,9 @@ export interface SuperAdminOrganisationDetail {
       periodStart: string | null;
     };
   };
+  paymentHoldActive?: boolean;
+  paymentHoldSince?: string | null;
+  manualHoldReason?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -213,6 +216,45 @@ export interface SuperAdminRunJobDto {
   maxRecords?: number;
   startDate?: string;
   endDate?: string;
+}
+
+// Lifecycle actions (Phase 4 slice 2). Match the DTOs in
+// synkazo-api/src/super-admin/organisations/dto/lifecycle-transition.dto.ts.
+export interface TransitionOrganisationStatusDto {
+  targetStatus: 'active' | 'suspended' | 'archived';
+  confirmName: string;
+  reason: string;
+}
+
+export interface HoldWorkDto {
+  reason?: string;
+}
+
+export interface PaymentHoldDto {
+  reason: string;
+  confirmName: string;
+}
+
+export interface ClearPaymentHoldDto {
+  reason: string;
+}
+
+export interface LifecycleTransitionResponse {
+  status: 'active' | 'suspended' | 'archived';
+  cascade: {
+    pausedJobs?: number;
+    queuedRemoved?: number;
+    heldJobs?: number;
+    resumedJobs?: number;
+  };
+}
+
+export interface HoldWorkResponse {
+  heldJobs: number;
+}
+
+export interface ResumeWorkResponse {
+  resumedJobs: number;
 }
 
 // Platform-wide overview (Phase 3). One aggregate call to avoid client
