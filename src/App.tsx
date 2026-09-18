@@ -56,6 +56,7 @@ import PreferencesTab from '@/pages/settings/tabs/PreferencesTab';
 import ProfileTab from '@/pages/settings/tabs/ProfileTab';
 import SettingsLayout from '@/pages/settings/SettingsLayout';
 import OrganisationsPage from '@/pages/superadmin/OrganisationsPage';
+import OrganisationBillingPage from '@/pages/superadmin/OrganisationBillingPage';
 import OrganisationDetailPage from '@/pages/superadmin/OrganisationDetailPage';
 import OrganisationMembersPage from '@/pages/superadmin/OrganisationMembersPage';
 import OrganisationProjectDetailPage from '@/pages/superadmin/OrganisationProjectDetailPage';
@@ -238,6 +239,10 @@ function App() {
                 <Route
                   path="organisations/:organisationId/projects/:projectId"
                   element={<OrganisationProjectDetailPage />}
+                />
+                <Route
+                  path="organisations/:organisationId/billing"
+                  element={<OrganisationBillingPage />}
                 />
                 <Route path="users" element={<UsersPage />} />
                 <Route path="marketing" element={<MarketingPage />} />
