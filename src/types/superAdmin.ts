@@ -187,3 +187,38 @@ export interface SuperAdminRunJobDto {
   startDate?: string;
   endDate?: string;
 }
+
+// Platform-wide overview (Phase 3). One aggregate call to avoid client
+// fan-out across organisations; every metric is a link to a filtered list
+// in the corresponding subsystem screen.
+export interface PlatformOverviewResponse {
+  generatedAt: string;
+  organisations: {
+    total: number;
+    byStatus: Record<OrgStatus, number>;
+    bySubscriptionStatus: Record<SubscriptionStatus, number>;
+    pastDueCount: number;
+    suspendedCount: number;
+  };
+  jobs: {
+    queue: {
+      waiting: number;
+      active: number;
+      completed: number;
+      failed: number;
+      delayed: number;
+      workerOnline: boolean;
+    };
+  };
+  recentAlerts: Array<{
+    id: string;
+    action: string;
+    resource: string | null;
+    resourceId: string | null;
+    severity: 'info' | 'warning' | 'critical';
+    userEmail: string | null;
+    organisationId: string | null;
+    summary: string;
+    createdAt: string;
+  }>;
+}
