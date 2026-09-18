@@ -36,7 +36,6 @@ import {
   SyncRunHealthMetric,
 } from '@/features/metrics/MetricCards';
 import {
-  getMetricsPeriodStart,
   METRICS_PERIOD_LABELS,
   unwrapOrganizationLogs,
 } from '@/features/metrics/metricsData';
@@ -97,7 +96,6 @@ export default function Dashboard() {
     () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
     [],
   );
-  const statsSince = useMemo(() => getMetricsPeriodStart('weekly'), []);
   const summaryQuery = useDashboardSummaryQuery();
   const jobsQuery = useJobsQuery();
   const projectsQuery = useProjectsQuery();
@@ -105,7 +103,6 @@ export default function Dashboard() {
   const activityQuery = useOrgSyncLogsQuery(7, {
     level: activityFilter === 'all' ? undefined : activityFilter,
   });
-  const statsLogsQuery = useOrgSyncLogsQuery(200, { since: statsSince });
   const metricsParams = useMemo(
     () => ({
       period: metricsPeriod,
@@ -131,14 +128,12 @@ export default function Dashboard() {
     jobsQuery.isLoading ||
     projectsQuery.isLoading ||
     connectionsQuery.isLoading ||
-    activityQuery.isLoading ||
-    statsLogsQuery.isLoading;
+    activityQuery.isLoading;
   const isError =
     summaryQuery.isError ||
     jobsQuery.isError ||
     connectionsQuery.isError ||
-    activityQuery.isError ||
-    statsLogsQuery.isError;
+    activityQuery.isError;
 
   const jobs = jobsQuery.data ?? [];
   const connections = connectionsQuery.data ?? [];
@@ -148,7 +143,6 @@ export default function Dashboard() {
     connections,
   );
   const activityLogs = unwrapOrganizationLogs(activityQuery.data);
-  const statsLogs = unwrapOrganizationLogs(statsLogsQuery.data);
   const firstName = currentUser?.fullName?.trim().split(/\s+/)[0];
   const greeting = `${getGreeting()}${firstName ? `, ${firstName}` : ''}`;
   const metricsRangeLabel =
@@ -195,7 +189,6 @@ export default function Dashboard() {
     projectsQuery.refetch();
     connectionsQuery.refetch();
     activityQuery.refetch();
-    statsLogsQuery.refetch();
     metricsQuery.refetch();
   };
 
@@ -235,7 +228,6 @@ export default function Dashboard() {
     summary: summaryQuery.data,
     projects: projectsQuery.data,
     jobs,
-    logs: statsLogs,
   });
 
   return (

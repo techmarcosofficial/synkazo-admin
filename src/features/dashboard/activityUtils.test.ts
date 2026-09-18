@@ -77,6 +77,9 @@ describe('dashboard utilities', () => {
       connectedConnections: 2,
       totalRecordsSynced: 348,
       totalErrors: 1,
+      totalRecordsCreated: 200,
+      totalRecordsUpdated: 147,
+      totalRecordsFailed: 1,
     };
     const projects = [
       { id: 'project-1', createdAt: '2026-09-05T08:00:00.000Z' },
@@ -93,19 +96,20 @@ describe('dashboard utilities', () => {
       summary,
       projects,
       jobs,
-      logs: [
-        {
-          createdAt: '2026-09-05T09:00:00.000Z',
-          recordsProcessed: 348,
-        },
-      ],
       now,
     });
 
     expect(stats.map((stat) => stat.chartSummary)).toEqual([
       '1 project created · 7d',
       '1 active job created · 7d',
-      '348 records synced · 7d',
+      undefined,
+    ]);
+    expect(
+      stats[2]?.pieData?.map(({ label, value }) => ({ label, value })),
+    ).toEqual([
+      { label: 'New', value: 200 },
+      { label: 'Updated', value: 147 },
+      { label: 'Failed', value: 1 },
     ]);
   });
 });

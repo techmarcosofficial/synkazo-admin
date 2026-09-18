@@ -5,8 +5,10 @@ import {
   RefreshCw,
   Settings,
   ShieldCheck,
+  SquarePen,
   Trash2,
   Wifi,
+  WifiSync,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -93,95 +95,76 @@ export default function PlatformCard({
           ) : (
             <>
               <Separator className="md:hidden" />
+
               <Separator
                 orientation="vertical"
                 className="hidden h-7 data-vertical:self-center md:ml-auto md:block"
               />
-              <div className="bg-muted/60 flex w-fit items-center rounded-3xl p-1">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={handleTest}
-                      disabled={testing}
-                      aria-label={
-                        testing
-                          ? `Testing ${meta.label}`
-                          : `${conn.status === 'connected' ? 'Retest' : 'Test'} ${meta.label}`
-                      }
-                    >
-                      {testing ? (
-                        <RefreshCw className="animate-spin" />
-                      ) : (
-                        <Wifi />
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">
-                    {testing
-                      ? 'Testing connection'
-                      : conn.status === 'connected'
-                        ? 'Retest connection'
-                        : 'Test connection'}
-                  </TooltipContent>
-                </Tooltip>
 
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={() => onConnect(conn)}
-                      aria-label={`Edit ${meta.label} connection`}
-                    >
-                      <Settings />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">Edit connection</TooltipContent>
-                </Tooltip>
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Test / Retest */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleTest}
+                  disabled={testing}
+                  aria-label={
+                    testing
+                      ? `Testing ${meta.label}`
+                      : `${conn.status === 'connected' ? 'Retest' : 'Test'} ${meta.label}`
+                  }
+                >
+                  {testing ? (
+                    <RefreshCw className="animate-spin" />
+                  ) : (
+                    <WifiSync />
+                  )}
+                  {testing
+                    ? 'Testing...'
+                    : conn.status === 'connected'
+                      ? 'Retest'
+                      : 'Test connection'}
+                </Button>
 
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={() => setShowPermissions(true)}
-                      aria-label={`View ${meta.label} permissions`}
-                    >
-                      <ShieldCheck />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">View permissions</TooltipContent>
-                </Tooltip>
+                {/* Edit */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onConnect(conn)}
+                >
+                  <SquarePen />
+                  Edit
+                </Button>
 
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      className="text-destructive hover:bg-destructive/10"
-                      aria-label={`Disconnect ${meta.label}`}
-                      onClick={() =>
-                        confirm({
-                          variant: 'danger',
-                          title: `Disconnect ${meta.label}?`,
-                          description: `${envLabel} environment — this will remove the stored credentials.`,
-                          body: (
-                            <DisconnectImpactBody projectId={conn.projectId} />
-                          ),
-                          confirmLabel: 'Yes, Disconnect',
-                          onConfirm: handleDisconnect,
-                        })
-                      }
-                    >
-                      <Trash2 />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">
-                    Disconnect platform
-                  </TooltipContent>
-                </Tooltip>
+                {/* Permissions */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowPermissions(true)}
+                >
+                  <ShieldCheck />
+                  Permissions
+                </Button>
+
+                {/* Disconnect */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() =>
+                    confirm({
+                      variant: 'danger',
+                      title: `Disconnect ${meta.label}?`,
+                      description: `${envLabel} environment — this will remove the stored credentials.`,
+                      body: <DisconnectImpactBody projectId={conn.projectId} />,
+                      confirmLabel: 'Yes, Disconnect',
+                      onConfirm: handleDisconnect,
+                    })
+                  }
+                >
+                  <Trash2 />
+                  Disconnect
+                </Button>
               </div>
             </>
           )}

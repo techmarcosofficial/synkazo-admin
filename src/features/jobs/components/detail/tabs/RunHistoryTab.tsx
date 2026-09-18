@@ -5,14 +5,12 @@ import {
   ArrowUp,
   CalendarDays,
   CircleAlert,
-  CircleCheck,
   ChevronRight,
   Clock,
   Copy,
   Database,
   Edit2,
   FileText,
-  Filter,
   Info,
   Plus,
   RefreshCw,
@@ -62,25 +60,6 @@ import type { ExtSyncRun } from '@/features/jobs/hooks';
 import { cn } from '@/lib/utils';
 import { useRunLogsQuery } from '@/queries/useJobs';
 import type { SyncLogRecord } from '@/types';
-
-const ACTION_FILTER_OPTIONS = ['created', 'updated', 'skipped', 'failed'];
-const SKIP_REASON_OPTIONS = [
-  'no_change',
-  'missing_required_field',
-  'duplicate',
-  'filter_excluded',
-  'no_id_match',
-  'manually_excluded',
-];
-const FAIL_REASON_OPTIONS = [
-  'api_error',
-  'rate_limited',
-  'transform_error',
-  'validation_error',
-  'auth_error',
-  'network_error',
-  'unknown',
-];
 
 function enumLabel(value: string): string {
   return value
@@ -178,14 +157,30 @@ function friendlyRunMessage(message?: string | null): string | null {
 }
 
 const ACTION_CONFIG = {
-  created: { className: 'text-success', icon: Plus, label: 'Created' },
-  updated: { className: 'text-info', icon: Edit2, label: 'Updated' },
+  created: {
+    className: 'text-success',
+    badgeClassName: 'bg-success/10 text-success',
+    icon: Plus,
+    label: 'Created',
+  },
+  updated: {
+    className: 'text-info',
+    badgeClassName: 'bg-info/10 text-info',
+    icon: Edit2,
+    label: 'Updated',
+  },
   skipped: {
     className: 'text-muted-foreground',
+    badgeClassName: 'bg-muted text-muted-foreground',
     icon: SkipForward,
     label: 'Skipped',
   },
-  failed: { className: 'text-destructive', icon: XCircle, label: 'Failed' },
+  failed: {
+    className: 'text-destructive',
+    badgeClassName: 'bg-destructive/10 text-destructive',
+    icon: XCircle,
+    label: 'Failed',
+  },
 };
 
 /**
@@ -194,14 +189,20 @@ const ACTION_CONFIG = {
  * cause the API already narrowed to this record — the full destination
  * response stays in the record log for anyone who needs it.
  */
-function RecordReason({ rec }: { rec: SyncLogRecord }) {
+function RecordReason({
+  rec,
+  showDestinationFallback = true,
+}: {
+  rec: SyncLogRecord;
+  showDestinationFallback?: boolean;
+}) {
   const reason = rec.skipReason || rec.failReason;
   const detail = rec.skipReasonDetail || rec.failReasonDetail;
 
   if (!reason && !detail) {
     return (
       <span className="text-muted-foreground flex min-w-0 flex-1 items-center gap-1 truncate">
-        {rec.destRecordId ? (
+        {showDestinationFallback && rec.destRecordId ? (
           <>
             <ArrowRight className="size-3 shrink-0" /> {rec.destRecordId}
           </>
@@ -380,18 +381,36 @@ function LiveProgressBar({
   );
 }
 
-const PAGES_PER_VIEW = 25;
+const DEFAULT_RECORDS_PER_PAGE = 25;
+const RECORDS_PER_PAGE_OPTIONS = [10, 25, 50, 100];
+const PAGE_RECORD_FILTERS = [
+  'all',
+  'created',
+  'updated',
+  'failed',
+  'skipped',
+] as const;
+
+type PageRecordFilter = (typeof PAGE_RECORD_FILTERS)[number];
+
+function formatPageDuration(durationMs: number | null): string {
+  if (durationMs == null) return '—';
+  if (durationMs < 1000) return `${durationMs}ms`;
+  return formatDuration(durationMs);
+}
 
 function PageRow({
   pg,
   projectId,
   jobId,
   runId,
+  recordSearch,
 }: {
   pg: SyncPageLog;
   projectId: string;
   jobId: string;
   runId: string;
+  recordSearch?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [records, setRecords] = useState<SyncLogRecord[]>([]);
@@ -399,368 +418,23 @@ function PageRow({
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [recordPage, setRecordPage] = useState(1);
-  const RECS_PER_PAGE = 50;
-
-  const handleOpenChange = async (next: boolean) => {
-    if (next && records.length === 0) {
-      setLoading(true);
-      setLoadError(false);
-      try {
-        const res = await syncLogsApi.listRecords(projectId, jobId, runId, {
-          pageNumber: pg.pageNumber,
-          limit: RECS_PER_PAGE,
-          page: 1,
-        });
-        setRecords(res.data || []);
-        setTotal(res.total || 0);
-        setRecordPage(1);
-      } catch {
-        setLoadError(true);
-      }
-      setLoading(false);
-    }
-    setOpen(next);
-  };
-
-  const loadPage = async (p: number) => {
-    setLoading(true);
-    setLoadError(false);
-    try {
-      const res = await syncLogsApi.listRecords(projectId, jobId, runId, {
-        pageNumber: pg.pageNumber,
-        limit: RECS_PER_PAGE,
-        page: p,
-      });
-      setRecords(res.data || []);
-      setRecordPage(p);
-    } catch {
-      setLoadError(true);
-    }
-    setLoading(false);
-  };
-
-  const totalPages = Math.ceil(total / RECS_PER_PAGE);
-  const hasFailed = pg.failedCount > 0;
-
-  return (
-    <Collapsible
-      open={open}
-      onOpenChange={handleOpenChange}
-      className={cn(
-        'bg-card overflow-hidden rounded-4xl border',
-        hasFailed && 'border-destructive/30',
-      )}
-    >
-      <CollapsibleTrigger
-        className={cn(
-          'group hover:bg-muted/60 flex w-full items-center gap-3 px-3 py-2 text-left transition-colors',
-          hasFailed && 'bg-destructive/5',
-        )}
-      >
-        <ExpandChevron open={open} loading={loading} />
-        <span className="text-muted-foreground w-16 shrink-0 font-mono text-xs">
-          Page {pg.pageNumber}
-        </span>
-        <span className="text-xs">{pg.recordsFetched} fetched</span>
-        <div className="ml-3 flex items-center gap-3">
-          <span className="text-success text-xs">+{pg.createdCount}</span>
-          <span className="text-info inline-flex items-center text-xs">
-            <ArrowUp className="size-3" />
-            {pg.updatedCount}
-          </span>
-          <span className="text-muted-foreground text-xs">
-            –{pg.skippedCount}
-          </span>
-          {hasFailed && (
-            <span className="text-destructive inline-flex items-center text-xs font-semibold">
-              <X className="size-3" />
-              {pg.failedCount}
-            </span>
-          )}
-        </div>
-        {!!pg.fetchDurationMs && pg.fetchDurationMs > 0 && (
-          <span className="text-muted-foreground ml-auto shrink-0 text-xs">
-            {pg.fetchDurationMs}ms
-          </span>
-        )}
-      </CollapsibleTrigger>
-
-      <CollapsibleContent className="bg-muted/20 border-t">
-        {loadError ? (
-          <div className="flex items-center justify-between gap-3 py-3 pr-4 pl-9">
-            <span className="text-muted-foreground text-xs">
-              Could not load records for this page.
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs"
-              onClick={() => handleOpenChange(true)}
-            >
-              <RefreshCw /> Try again
-            </Button>
-          </div>
-        ) : records.length === 0 && !loading ? (
-          <div className="text-muted-foreground py-2 pr-4 pl-9 text-xs">
-            No record logs for this page.
-          </div>
-        ) : (
-          <>
-            {records.map((rec, i) => {
-              const ac =
-                ACTION_CONFIG[rec.action as keyof typeof ACTION_CONFIG] ||
-                ACTION_CONFIG.created;
-              const Icon = ac.icon;
-              return (
-                <div
-                  key={rec.id}
-                  className={cn(
-                    'flex items-center gap-3 py-2 pr-4 pl-9 text-xs',
-                    i > 0 && 'border-border/60 border-t',
-                  )}
-                >
-                  <Icon className={cn('size-2.5 shrink-0', ac.className)} />
-                  <span
-                    className="w-28 shrink-0 truncate font-mono"
-                    title={rec.sourceRecordId}
-                  >
-                    {rec.sourceRecordId}
-                  </span>
-                  <RecordReason rec={rec} />
-                </div>
-              );
-            })}
-            {totalPages > 1 && (
-              <div className="border-border/60 flex items-center justify-between border-t px-4 py-2">
-                <span className="text-muted-foreground text-xs">
-                  {(recordPage - 1) * RECS_PER_PAGE + 1}–
-                  {Math.min(recordPage * RECS_PER_PAGE, total)} of {total}{' '}
-                  records
-                </span>
-                <div className="flex gap-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-6 px-2 text-xs"
-                    disabled={recordPage <= 1}
-                    onClick={() => loadPage(recordPage - 1)}
-                  >
-                    <ArrowLeft /> Prev
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-6 px-2 text-xs"
-                    disabled={recordPage >= totalPages}
-                    onClick={() => loadPage(recordPage + 1)}
-                  >
-                    Next <ArrowRight />
-                  </Button>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </CollapsibleContent>
-    </Collapsible>
-  );
-}
-
-const ALL_FILTER_VALUE = '__all__';
-const RECORD_FILTERS_PER_PAGE = 50;
-
-interface RecordFilters {
-  action?: string;
-  skipReason?: string;
-  failReason?: string;
-  search?: string;
-  pageNumber?: string;
-}
-
-function hasActiveFilters(f: RecordFilters): boolean {
-  return !!(
-    f.action ||
-    f.skipReason ||
-    f.failReason ||
-    f.search ||
-    f.pageNumber
-  );
-}
-
-/** Filters records across every page of a run, not just the one page currently expanded —
- *  mirrors every filter the backend's records endpoint already supports (action, skip/fail
- *  reason, free-text search, and an exact page number), which had no UI before this. */
-function RecordFilterBar({
-  filters,
-  onChange,
-  onClear,
-}: {
-  filters: RecordFilters;
-  onChange: (next: RecordFilters) => void;
-  onClear: () => void;
-}) {
-  const [searchDraft, setSearchDraft] = useState(filters.search ?? '');
-
-  useEffect(() => {
-    setSearchDraft(filters.search ?? '');
-  }, [filters.search]);
-
-  // Debounce free-text search so it doesn't fire a request per keystroke.
-  useEffect(() => {
-    const t = setTimeout(() => {
-      if (searchDraft !== (filters.search ?? '')) {
-        onChange({ ...filters, search: searchDraft || undefined });
-      }
-    }, 400);
-    return () => clearTimeout(t);
-  }, [searchDraft]);
-
-  return (
-    <div className="flex flex-wrap items-center gap-2 border-b px-5 py-3">
-      <Filter className="text-muted-foreground size-3.5 shrink-0" />
-
-      <Select
-        value={filters.action ?? ALL_FILTER_VALUE}
-        onValueChange={(v) =>
-          onChange({
-            ...filters,
-            action: v === ALL_FILTER_VALUE ? undefined : v,
-          })
-        }
-      >
-        <SelectTrigger size="sm" className="h-8 w-32">
-          <SelectValue placeholder="Action" />
-        </SelectTrigger>
-        <SelectContent align="start">
-          <SelectItem value={ALL_FILTER_VALUE}>All actions</SelectItem>
-          {ACTION_FILTER_OPTIONS.map((a) => (
-            <SelectItem key={a} value={a}>
-              {enumLabel(a)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Select
-        value={filters.skipReason ?? ALL_FILTER_VALUE}
-        onValueChange={(v) =>
-          onChange({
-            ...filters,
-            skipReason: v === ALL_FILTER_VALUE ? undefined : v,
-          })
-        }
-      >
-        <SelectTrigger size="sm" className="h-8 w-40">
-          <SelectValue placeholder="Skip reason" />
-        </SelectTrigger>
-        <SelectContent align="start">
-          <SelectItem value={ALL_FILTER_VALUE}>Any skip reason</SelectItem>
-          {SKIP_REASON_OPTIONS.map((r) => (
-            <SelectItem key={r} value={r}>
-              {enumLabel(r)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Select
-        value={filters.failReason ?? ALL_FILTER_VALUE}
-        onValueChange={(v) =>
-          onChange({
-            ...filters,
-            failReason: v === ALL_FILTER_VALUE ? undefined : v,
-          })
-        }
-      >
-        <SelectTrigger size="sm" className="h-8 w-40">
-          <SelectValue placeholder="Fail reason" />
-        </SelectTrigger>
-        <SelectContent align="start">
-          <SelectItem value={ALL_FILTER_VALUE}>Any fail reason</SelectItem>
-          {FAIL_REASON_OPTIONS.map((r) => (
-            <SelectItem key={r} value={r}>
-              {enumLabel(r)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Input
-        value={searchDraft}
-        onChange={(e) => setSearchDraft(e.target.value)}
-        placeholder="Search source/destination ID…"
-        className="h-8 w-52"
-      />
-
-      <Input
-        type="number"
-        min={1}
-        value={filters.pageNumber ?? ''}
-        onChange={(e) =>
-          onChange({ ...filters, pageNumber: e.target.value || undefined })
-        }
-        placeholder="Page #"
-        className="h-8 w-20"
-      />
-
-      {hasActiveFilters(filters) && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 px-2 text-xs"
-          onClick={() => {
-            setSearchDraft('');
-            onClear();
-          }}
-        >
-          <X /> Clear filters
-        </Button>
-      )}
-    </div>
-  );
-}
-
-function FilteredRecordsList({
-  projectId,
-  jobId,
-  runId,
-  filters,
-}: {
-  projectId: string;
-  jobId: string;
-  runId: string;
-  filters: RecordFilters;
-}) {
-  const [records, setRecords] = useState<SyncLogRecord[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [loadError, setLoadError] = useState(false);
+  const [pageSize, setPageSize] = useState(DEFAULT_RECORDS_PER_PAGE);
+  const [filter, setFilter] = useState<PageRecordFilter>('all');
   const [requestVersion, setRequestVersion] = useState(0);
 
   useEffect(() => {
-    setPage(1);
-  }, [
-    filters.action,
-    filters.skipReason,
-    filters.failReason,
-    filters.search,
-    filters.pageNumber,
-  ]);
+    if (!open) return;
 
-  useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setLoadError(false);
     syncLogsApi
       .listRecords(projectId, jobId, runId, {
-        page,
-        limit: RECORD_FILTERS_PER_PAGE,
-        action: filters.action,
-        skipReason: filters.skipReason,
-        failReason: filters.failReason,
-        search: filters.search,
-        pageNumber: filters.pageNumber ? Number(filters.pageNumber) : undefined,
+        pageNumber: pg.pageNumber,
+        action: filter === 'all' ? undefined : filter,
+        search: recordSearch,
+        limit: pageSize,
+        page: recordPage,
       })
       .then((res) => {
         if (cancelled) return;
@@ -768,380 +442,332 @@ function FilteredRecordsList({
         setTotal(res.total || 0);
       })
       .catch(() => {
-        if (!cancelled) {
-          setRecords([]);
-          setTotal(0);
-          setLoadError(true);
-        }
+        if (cancelled) return;
+        setRecords([]);
+        setTotal(0);
+        setLoadError(true);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
+
     return () => {
       cancelled = true;
     };
   }, [
-    projectId,
+    filter,
     jobId,
-    runId,
-    page,
-    filters.action,
-    filters.skipReason,
-    filters.failReason,
-    filters.search,
-    filters.pageNumber,
+    open,
+    pg.pageNumber,
+    pageSize,
+    projectId,
+    recordPage,
+    recordSearch,
     requestVersion,
+    runId,
   ]);
 
-  const totalPages = Math.ceil(total / RECORD_FILTERS_PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const hasFailed = pg.failedCount > 0;
+  const loggedRecordCount =
+    pg.createdCount + pg.updatedCount + pg.skippedCount + pg.failedCount;
+  const filterCounts: Record<PageRecordFilter, number> = {
+    all: filter === 'all' && !loading && !loadError ? total : loggedRecordCount,
+    created: pg.createdCount,
+    updated: pg.updatedCount,
+    failed: pg.failedCount,
+    skipped: pg.skippedCount,
+  };
+  const metrics = [
+    { label: 'Fetched', value: pg.recordsFetched, className: '' },
+    { label: 'Created', value: pg.createdCount, className: 'text-success' },
+    { label: 'Updated', value: pg.updatedCount, className: 'text-info' },
+    {
+      label: 'Skipped',
+      value: pg.skippedCount,
+      className: 'text-muted-foreground',
+    },
+    {
+      label: 'Failed',
+      value: pg.failedCount,
+      className: hasFailed ? 'text-destructive' : 'text-muted-foreground',
+    },
+  ];
 
-  if (loading && records.length === 0) {
-    return (
-      <div className="text-muted-foreground flex items-center gap-2 px-5 py-4 text-xs">
-        <RefreshCw className="size-3 animate-spin" /> Loading records…
-      </div>
-    );
-  }
-
-  if (loadError) {
-    return (
-      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
-        <span className="text-muted-foreground text-sm">
-          Could not load matching records.
-        </span>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setRequestVersion((version) => version + 1)}
-        >
-          <RefreshCw /> Try again
-        </Button>
-      </div>
-    );
-  }
-
-  if (records.length === 0) {
-    return (
-      <div className="text-muted-foreground px-5 py-4 text-sm">
-        No records match these filters.
-      </div>
-    );
-  }
-
-  return (
-    <div className="px-5 py-3">
-      <p className="text-muted-foreground mb-2 text-xs">
-        {total} matching record{total !== 1 ? 's' : ''}
-      </p>
-      <div className="overflow-hidden rounded-4xl border">
-        {records.map((rec, i) => {
-          const ac =
-            ACTION_CONFIG[rec.action as keyof typeof ACTION_CONFIG] ||
-            ACTION_CONFIG.created;
-          const Icon = ac.icon;
-          return (
-            <div
-              key={rec.id}
-              className={cn(
-                'bg-card flex items-center gap-3 py-2 pr-4 pl-4 text-xs',
-                i > 0 && 'border-border/60 border-t',
-              )}
-            >
-              <Icon className={cn('size-2.5 shrink-0', ac.className)} />
-              <span className="text-muted-foreground w-14 shrink-0 font-mono">
-                p{rec.pageNumber ?? '—'}
-              </span>
-              <span
-                className="w-28 shrink-0 truncate font-mono"
-                title={rec.sourceRecordId}
-              >
-                {rec.sourceRecordId}
-              </span>
-              <RecordReason rec={rec} />
-            </div>
-          );
-        })}
-      </div>
-      {totalPages > 1 && (
-        <div className="mt-2 flex items-center justify-between">
-          <span className="text-muted-foreground text-xs">
-            Page {page} of {totalPages}
-          </span>
-          <div className="flex gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-6 px-2 text-xs"
-              disabled={page <= 1}
-              onClick={() => setPage((p) => p - 1)}
-            >
-              <ArrowLeft /> Prev
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-6 px-2 text-xs"
-              disabled={page >= totalPages}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Next <ArrowRight />
-            </Button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-const DEFAULT_RECORDS_PER_PAGE = 10;
-const RECORDS_PER_PAGE_OPTIONS = [10, 30, 50, 100];
-
-function RecordDetailsTable({
-  projectId,
-  jobId,
-  runId,
-  action,
-  search,
-}: {
-  projectId: string;
-  jobId: string;
-  runId: string;
-  action: (typeof ACTION_FILTER_OPTIONS)[number];
-  search?: string;
-}) {
-  const [records, setRecords] = useState<SyncLogRecord[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(DEFAULT_RECORDS_PER_PAGE);
-  const [open, setOpen] = useState(action === 'failed');
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
-  const [requestVersion, setRequestVersion] = useState(0);
-
-  useEffect(() => setPage(1), [action, search]);
-
-  useEffect(() => {
-    let cancelled = false;
+  const changeFilter = (nextFilter: PageRecordFilter) => {
+    if (nextFilter === filter) return;
     setLoading(true);
     setLoadError(false);
-    syncLogsApi
-      .listRecords(projectId, jobId, runId, {
-        page,
-        limit: pageSize,
-        action,
-        search,
-      })
-      .then((response) => {
-        if (cancelled) return;
-        setRecords(response.data || []);
-        setTotal(response.total || 0);
-      })
-      .catch(() => {
-        if (!cancelled) setLoadError(true);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [action, jobId, page, pageSize, projectId, requestVersion, runId, search]);
+    setRecords([]);
+    setRecordPage(1);
+    setFilter(nextFilter);
+  };
 
-  const actionConfig = ACTION_CONFIG[action as keyof typeof ACTION_CONFIG];
-  const ActionIcon = actionConfig.icon;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const isFailed = action === 'failed';
-  const title = `${actionConfig.label} Records`;
+  const changeRecordPage = (nextPage: number) => {
+    setRecords([]);
+    setRecordPage(nextPage);
+  };
 
-  if (loading && records.length === 0) {
-    return (
-      <div className="bg-card text-muted-foreground flex items-center gap-2 rounded-3xl border px-4 py-5 text-xs">
-        <RefreshCw className="size-3.5 animate-spin" /> Loading{' '}
-        {title.toLowerCase()}…
-      </div>
-    );
-  }
-
-  if (loadError) {
-    return (
-      <div className="bg-card flex items-center justify-between gap-3 rounded-3xl border px-4 py-4">
-        <span className="text-muted-foreground text-sm">
-          Could not load {title.toLowerCase()}.
-        </span>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setRequestVersion((version) => version + 1)}
-        >
-          <RefreshCw /> Try again
-        </Button>
-      </div>
-    );
-  }
-
-  if (records.length === 0) return null;
+  const changePageSize = (nextPageSize: number) => {
+    setRecords([]);
+    setRecordPage(1);
+    setPageSize(nextPageSize);
+  };
 
   return (
     <Collapsible
       open={open}
       onOpenChange={setOpen}
       className={cn(
-        'bg-card overflow-hidden rounded-3xl border',
-        isFailed && 'border-destructive/25',
+        'bg-card overflow-hidden rounded-2xl border',
+        hasFailed && 'border-destructive/30',
       )}
     >
-      <CollapsibleTrigger className="group hover:bg-muted/30 flex w-full items-center justify-between gap-3 px-3.5 py-2.5 text-left transition-colors">
-        <div className="flex items-center gap-2.5">
-          <div className="bg-muted flex size-6 items-center justify-center rounded-full">
-            <ActionIcon
+      <div
+        className={cn(
+          'min-h- flex w-full flex-nowrap items-center gap-1.5 px-2.5 py-1 text-xs transition-colors',
+          hasFailed && 'bg-destructive/5',
+        )}
+      >
+        <CollapsibleTrigger className="group hover:text-foreground flex min-w-0 flex-1 items-center gap-x-2.5 overflow-x-auto text-left whitespace-nowrap transition-colors">
+          <span className="flex shrink-0 items-center gap-1.5 font-medium">
+            <FileText className="text-muted-foreground size-3.5" />
+            Page {pg.pageNumber}
+          </span>
+          {metrics.map((metric) => (
+            <span
+              key={metric.label}
               className={cn(
-                'text-muted-foreground size-3.5',
-                isFailed && 'text-destructive',
+                'shrink-0 tabular-nums',
+                metric.label === 'Fetched'
+                  ? 'text-muted-foreground'
+                  : metric.className,
               )}
-            />
-          </div>
-          <div>
-            <p className="text-sm font-semibold">
-              {title} ({total.toLocaleString()})
-            </p>
-            <p className="text-muted-foreground text-xs">
-              {isFailed
-                ? 'Review the error and try again.'
-                : 'Records processed successfully by this run.'}
-            </p>
-          </div>
-        </div>
-        <ExpandChevron open={open} bordered />
-      </CollapsibleTrigger>
+            >
+              {metric.value.toLocaleString()} {metric.label.toLowerCase()}
+            </span>
+          ))}
+          <span className="text-muted-foreground flex shrink-0 items-center gap-1 tabular-nums">
+            <Clock className="size-3" />
+            {formatPageDuration(pg.fetchDurationMs)}
+          </span>
+        </CollapsibleTrigger>
+
+        {open && (
+          <>
+            <div
+              className="ml-auto flex max-w-[58vw] shrink-0 items-center justify-end gap-1 overflow-x-auto"
+              role="group"
+              aria-label={`Page ${pg.pageNumber} record filters`}
+            >
+              {PAGE_RECORD_FILTERS.map((option) => {
+                const active = filter === option;
+                const actionConfig =
+                  option === 'all' ? null : ACTION_CONFIG[option];
+                return (
+                  <Button
+                    key={option}
+                    type="button"
+                    variant={active ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className={cn(
+                      'h-6 rounded-md px-2 text-[11px]',
+                      active && actionConfig?.className,
+                    )}
+                    aria-pressed={active}
+                    onClick={() => changeFilter(option)}
+                  >
+                    {option === 'all' ? 'All' : actionConfig?.label}
+                    <span className="text-muted-foreground tabular-nums">
+                      {filterCounts[option].toLocaleString()}
+                    </span>
+                  </Button>
+                );
+              })}
+            </div>
+            <Separator orientation="vertical" className="my-auto h-4 mr-1" />
+          </>
+        )}
+
+        <CollapsibleTrigger
+          className="group flex size-5 shrink-0 items-center justify-center rounded-full border"
+          aria-label={`${open ? 'Collapse' : 'Expand'} page ${pg.pageNumber} records`}
+        >
+          <ExpandChevron open={open} />
+        </CollapsibleTrigger>
+      </div>
 
       <CollapsibleContent>
-        <div className="overflow-x-auto border-t">
-          <table className="w-full min-w-[680px] text-left text-xs">
-            <thead className="bg-muted/70 text-muted-foreground">
-              <tr>
-                <th className="w-12 px-3.5 py-1.5 font-medium">#</th>
-                <th className="px-3.5 py-1.5 font-medium">Source Record ID</th>
-                <th className="px-3.5 py-1.5 font-medium">Result</th>
-                <th className="px-3.5 py-1.5 font-medium">
-                  {isFailed || action === 'skipped'
-                    ? 'Error / Reason'
-                    : 'Destination ID'}
-                </th>
-                <th className="w-20 px-3.5 py-1.5 font-medium">Page</th>
-              </tr>
-            </thead>
-            <tbody>
-              {records.map((record, index) => (
-                <tr
-                  key={record.id}
-                  className={cn(
-                    'border-t',
-                    isFailed && 'bg-destructive/[0.025]',
-                  )}
-                >
-                  <td className="text-muted-foreground px-3.5 py-2">
-                    {(page - 1) * pageSize + index + 1}
-                  </td>
-                  <td className="px-3.5 py-2 font-mono">
-                    {record.sourceRecordId}
-                  </td>
-                  <td className="px-3.5 py-2">
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        'border-transparent font-normal',
-                        isFailed
-                          ? 'bg-destructive/10 text-destructive'
-                          : 'bg-muted text-foreground',
-                      )}
-                    >
-                      {actionConfig.label}
-                    </Badge>
-                  </td>
-                  <td className="max-w-sm px-3.5 py-2">
-                    <RecordReason rec={record} />
-                  </td>
-                  <td className="text-muted-foreground px-3.5 py-2">
-                    {record.pageNumber ?? '—'}
-                  </td>
-                </tr>
+        <div className="bg-card overflow-hidden border-t">
+          {loadError ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 px-3 py-4">
+              <span className="text-muted-foreground text-xs">
+                Could not load records for this page.
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => setRequestVersion((version) => version + 1)}
+              >
+                <RefreshCw /> Try again
+              </Button>
+            </div>
+          ) : loading && records.length === 0 ? (
+            <div className="space-y-1.5 p-3" aria-label="Loading page records">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <Skeleton key={index} className="h-8 w-full rounded-lg" />
               ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 px-3.5 py-2">
-          <span className="text-muted-foreground text-xs">
-            Showing {(page - 1) * pageSize + 1}–
-            {Math.min(page * pageSize, total)} of {total}
-          </span>
-          <div className="ml-auto flex items-center gap-1.5">
-            <span className="text-muted-foreground text-xs">Rows per page</span>
-            <Select
-              value={String(pageSize)}
-              onValueChange={(value) => {
-                setPageSize(Number(value));
-                setPage(1);
-              }}
-            >
-              <SelectTrigger size="sm" className="h-7 w-16 rounded-lg px-2">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent align="end">
-                {RECORDS_PER_PAGE_OPTIONS.map((option) => (
-                  <SelectItem key={option} value={String(option)}>
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          {totalPages > 1 && (
-            <span className="text-muted-foreground text-xs">
-              Page {page} of {totalPages}
-            </span>
+            </div>
+          ) : records.length === 0 ? (
+            <div className="text-muted-foreground px-3 py-4 text-xs">
+              No {filter === 'all' ? '' : `${filter} `}record logs for this
+              page.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] text-left text-xs">
+                <thead className="bg-muted/60 text-muted-foreground">
+                  <tr>
+                    <th className="w-12 px-3 py-1.5 font-medium">#</th>
+                    <th className="px-3 py-1.5 font-medium">Source ID</th>
+                    <th className="px-3 py-1.5 font-medium">Status</th>
+                    <th className="px-3 py-1.5 font-medium">Destination ID</th>
+                    <th className="px-3 py-1.5 font-medium">Error / reason</th>
+                  </tr>
+                </thead>
+                <tbody className="align-middle">
+                  {records.map((record, index) => {
+                    const actionConfig =
+                      ACTION_CONFIG[record.action] || ACTION_CONFIG.created;
+                    return (
+                      <tr
+                        key={record.id}
+                        className={cn(
+                          'border-t align-middle',
+                          record.action === 'failed' &&
+                            'bg-destructive/[0.025]',
+                        )}
+                      >
+                        <td className="text-muted-foreground px-3 py-1.5 tabular-nums">
+                          {(recordPage - 1) * pageSize + index + 1}
+                        </td>
+                        <td
+                          className="max-w-56 truncate px-3 py-1.5 font-mono"
+                          title={record.sourceRecordId}
+                        >
+                          {record.sourceRecordId}
+                        </td>
+                        <td className="px-3 py-1.5">
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              'border-transparent font-normal',
+                              actionConfig.badgeClassName,
+                            )}
+                          >
+                            {actionConfig.label}
+                          </Badge>
+                        </td>
+                        <td
+                          className="text-muted-foreground max-w-56 truncate px-3 py-1.5 font-mono"
+                          title={record.destRecordId ?? undefined}
+                        >
+                          {record.destRecordId || '—'}
+                        </td>
+                        <td className="max-w-sm px-3 py-1.5">
+                          <RecordReason
+                            rec={record}
+                            showDestinationFallback={false}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
-          <div className="flex gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              className="size-7 rounded-lg p-0"
-              disabled={page <= 1}
-              onClick={() => setPage((current) => current - 1)}
-              aria-label={`Previous ${title.toLowerCase()} page`}
-            >
-              <ArrowLeft />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="size-7 rounded-lg p-0"
-              disabled={page >= totalPages}
-              onClick={() => setPage((current) => current + 1)}
-              aria-label={`Next ${title.toLowerCase()} page`}
-            >
-              <ArrowRight />
-            </Button>
-          </div>
+
+          {!loadError && total > 0 && (
+            <div className="flex flex-wrap items-center gap-2 border-t px-3 py-2">
+              <span className="text-muted-foreground text-xs tabular-nums">
+                Showing {(recordPage - 1) * pageSize + 1}–
+                {Math.min(recordPage * pageSize, total)} of{' '}
+                {total.toLocaleString()}
+              </span>
+              <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
+                <label
+                  className="text-muted-foreground text-xs"
+                  htmlFor={`page-${pg.id}-page-size`}
+                >
+                  Rows per page
+                </label>
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(value) => changePageSize(Number(value))}
+                >
+                  <SelectTrigger
+                    id={`page-${pg.id}-page-size`}
+                    size="sm"
+                    className="h-6! rounded-xl"
+                    aria-label={`Rows per page for sync page ${pg.pageNumber}`}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {RECORDS_PER_PAGE_OPTIONS.map((option) => (
+                      <SelectItem key={option} value={String(option)}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Separator orientation="vertical" className='h-5 my-auto' />
+                <Button
+                  variant="outline"
+                  size="xs"
+                  className="rounded-xl"
+                  disabled={loading || recordPage <= 1}
+                  onClick={() => changeRecordPage(recordPage - 1)}
+                  aria-label={`Previous records for page ${pg.pageNumber}`}
+                >
+                  <ArrowLeft /> Previous
+                </Button>
+                <span className="text-muted-foreground min-w-20 text-center text-xs tabular-nums">
+                  Page {recordPage} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="xs"
+                  className="rounded-xl"
+                  disabled={loading || recordPage >= totalPages}
+                  onClick={() => changeRecordPage(recordPage + 1)}
+                  aria-label={`Next records for page ${pg.pageNumber}`}
+                >
+                  Next <ArrowRight />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </CollapsibleContent>
     </Collapsible>
   );
 }
 
+const ALL_FILTER_VALUE = '__all__';
 function RunLogRow({
   run,
   projectId,
   jobId,
   recordSearch,
-  resultType,
   onRefresh,
 }: {
   run: ExtSyncRun;
   projectId: string;
   jobId: string;
   recordSearch?: string;
-  resultType?: string;
   onRefresh?: () => void | Promise<void>;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -1200,12 +826,6 @@ function RunLogRow({
     }
     setExpanded(next);
   };
-
-  const totalPageCount = pages.length;
-  const visibleRecordActions =
-    resultType && resultType !== ALL_FILTER_VALUE
-      ? [resultType]
-      : ACTION_FILTER_OPTIONS;
 
   return (
     <Collapsible
@@ -1416,88 +1036,39 @@ function RunLogRow({
               </Button>
             </div>
           ) : pages.length > 0 ? (
-            <>
-              <section>
-                <div className="mb-2 flex items-end justify-between gap-3">
-                  <div>
-                    <h3 className="text-sm font-semibold">Page Breakdown</h3>
-                    <p className="text-muted-foreground mt-0.5 text-xs">
-                      Each page shows the fetched records and batch result.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    className="text-muted-foreground hover:text-foreground flex min-w-0 items-center gap-1.5 text-xs transition-colors"
-                    onClick={() => {
-                      navigator.clipboard.writeText(run.id);
-                      toast.success('Run ID copied');
-                    }}
-                  >
-                    <span className="max-w-56 truncate">Run ID: {run.id}</span>
-                    <Copy className="size-3.5 shrink-0" />
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {pages.map((pageLog) => (
-                    <div
-                      key={pageLog.id}
-                      className="bg-card flex flex-wrap items-center gap-2 rounded-xl border px-2.5 py-1.5 text-xs"
-                    >
-                      <span className="flex items-center gap-1.5 font-medium">
-                        <FileText className="text-muted-foreground size-3.5" />
-                        Page {pageLog.pageNumber}
-                      </span>
-                      <span className="text-muted-foreground">
-                        {pageLog.recordsFetched} fetched
-                      </span>
-                      {pageLog.createdCount + pageLog.updatedCount > 0 && (
-                        <span className="text-foreground flex items-center gap-1">
-                          <CircleCheck className="text-muted-foreground size-3" />
-                          +{pageLog.createdCount + pageLog.updatedCount}{' '}
-                          succeeded
-                        </span>
-                      )}
-                      <span className="text-muted-foreground">
-                        {pageLog.skippedCount} skipped
-                      </span>
-                      {pageLog.failedCount > 0 && (
-                        <span className="text-destructive">
-                          {pageLog.failedCount} failed
-                        </span>
-                      )}
-                      {pageLog.fetchDurationMs != null && (
-                        <span className="text-muted-foreground flex items-center gap-1">
-                          <Clock className="size-3" />
-                          {pageLog.fetchDurationMs}ms
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <section>
-                <div className="mb-2">
-                  <h3 className="text-sm font-semibold">Record Details</h3>
+            <section>
+              <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
+                <div>
+                  <h3 className="text-sm font-semibold">Page Breakdown</h3>
                   <p className="text-muted-foreground mt-0.5 text-xs">
-                    Records from this run, grouped by result. Global filters
-                    remain applied.
+                    Expand a page to review and filter only its records.
                   </p>
                 </div>
-                <div className="space-y-2">
-                  {visibleRecordActions.map((action) => (
-                    <RecordDetailsTable
-                      key={action}
-                      projectId={projectId}
-                      jobId={jobId}
-                      runId={run.id}
-                      action={action}
-                      search={recordSearch}
-                    />
-                  ))}
-                </div>
-              </section>
-            </>
+                <button
+                  type="button"
+                  className="text-muted-foreground hover:text-foreground flex min-w-0 items-center gap-1.5 text-xs transition-colors"
+                  onClick={() => {
+                    navigator.clipboard.writeText(run.id);
+                    toast.success('Run ID copied');
+                  }}
+                >
+                  <span className="max-w-56 truncate">Run ID: {run.id}</span>
+                  <Copy className="size-3.5 shrink-0" />
+                </button>
+              </div>
+              <div className="space-y-1">
+                {pages.map((pageLog) => (
+                  <PageRow
+                    key={pageLog.id}
+                    pg={pageLog}
+                    projectId={projectId}
+                    jobId={jobId}
+                    runId={run.id}
+                    recordSearch={recordSearch}
+                  />
+                ))}
+              </div>
+            </section>
           ) : (
             !loadingDetails && (
               <div className="bg-card text-muted-foreground rounded-3xl border px-4 py-4 text-sm">
@@ -1521,7 +1092,6 @@ export default function RunHistoryTab() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [status, setStatus] = useState(ALL_FILTER_VALUE);
-  const [resultType, setResultType] = useState(ALL_FILTER_VALUE);
   const [triggeredBy, setTriggeredBy] = useState(ALL_FILTER_VALUE);
   const [period, setPeriod] = useState('all');
   const [searchDraft, setSearchDraft] = useState('');
@@ -1560,14 +1130,13 @@ export default function RunHistoryTab() {
 
   const hasFilters =
     status !== ALL_FILTER_VALUE ||
-    resultType !== ALL_FILTER_VALUE ||
     triggeredBy !== ALL_FILTER_VALUE ||
     period !== 'all' ||
     !!search;
 
   useEffect(() => {
     setPage(1);
-  }, [status, resultType, triggeredBy, period, search]);
+  }, [status, triggeredBy, period, search]);
 
   function handlePageSizeChange(size: number) {
     setPageSize(size);
@@ -1592,7 +1161,6 @@ export default function RunHistoryTab() {
 
   const clearFilters = () => {
     setStatus(ALL_FILTER_VALUE);
-    setResultType(ALL_FILTER_VALUE);
     setTriggeredBy(ALL_FILTER_VALUE);
     setPeriod('all');
     setSearchDraft('');
@@ -1639,20 +1207,6 @@ export default function RunHistoryTab() {
               </SelectContent>
             </Select>
 
-            <Select value={resultType} onValueChange={setResultType}>
-              <SelectTrigger size="sm" className="h-9 w-36">
-                <SelectValue placeholder="Result type" />
-              </SelectTrigger>
-              <SelectContent align="end">
-                <SelectItem value={ALL_FILTER_VALUE}>All results</SelectItem>
-                {ACTION_FILTER_OPTIONS.map((action) => (
-                  <SelectItem key={action} value={action}>
-                    {enumLabel(action)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
             <Select value={triggeredBy} onValueChange={setTriggeredBy}>
               <SelectTrigger size="sm" className="h-9 w-40">
                 <SelectValue placeholder="Sync type" />
@@ -1693,8 +1247,8 @@ export default function RunHistoryTab() {
       <CardContent className="space-y-4 p-4 sm:p-5">
         <div className="bg-info/5 text-muted-foreground border-info/10 flex items-center gap-2 rounded-2xl border px-3 py-2 text-xs">
           <Info className="text-info size-3.5 shrink-0" />
-          These filters apply to the full Run History and any expanded run
-          details.
+          Run filters narrow this history. Record filters stay scoped to the
+          page you expand.
         </div>
 
         {activeRunLog?.status === 'running' && (
@@ -1734,7 +1288,6 @@ export default function RunHistoryTab() {
                   projectId={projectId}
                   jobId={jobId}
                   recordSearch={search}
-                  resultType={resultType}
                   onRefresh={handleRefresh}
                 />
               ))}

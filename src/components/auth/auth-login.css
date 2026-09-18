@@ -569,6 +569,7 @@
 .synkazo-showcase-source-name {
   display: inline-flex;
   vertical-align: baseline;
+  font-size: clamp(28px, 2vw, 35px);
 }
 
 .synkazo-showcase-source-name > strong {
@@ -865,7 +866,7 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: 32px;
-  padding-top: 28px;
+  padding-top: 100px;
 }
 
 .synkazo-showcase-footer blockquote {
@@ -925,8 +926,8 @@
 .light .synkazo-login-form-panel {
   border-right-color: rgba(39, 49, 66, 0.11);
   background:
-    radial-gradient(circle at 14% 8%, rgba(255, 98, 50, 0.07), transparent 30%),
-    radial-gradient(circle at 82% 54%, rgba(255, 116, 72, 0.035), transparent 38%),
+    radial-gradient(circle at 14% 8%, rgba(255, 98, 50, 0.02), transparent 20%),
+    radial-gradient(circle at 82% 54%, rgba(255, 116, 72, 0.035), transparent 30%),
     #fff;
 }
 

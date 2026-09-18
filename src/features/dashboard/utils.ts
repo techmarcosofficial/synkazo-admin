@@ -1,13 +1,10 @@
 import { differenceInCalendarDays } from 'date-fns';
-import { Activity, FolderOpen, Zap } from 'lucide-react';
+import { Database, FolderOpen, Zap } from 'lucide-react';
 
 import type { DashboardStat, OrgSyncLog } from './types';
 
 import type { DashboardSummary } from '@/api/dashboard';
-import {
-  buildRecentCreationTrend,
-  buildRecentRecordsTrend,
-} from '@/features/metrics/metricsData';
+import { buildRecentCreationTrend } from '@/features/metrics/metricsData';
 import type { Job, Project } from '@/types';
 
 export type ActivityStatus =
@@ -93,36 +90,35 @@ export function computeDashboardStats({
   summary,
   projects,
   jobs,
-  logs,
   now = new Date(),
 }: {
   summary: DashboardSummary;
   projects?: Project[];
   jobs: Job[];
-  logs: OrgSyncLog[];
   now?: Date;
 }): DashboardStat[] {
   const enabledJobs = jobs.filter((job) => job.isEnabled === true);
   const projectTrend = buildRecentCreationTrend(projects, now);
   const activeJobTrend = buildRecentCreationTrend(enabledJobs, now);
-  const recordsTrend = buildRecentRecordsTrend(logs, now);
   const projectCreations = sumTrend(projectTrend);
   const activeJobCreations = sumTrend(activeJobTrend);
-  const syncedRecords = sumTrend(recordsTrend);
 
   return [
     {
       id: 'projects',
       label: 'Total Projects',
       value: summary.totalProjects,
-      sublabel: `${summary.activeProjects} active`,
+      sublabel: `${summary.activeProjects} active · ${Math.max(0, summary.totalProjects - summary.activeProjects)} inactive`,
       icon: FolderOpen,
-      iconClassName: 'text-primary',
-      iconBgClassName: 'bg-primary/10',
+      iconClassName: 'text-foreground',
+      iconBgClassName: 'bg-muted',
+      statusLabel: `${summary.activeProjects} active`,
+      statusTone:
+        summary.activeProjects > 0
+          ? ('success' as const)
+          : ('neutral' as const),
       href: '/projects',
-      chartData: projectTrend,
-      chartColor: 'var(--primary)',
-      chartLabel: 'Projects created · 7d',
+      activityActive: (projectCreations ?? 0) > 0,
       chartSummary:
         projectCreations === undefined
           ? undefined
@@ -134,12 +130,13 @@ export function computeDashboardStats({
       value: summary.enabledJobs,
       sublabel: `${summary.totalJobs} total jobs`,
       icon: Zap,
-      iconClassName: 'text-primary',
-      iconBgClassName: 'bg-primary/10',
+      iconClassName: 'text-foreground',
+      iconBgClassName: 'bg-muted',
+      statusLabel: summary.enabledJobs > 0 ? 'Active' : 'No active jobs',
+      statusTone:
+        summary.enabledJobs > 0 ? ('success' as const) : ('neutral' as const),
       href: '/jobs',
-      chartData: activeJobTrend,
-      chartColor: 'var(--primary)',
-      chartLabel: 'Active jobs created · 7d',
+      activityActive: (activeJobCreations ?? 0) > 0,
       chartSummary:
         activeJobCreations === undefined
           ? undefined
@@ -150,17 +147,29 @@ export function computeDashboardStats({
       label: 'Records Synced',
       value: formatNum(summary.totalRecordsSynced),
       sublabel: 'All time',
-      icon: Activity,
-      iconClassName: 'text-primary',
-      iconBgClassName: 'bg-primary/10',
+      icon: Database,
+      iconClassName: 'text-foreground',
+      iconBgClassName: 'bg-muted',
+      statusLabel: 'All time',
+      statusTone: 'neutral' as const,
       href: '/logs',
-      chartData: recordsTrend,
-      chartColor: 'var(--primary)',
-      chartLabel: 'Records synced · 7d',
-      chartSummary:
-        syncedRecords === undefined
-          ? undefined
-          : `${syncedRecords.toLocaleString()} ${syncedRecords === 1 ? 'record' : 'records'} synced · 7d`,
+      pieData: [
+        {
+          label: 'New',
+          value: summary.totalRecordsCreated ?? 0,
+          color: 'var(--chart-1)',
+        },
+        {
+          label: 'Updated',
+          value: summary.totalRecordsUpdated ?? 0,
+          color: 'var(--chart-2)',
+        },
+        {
+          label: 'Failed',
+          value: summary.totalRecordsFailed ?? 0,
+          color: 'var(--chart-5)',
+        },
+      ],
     },
   ];
 }

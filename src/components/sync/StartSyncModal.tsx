@@ -53,34 +53,12 @@ function ManualSyncContent({
   embedded = false,
 }: StartSyncModalProps) {
   const [runType, setRunType] = useState<'all' | 'limited'>('all');
-  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [showIncrementalRun, setShowIncrementalRun] = useState(false);
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm font-medium">What records do you want to sync?</p>
 
-        {runType === 'all' && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground"
-            aria-expanded={advancedOpen}
-            onClick={() => setAdvancedOpen((open) => !open)}
-            disabled={disabled}
-          >
-            Advanced options
-            <ChevronDown
-              className={cn(
-                'transition-transform',
-                advancedOpen && 'rotate-180',
-              )}
-            />
-          </Button>
-        )}
-      </div>
+      <p className="text-sm font-medium">What records do you want to sync?</p>
 
       <RadioGroup
         value={runType}
@@ -116,32 +94,6 @@ function ManualSyncContent({
               onGoToPipeline={onGoToPipeline}
               disabled={disabled}
             >
-              <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
-                <CollapsibleContent className="pt-2">
-                  <div className="bg-muted/30 flex flex-col gap-3 rounded-4xl border p-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium">
-                        Sync only new or updated records
-                      </p>
-                      <p className="text-muted-foreground mt-1 text-xs">
-                        {hasBaseline
-                          ? 'Continue incrementally from the last successful sync.'
-                          : 'A full sync is recommended first to establish a baseline.'}
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      className="shrink-0"
-                      onClick={() => setShowIncrementalRun(true)}
-                      disabled={disabled}
-                    >
-                      <RefreshCw /> Run changes only
-                    </Button>
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
               {runProgress}
             </SyncAllTab>
           </div>
