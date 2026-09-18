@@ -19,6 +19,7 @@ import {
   useSubscriptionQuery,
 } from '@/queries/useBilling';
 import type { ApiPlan, ApiPrice, BillingInterval, PlanId } from '@/types';
+import { PageLoader } from '@/components/ui/brand-loader';
 
 const ACTIVE_SUB_STATUSES = new Set(['active', 'trialing']);
 
@@ -139,12 +140,9 @@ export default function CheckoutPage() {
 
   if (isRedirecting || plansQuery.isLoading || subQuery.isLoading) {
     return (
-      <Shell>
-        <div className="text-muted-foreground flex items-center gap-2">
-          <Loader2 className="h-4 w-4 animate-spin" />{' '}
-          {isRedirecting ? 'Redirecting…' : 'Loading checkout…'}
-        </div>
-      </Shell>
+      <PageLoader
+        label={isRedirecting ? 'Redirecting to checkout' : 'Loading checkout'}
+      />
     );
   }
 
