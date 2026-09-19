@@ -10,3 +10,4 @@ export type * from './billing';
 export type * from './audit';
 export type * from './systemLog';
 export type * from './lead';
+export type * from './superAdmin';
