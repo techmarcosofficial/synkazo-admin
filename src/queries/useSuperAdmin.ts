@@ -6,6 +6,7 @@ import { superAdminActivityApi } from '@/api/superAdminActivity';
 import { superAdminBillingApi } from '@/api/superAdminBilling';
 import { superAdminOrganisationLifecycleApi } from '@/api/superAdminOrganisationLifecycle';
 import { superAdminPlatformApi } from '@/api/superAdminPlatform';
+import { superAdminSubscriptionApi } from '@/api/superAdminSubscription';
 import {
   superAdminMembersApi,
   type ListInvitationsParams,
@@ -20,9 +21,12 @@ import {
   type ListSuperAdminOrganisationsParams,
 } from '@/api/superAdminOrganisations';
 import type {
+  CancelAtPeriodEndDto,
+  CancelSubscriptionImmediateDto,
   ClearPaymentHoldDto,
   HoldWorkDto,
   PaymentHoldDto,
+  ResumeSubscriptionDto,
   SuperAdminInviteMemberDto,
   SuperAdminRunJobDto,
   SuperAdminUpdateOrganisationDto,
@@ -153,6 +157,60 @@ export function useClearPaymentHoldMutation(organisationId: string) {
     mutationFn: (dto: ClearPaymentHoldDto) =>
       superAdminOrganisationLifecycleApi.clearPaymentHold(organisationId, dto),
     onSuccess: () => invalidateOrgAfterLifecycle(queryClient, organisationId),
+  });
+}
+
+// ── Subscription lifecycle commands (SA-703/704) ──────────────────────
+
+function invalidateOrgBillingAfterCommand(
+  queryClient: ReturnType<typeof useQueryClient>,
+  organisationId: string,
+) {
+  queryClient.invalidateQueries({
+    queryKey: queryKeys.superAdmin.billing.overview(organisationId),
+  });
+  queryClient.invalidateQueries({
+    queryKey: queryKeys.superAdmin.organisations.detail(organisationId),
+  });
+  queryClient.invalidateQueries({
+    queryKey: queryKeys.superAdmin.orgScope(organisationId),
+  });
+  queryClient.invalidateQueries({
+    queryKey: queryKeys.superAdmin.platform.overview,
+  });
+}
+
+export function useCancelSubscriptionAtPeriodEndMutation(
+  organisationId: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: CancelAtPeriodEndDto) =>
+      superAdminSubscriptionApi.cancelAtPeriodEnd(organisationId, dto),
+    onSuccess: () =>
+      invalidateOrgBillingAfterCommand(queryClient, organisationId),
+  });
+}
+
+export function useResumeSubscriptionMutation(organisationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: ResumeSubscriptionDto) =>
+      superAdminSubscriptionApi.resume(organisationId, dto),
+    onSuccess: () =>
+      invalidateOrgBillingAfterCommand(queryClient, organisationId),
+  });
+}
+
+export function useCancelSubscriptionImmediateMutation(
+  organisationId: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: CancelSubscriptionImmediateDto) =>
+      superAdminSubscriptionApi.cancelImmediate(organisationId, dto),
+    onSuccess: () =>
+      invalidateOrgBillingAfterCommand(queryClient, organisationId),
   });
 }
 
