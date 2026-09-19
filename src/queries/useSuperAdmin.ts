@@ -31,11 +31,34 @@ import type {
   HoldWorkDto,
   PaymentHoldDto,
   ResumeSubscriptionDto,
+  RetryInvoiceDto,
   SuperAdminInviteMemberDto,
   SuperAdminRunJobDto,
   SuperAdminUpdateOrganisationDto,
   TransitionOrganisationStatusDto,
 } from '@/types';
+
+// ── Invoice retry (SA-706) ────────────────────────────────────────────
+
+export function useRetryInvoiceMutation(organisationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { invoiceId: string; dto: RetryInvoiceDto }) =>
+      superAdminBillingApi.retryInvoice(
+        organisationId,
+        params.invoiceId,
+        params.dto,
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['superAdmin', organisationId, 'billing'],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['superAdmin', 'platform', 'failedPayments'],
+      });
+    },
+  });
+}
 
 // ── Failed-payments queue (SA-705) ────────────────────────────────────
 

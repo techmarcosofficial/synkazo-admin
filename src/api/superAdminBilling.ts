@@ -1,6 +1,8 @@
 import apiClient from './apiClient';
 
 import type {
+  RetryInvoiceDto,
+  RetryInvoiceResponse,
   SuperAdminPage,
   SuperAdminBillingOverview,
   SuperAdminInvoiceListItem,
@@ -38,4 +40,18 @@ export const superAdminBillingApi = {
         params,
       })
       .then(paginated<SuperAdminInvoiceListItem>),
+
+  // SA-706 — retry a specific invoice through Stripe. The dry-run
+  // command; safe to fire again if the first attempt returned open state.
+  retryInvoice: (
+    organisationId: string,
+    invoiceId: string,
+    dto: RetryInvoiceDto,
+  ): Promise<RetryInvoiceResponse> =>
+    apiClient
+      .post(
+        `/super-admin/organisations/${organisationId}/billing/invoices/${invoiceId}/retry`,
+        dto,
+      )
+      .then(d),
 };
