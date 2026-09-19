@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   Building2,
   ClipboardList,
   FolderOpen,
@@ -62,6 +63,12 @@ export const SUPER_ADMIN_NAV: NavGroup[] = [
         title: 'Discounts',
         url: '/super-admin/discounts',
         icon: Percent,
+        minRole: 'super_admin',
+      },
+      {
+        title: 'Failed payments',
+        url: '/super-admin/failed-payments',
+        icon: AlertTriangle,
         minRole: 'super_admin',
       },
     ],

@@ -6,6 +6,10 @@ import { superAdminActivityApi } from '@/api/superAdminActivity';
 import { superAdminBillingApi } from '@/api/superAdminBilling';
 import { superAdminOrganisationLifecycleApi } from '@/api/superAdminOrganisationLifecycle';
 import { superAdminPlatformApi } from '@/api/superAdminPlatform';
+import {
+  superAdminPlatformBillingApi,
+  type ListFailedPaymentsParams,
+} from '@/api/superAdminPlatformBilling';
 import { superAdminSubscriptionApi } from '@/api/superAdminSubscription';
 import {
   superAdminMembersApi,
@@ -32,6 +36,27 @@ import type {
   SuperAdminUpdateOrganisationDto,
   TransitionOrganisationStatusDto,
 } from '@/types';
+
+// ── Failed-payments queue (SA-705) ────────────────────────────────────
+
+export function useSuperAdminFailedPaymentsQuery(
+  params: ListFailedPaymentsParams = {},
+) {
+  const { page = 1, limit = 20, ...filters } = params;
+  return useQuery({
+    queryKey: queryKeys.superAdmin.platform.failedPayments(page, limit, filters),
+    queryFn: () =>
+      superAdminPlatformBillingApi.listFailedPayments({
+        page,
+        limit,
+        ...filters,
+      }),
+    // Auto-refresh cadence matches the overview screen — operators
+    // running triage want fresh state without a manual reload.
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+  });
+}
 
 // ── Platform overview ─────────────────────────────────────────────────
 
