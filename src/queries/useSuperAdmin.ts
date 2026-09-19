@@ -30,6 +30,7 @@ import type {
   ClearPaymentHoldDto,
   HoldWorkDto,
   PaymentHoldDto,
+  ProvisionOrganisationDto,
   ResumeSubscriptionDto,
   RetryInvoiceDto,
   SuperAdminInviteMemberDto,
@@ -138,6 +139,23 @@ export function useUpdateSuperAdminOrganisationMutation(
       });
       queryClient.invalidateQueries({
         queryKey: queryKeys.superAdmin.orgScope(organisationId),
+      });
+    },
+  });
+}
+
+export function useProvisionSuperAdminOrganisationMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: ProvisionOrganisationDto) =>
+      superAdminOrganisationsApi.provision(dto),
+    onSuccess: () => {
+      // A new org shifts every list page + the platform overview totals.
+      queryClient.invalidateQueries({
+        queryKey: ['superAdmin', 'organisations'],
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.superAdmin.platform.overview,
       });
     },
   });

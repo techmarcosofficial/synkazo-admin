@@ -216,6 +216,23 @@ export interface SuperAdminUpdateOrganisationDto {
   reason?: string;
 }
 
+export interface ProvisionOrganisationDto {
+  name: string;
+  slug?: string;
+  description?: string;
+  ownerEmail?: string;
+  invitationMessage?: string;
+  reason: string;
+}
+
+export interface ProvisionOrganisationResponse {
+  organisationId: string;
+  slug: string;
+  invitationId: string | null;
+  invitationSent: boolean;
+  reused: boolean;
+}
+
 export interface SuperAdminInviteMemberDto {
   email: string;
   role: 'editor' | 'org_admin';
