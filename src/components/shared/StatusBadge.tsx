@@ -105,9 +105,11 @@ const STATUS_CONFIG: Record<
   },
 
   running: { tone: 'success', label: 'Running' },
+  in_progress: { tone: 'info', label: 'In progress' },
   connected: { tone: 'success', label: 'Connected' },
   success: { tone: 'success', label: 'Success' },
   completed: { tone: 'success', label: 'Completed' },
+  associated: { tone: 'success', label: 'Associated' },
 
   pending: { tone: 'warning', label: 'Pending' },
   retry_pending: { tone: 'warning', label: 'Retry pending' },

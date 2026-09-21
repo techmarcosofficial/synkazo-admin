@@ -10,6 +10,15 @@ import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import type { Connection } from '@/types';
+import {
+  Popover,
+  PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
+} from '../ui/popover';
+import { CircleHelp, ExternalLink } from 'lucide-react';
 
 interface ConnectionPayload {
   platformId?: string;
@@ -181,7 +190,14 @@ export default function CredentialsModal({
           if (isMarketplacePrivateAppToken) return null;
           return (
             <Field key={f.key} data-invalid={!!errors[f.key]}>
-              <FieldLabel htmlFor={f.key}>{f.label}</FieldLabel>
+              <FieldLabel htmlFor={f.key}>
+                {f.label}{' '}
+                <KnowMore
+                  label={f.label}
+                  helpText={f.helpText}
+                  helpUrl={f.helpUrl}
+                />{' '}
+              </FieldLabel>
               <Input
                 id={f.key}
                 type={f.type}
@@ -204,8 +220,56 @@ export default function CredentialsModal({
       </FieldGroup>
 
       {schema.note && (
-        <p className="text-muted-foreground text-xs">{schema.note}</p>
+        <p className="text-muted-foreground text-xs mt-1">{schema.note}</p>
       )}
     </FormDialog>
+  );
+}
+interface KnowMoreProps {
+  label: string;
+  helpText?: string;
+  helpUrl?: string;
+}
+
+function KnowMore({ label, helpText, helpUrl }: KnowMoreProps) {
+  if (!helpText && !helpUrl) return null;
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          className="text-muted-foreground hover:text-foreground size-5 rounded-full"
+          aria-label={`Help with ${label}`}
+        >
+          <CircleHelp className="size-3.5" />
+        </Button>
+      </PopoverTrigger>
+
+      <PopoverContent align="start" side="top" className="w-72">
+        <PopoverHeader>
+          <PopoverTitle className="text-sm">{label}</PopoverTitle>
+
+          {helpText && (
+            <PopoverDescription className="text-xs leading-relaxed">
+              {helpText}
+            </PopoverDescription>
+          )}
+        </PopoverHeader>
+
+        {helpUrl && (
+          <a
+            href={helpUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary mt-3 inline-flex items-center gap-1 text-xs font-medium hover:underline"
+          >
+            View documentation
+            <ExternalLink className="size-3" />
+          </a>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }

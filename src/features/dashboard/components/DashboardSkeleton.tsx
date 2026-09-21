@@ -11,19 +11,34 @@ export default function DashboardSkeleton() {
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {Array.from({ length: 3 }).map((_, index) => (
-          <Card key={index} size="sm">
-            <CardContent>
-              <div className="space-y-4">
-                <Skeleton className="size-9 rounded-lg" />
-                <div className="space-y-1">
-                  <Skeleton className="h-10 w-20" />
-                  <Skeleton className="h-5 w-28" />
-                  <Skeleton className="h-4 w-20" />
-                </div>
-                <Skeleton className="h-px w-full" />
-                <Skeleton className="h-[88px] w-full" />
-                <Skeleton className="h-4 w-44 max-w-full" />
+          <Card key={index} className="min-h-[228px]">
+            <CardContent className="flex h-full flex-1 flex-col">
+              <div className="flex items-center justify-between">
+                <Skeleton className="size-11 rounded-2xl" />
+                <Skeleton className="h-7 w-20 rounded-3xl" />
               </div>
+              <div className="flex flex-1 items-center justify-between gap-4 py-5">
+                <div className="space-y-2">
+                  <Skeleton className="h-10 w-20" />
+                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
+                {index === 2 && (
+                  <>
+                    <Skeleton className="size-24 rounded-full" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-5 w-16" />
+                      <Skeleton className="h-5 w-16" />
+                      <Skeleton className="h-5 w-16" />
+                    </div>
+                  </>
+                )}
+              </div>
+              {index < 2 && (
+                <div className="border-border border-t pt-3">
+                  <Skeleton className="h-5 w-44 max-w-full" />
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}

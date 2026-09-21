@@ -479,6 +479,10 @@ export interface FieldMatchExplanation {
  * always agree on score), just without the cross-product assignment or the
  * `MIN_SCORE` cutoff, since here the pair is already fixed by the user.
  */
+function clampScore(score: number): number {
+  return Math.max(0, Math.min(100, score));
+}
+
 export function explainFieldPair(
   source: MatchableField,
   dest: MatchableField,
@@ -492,7 +496,7 @@ export function explainFieldPair(
   score += typeCompatible ? 3 : -10;
   if (dest.required) score += 2;
   if (s.nested) score -= 1;
-  score = Math.max(0, Math.min(100, score));
+  score = clampScore(score);
 
   const nameSimilar = base >= 82;
   const structureSimilar = base >= 66;
@@ -568,6 +572,7 @@ export function matchFields(
       if (d.field.required) score += 2;
       // Tie-break toward the flat source field when a nested one scores the same.
       if (s.nested) score -= 1;
+      score = clampScore(score);
       if (score < MIN_SCORE) continue;
 
       candidates.push({ source: s.field, dest: d.field, score });

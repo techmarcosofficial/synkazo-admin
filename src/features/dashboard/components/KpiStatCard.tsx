@@ -1,9 +1,14 @@
-import { TrendingDown, TrendingUp, type LucideIcon } from 'lucide-react';
+import { ArrowUpRight, type LucideIcon } from 'lucide-react';
 import * as React from 'react';
 import { Link } from 'react-router-dom';
-import { Area, AreaChart, XAxis } from 'recharts';
+import { Pie, PieChart } from 'recharts';
 
-import type { KpiSecondaryStat, KpiSparklinePoint, KpiTrend } from '../types';
+import type {
+  KpiPieStat,
+  KpiSecondaryStat,
+  KpiSparklinePoint,
+  KpiTrend,
+} from '../types';
 
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -12,50 +17,31 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from '@/components/ui/chart';
-import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 
 export type { KpiSparklinePoint, KpiTrend };
-
-const SECONDARY_TONE_CLASSNAME: Record<
-  NonNullable<KpiSecondaryStat['tone']>,
-  string
-> = {
-  default: 'text-foreground',
-  success: 'text-success',
-  danger: 'text-destructive',
-};
 
 export interface KpiStatCardProps {
   label: string;
   value: string | number;
   sublabel?: string;
-
   icon: LucideIcon;
-  /** Tailwind text color class for the icon, e.g. "text-violet-600" */
   iconClassName?: string;
-  /** Tailwind bg color class for the icon chip, e.g. "bg-violet-100" */
   iconBgClassName?: string;
-
-  /** Omit entirely when you don't have enough history to say anything true about direction */
-  trend?: KpiTrend;
-
-  /**
-   * Omit when there's no real time-series behind this metric yet.
-   * The card renders without a chart section at all rather than
-   * reserving space for a placeholder.
-   */
-  chartData?: KpiSparklinePoint[];
-
-  chartColor?: string; // CSS color/oklch value for the chart line + fill
-  chartLabel?: string;
+  statusLabel?: string;
+  statusTone?: 'success' | 'neutral';
   chartSummary?: string;
-
-  /** Makes the whole card a link to this route. */
+  activityActive?: boolean;
+  pieData?: KpiPieStat[];
   href?: string;
-
-  /** Compact extra numbers shown under the main value, e.g. success rate + error count. */
   secondaryStats?: KpiSecondaryStat[];
+}
+
+function formatCompactNumber(value: number): string {
+  return new Intl.NumberFormat('en-US', {
+    notation: value >= 10_000 ? 'compact' : 'standard',
+    maximumFractionDigits: 1,
+  }).format(value);
 }
 
 export default function KpiStatCard({
@@ -65,207 +51,173 @@ export default function KpiStatCard({
   icon: Icon,
   iconClassName,
   iconBgClassName,
-  trend,
-  chartData,
-  chartColor = 'var(--primary)',
-  chartLabel,
+  statusLabel,
+  statusTone = 'neutral',
   chartSummary,
+  activityActive = false,
+  pieData,
   href,
-  secondaryStats,
 }: KpiStatCardProps) {
-  const hasChart = !!chartData && chartData.length > 1;
-  const hasChartActivity = !!chartData?.some((point) => point.value > 0);
-  const chartTicks = React.useMemo(() => {
-    if (!chartData?.length) return [];
-
-    return Array.from(
-      new Set([
-        chartData[0]?.date,
-        chartData[Math.floor((chartData.length - 1) / 2)]?.date,
-        chartData[chartData.length - 1]?.date,
-      ]),
-    ).filter((date): date is string => !!date);
-  }, [chartData]);
-
-  // Built per-card so ChartContainer can expose `var(--color-value)` bound to
-  // this card's own color, same mechanism as the desktop/mobile config in
-  // StatCard.tsx — just with a single "value" series instead of two.
-  const chartConfig = React.useMemo(
+  const pieItems = pieData ?? [];
+  const hasPie = pieItems.length > 0;
+  const pieTotal = pieItems.reduce((total, item) => total + item.value, 0);
+  const pieChartConfig = React.useMemo(
     () =>
-      ({
-        value: {
-          label: chartLabel ?? label,
-          color: chartColor,
-        },
-      }) satisfies ChartConfig,
-    [label, chartColor, chartLabel],
+      Object.fromEntries(
+        pieItems.map((item) => [
+          item.label,
+          { label: item.label, color: item.color },
+        ]),
+      ) as ChartConfig,
+    [pieItems],
   );
-
-  const gradientId = `fill-${label.replace(/\s+/g, '-')}`;
 
   const card = (
     <Card
-      size="sm"
       className={cn(
-        'h-full transition-all duration-200 ease-out',
+        'h-full min-h-[228px] transition-all duration-200 ease-out',
         href &&
-          'hover:border-foreground/20 cursor-pointer hover:-translate-y-1',
+          'hover:border-foreground/20 cursor-pointer hover:-translate-y-0.5 hover:shadow-md',
       )}
     >
-      <CardContent>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="bg-muted flex h-11 w-11 items-center justify-center rounded-3xl">
-              <Icon className="text-muted-foreground h-5 w-5" />
-            </div>
-            <div className="flex items-center gap-1.5">
-              {trend && (
-                <div
-                  className={cn(
-                    'flex items-center gap-1 text-xs font-semibold',
-                    trend.positive ? 'text-success' : 'text-destructive',
-                  )}
-                  title={trend.label}
-                >
-                  {trend.positive ? (
-                    <TrendingUp className="h-3 w-3" />
-                  ) : (
-                    <TrendingDown className="h-3 w-3" />
-                  )}
-                  {trend.value}
-                </div>
-              )}
-              {chartSummary && (
-                <div className="text-muted-foreground flex items-center justify-center gap-2 text-xs">
-                  <span
-                    aria-hidden="true"
-                    className={cn(
-                      'size-2 shrink-0 rounded-full',
-                      hasChartActivity ? 'bg-primary' : 'bg-muted-foreground',
-                    )}
-                  />
-                  <span>{chartSummary}</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="mb-0 space-y-1">
-            <div className="text-4xl font-bold tracking-tight">{value}</div>
-            <div className="text-sm font-medium">{label}</div>
-            {sublabel && (
-              <div className="text-muted-foreground text-xs">{sublabel}</div>
+      <CardContent className="flex h-full flex-1 flex-col">
+        <div className="flex items-center justify-between gap-4">
+          <div
+            className={cn(
+              'bg-muted flex size-11 shrink-0 items-center justify-center rounded-2xl',
+              iconBgClassName,
             )}
+          >
+            <Icon
+              className={cn('text-muted-foreground size-5', iconClassName)}
+            />
           </div>
 
-          {secondaryStats && secondaryStats.length > 0 && (
-            <>
-              <div className="flex items-center gap-4">
-                {secondaryStats.map((stat) => (
-                  <div key={stat.label}>
-                    <div
-                      className={cn(
-                        'text-sm font-semibold',
-                        SECONDARY_TONE_CLASSNAME[stat.tone ?? 'default'],
-                      )}
-                    >
-                      {stat.value}
-                    </div>
-                    <div className="text-muted-foreground text-xs">
-                      {stat.label}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
-          {hasChart && (
-            <>
-              <div>
-                {hasChartActivity && (
-                  <ChartContainer
-                    config={chartConfig}
-                    className="aspect-auto h-[88px] w-full"
-                    initialDimension={{ width: 320, height: 88 }}
-                  >
-                    <AreaChart
-                      accessibilityLayer
-                      data={chartData}
-                      margin={{ top: 4, right: 8, left: 8 }}
-                    >
-                      <defs>
-                        <linearGradient
-                          id={gradientId}
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop
-                            offset="0%"
-                            stopColor="var(--color-value)"
-                            stopOpacity={0.8}
-                          />
-                          <stop
-                            offset="95%"
-                            stopColor="var(--color-value)"
-                            stopOpacity={0.1}
-                          />
-                        </linearGradient>
-                      </defs>
-                      <XAxis
-                        dataKey="date"
-                        ticks={chartTicks}
-                        tickLine={false}
-                        axisLine={false}
-                        tickMargin={6}
-                        tickFormatter={(dateValue) => {
-                          const date = new Date(dateValue);
-                          return date.toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                          });
-                        }}
-                      />
-                      <ChartTooltip
-                        cursor={false}
-                        content={
-                          <ChartTooltipContent
-                            labelFormatter={(dateValue) => {
-                              return new Date(
-                                String(dateValue),
-                              ).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                              });
-                            }}
-                            indicator="dot"
-                          />
-                        }
-                      />
-                      <Area
-                        dataKey="value"
-                        type="monotone"
-                        fill={`url(#${gradientId})`}
-                        stroke="var(--color-value)"
-                        strokeWidth={2}
-                        dot={false}
-                        activeDot={{ r: 3, strokeWidth: 0 }}
-                      />
-                    </AreaChart>
-                  </ChartContainer>
-                )}
-
-                {!hasChartActivity && (
-                  <div className="text-muted-foreground flex h-[88px] items-center justify-center text-xs">
-                    No activity in the last 7 days
-                  </div>
-                )}
-              </div>
-            </>
+          {statusLabel && (
+            <span className="bg-muted text-muted-foreground inline-flex h-5.5 items-center gap-2 rounded-3xl px-3 text-xs font-medium">
+              {statusTone === 'success' && (
+                <span
+                  aria-hidden="true"
+                  className="bg-success size-2 rounded-full"
+                />
+              )}
+              {statusLabel}
+            </span>
           )}
         </div>
+
+        {hasPie ? (
+          <div className="flex flex-1 items-center justify-between gap-3 py-4">
+            <div className="min-w-0 shrink-0 space-y-1">
+              <div className="text-4xl font-bold tracking-tight tabular-nums">
+                {value}
+              </div>
+              <div className="text-sm font-semibold">{label}</div>
+              {sublabel && (
+                <div className="text-muted-foreground text-xs">{sublabel}</div>
+              )}
+            </div>
+
+            <div className="flex min-w-0 items-center justify-end gap-3">
+              <ChartContainer
+                config={pieChartConfig}
+                className="aspect-square h-[108px] shrink-0"
+                initialDimension={{ width: 108, height: 108 }}
+              >
+                <PieChart accessibilityLayer>
+                  <Pie
+                    data={[{ value: 1 }]}
+                    dataKey="value"
+                    innerRadius={31}
+                    outerRadius={50}
+                    fill="var(--muted)"
+                    strokeWidth={0}
+                    isAnimationActive={false}
+                  />
+                  {pieTotal > 0 && (
+                    <Pie
+                      data={pieItems.map((item) => ({
+                        ...item,
+                        fill: item.color,
+                      }))}
+                      dataKey="value"
+                      nameKey="label"
+                      innerRadius={31}
+                      outerRadius={50}
+                      paddingAngle={1.5}
+                      strokeWidth={2}
+                    />
+                  )}
+                  <ChartTooltip
+                    cursor={false}
+                    content={<ChartTooltipContent hideLabel nameKey="label" />}
+                  />
+                </PieChart>
+              </ChartContainer>
+
+              <div className="min-w-[84px] space-y-2">
+                {pieItems.map((item) => {
+                  const percentage =
+                    pieTotal > 0
+                      ? Math.round((item.value / pieTotal) * 100)
+                      : 0;
+
+                  return (
+                    <div key={item.label} className="flex items-start gap-2">
+                      <span
+                        aria-hidden="true"
+                        className="mt-1 size-2 shrink-0 rounded-full"
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <div className="min-w-0 leading-tight">
+                        <div className="text-muted-foreground text-xs">
+                          {item.label}
+                        </div>
+                        <div className="text-xs font-semibold tabular-nums">
+                          {formatCompactNumber(item.value)} ({percentage}%)
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="flex flex-1 flex-col justify-center py-5">
+              <div className="text-4xl font-bold tracking-tight tabular-nums">
+                {value}
+              </div>
+              <div className="mt-1 text-sm font-semibold">{label}</div>
+              {sublabel && (
+                <div className="text-muted-foreground mt-1 text-xs">
+                  {sublabel}
+                </div>
+              )}
+            </div>
+
+            {chartSummary && (
+              <div className="border-border text-muted-foreground flex items-center gap-2 border-t pt-3 text-xs">
+                <span
+                  className={cn(
+                    'flex size-5 shrink-0 items-center justify-center rounded-full',
+                    activityActive
+                      ? 'bg-success/10 text-success'
+                      : 'bg-muted text-muted-foreground',
+                  )}
+                >
+                  {activityActive ? (
+                    <ArrowUpRight className="size-3" />
+                  ) : (
+                    <span className="size-1.5 rounded-full bg-current" />
+                  )}
+                </span>
+                <span>{chartSummary}</span>
+              </div>
+            )}
+          </>
+        )}
       </CardContent>
     </Card>
   );

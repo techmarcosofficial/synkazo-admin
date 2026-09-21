@@ -73,6 +73,10 @@ import {
   type Rule,
   type RuleDefinition,
 } from '@/lib/ruleEngine';
+import {
+  buildRuleSuggestions,
+  type RuleSuggestion,
+} from '@/lib/ruleSuggestions';
 import { cn } from '@/lib/utils';
 import type { FieldMapping } from '@/types';
 
@@ -712,10 +716,11 @@ export default function RuleBuilderModal({
   const [rules, setRules] = useState<Rule[]>(() => cloneRules(initialRules));
   const initialRulesSnapshotRef = useRef(JSON.stringify(initialRules || []));
   const [search, setSearch] = useState('');
-  const [activeCategory, setActiveCategory] = useState<string | null>('text');
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [testInput, setTestInput] = useState(
     DEFAULT_TEST_BY_TYPE[sourceType] || '',
   );
+  const [sourceSample, setSourceSample] = useState<string>();
   const [dupFlash, setDupFlash] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<
     Record<number, string[]>
@@ -724,22 +729,41 @@ export default function RuleBuilderModal({
   const { confirm } = useConfirmDialog();
 
   useEffect(() => {
+    setSourceSample(undefined);
     if (!projectId || !sourceObject) return;
+    let cancelled = false;
     associationsApi
       .getSampleRecord(projectId, sourceObject)
       .then((record) => {
-        if (!record) return;
+        if (!record || cancelled) return;
         const fieldValue = record[mapping.sourceField];
         if (
           fieldValue !== undefined &&
           fieldValue !== null &&
           String(fieldValue).trim() !== ''
         ) {
-          setTestInput(String(fieldValue));
+          const sample = String(fieldValue);
+          setSourceSample(sample);
+          setTestInput(sample);
         }
       })
       .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
   }, [projectId, sourceObject, mapping.sourceField]);
+
+  const ruleSuggestions = useMemo(
+    () =>
+      buildRuleSuggestions({
+        sourceField,
+        destField,
+        sampleValue: sourceSample,
+        currentRules: rules,
+      }),
+    [sourceField, destField, sourceSample, rules],
+  );
 
   const addRule = (def: RuleDefinition) => {
     if (rules.some((r) => r.type === def.type)) {
@@ -753,6 +777,20 @@ export default function RuleBuilderModal({
         newRule[p] = '';
       });
     setRules((prev) => [...prev, newRule]);
+    if (saveAttempted) setValidationErrors({});
+  };
+
+  const addSuggestedRule = (suggestion: RuleSuggestion) => {
+    setRules((prev) => {
+      const equivalentExists = prev.some((rule) =>
+        suggestion.rule.type === 'value_map' ||
+        suggestion.rule.type === 'value_mapping'
+          ? rule.type === 'value_map' || rule.type === 'value_mapping'
+          : rule.type === suggestion.rule.type,
+      );
+      if (equivalentExists) return prev;
+      return [...prev, cloneRules([suggestion.rule])[0]];
+    });
     if (saveAttempted) setValidationErrors({});
   };
 
@@ -1176,62 +1214,117 @@ export default function RuleBuilderModal({
             </div>
 
             <ScrollArea className="min-h-0 flex-1 px-4">
-              {rules.length === 0 ? (
-                <div className="flex flex-col items-center pt-8 text-center">
-                  <div className="bg-muted mb-3 flex size-12 items-center justify-center rounded-4xl">
-                    <Sparkles className="text-muted-foreground size-5" />
-                  </div>
-                  <p className="text-muted-foreground text-sm font-medium">
-                    No rules added yet
-                  </p>
-                  <p className="text-muted-foreground mt-1 text-xs">
-                    Click any rule from the left panel to add it
-                  </p>
-                </div>
-              ) : (
-                <DragDropContext onDragEnd={handleDragEnd}>
-                  <Droppable droppableId="transformation-rule-pipeline">
-                    {(provided) => (
+              <div className="pb-3">
+                {ruleSuggestions.length > 0 && (
+                  <div
+                    className="space-y-2 pb-3"
+                    aria-label="Suggested transformation rules"
+                  >
+                    {ruleSuggestions.map((suggestion) => (
                       <div
-                        ref={provided.innerRef}
-                        {...provided.droppableProps}
-                        className="pb-3"
+                        key={suggestion.id}
+                        className="border-border bg-muted/30 rounded-4xl border p-3"
                       >
-                        {rules.map((rule, idx) => (
-                          <Draggable
-                            key={rule.type}
-                            draggableId={rule.type}
-                            index={idx}
-                          >
-                            {(dragProvided, snapshot) => (
-                              <div
-                                ref={dragProvided.innerRef}
-                                {...dragProvided.draggableProps}
-                                style={dragProvided.draggableProps.style}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-xs font-semibold">
+                                {suggestion.label}
+                              </p>
+                              <Badge
+                                variant="secondary"
+                                className="rounded-full px-1.5 text-[10px] font-normal"
                               >
-                                <ActiveRule
-                                  rule={rule}
-                                  index={idx}
-                                  onUpdate={updateRule}
-                                  onRemove={removeRule}
-                                  validationErrors={validationErrors}
-                                  destOptions={destField?.options}
-                                  dragHandleProps={dragProvided.dragHandleProps}
-                                  isDragging={snapshot.isDragging}
-                                />
-                                {idx < rules.length - 1 && (
-                                  <div className="bg-border mx-8 h-2 w-px" />
-                                )}
-                              </div>
+                                {suggestion.confidence === 'recommended'
+                                  ? 'Recommended'
+                                  : 'Suggested'}
+                              </Badge>
+                            </div>
+                            <p className="text-muted-foreground mt-1 text-[11px] leading-4">
+                              {suggestion.reason}
+                            </p>
+                            {suggestion.requiresConfiguration && (
+                              <p className="text-muted-foreground mt-1 text-[10px] font-medium">
+                                Review the value mapping after adding.
+                              </p>
                             )}
-                          </Draggable>
-                        ))}
-                        {provided.placeholder}
+                          </div>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            className="shrink-0"
+                            onClick={() => addSuggestedRule(suggestion)}
+                            aria-label={`Add suggested rule ${suggestion.label}`}
+                          >
+                            <Plus /> Add rule
+                          </Button>
+                        </div>
                       </div>
-                    )}
-                  </Droppable>
-                </DragDropContext>
-              )}
+                    ))}
+                  </div>
+                )}
+
+                {rules.length === 0 ? (
+                  <div className="flex flex-col items-center pt-5 text-center">
+                    <div className="bg-muted mb-3 flex size-12 items-center justify-center rounded-4xl">
+                      <Sparkles className="text-muted-foreground size-5" />
+                    </div>
+                    <p className="text-muted-foreground text-sm font-medium">
+                      No rules added yet
+                    </p>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      {ruleSuggestions.length > 0
+                        ? 'Use a suggestion above or choose a rule from the library'
+                        : 'Choose a category on the left to add a rule'}
+                    </p>
+                  </div>
+                ) : (
+                  <DragDropContext onDragEnd={handleDragEnd}>
+                    <Droppable droppableId="transformation-rule-pipeline">
+                      {(provided) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.droppableProps}
+                        >
+                          {rules.map((rule, idx) => (
+                            <Draggable
+                              key={rule.type}
+                              draggableId={rule.type}
+                              index={idx}
+                            >
+                              {(dragProvided, snapshot) => (
+                                <div
+                                  ref={dragProvided.innerRef}
+                                  {...dragProvided.draggableProps}
+                                  style={dragProvided.draggableProps.style}
+                                >
+                                  <ActiveRule
+                                    rule={rule}
+                                    index={idx}
+                                    onUpdate={updateRule}
+                                    onRemove={removeRule}
+                                    validationErrors={validationErrors}
+                                    destOptions={destField?.options}
+                                    dragHandleProps={
+                                      dragProvided.dragHandleProps
+                                    }
+                                    isDragging={snapshot.isDragging}
+                                  />
+                                  {idx < rules.length - 1 && (
+                                    <div className="bg-border mx-8 h-2 w-px" />
+                                  )}
+                                </div>
+                              )}
+                            </Draggable>
+                          ))}
+                          {provided.placeholder}
+                        </div>
+                      )}
+                    </Droppable>
+                  </DragDropContext>
+                )}
+              </div>
             </ScrollArea>
           </section>
 

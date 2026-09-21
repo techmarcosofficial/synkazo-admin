@@ -207,6 +207,7 @@ export function useJobHeaderAlert(): ResolvedJobHeaderAlert | undefined {
   if (
     isActive &&
     !job.lastSyncedAt &&
+    runLogs.length === 0 &&
     job.checkpointPage == null &&
     !isSyncing
   ) {

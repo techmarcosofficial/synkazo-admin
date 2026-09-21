@@ -403,19 +403,12 @@ export default function ManualMappingDialog({
           className="flex h-[85vh] max-h-[85vh] flex-col gap-0 p-0"
           onPointerDownOutside={(e) => e.preventDefault()}
         >
-          <DialogHeader className="gap-0 border-b px-6 py-5">
-            <div className="flex items-center gap-3">
-              <div className="bg-primary text-primary-foreground flex size-9 shrink-0 items-center justify-center rounded-lg">
-                <ListPlus className="size-4" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <DialogTitle>Manual Field Mapping</DialogTitle>
-                <DialogDescription>
-                  Create one or more mappings manually. We&apos;ll estimate how
-                  well each mapping matches.
-                </DialogDescription>
-              </div>
-            </div>
+          <DialogHeader className="shrink-0 gap-1.5 border-b px-6 py-4 pr-14">
+            <DialogTitle>Manual field mapping</DialogTitle>
+            <DialogDescription>
+              Create one or more mappings manually. We&apos;ll estimate how well
+              each mapping matches.
+            </DialogDescription>
           </DialogHeader>
 
           <ScrollArea className="min-h-0 flex-1">

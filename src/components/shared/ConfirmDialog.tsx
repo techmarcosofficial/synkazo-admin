@@ -36,29 +36,21 @@ const VARIANT_META: Record<
     icon: CircleAlert,
     iconClassName: 'text-destructive',
     mediaClassName: 'bg-destructive/10 text-destructive',
-    actionClassName:
-      'bg-destructive text-white hover:bg-[color-mix(in_oklch,var(--destructive),white_10%)]',
   },
   warning: {
     icon: AlertTriangle,
     iconClassName: 'text-warning',
     mediaClassName: 'bg-warning/10 text-warning',
-    actionClassName:
-      'bg-warning text-white hover:bg-[color-mix(in_oklch,var(--warning),black_8%)] dark:text-black',
   },
   success: {
     icon: CircleCheck,
     iconClassName: 'text-success',
     mediaClassName: 'bg-success/10 text-success',
-    actionClassName:
-      'bg-success text-white hover:bg-[color-mix(in_oklch,var(--success),black_8%)] dark:text-black',
   },
   info: {
     icon: Info,
     iconClassName: 'text-info',
-    mediaClassName: 'bg-info/10 text-info',
-    actionClassName:
-      'bg-info text-white hover:bg-[color-mix(in_oklch,var(--info),white_10%)]',
+    mediaClassName: 'bg-info/10 text-info'
   },
 };
 
@@ -110,7 +102,6 @@ export default function ConfirmDialog() {
             {cancelLabel}
           </AlertDialogCancel>
           <AlertDialogAction
-            className={meta.actionClassName}
             size="sm"
             disabled={isConfirming}
             onClick={(e) => {

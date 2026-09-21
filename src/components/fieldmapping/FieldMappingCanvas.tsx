@@ -1,3 +1,5 @@
+import type { DropResult } from '@hello-pangea/dnd';
+import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd';
 import {
   AlertCircleIcon,
   ArrowLeft,
@@ -8,6 +10,7 @@ import {
   ChevronsUpDown,
   ChevronUp,
   HelpCircle,
+  GripVertical,
   ListFilter,
   Pencil,
   KeyRound,
@@ -67,6 +70,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Progress } from '@/components/ui/progress';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
@@ -567,7 +571,11 @@ function DirectionArrow({ direction }: { direction: MappingDirection }) {
 function TypeChip({ type }: { type?: string }) {
   if (!type) return null;
   return (
-    <Badge variant="outline" className="text-[10.5px] font-semibold capitalize">
+    <Badge
+      variant="outline"
+      className="max-w-20 shrink-0 truncate text-[10.5px] font-semibold capitalize"
+      title={type.toLowerCase()}
+    >
       {type.toLowerCase()}
     </Badge>
   );
@@ -677,6 +685,8 @@ export function FieldSelect({
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [insideDialog, setInsideDialog] = useState(false);
   // Required fields surface first so they're not buried in a long list.
   const sorted = highlightRequired
     ? [...fields].sort((a, b) => Number(!!b.required) - Number(!!a.required))
@@ -684,9 +694,20 @@ export function FieldSelect({
   const selected = fields.find((f) => f.key === value);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (nextOpen) {
+          setInsideDialog(
+            !!triggerRef.current?.closest('[data-slot="dialog-content"]'),
+          );
+        }
+        setOpen(nextOpen);
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
+          ref={triggerRef}
           type="button"
           variant="outline"
           role="combobox"
@@ -704,43 +725,61 @@ export function FieldSelect({
           <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-(--radix-popover-trigger-width) p-0">
+      <PopoverContent className="max-h-(--radix-popover-content-available-height) w-(--radix-popover-trigger-width) overflow-hidden p-0">
         <Command
           filter={(itemValue, search) =>
             itemValue.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
           }
         >
           <CommandInput placeholder="Search fields…" />
-          <CommandList>
-            <CommandEmpty>No fields found.</CommandEmpty>
-            <CommandGroup>
-              {sorted.map((f) => (
-                <CommandItem
-                  key={f.key}
-                  // cmdk matches on this string, so both the label and the raw
-                  // key are searchable.
-                  value={`${f.label || f.key} ${f.key}`}
-                  onSelect={() => {
-                    onChange(f.key);
-                    setOpen(false);
-                  }}
-                >
-                  <span className="flex min-w-0 flex-1 items-center justify-between gap-2.5">
-                    <span className="truncate">
-                      {f.label || f.key}
-                      {highlightRequired && f.required && (
-                        <span className="text-destructive ml-0.5">*</span>
-                      )}
+          <ScrollArea
+            className="h-64 max-h-[calc(var(--radix-popover-content-available-height)-3rem)]"
+            viewportClassName="[&>div]:!block [&>div]:!w-full [&>div]:!min-w-0"
+            onWheelCapture={(event) => {
+              // Radix Dialog uses react-remove-scroll. Because Popover.Content is
+              // correctly portaled to the body for positioning, that library can
+              // cancel wheel input before it reaches this nested list. Only replace
+              // the cancelled native scroll; outside a modal, the browser remains in
+              // charge and this branch does nothing.
+              if (!insideDialog || event.deltaY === 0) return;
+              const viewport = event.currentTarget.querySelector<HTMLElement>(
+                '[data-slot="scroll-area-viewport"]',
+              );
+              if (viewport) viewport.scrollTop += event.deltaY;
+            }}
+          >
+            <CommandList className="max-h-none w-full max-w-full min-w-0">
+              <CommandEmpty>No fields found.</CommandEmpty>
+              <CommandGroup className="w-full max-w-full min-w-0">
+                {sorted.map((f) => (
+                  <CommandItem
+                    key={f.key}
+                    className="min-w-0 overflow-hidden"
+                    // cmdk matches on this string, so both the label and the raw
+                    // key are searchable.
+                    value={`${f.label || f.key} ${f.key}`}
+                    onSelect={() => {
+                      onChange(f.key);
+                      setOpen(false);
+                    }}
+                  >
+                    <span className="flex min-w-0 flex-1 items-center justify-between gap-2.5 overflow-hidden">
+                      <span className="truncate">
+                        {f.label || f.key}
+                        {highlightRequired && f.required && (
+                          <span className="text-destructive ml-0.5">*</span>
+                        )}
+                      </span>
+                      <TypeChip type={f.type} />
                     </span>
-                    <TypeChip type={f.type} />
-                  </span>
-                  {f.key === value && (
-                    <Check className="ml-2 size-3.5 shrink-0" />
-                  )}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
+                    {f.key === value && (
+                      <Check className="ml-2 size-3.5 shrink-0" />
+                    )}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </ScrollArea>
         </Command>
       </PopoverContent>
     </Popover>
@@ -847,10 +886,6 @@ export default function FieldMappingCanvas({
   const [glow, setGlow] = useState<GlowTarget | null>(null);
   const [naOpen, setNaOpen] = useState(false);
   const [attentionReviewed, setAttentionReviewed] = useState(false);
-  const [attentionHighlighted, setAttentionHighlighted] = useState(false);
-  const attentionHighlightTimerRef = useRef<ReturnType<
-    typeof setTimeout
-  > | null>(null);
   const { confirm } = useConfirmDialog();
 
   // Plan gating: a plan whose `allowed_transform_types` is `direct` alone gets no rule
@@ -991,14 +1026,6 @@ export default function FieldMappingCanvas({
 
   const revealAttention = useCallback(() => {
     setNaOpen(true);
-    setAttentionHighlighted(true);
-    if (attentionHighlightTimerRef.current) {
-      clearTimeout(attentionHighlightTimerRef.current);
-    }
-    attentionHighlightTimerRef.current = setTimeout(
-      () => setAttentionHighlighted(false),
-      GLOW_MS,
-    );
     // The collapsible content needs one frame to open before its position can
     // be measured correctly. scrollIntoView scrolls both the field-list pane
     // and the outer page when needed.
@@ -1010,20 +1037,15 @@ export default function FieldMappingCanvas({
     });
   }, []);
 
-  useEffect(
-    () => () => {
-      if (attentionHighlightTimerRef.current) {
-        clearTimeout(attentionHighlightTimerRef.current);
-      }
-    },
-    [],
-  );
-
-  // A newly-surfaced attention item (including one present once fields first
-  // load) opens the panel, focuses it, and needs a fresh review. Resolving an
-  // item never steals focus back from the user.
-  const prevNaCountRef = useRef(0);
+  // Ignore the initial empty state so the panel stays collapsed on first load.
+  // A later increase in attention items still opens it, but does not flash.
+  const prevNaCountRef = useRef<number | null>(null);
   useEffect(() => {
+    if (prevNaCountRef.current === null) {
+      prevNaCountRef.current = naCount;
+      return;
+    }
+
     if (naCount > prevNaCountRef.current) {
       setAttentionReviewed(false);
       revealAttention();
@@ -1197,38 +1219,6 @@ export default function FieldMappingCanvas({
         if (!m.matchDestKey) return m;
         next += 1;
         return { ...m, matchOrder: mode === 'or' ? next : null };
-      }),
-    );
-  };
-
-  /** Reorders one match field within OR mode by swapping matchOrder with its neighbour. */
-  const moveMatchOrder = (sourceKey: string, destKey: string, dir: -1 | 1) => {
-    const ordered = mappings
-      .filter((m) => m.matchDestKey)
-      .sort((a, b) => (a.matchOrder ?? 0) - (b.matchOrder ?? 0));
-    const idx = ordered.findIndex(
-      (m) => m.sourceField === sourceKey && m.matchDestKey === destKey,
-    );
-    const swapIdx = idx + dir;
-    if (idx < 0 || swapIdx < 0 || swapIdx >= ordered.length) return;
-    const a = ordered[idx];
-    const b = ordered[swapIdx];
-    const aOrder = a.matchOrder;
-    onMappingsChange(
-      mappings.map((m) => {
-        if (
-          m.sourceField === a.sourceField &&
-          m.matchDestKey === a.matchDestKey
-        ) {
-          return { ...m, matchOrder: b.matchOrder };
-        }
-        if (
-          m.sourceField === b.sourceField &&
-          m.matchDestKey === b.matchDestKey
-        ) {
-          return { ...m, matchOrder: aOrder };
-        }
-        return m;
       }),
     );
   };
@@ -1741,6 +1731,30 @@ export default function FieldMappingCanvas({
         (m) => m.sourceField === o.sourceField && m.destKey === o.destKey,
       ),
   );
+  const handleMatchDragEnd = (result: DropResult) => {
+    if (matchMode !== 'or' || !result.destination) return;
+    if (result.destination.index === result.source.index) return;
+
+    const reordered = [...activeMatches];
+    const [moved] = reordered.splice(result.source.index, 1);
+    reordered.splice(result.destination.index, 0, moved);
+    const orderByMatch = new Map(
+      reordered.map((match, index) => [
+        matchOptionValue(match.sourceField, match.destKey),
+        index + 1,
+      ]),
+    );
+
+    onMappingsChange(
+      mappings.map((mapping) => {
+        if (!mapping.matchDestKey) return mapping;
+        const matchOrder = orderByMatch.get(
+          matchOptionValue(mapping.sourceField, mapping.matchDestKey),
+        );
+        return matchOrder == null ? mapping : { ...mapping, matchOrder };
+      }),
+    );
+  };
   const totalFields = Math.max(requiredDest.length, pairCount);
   const toolbarIconSize = toolbarControlSize === 'default' ? 'icon' : 'icon-sm';
   const mappingToolbar = (
@@ -1835,10 +1849,10 @@ export default function FieldMappingCanvas({
   return (
     <div className="flex flex-col gap-4">
       {toolbarContainer && createPortal(mappingToolbar, toolbarContainer)}
-      <Card className="gap-0 py-0">
-        <CardContent className="flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-center">
-          <div className="flex min-w-0 flex-1 flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-2.5">
+      {/* <Card className="gap-0 overflow-hidden py-0">
+        <CardContent className="p-0">
+          <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2.5">
               <h3 className="text-sm font-bold">
                 <span
                   className={cn(
@@ -1877,179 +1891,461 @@ export default function FieldMappingCanvas({
                 )
               )}
             </div>
-          </div>
-
-          <Separator className="hidden lg:block" orientation="vertical" />
-
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2.5">
-            <KeyRound size={16} className="text-primary" />
-            <span className="text-muted-foreground text-xs whitespace-nowrap">
-              Matched by
-            </span>
-
-            {activeMatches.map((am, idx) => {
-              const field = sourceFields.find((f) => f.key === am.sourceField);
-              const destF = destFields.find((f) => f.key === am.destKey);
-              const fansOut =
-                matchOptions.filter((o) => o.sourceField === am.sourceField)
-                  .length > 1;
-              return (
-                <Badge
-                  key={`${am.sourceField}::${am.destKey}`}
-                  variant="secondary"
-                  className="gap-1 whitespace-nowrap"
-                >
-                  {matchMode === 'or' && (
-                    <span className="font-mono text-[10px] opacity-70">
-                      {idx + 1}.
-                    </span>
-                  )}
-                  {field?.label ?? am.sourceField}
-                  {fansOut ? ` → ${destF?.label ?? am.destKey}` : ''}
-                  {matchMode === 'or' && activeMatches.length > 1 && (
-                    <span className="flex items-center">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-xs"
-                        className="rounded-full"
-                        disabled={idx === 0}
-                        onClick={() =>
-                          moveMatchOrder(am.sourceField, am.destKey, -1)
-                        }
-                        aria-label="Try this field earlier"
-                      >
-                        <ChevronUp size={11} />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-xs"
-                        className="rounded-full"
-                        disabled={idx === activeMatches.length - 1}
-                        onClick={() =>
-                          moveMatchOrder(am.sourceField, am.destKey, 1)
-                        }
-                        aria-label="Try this field later"
-                      >
-                        <ChevronDown size={11} />
-                      </Button>
-                    </span>
-                  )}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-xs"
-                    className="rounded-full"
-                    onClick={() => toggleMatch(am.sourceField, am.destKey)}
-                    aria-label="Remove match field"
-                  >
-                    <X size={11} />
-                  </Button>
-                </Badge>
-              );
-            })}
-
-            {activeMatches.length >= 2 && (
-              <div className="bg-muted flex items-center gap-0.5 rounded-3xl p-0.5">
-                <button
-                  type="button"
-                  className={cn(
-                    'rounded-3xl px-1.5 py-0.5 text-[11px] font-medium',
-                    matchMode === 'and'
-                      ? 'bg-background shadow-sm'
-                      : 'text-muted-foreground',
-                  )}
-                  onClick={() => setMatchMode('and')}
-                  title="All match fields must agree on the same record"
-                >
-                  AND
-                </button>
-                <button
-                  type="button"
-                  className={cn(
-                    'rounded-3xl px-1.5 py-0.5 text-[11px] font-medium',
-                    matchMode === 'or'
-                      ? 'bg-background shadow-sm'
-                      : 'text-muted-foreground',
-                  )}
-                  onClick={() => setMatchMode('or')}
-                  title="Try each match field in order — first hit wins"
-                >
-                  OR
-                </button>
-              </div>
-            )}
-
-            <Select
-              value=""
-              onValueChange={(value) => {
-                const selected = addableMatchOptions.find(
-                  (option) =>
-                    matchOptionValue(option.sourceField, option.destKey) ===
-                    value,
-                );
-                if (!selected) return;
-                setMatchActive(selected.sourceField, selected.destKey, true);
-              }}
+            <Button
+              onClick={handleAutoMapClick}
+              size="sm"
+              className="shrink-0 self-start sm:self-auto"
+              disabled={
+                autoMapping ||
+                sourceFields.length === 0 ||
+                destFields.length === 0
+              }
             >
-              <SelectTrigger size="sm" className="h-8 w-44 max-w-full">
-                <SelectValue
-                  placeholder={
-                    activeMatches.length === 0
-                      ? 'Choose field'
-                      : '+ Add match field'
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent align="start">
-                {addableMatchOptions.length === 0 ? (
-                  <div className="text-muted-foreground px-2.5 py-1.5 text-xs">
-                    {matchOptions.length === 0
-                      ? 'No fields mapped yet'
-                      : 'All mapped fields already added'}
-                  </div>
-                ) : (
-                  addableMatchOptions.map(({ sourceField, destKey }) => {
-                    const field = sourceFields.find(
-                      (f) => f.key === sourceField,
-                    );
-                    const destF = destFields.find((f) => f.key === destKey);
-                    // Only qualify with the destination when this source fans out to more
-                    // than one — the common single-destination case stays uncluttered.
-                    const fansOut =
-                      matchOptions.filter((o) => o.sourceField === sourceField)
-                        .length > 1;
-                    return (
-                      <SelectItem
-                        key={matchOptionValue(sourceField, destKey)}
-                        value={matchOptionValue(sourceField, destKey)}
-                      >
-                        {field?.label ?? sourceField}
-                        {fansOut ? ` → ${destF?.label ?? destKey}` : ''}
-                      </SelectItem>
-                    );
-                  })
-                )}
-              </SelectContent>
-            </Select>
+              {autoMapping ? <Spinner /> : <Wand2 className="size-4" />}
+              {autoMapping ? 'Auto-mapping…' : 'Auto-map'}
+            </Button>
           </div>
 
-          <Button
-            onClick={handleAutoMapClick}
-            size="sm"
-            className="shrink-0 lg:ml-auto"
-            disabled={
-              autoMapping ||
-              sourceFields.length === 0 ||
-              destFields.length === 0
-            }
-          >
-            {autoMapping ? <Spinner /> : <Wand2 className="size-4" />}
-            {autoMapping ? 'Auto-mapping…' : 'Auto-map'}
-          </Button>
+          <Separator />
+
+          <section className="px-4 py-3" aria-labelledby="matched-by-heading">
+            <div className="flex flex-wrap items-center gap-2">
+              <div
+                className="flex shrink-0 items-center gap-1.5"
+                title="Fields used to find an existing destination record"
+              >
+                <KeyRound className="text-primary size-3.5" />
+                <h3 id="matched-by-heading" className="text-xs font-semibold">
+                  Matched by
+                </h3>
+              </div>
+
+              {activeMatches.length >= 2 && (
+                <div
+                  className="bg-muted flex shrink-0 items-center rounded-xl p-0.5"
+                  role="group"
+                  aria-label="Match key behavior"
+                >
+                  <button
+                    type="button"
+                    className={cn(
+                      'rounded-lg px-2 py-1 text-[11px] font-semibold transition-colors',
+                      matchMode === 'and'
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground',
+                    )}
+                    onClick={() => setMatchMode('and')}
+                    title="All selected keys must match"
+                  >
+                    AND
+                  </button>
+                  <button
+                    type="button"
+                    className={cn(
+                      'rounded-lg px-2 py-1 text-[11px] font-semibold transition-colors',
+                      matchMode === 'or'
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground',
+                    )}
+                    onClick={() => setMatchMode('or')}
+                    title="Try keys in priority order; first match wins"
+                  >
+                    OR
+                  </button>
+                </div>
+              )}
+
+              <Select
+                value=""
+                onValueChange={(value) => {
+                  const selected = addableMatchOptions.find(
+                    (option) =>
+                      matchOptionValue(option.sourceField, option.destKey) ===
+                      value,
+                  );
+                  if (!selected) return;
+                  setMatchActive(selected.sourceField, selected.destKey, true);
+                }}
+              >
+                <SelectTrigger
+                  size="sm"
+                  className="ml-auto h-7 w-48 max-w-full"
+                >
+                  <SelectValue
+                    placeholder={
+                      activeMatches.length === 0 ? 'Choose key' : '+ Add key'
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent align="end">
+                  {addableMatchOptions.length === 0 ? (
+                    <div className="text-muted-foreground px-2.5 py-1.5 text-xs">
+                      {matchOptions.length === 0
+                        ? 'No fields mapped yet'
+                        : 'All mapped fields already added'}
+                    </div>
+                  ) : (
+                    addableMatchOptions.map(({ sourceField, destKey }) => {
+                      const field = sourceFields.find(
+                        (f) => f.key === sourceField,
+                      );
+                      const destF = destFields.find((f) => f.key === destKey);
+                      return (
+                        <SelectItem
+                          key={matchOptionValue(sourceField, destKey)}
+                          value={matchOptionValue(sourceField, destKey)}
+                          title={`Maps to ${destF?.label ?? destKey}`}
+                        >
+                          {field?.label ?? sourceField}
+                        </SelectItem>
+                      );
+                    })
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {activeMatches.length > 0 && (
+              <DragDropContext onDragEnd={handleMatchDragEnd}>
+                <Droppable droppableId="matched-by-keys" direction="horizontal">
+                  {(dropProvided) => (
+                    <div
+                      ref={dropProvided.innerRef}
+                      {...dropProvided.droppableProps}
+                      className="mt-2 flex min-w-0 items-center gap-1.5 overflow-x-auto pb-0.5"
+                    >
+                      {activeMatches.map((am, idx) => {
+                        const field = sourceFields.find(
+                          (f) => f.key === am.sourceField,
+                        );
+                        const canReorder =
+                          matchMode === 'or' && activeMatches.length > 1;
+                        return (
+                          <Draggable
+                            key={matchOptionValue(am.sourceField, am.destKey)}
+                            draggableId={matchOptionValue(
+                              am.sourceField,
+                              am.destKey,
+                            )}
+                            index={idx}
+                            isDragDisabled={!canReorder}
+                          >
+                            {(dragProvided, snapshot) => (
+                              <div
+                                ref={dragProvided.innerRef}
+                                {...dragProvided.draggableProps}
+                                style={dragProvided.draggableProps.style}
+                                className={cn(
+                                  'bg-muted/40 flex h-8 max-w-56 shrink-0 items-center rounded-xl border text-xs',
+                                  snapshot.isDragging &&
+                                    'bg-background ring-ring shadow-md ring-2',
+                                )}
+                              >
+                                {canReorder ? (
+                                  <button
+                                    type="button"
+                                    {...dragProvided.dragHandleProps}
+                                    className="text-muted-foreground hover:text-foreground flex h-full w-7 cursor-grab items-center justify-center border-r outline-none active:cursor-grabbing"
+                                    aria-label={`Reorder ${field?.label ?? am.sourceField}`}
+                                    title="Drag to change priority"
+                                  >
+                                    <GripVertical className="size-3.5" />
+                                  </button>
+                                ) : (
+                                  <KeyRound className="text-muted-foreground ml-2 size-3 shrink-0" />
+                                )}
+                                {matchMode === 'or' && (
+                                  <span className="text-primary pl-2 font-mono text-[10px] font-semibold">
+                                    {idx + 1}
+                                  </span>
+                                )}
+                                <span
+                                  className="truncate px-2 font-medium"
+                                  title={field?.label ?? am.sourceField}
+                                >
+                                  {field?.label ?? am.sourceField}
+                                </span>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon-xs"
+                                  className="text-muted-foreground hover:text-destructive mr-0.5 shrink-0"
+                                  onClick={() =>
+                                    toggleMatch(am.sourceField, am.destKey)
+                                  }
+                                  aria-label="Remove match key"
+                                  title="Remove key"
+                                >
+                                  <X />
+                                </Button>
+                              </div>
+                            )}
+                          </Draggable>
+                        );
+                      })}
+                      {dropProvided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </DragDropContext>
+            )}
+          </section>
+        </CardContent>
+      </Card> */}
+
+      <Card className="gap-0 overflow-hidden py-0">
+        <CardContent className="p-0">
+          <div className="flex flex-col gap-3 px-4 py-3 lg:flex-row lg:items-center lg:gap-4">
+            {/* Status: ready count + progress + badge */}
+            <div className="flex shrink-0 items-center gap-2.5">
+              <h3 className="text-sm font-bold whitespace-nowrap">
+                <span
+                  className={cn(
+                    naCount === 0 && pairRows.length > 0 && 'text-success',
+                  )}
+                >
+                  {readyCount}
+                </span>
+                <span className="text-muted-foreground font-medium">
+                  {' '}
+                  of {totalFields} fields ready
+                </span>
+              </h3>
+              <Progress value={progress} className="h-1.5 w-20 lg:w-24" />
+
+              {naCount > 0 ? (
+                <Badge
+                  variant="secondary"
+                  className="bg-warning/10 text-warning hover:bg-warning/10 shrink-0 gap-1.5"
+                >
+                  <span className="bg-warning size-1.5 rounded-full" />
+                  {naCount} need attention
+                </Badge>
+              ) : (
+                pairRows.length > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="bg-success/10 text-success hover:bg-success/10 shrink-0 gap-1"
+                  >
+                    <Check className="size-3" />
+                    All mapped
+                  </Badge>
+                )
+              )}
+            </div>
+
+            <div className="bg-border hidden h-8 w-px shrink-0 lg:block" />
+
+            {/* Matched by: flexes to fill remaining width, chips scroll if crowded */}
+            <section
+              className="flex min-w-0 flex-1 items-center gap-2"
+              aria-labelledby="matched-by-heading"
+            >
+              <div
+                className="flex shrink-0 items-center gap-1.5"
+                title="Fields used to find an existing destination record"
+              >
+                <KeyRound className="text-primary size-3.5" />
+                <h3
+                  id="matched-by-heading"
+                  className="text-xs font-semibold whitespace-nowrap"
+                >
+                  Matched by
+                </h3>
+              </div>
+
+              {activeMatches.length >= 2 && (
+                <div
+                  className="bg-muted h-7 flex shrink-0 items-center rounded-xl p-0.5"
+                  role="group"
+                  aria-label="Match key behavior"
+                >
+                  <button
+                    type="button"
+                    className={cn(
+                      'rounded-lg px-2 h-6 text-[11px] font-semibold transition-colors',
+                      matchMode === 'and'
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground',
+                    )}
+                    onClick={() => setMatchMode('and')}
+                    title="All selected keys must match"
+                  >
+                    AND
+                  </button>
+                  <button
+                    type="button"
+                    className={cn(
+                      'rounded-lg px-2 h-6 text-[11px] font-semibold transition-colors',
+                      matchMode === 'or'
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground',
+                    )}
+                    onClick={() => setMatchMode('or')}
+                    title="Try keys in priority order; first match wins"
+                  >
+                    OR
+                  </button>
+                </div>
+              )}
+
+              {activeMatches.length > 0 ? (
+                <DragDropContext onDragEnd={handleMatchDragEnd}>
+                  <Droppable
+                    droppableId="matched-by-keys"
+                    direction="horizontal"
+                  >
+                    {(dropProvided) => (
+                      <div
+                        ref={dropProvided.innerRef}
+                        {...dropProvided.droppableProps}
+                        className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto py-0.5"
+                      >
+                        {activeMatches.map((am, idx) => {
+                          const field = sourceFields.find(
+                            (f) => f.key === am.sourceField,
+                          );
+                          const canReorder =
+                            matchMode === 'or' && activeMatches.length > 1;
+                          return (
+                            <Draggable
+                              key={matchOptionValue(am.sourceField, am.destKey)}
+                              draggableId={matchOptionValue(
+                                am.sourceField,
+                                am.destKey,
+                              )}
+                              index={idx}
+                              isDragDisabled={!canReorder}
+                            >
+                              {(dragProvided, snapshot) => (
+                                <div
+                                  ref={dragProvided.innerRef}
+                                  {...dragProvided.draggableProps}
+                                  style={dragProvided.draggableProps.style}
+                                  className={cn(
+                                    'bg-muted/40 flex h-7 max-w-44 shrink-0 items-center rounded-xl border text-xs',
+                                    snapshot.isDragging &&
+                                      'bg-background ring-ring shadow-md ring-2',
+                                  )}
+                                >
+                                  {canReorder ? (
+                                    <button
+                                      type="button"
+                                      {...dragProvided.dragHandleProps}
+                                      className="text-muted-foreground hover:text-foreground flex h-full w-6 cursor-grab items-center justify-center border-r outline-none active:cursor-grabbing"
+                                      aria-label={`Reorder ${field?.label ?? am.sourceField}`}
+                                      title="Drag to change priority"
+                                    >
+                                      <GripVertical className="size-3.5" />
+                                    </button>
+                                  ) : (
+                                    <KeyRound className="text-muted-foreground ml-2 size-3 shrink-0" />
+                                  )}
+                                  {matchMode === 'or' && (
+                                    <span className="text-primary pl-1.5 font-mono font-semibold">
+                                      {idx + 1}
+                                    </span>
+                                  )}
+                                  <span
+                                    className="truncate px-1.5 font-medium"
+                                    title={field?.label ?? am.sourceField}
+                                  >
+                                    {field?.label ?? am.sourceField}
+                                  </span>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon-xs"
+                                    className="text-muted-foreground hover:text-destructive mr-0.5 shrink-0"
+                                    onClick={() =>
+                                      toggleMatch(am.sourceField, am.destKey)
+                                    }
+                                    aria-label="Remove match key"
+                                    title="Remove key"
+                                  >
+                                    <X />
+                                  </Button>
+                                </div>
+                              )}
+                            </Draggable>
+                          );
+                        })}
+                        {dropProvided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </DragDropContext>
+              ) : (
+                <span className="text-muted-foreground shrink-0 text-xs italic">
+                  No keys selected
+                </span>
+              )}
+
+              <Select
+                value=""
+                onValueChange={(value) => {
+                  const selected = addableMatchOptions.find(
+                    (option) =>
+                      matchOptionValue(option.sourceField, option.destKey) ===
+                      value,
+                  );
+                  if (!selected) return;
+                  setMatchActive(selected.sourceField, selected.destKey, true);
+                }}
+              >
+                <SelectTrigger size="sm" className="h-7 w-36 shrink-0">
+                  <SelectValue
+                    placeholder={
+                      activeMatches.length === 0 ? 'Choose key' : '+ Add key'
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent align="end">
+                  {addableMatchOptions.length === 0 ? (
+                    <div className="text-muted-foreground px-2.5 py-1.5 text-xs">
+                      {matchOptions.length === 0
+                        ? 'No fields mapped yet'
+                        : 'All mapped fields already added'}
+                    </div>
+                  ) : (
+                    addableMatchOptions.map(({ sourceField, destKey }) => {
+                      const field = sourceFields.find(
+                        (f) => f.key === sourceField,
+                      );
+                      const destF = destFields.find((f) => f.key === destKey);
+                      return (
+                        <SelectItem
+                          key={matchOptionValue(sourceField, destKey)}
+                          value={matchOptionValue(sourceField, destKey)}
+                          title={`Maps to ${destF?.label ?? destKey}`}
+                        >
+                          {field?.label ?? sourceField}
+                        </SelectItem>
+                      );
+                    })
+                  )}
+                </SelectContent>
+              </Select>
+            </section>
+
+            {/* Auto-map: pinned to the right on lg+, full-width row on mobile */}
+            <Button
+              onClick={handleAutoMapClick}
+              size="sm"
+              className="shrink-0"
+              disabled={
+                autoMapping ||
+                sourceFields.length === 0 ||
+                destFields.length === 0
+              }
+            >
+              {autoMapping ? <Spinner /> : <Wand2 className="size-4" />}
+              {autoMapping ? 'Auto-mapping…' : 'Auto-map'}
+            </Button>
+          </div>
         </CardContent>
       </Card>
+
       <Card className="gap-0 overflow-hidden py-0">
         <CardContent className="p-0">
           {toolbarContainer === undefined && (
@@ -2166,11 +2462,7 @@ export default function FieldMappingCanvas({
               {naCount > 0 && !mapSearch && (
                 <div
                   ref={attentionSectionRef}
-                  className={cn(
-                    'scroll-mt-28 transition-shadow',
-                    attentionHighlighted &&
-                      'ring-warning animate-pulse ring-2 ring-offset-2',
-                  )}
+                  className="scroll-mt-28 transition-shadow"
                 >
                   <Table>
                     <TableBody>

@@ -1,8 +1,13 @@
-import { Plus, X } from 'lucide-react';
+import { CircleHelp, Plus, SlidersHorizontal, Trash2 } from 'lucide-react';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -11,6 +16,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 import type {
   AssociationCondition,
@@ -119,100 +130,142 @@ export default function AssociationConditionsEditor({
   const error = validateConditions(conditions);
 
   return (
-    <FieldGroup>
-      <div className="bg-muted/40 text-muted-foreground rounded-4xl border p-3 text-xs">
-        Optional — the association is only created when the source record
-        satisfies these conditions. Leave empty to associate every matching
-        record, same as today.
+    <div className="overflow-hidden rounded-3xl border">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-semibold">Conditions</h3>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="text-muted-foreground hover:text-foreground rounded-full"
+                  aria-label="How association conditions work"
+                >
+                  <CircleHelp className="size-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                Optional filters checked on the source record before creating an
+                association.
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <Badge variant="secondary" className="font-normal">
+            {conditions.length}
+          </Badge>
+        </div>
+
+        {conditions.length > 1 && (
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground text-xs">
+              Combine conditions with
+            </span>
+            <Select
+              value={conditionLogic}
+              onValueChange={(v) => onChange(conditions, v as 'AND' | 'OR')}
+            >
+              <SelectTrigger size="sm" className="w-24">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="AND">AND</SelectItem>
+                <SelectItem value="OR">OR</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
-      {conditions.length > 1 && (
-        <Field>
-          <FieldLabel>Combine conditions with</FieldLabel>
-          <Select
-            value={conditionLogic}
-            onValueChange={(v) => onChange(conditions, v as 'AND' | 'OR')}
+      {conditions.map((cond, i) => {
+        const opDef = OPERATORS.find((o) => o.value === cond.operator);
+        const needsValue = opDef?.needsValue ?? true;
+        const isMulti = opDef?.multiValue ?? false;
+        const missingValue =
+          needsValue &&
+          (cond.value === undefined ||
+            cond.value === null ||
+            cond.value === '');
+        const norm = cond.normalization ?? {};
+        const activeNormalizationCount = [
+          norm.trim,
+          norm.lowercase,
+          norm.removeWhitespace,
+        ].filter(Boolean).length;
+
+        return (
+          <div
+            key={i}
+            className="grid gap-2 border-t px-4 py-3 md:grid-cols-[3.5rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_4.5rem] md:items-end"
+            data-invalid={!cond.field || !cond.operator || missingValue}
           >
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="AND">AND</SelectItem>
-              <SelectItem value="OR">OR</SelectItem>
-            </SelectContent>
-          </Select>
-        </Field>
-      )}
+            <div className="flex h-9 items-center">
+              <Badge
+                variant={i === 0 ? 'secondary' : 'outline'}
+                className="font-normal"
+              >
+                {i === 0 ? 'Where' : conditionLogic}
+              </Badge>
+            </div>
 
-      <div className="space-y-3">
-        {conditions.map((cond, i) => {
-          const opDef = OPERATORS.find((o) => o.value === cond.operator);
-          const needsValue = opDef?.needsValue ?? true;
-          const isMulti = opDef?.multiValue ?? false;
-          const rowIncomplete = !cond.field || !cond.operator;
-          const norm = cond.normalization ?? {};
-
-          return (
-            <div
-              key={i}
-              className="bg-muted/30 space-y-2 rounded-4xl border p-3"
-              data-invalid={rowIncomplete}
-            >
-              <div className="flex items-center gap-2">
-                {fields.length > 0 ? (
-                  <Select
-                    value={cond.field}
-                    onValueChange={(v) => update(i, { field: v })}
-                  >
-                    <SelectTrigger className="h-9 flex-1 font-mono text-xs">
-                      <SelectValue placeholder="Select field…" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {fields.map((f) => (
-                        <SelectItem key={f.field} value={f.field}>
-                          {f.field}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input
-                    value={cond.field}
-                    onChange={(e) => update(i, { field: e.target.value })}
-                    placeholder="Field name"
-                    className="h-9 flex-1 font-mono text-xs"
-                  />
-                )}
-
+            <div className="min-w-0">
+              <p className="text-muted-foreground mb-1 text-[11px] font-medium">
+                Source field
+              </p>
+              {fields.length > 0 ? (
                 <Select
-                  value={cond.operator}
-                  onValueChange={(v) =>
-                    update(i, { operator: v as ConditionOperator })
-                  }
+                  value={cond.field}
+                  onValueChange={(v) => update(i, { field: v })}
                 >
-                  <SelectTrigger className="h-9 w-52 text-xs">
-                    <SelectValue />
+                  <SelectTrigger className="h-9 w-full font-mono text-xs">
+                    <SelectValue placeholder="Select field…" />
                   </SelectTrigger>
                   <SelectContent>
-                    {OPERATORS.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>
-                        {o.label}
+                    {fields.map((f) => (
+                      <SelectItem key={f.field} value={f.field}>
+                        {f.field}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+              ) : (
+                <Input
+                  value={cond.field}
+                  onChange={(e) => update(i, { field: e.target.value })}
+                  placeholder="Field name"
+                  className="h-9 font-mono text-xs"
+                />
+              )}
+            </div>
 
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => remove(i)}
-                  title="Remove condition"
-                >
-                  <X className="size-4" />
-                </Button>
-              </div>
+            <div className="min-w-0">
+              <p className="text-muted-foreground mb-1 text-[11px] font-medium">
+                Operator
+              </p>
+              <Select
+                value={cond.operator}
+                onValueChange={(v) =>
+                  update(i, { operator: v as ConditionOperator })
+                }
+              >
+                <SelectTrigger className="h-9 w-full text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {OPERATORS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-              {needsValue && (
+            <div className="min-w-0">
+              <p className="text-muted-foreground mb-1 text-[11px] font-medium">
+                Value
+              </p>
+              {needsValue ? (
                 <Input
                   value={
                     Array.isArray(cond.value)
@@ -229,59 +282,106 @@ export default function AssociationConditionsEditor({
                   placeholder={
                     isMulti ? 'value1, value2, …' : 'Comparison value'
                   }
+                  aria-invalid={missingValue}
                   className="h-9 font-mono text-xs"
                 />
+              ) : (
+                <div className="bg-muted/30 text-muted-foreground flex h-9 items-center rounded-3xl border px-3 text-xs">
+                  Not required
+                </div>
               )}
-
-              <div className="flex flex-wrap items-center gap-4 pt-1">
-                <label className="flex items-center gap-1.5">
-                  <Switch
-                    checked={!!norm.trim}
-                    onCheckedChange={(v) =>
-                      update(i, { normalization: { ...norm, trim: v } })
-                    }
-                  />
-                  <span className="text-muted-foreground text-xs">
-                    Trim whitespace
-                  </span>
-                </label>
-                <label className="flex items-center gap-1.5">
-                  <Switch
-                    checked={!!norm.lowercase}
-                    onCheckedChange={(v) =>
-                      update(i, { normalization: { ...norm, lowercase: v } })
-                    }
-                  />
-                  <span className="text-muted-foreground text-xs">
-                    Case-insensitive
-                  </span>
-                </label>
-                <label className="flex items-center gap-1.5">
-                  <Switch
-                    checked={!!norm.removeWhitespace}
-                    onCheckedChange={(v) =>
-                      update(i, {
-                        normalization: { ...norm, removeWhitespace: v },
-                      })
-                    }
-                  />
-                  <span className="text-muted-foreground text-xs">
-                    Ignore whitespace
-                  </span>
-                </label>
-              </div>
             </div>
-          );
-        })}
-      </div>
 
-      <Button variant="outline" size="sm" onClick={add} type="button">
-        <Plus className="mr-2 size-3.5" /> Add Condition
-      </Button>
+            <div className="flex h-9 items-center justify-end gap-1">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="text-muted-foreground relative"
+                    aria-label={`Formatting options for condition ${i + 1}`}
+                    title="Formatting options"
+                  >
+                    <SlidersHorizontal />
+                    {activeNormalizationCount > 0 && (
+                      <span className="bg-primary absolute top-1 right-1 size-1.5 rounded-full" />
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-72 gap-3">
+                  <div>
+                    <p className="text-sm font-semibold">Format before match</p>
+                    <p className="text-muted-foreground mt-0.5 text-xs">
+                      Normalize the source value before evaluating this row.
+                    </p>
+                  </div>
+                  <label className="flex items-center justify-between gap-3">
+                    <span className="text-xs">Trim outer whitespace</span>
+                    <Switch
+                      checked={!!norm.trim}
+                      onCheckedChange={(v) =>
+                        update(i, { normalization: { ...norm, trim: v } })
+                      }
+                    />
+                  </label>
+                  <label className="flex items-center justify-between gap-3">
+                    <span className="text-xs">Ignore letter case</span>
+                    <Switch
+                      checked={!!norm.lowercase}
+                      onCheckedChange={(v) =>
+                        update(i, {
+                          normalization: { ...norm, lowercase: v },
+                        })
+                      }
+                    />
+                  </label>
+                  <label className="flex items-center justify-between gap-3">
+                    <span className="text-xs">Remove all whitespace</span>
+                    <Switch
+                      checked={!!norm.removeWhitespace}
+                      onCheckedChange={(v) =>
+                        update(i, {
+                          normalization: { ...norm, removeWhitespace: v },
+                        })
+                      }
+                    />
+                  </label>
+                </PopoverContent>
+              </Popover>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => remove(i)}
+                aria-label={`Remove condition ${i + 1}`}
+                title="Remove condition"
+              >
+                <Trash2 />
+              </Button>
+            </div>
+          </div>
+        );
+      })}
+
+      {conditions.length === 0 && (
+        <div className="text-muted-foreground border-t px-4 py-6 text-center text-xs">
+          No conditions — every matched record is eligible.
+        </div>
+      )}
 
       {error && conditions.length > 0 && (
-        <p className="text-destructive text-xs">{error}</p>
+        <p className="text-destructive border-t px-4 py-2 text-xs">{error}</p>
       )}
-    </FieldGroup>
+
+      <div className="bg-muted/20 flex items-center justify-between border-t px-4 py-2.5">
+        <span className="text-muted-foreground text-xs">
+          {conditions.length} condition{conditions.length === 1 ? '' : 's'}
+        </span>
+        <Button variant="outline" size="sm" onClick={add} type="button">
+          <Plus /> Add condition
+        </Button>
+      </div>
+    </div>
   );
 }
