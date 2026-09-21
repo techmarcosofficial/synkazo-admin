@@ -71,6 +71,8 @@ const SKIP_REASON_OPTIONS = [
   'filter_excluded',
   'no_id_match',
   'manually_excluded',
+  'matched_no_update',
+  'record_level_conflict',
 ];
 const FAIL_REASON_OPTIONS = [
   'api_error',
