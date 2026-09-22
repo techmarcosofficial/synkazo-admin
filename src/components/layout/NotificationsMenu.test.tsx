@@ -137,6 +137,15 @@ describe('NotificationsMenu', () => {
       'datetime',
       '2026-09-22T08:00:00.000Z',
     );
+    const statusIcon = popover?.querySelector(
+      '[data-slot="notification-icon"]',
+    );
+    expect(statusIcon).not.toHaveClass('bg-success/10', 'rounded-full');
+    expect(statusIcon?.querySelector('svg')).toHaveClass(
+      'size-5',
+      'stroke-[1.75]',
+      'text-success',
+    );
     expect(
       within(popover as HTMLElement).getByText('Here are your latest updates.'),
     ).toBeVisible();

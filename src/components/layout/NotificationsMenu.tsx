@@ -45,11 +45,11 @@ type NotifTone = 'success' | 'warning' | 'danger' | 'info';
 type NotifCategory = 'sync' | 'system';
 type FilterTab = 'all' | 'unread' | 'sync' | 'system';
 
-const TONE_CLASSES: Record<NotifTone, { bg: string; text: string }> = {
-  success: { bg: 'bg-success/10', text: 'text-success' },
-  warning: { bg: 'bg-warning/10', text: 'text-warning' },
-  danger: { bg: 'bg-destructive/10', text: 'text-destructive' },
-  info: { bg: 'bg-info/10', text: 'text-info' },
+const TONE_CLASSES: Record<NotifTone, string> = {
+  success: 'text-success',
+  warning: 'text-warning',
+  danger: 'text-destructive',
+  info: 'text-info',
 };
 
 // One entry per backend NotificationType (see notifications/entities/notification.entity.ts).
@@ -164,12 +164,10 @@ function NotificationItem({
         }}
       >
         <div
-          className={cn(
-            'mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full',
-            tone.bg,
-          )}
+          data-slot="notification-icon"
+          className="mt-0.5 flex size-7 shrink-0 items-center justify-center"
         >
-          <Icon className={cn('size-3.5', tone.text)} aria-hidden />
+          <Icon className={cn('size-5 stroke-[1.75]', tone)} aria-hidden />
         </div>
         <div className="min-w-0 flex-1 space-y-0.5">
           <div className="flex items-start gap-2">
