@@ -31,7 +31,6 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -173,30 +172,33 @@ function NotificationItem({
           <Icon className={cn('size-3.5', tone.text)} aria-hidden />
         </div>
         <div className="min-w-0 flex-1 space-y-0.5">
-          <div className="flex items-start justify-between gap-3">
-            <p className="text-sm leading-4.5 font-medium">
+          <div className="flex items-start gap-2">
+            <p className="min-w-0 flex-1 truncate text-sm leading-4.5 font-medium">
               {notification.title || notification.message}
             </p>
-            {isUnread && (
-              <span
-                className="bg-primary mt-1.5 size-2 shrink-0 rounded-full"
-                aria-label="Unread"
-              />
-            )}
+            <div className="flex shrink-0 items-center gap-2">
+              {notification.createdAt && (
+                <time
+                  className="text-muted-foreground text-[11px] leading-4 whitespace-nowrap"
+                  dateTime={notification.createdAt}
+                  title={new Date(notification.createdAt).toLocaleString()}
+                >
+                  {formatDistanceToNow(new Date(notification.createdAt), {
+                    addSuffix: true,
+                  })}
+                </time>
+              )}
+              {isUnread && (
+                <span
+                  className="bg-primary size-2 shrink-0 rounded-full"
+                  aria-label="Unread"
+                />
+              )}
+            </div>
           </div>
           {notification.title && (
             <p className="text-muted-foreground line-clamp-1 text-xs leading-4">
               {notification.message}
-            </p>
-          )}
-          {notification.createdAt && (
-            <p
-              className="text-muted-foreground text-[11px] leading-4"
-              title={new Date(notification.createdAt).toLocaleString()}
-            >
-              {formatDistanceToNow(new Date(notification.createdAt), {
-                addSuffix: true,
-              })}
             </p>
           )}
         </div>
@@ -419,7 +421,7 @@ export default function NotificationsMenu() {
           </Card>
 
           <Card size="sm" className="gap-0 overflow-hidden py-0 shadow-lg">
-            <ScrollArea className="max-h-[min(22rem,50vh)]">
+            <div className="max-h-[min(22rem,50vh)] overflow-y-auto overscroll-contain">
               {isLoading ? (
                 <NotificationListSkeleton />
               ) : isError ? (
@@ -436,7 +438,7 @@ export default function NotificationsMenu() {
                   </TabsContent>
                 ))
               )}
-            </ScrollArea>
+            </div>
 
             <div className="bg-muted/30 flex items-center justify-between gap-3 border-t px-3 py-2">
               <Button asChild variant="ghost" size="sm">

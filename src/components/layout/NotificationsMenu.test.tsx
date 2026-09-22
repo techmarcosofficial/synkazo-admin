@@ -122,6 +122,14 @@ describe('NotificationsMenu', () => {
       'data-variant',
       'line',
     );
+    expect(popover?.querySelector('.overflow-y-auto')).toHaveClass(
+      'max-h-[min(22rem,50vh)]',
+      'overscroll-contain',
+    );
+    expect(popover?.querySelector('time')).toHaveAttribute(
+      'datetime',
+      '2026-09-22T08:00:00.000Z',
+    );
     expect(
       within(popover as HTMLElement).getByText('Here are your latest updates.'),
     ).toBeVisible();
