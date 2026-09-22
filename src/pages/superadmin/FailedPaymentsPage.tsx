@@ -1,7 +1,10 @@
 import { formatDistanceToNow } from 'date-fns';
-import { CreditCard, ExternalLink } from 'lucide-react';
+import { CreditCard, ExternalLink, RotateCcw } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+
+import { showToast } from '@/lib/toast';
+import { useRetryInvoiceMutation } from '@/queries/useSuperAdmin';
 
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
@@ -32,6 +35,7 @@ import {
 } from '@/components/ui/table';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useSuperAdminFailedPaymentsQuery } from '@/queries/useSuperAdmin';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import type { SubscriptionStatus } from '@/types';
 
 type StatusFilter = 'all' | 'past_due' | 'unpaid' | 'incomplete';
@@ -74,6 +78,65 @@ function formatCurrency(amount: number, currency: string | null): string {
 function extractErrorMessage(err: unknown): string {
   const e = err as { response?: { data?: { message?: string } } };
   return e?.response?.data?.message ?? 'The request failed. Try again.';
+}
+
+// SA-706 retry button — safe idempotent action, so a simple
+// confirmation dialog is enough (typed-name + reason would be
+// overkill for a defensive charge attempt).
+function RetryButton({
+  organisationId,
+  invoiceId,
+}: {
+  organisationId: string;
+  invoiceId: string | null;
+}) {
+  const { confirm } = useConfirmDialog();
+  const retryMutation = useRetryInvoiceMutation(organisationId);
+
+  if (!invoiceId) return null;
+
+  const disabled = retryMutation.isPending;
+
+  const onClick = () => {
+    confirm({
+      variant: 'warning',
+      title: 'Retry this invoice through Stripe?',
+      description:
+        'Pushes a fresh charge attempt without waiting for the next dunning cycle. Safe to run again if the previous attempt still needs a customer action.',
+      confirmLabel: 'Retry now',
+      onConfirm: async () => {
+        try {
+          const result = await retryMutation.mutateAsync({
+            invoiceId,
+            dto: {},
+          });
+          if (result.status === 'paid') {
+            showToast.success('Invoice paid.');
+          } else {
+            showToast.info(`Retry queued — Stripe status: ${result.status}.`);
+          }
+        } catch (err) {
+          showToast.error(extractErrorMessage(err));
+        }
+      },
+    });
+  };
+
+  return (
+    <button
+      type="button"
+      className="text-muted-foreground hover:text-foreground rounded p-1 disabled:opacity-50"
+      onClick={onClick}
+      disabled={disabled}
+      title="Retry through Stripe"
+      aria-label="Retry invoice"
+    >
+      <RotateCcw
+        className={`size-3.5 ${disabled ? 'animate-spin' : ''}`}
+        aria-hidden
+      />
+    </button>
+  );
 }
 
 export default function FailedPaymentsPage() {
@@ -276,7 +339,11 @@ export default function FailedPaymentsPage() {
                       </span>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="flex items-center justify-end gap-2">
+                    <RetryButton
+                      organisationId={row.organisationId}
+                      invoiceId={row.latestFailedInvoiceId}
+                    />
                     <Link
                       to={`/super-admin/organisations/${row.organisationId}/billing`}
                       aria-label={`Open ${row.organisationName} billing`}

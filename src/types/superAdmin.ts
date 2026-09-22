@@ -305,6 +305,18 @@ export interface CancelSubscriptionImmediateResponse {
 // SA-705 failed-payments queue row. Denormalised so the queue page can
 // render every column without joining subscriptions / orders / orgs on
 // the client.
+export interface RetryInvoiceDto {
+  note?: string;
+}
+
+export interface RetryInvoiceResponse {
+  command: 'invoice_retry';
+  orderId: string;
+  stripeInvoiceId: string;
+  status: string;
+  amount: number;
+}
+
 export interface FailedPaymentRow {
   organisationId: string;
   organisationName: string;
