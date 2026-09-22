@@ -173,12 +173,18 @@ export default function OrganisationDetailPage() {
       ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          icon={Users}
-          label="Members"
-          value={org.usage.members.active}
-          hint={`of ${formatLimit(org.usage.members.limit)} allowed · ${org.usage.members.total} total`}
-        />
+        <Link
+          to={`/super-admin/organisations/${org.id}/members`}
+          className="block"
+          aria-label="Manage members"
+        >
+          <StatCard
+            icon={Users}
+            label="Members"
+            value={org.usage.members.active}
+            hint={`of ${formatLimit(org.usage.members.limit)} allowed · ${org.usage.members.total} total`}
+          />
+        </Link>
         <StatCard
           icon={FolderOpen}
           label="Projects"
