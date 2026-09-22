@@ -302,6 +302,26 @@ export interface CancelSubscriptionImmediateResponse {
   effectiveAt: string;
 }
 
+// SA-705 failed-payments queue row. Denormalised so the queue page can
+// render every column without joining subscriptions / orders / orgs on
+// the client.
+export interface FailedPaymentRow {
+  organisationId: string;
+  organisationName: string;
+  organisationSlug: string;
+  ownerEmail: string;
+  subscriptionStatus: SubscriptionStatus;
+  subscriptionId: string | null;
+  amountDue: number;
+  currency: string | null;
+  latestFailedInvoiceId: string | null;
+  latestFailedInvoiceNumber: string | null;
+  firstFailureAt: string | null;
+  daysInGrace: number | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+}
+
 // Platform-wide overview (Phase 3). One aggregate call to avoid client
 // fan-out across organisations; every metric is a link to a filtered list
 // in the corresponding subsystem screen.

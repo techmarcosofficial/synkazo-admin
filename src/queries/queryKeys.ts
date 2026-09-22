@@ -155,6 +155,19 @@ export const queryKeys = {
   superAdmin: {
     platform: {
       overview: ['superAdmin', 'platform', 'overview'] as const,
+      failedPayments: (
+        page: number,
+        limit: number,
+        filters: Record<string, unknown> = {},
+      ) =>
+        [
+          'superAdmin',
+          'platform',
+          'failedPayments',
+          page,
+          limit,
+          filters,
+        ] as const,
     },
     organisations: {
       list: (

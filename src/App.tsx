@@ -55,6 +55,7 @@ import SchedulerHealth from '@/pages/SchedulerHealth';
 import PreferencesTab from '@/pages/settings/tabs/PreferencesTab';
 import ProfileTab from '@/pages/settings/tabs/ProfileTab';
 import SettingsLayout from '@/pages/settings/SettingsLayout';
+import FailedPaymentsPage from '@/pages/superadmin/FailedPaymentsPage';
 import OrganisationsPage from '@/pages/superadmin/OrganisationsPage';
 import OrganisationBillingPage from '@/pages/superadmin/OrganisationBillingPage';
 import OrganisationDetailPage from '@/pages/superadmin/OrganisationDetailPage';
@@ -249,6 +250,10 @@ function App() {
                 <Route path="projects" element={<SuperAdminProjectsPage />} />
                 <Route path="plans" element={<PlanManagementPage />} />
                 <Route path="discounts" element={<DiscountManagementPage />} />
+                <Route
+                  path="failed-payments"
+                  element={<FailedPaymentsPage />}
+                />
                 <Route path="system" element={<SystemSettingsPage />} />
                 <Route path="audit-log" element={<PlatformAuditPage />} />
                 <Route
