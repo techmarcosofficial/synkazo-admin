@@ -4,6 +4,7 @@ import { queryKeys } from './queryKeys';
 
 import { superAdminActivityApi } from '@/api/superAdminActivity';
 import { superAdminBillingApi } from '@/api/superAdminBilling';
+import { superAdminPlatformApi } from '@/api/superAdminPlatform';
 import {
   superAdminMembersApi,
   type ListInvitationsParams,
@@ -22,6 +23,22 @@ import type {
   SuperAdminRunJobDto,
   SuperAdminUpdateOrganisationDto,
 } from '@/types';
+
+// ── Platform overview ─────────────────────────────────────────────────
+
+export function useSuperAdminPlatformOverviewQuery(opts?: {
+  refetchIntervalMs?: number;
+}) {
+  return useQuery({
+    queryKey: queryKeys.superAdmin.platform.overview,
+    queryFn: () => superAdminPlatformApi.overview(),
+    // The overview is cheap enough server-side and its cache lifetime is
+    // very short; auto-refresh keeps operator situational awareness
+    // without a hard-refresh button being the only path to fresh numbers.
+    refetchInterval: opts?.refetchIntervalMs ?? 30_000,
+    staleTime: 15_000,
+  });
+}
 
 // ── Organisations ─────────────────────────────────────────────────────
 

@@ -153,6 +153,9 @@ export const queryKeys = {
 // its second slot so React Query never returns Organisation A's cached
 // data while the sidebar is displaying Organisation B (SA-202, SA-213).
   superAdmin: {
+    platform: {
+      overview: ['superAdmin', 'platform', 'overview'] as const,
+    },
     organisations: {
       list: (
         page: number,
