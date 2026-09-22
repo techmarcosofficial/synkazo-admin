@@ -23,6 +23,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import { useJobDetailContext } from '../context';
+import { RecordReason } from './RecordReason';
 
 import { jobsApi } from '@/api/jobs';
 import { syncLogsApi, type SyncPageLog } from '@/api/syncLogs';
@@ -182,61 +183,6 @@ const ACTION_CONFIG = {
     label: 'Failed',
   },
 };
-
-/**
- * The right-hand cell of a record row: why it was skipped/failed, or where it
- * landed. The reason badge names the category and the text is the one-line
- * cause the API already narrowed to this record — the full destination
- * response stays in the record log for anyone who needs it.
- */
-function RecordReason({
-  rec,
-  showDestinationFallback = true,
-}: {
-  rec: SyncLogRecord;
-  showDestinationFallback?: boolean;
-}) {
-  const reason = rec.skipReason || rec.failReason;
-  const detail = rec.skipReasonDetail || rec.failReasonDetail;
-
-  if (!reason && !detail) {
-    return (
-      <span className="text-muted-foreground flex min-w-0 flex-1 items-center gap-1 truncate">
-        {showDestinationFallback && rec.destRecordId ? (
-          <>
-            <ArrowRight className="size-3 shrink-0" /> {rec.destRecordId}
-          </>
-        ) : (
-          '—'
-        )}
-      </span>
-    );
-  }
-
-  return (
-    <span className="flex min-w-0 flex-1 items-center gap-2">
-      {reason && (
-        <Badge
-          variant="outline"
-          className={cn(
-            'shrink-0 border-transparent font-normal',
-            rec.action === 'failed'
-              ? 'bg-destructive/10 text-destructive'
-              : 'bg-muted text-muted-foreground',
-          )}
-        >
-          {enumLabel(reason)}
-        </Badge>
-      )}
-      <span
-        className="text-muted-foreground min-w-0 flex-1 truncate"
-        title={detail ?? undefined}
-      >
-        {detail || '—'}
-      </span>
-    </span>
-  );
-}
 
 function ExpandChevron({
   open,
@@ -405,12 +351,19 @@ function PageRow({
   jobId,
   runId,
   recordSearch,
+  recordContext,
 }: {
   pg: SyncPageLog;
   projectId: string;
   jobId: string;
   runId: string;
   recordSearch?: string;
+  recordContext?: {
+    sourceObject?: string;
+    destObject?: string;
+    sourcePlatform?: string;
+    destPlatform?: string;
+  };
 }) {
   const [open, setOpen] = useState(false);
   const [records, setRecords] = useState<SyncLogRecord[]>([]);
@@ -585,7 +538,7 @@ function PageRow({
                 );
               })}
             </div>
-            <Separator orientation="vertical" className="my-auto h-4 mr-1" />
+            <Separator orientation="vertical" className="my-auto mr-1 h-4" />
           </>
         )}
 
@@ -676,10 +629,7 @@ function PageRow({
                           {record.destRecordId || '—'}
                         </td>
                         <td className="max-w-sm px-3 py-1.5">
-                          <RecordReason
-                            rec={record}
-                            showDestinationFallback={false}
-                          />
+                          <RecordReason rec={record} context={recordContext} />
                         </td>
                       </tr>
                     );
@@ -723,7 +673,7 @@ function PageRow({
                     ))}
                   </SelectContent>
                 </Select>
-                <Separator orientation="vertical" className='h-5 my-auto' />
+                <Separator orientation="vertical" className="my-auto h-5" />
                 <Button
                   variant="outline"
                   size="xs"
@@ -1065,6 +1015,12 @@ function RunLogRow({
                     jobId={jobId}
                     runId={run.id}
                     recordSearch={recordSearch}
+                    recordContext={{
+                      sourceObject: run.sourceObject,
+                      destObject: run.destObject,
+                      sourcePlatform: run.sourcePlatform,
+                      destPlatform: run.destPlatform,
+                    }}
                   />
                 ))}
               </div>
