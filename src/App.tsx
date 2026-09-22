@@ -58,6 +58,8 @@ import SettingsLayout from '@/pages/settings/SettingsLayout';
 import OrganisationsPage from '@/pages/superadmin/OrganisationsPage';
 import OrganisationDetailPage from '@/pages/superadmin/OrganisationDetailPage';
 import OrganisationMembersPage from '@/pages/superadmin/OrganisationMembersPage';
+import OrganisationProjectDetailPage from '@/pages/superadmin/OrganisationProjectDetailPage';
+import OrganisationProjectsPage from '@/pages/superadmin/OrganisationProjectsPage';
 import MarketingPage from '@/pages/superadmin/MarketingPage';
 import OverviewPage from '@/pages/superadmin/OverviewPage';
 import PlatformAuditPage from '@/pages/superadmin/PlatformAuditPage';
@@ -228,6 +230,14 @@ function App() {
                 <Route
                   path="organisations/:organisationId/members"
                   element={<OrganisationMembersPage />}
+                />
+                <Route
+                  path="organisations/:organisationId/projects"
+                  element={<OrganisationProjectsPage />}
+                />
+                <Route
+                  path="organisations/:organisationId/projects/:projectId"
+                  element={<OrganisationProjectDetailPage />}
                 />
                 <Route path="users" element={<UsersPage />} />
                 <Route path="marketing" element={<MarketingPage />} />

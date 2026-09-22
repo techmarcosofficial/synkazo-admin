@@ -185,12 +185,18 @@ export default function OrganisationDetailPage() {
             hint={`of ${formatLimit(org.usage.members.limit)} allowed · ${org.usage.members.total} total`}
           />
         </Link>
-        <StatCard
-          icon={FolderOpen}
-          label="Projects"
-          value={org.usage.projects.count}
-          hint={`of ${formatLimit(org.usage.projects.limit)} allowed${org.usage.projects.over ? ' · over plan' : ''}`}
-        />
+        <Link
+          to={`/super-admin/organisations/${org.id}/projects`}
+          className="block"
+          aria-label="Manage projects"
+        >
+          <StatCard
+            icon={FolderOpen}
+            label="Projects"
+            value={org.usage.projects.count}
+            hint={`of ${formatLimit(org.usage.projects.limit)} allowed${org.usage.projects.over ? ' · over plan' : ''}`}
+          />
+        </Link>
         <StatCard
           icon={Package}
           label="Jobs"
