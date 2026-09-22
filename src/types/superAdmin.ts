@@ -147,17 +147,28 @@ export interface SuperAdminRunStatus {
 }
 
 export interface SuperAdminBillingOverview {
-  planName: string;
-  planId: string | null;
-  subscriptionStatus: SubscriptionStatus;
-  trialEndsAt: string | null;
-  currentPeriodEnd: string | null;
-  cancelAtPeriodEnd: boolean;
-  paymentHoldActive: boolean;
-  recordUsage: {
-    used: number;
-    limit: number | null;
-    resetsAt: string | null;
+  plan: {
+    planId: string | null;
+    planName: string;
+    subscriptionStatus: SubscriptionStatus;
+    billingInterval: string | null;
+    trialEndsAt: string | null;
+    trialPendingStart: boolean;
+    currentPeriodEnd: string | null;
+    cancelAtPeriodEnd: boolean;
+    overLimit: {
+      projects: { count: number; limit: number | null; over: boolean };
+      jobs: { count: number; limit: number | null; over: boolean };
+      teamMembers: { count: number; limit: number | null; over: boolean };
+      records: { count: number; limit: number | null; over: boolean };
+      isOverLimit: boolean;
+    };
+  };
+  usage: {
+    recordsSynced: number;
+    maxRecordsPerMonth: number | null;
+    periodStart: string;
+    remaining: number | null;
   };
 }
 
