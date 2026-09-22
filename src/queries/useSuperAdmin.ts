@@ -4,6 +4,7 @@ import { queryKeys } from './queryKeys';
 
 import { superAdminActivityApi } from '@/api/superAdminActivity';
 import { superAdminBillingApi } from '@/api/superAdminBilling';
+import { superAdminOrganisationLifecycleApi } from '@/api/superAdminOrganisationLifecycle';
 import { superAdminPlatformApi } from '@/api/superAdminPlatform';
 import {
   superAdminMembersApi,
@@ -19,9 +20,13 @@ import {
   type ListSuperAdminOrganisationsParams,
 } from '@/api/superAdminOrganisations';
 import type {
+  ClearPaymentHoldDto,
+  HoldWorkDto,
+  PaymentHoldDto,
   SuperAdminInviteMemberDto,
   SuperAdminRunJobDto,
   SuperAdminUpdateOrganisationDto,
+  TransitionOrganisationStatusDto,
 } from '@/types';
 
 // ── Platform overview ─────────────────────────────────────────────────
@@ -83,6 +88,71 @@ export function useUpdateSuperAdminOrganisationMutation(
         queryKey: queryKeys.superAdmin.orgScope(organisationId),
       });
     },
+  });
+}
+
+// ── Lifecycle actions ─────────────────────────────────────────────────
+
+function invalidateOrgAfterLifecycle(
+  queryClient: ReturnType<typeof useQueryClient>,
+  organisationId: string,
+) {
+  queryClient.invalidateQueries({
+    queryKey: queryKeys.superAdmin.organisations.detail(organisationId),
+  });
+  queryClient.invalidateQueries({
+    queryKey: ['superAdmin', 'organisations'],
+  });
+  queryClient.invalidateQueries({
+    queryKey: queryKeys.superAdmin.orgScope(organisationId),
+  });
+  queryClient.invalidateQueries({
+    queryKey: queryKeys.superAdmin.platform.overview,
+  });
+}
+
+export function useTransitionOrganisationStatusMutation(organisationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: TransitionOrganisationStatusDto) =>
+      superAdminOrganisationLifecycleApi.transitionStatus(organisationId, dto),
+    onSuccess: () => invalidateOrgAfterLifecycle(queryClient, organisationId),
+  });
+}
+
+export function useHoldOrganisationWorkMutation(organisationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: HoldWorkDto) =>
+      superAdminOrganisationLifecycleApi.hold(organisationId, dto),
+    onSuccess: () => invalidateOrgAfterLifecycle(queryClient, organisationId),
+  });
+}
+
+export function useResumeOrganisationWorkMutation(organisationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      superAdminOrganisationLifecycleApi.resume(organisationId),
+    onSuccess: () => invalidateOrgAfterLifecycle(queryClient, organisationId),
+  });
+}
+
+export function useImposePaymentHoldMutation(organisationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: PaymentHoldDto) =>
+      superAdminOrganisationLifecycleApi.imposePaymentHold(organisationId, dto),
+    onSuccess: () => invalidateOrgAfterLifecycle(queryClient, organisationId),
+  });
+}
+
+export function useClearPaymentHoldMutation(organisationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: ClearPaymentHoldDto) =>
+      superAdminOrganisationLifecycleApi.clearPaymentHold(organisationId, dto),
+    onSuccess: () => invalidateOrgAfterLifecycle(queryClient, organisationId),
   });
 }
 
