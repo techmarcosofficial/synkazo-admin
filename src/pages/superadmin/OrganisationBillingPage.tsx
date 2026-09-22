@@ -91,7 +91,8 @@ function BillingOverviewSection({
   overview: SuperAdminBillingOverview;
 }) {
   const { plan, usage } = overview;
-  const limitLabel = (n: number | null) => (n == null ? 'Unlimited' : n.toLocaleString());
+  const limitLabel = (n: number | null) =>
+    n == null ? 'Unlimited' : n.toLocaleString();
 
   return (
     <>
@@ -110,7 +111,9 @@ function BillingOverviewSection({
           </div>
           {plan.billingInterval ? (
             <div>
-              <dt className="text-muted-foreground text-xs">Billing interval</dt>
+              <dt className="text-muted-foreground text-xs">
+                Billing interval
+              </dt>
               <dd className="font-medium">{plan.billingInterval}</dd>
             </div>
           ) : null}
@@ -128,7 +131,9 @@ function BillingOverviewSection({
           ) : null}
           {plan.currentPeriodEnd ? (
             <div>
-              <dt className="text-muted-foreground text-xs">Current period ends</dt>
+              <dt className="text-muted-foreground text-xs">
+                Current period ends
+              </dt>
               <dd>
                 {format(new Date(plan.currentPeriodEnd), 'PP')} (
                 {formatDistanceToNow(new Date(plan.currentPeriodEnd), {
@@ -140,7 +145,9 @@ function BillingOverviewSection({
           ) : null}
           {plan.cancelAtPeriodEnd ? (
             <div>
-              <dt className="text-muted-foreground text-xs">Cancel scheduled</dt>
+              <dt className="text-muted-foreground text-xs">
+                Cancel scheduled
+              </dt>
               <dd className="text-amber-800">
                 Subscription will cancel at period end.
               </dd>
@@ -242,9 +249,7 @@ export default function OrganisationBillingPage() {
           {orgQuery.data && overviewQuery.data ? (
             <SubscriptionActions
               organisation={orgQuery.data}
-              subscriptionStatus={
-                overviewQuery.data.plan.subscriptionStatus
-              }
+              subscriptionStatus={overviewQuery.data.plan.subscriptionStatus}
               cancelAtPeriodEnd={overviewQuery.data.plan.cancelAtPeriodEnd}
             />
           ) : null}
@@ -308,11 +313,16 @@ export default function OrganisationBillingPage() {
                     <TableCell className="text-right font-mono text-sm">
                       {formatCurrency(invoice.amountPaid, invoice.currency)}
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
+                    {/* Temp comment before  uncomment this please veryfiy the sape of api response
+                      RangeError: Invalid time value
+                      at OrganisationBillingPage.tsx:312:24
+                      at Array.map
+                    */}
+                    {/* <TableCell className="text-muted-foreground text-sm">
                       {formatDistanceToNow(new Date(invoice.createdAt), {
                         addSuffix: true,
                       })}
-                    </TableCell>
+                    </TableCell> */}
                     <TableCell className="text-muted-foreground text-sm">
                       {invoice.paidAt
                         ? formatDistanceToNow(new Date(invoice.paidAt), {
