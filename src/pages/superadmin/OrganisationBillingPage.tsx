@@ -26,6 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import SubscriptionActions from '@/pages/superadmin/billing/SubscriptionActions';
 import {
   useSuperAdminBillingOverviewQuery,
   useSuperAdminInvoicesQuery,
@@ -233,10 +234,21 @@ export default function OrganisationBillingPage() {
           <ArrowLeft className="size-3.5" aria-hidden />
           Back to organisation
         </Link>
-        <PageHeader
-          title="Billing"
-          description={orgQuery.data?.name ?? organisationId}
-        />
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <PageHeader
+            title="Billing"
+            description={orgQuery.data?.name ?? organisationId}
+          />
+          {orgQuery.data && overviewQuery.data ? (
+            <SubscriptionActions
+              organisation={orgQuery.data}
+              subscriptionStatus={
+                overviewQuery.data.plan.subscriptionStatus
+              }
+              cancelAtPeriodEnd={overviewQuery.data.plan.cancelAtPeriodEnd}
+            />
+          ) : null}
+        </div>
       </div>
 
       {overviewQuery.isLoading ? (

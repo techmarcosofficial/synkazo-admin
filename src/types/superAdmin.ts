@@ -268,6 +268,40 @@ export interface ResumeWorkResponse {
   resumedJobs: number;
 }
 
+// SA-703/704 subscription command payloads. Every command carries a
+// reason. Length constraints are enforced server-side; the client just
+// requires presence.
+export interface CancelAtPeriodEndDto {
+  reason: string;
+}
+
+export interface ResumeSubscriptionDto {
+  reason: string;
+}
+
+export interface CancelSubscriptionImmediateDto {
+  reason: string;
+}
+
+export interface CancelAtPeriodEndResponse {
+  command: 'cancel_at_period_end';
+  subscriptionId: string;
+  status: 'pending_cancel';
+  accessUntil: string | null;
+}
+
+export interface ResumeSubscriptionResponse {
+  command: 'resume';
+  subscriptionId: string;
+  status: 'active';
+}
+
+export interface CancelSubscriptionImmediateResponse {
+  command: 'cancel_immediate';
+  status: 'canceled';
+  effectiveAt: string;
+}
+
 // Platform-wide overview (Phase 3). One aggregate call to avoid client
 // fan-out across organisations; every metric is a link to a filtered list
 // in the corresponding subsystem screen.
