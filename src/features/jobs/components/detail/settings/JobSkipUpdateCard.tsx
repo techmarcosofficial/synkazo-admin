@@ -5,7 +5,6 @@ import { z } from 'zod';
 
 import { jobsApi } from '@/api/jobs';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import {
   Field,
   FieldContent,
@@ -60,41 +59,41 @@ export default function JobSkipUpdateCard({
   });
 
   return (
-    <Card>
-      <CardContent>
-        <h3 className="mb-4 font-semibold">Matched Records</h3>
-        <form onSubmit={onSubmit} className="space-y-4">
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel htmlFor="skip-update-on-match">
-                Never update matched records
-              </FieldLabel>
-              <FieldDescription>
-                When a record already exists in the destination, leave it
-                completely untouched instead of updating it — only brand-new
-                records get written.
-              </FieldDescription>
-            </FieldContent>
-            <Switch
-              id="skip-update-on-match"
-              checked={form.watch('skipUpdateOnMatch')}
-              onCheckedChange={(checked) =>
-                form.setValue('skipUpdateOnMatch', checked, {
-                  shouldDirty: true,
-                })
-              }
-            />
-          </Field>
+    <section aria-labelledby="job-matched-records-title">
+      <h3 id="job-matched-records-title" className="mb-4 font-semibold">
+        Matched Record Behavior
+      </h3>
+      <form onSubmit={onSubmit} className="space-y-4">
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel htmlFor="skip-update-on-match">
+              Never update matched records
+            </FieldLabel>
+            <FieldDescription>
+              When a record already exists in the destination, leave it
+              completely untouched instead of updating it — only brand-new
+              records get written.
+            </FieldDescription>
+          </FieldContent>
+          <Switch
+            id="skip-update-on-match"
+            checked={form.watch('skipUpdateOnMatch')}
+            onCheckedChange={(checked) =>
+              form.setValue('skipUpdateOnMatch', checked, {
+                shouldDirty: true,
+              })
+            }
+          />
+        </Field>
 
-          <Button type="submit" disabled={saving || !form.formState.isDirty}>
-            {saving
-              ? 'Saving…'
-              : form.formState.isSubmitSuccessful && !form.formState.isDirty
-                ? 'Saved'
-                : 'Save Changes'}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+        <Button type="submit" disabled={saving || !form.formState.isDirty}>
+          {saving
+            ? 'Saving…'
+            : form.formState.isSubmitSuccessful && !form.formState.isDirty
+              ? 'Saved'
+              : 'Save Changes'}
+        </Button>
+      </form>
+    </section>
   );
 }

@@ -58,6 +58,7 @@ interface LimitSyncModalProps {
   projectId: string;
   jobId: string;
   job?: Job;
+  onStarted?: () => void;
   onDone?: () => void;
   onClose: () => void;
   pipelineRequired?: boolean;
@@ -127,6 +128,7 @@ export default function LimitSyncModal({
   projectId,
   jobId,
   job,
+  onStarted,
   onDone,
   onClose,
   pipelineRequired = false,
@@ -285,6 +287,7 @@ export default function LimitSyncModal({
         );
         return;
       }
+      onStarted?.();
       await findAndPollLatestRun(triggerTime);
     } catch (err) {
       const e = err as {

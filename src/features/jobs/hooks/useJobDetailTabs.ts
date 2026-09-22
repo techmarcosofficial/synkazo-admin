@@ -25,7 +25,7 @@ export function useJobDetailTabs(ctx: JobDetailTabContext) {
 
   const rawRequestedTab = searchParams.get('tab');
   const requestedTab =
-    rawRequestedTab === 'overview'
+    rawRequestedTab === 'schedule'
       ? DEFAULT_TAB_ID
       : (rawRequestedTab as JobDetailTabId | null);
   const activeTab = visibleDefs.some((t) => t.id === requestedTab)
@@ -37,10 +37,10 @@ export function useJobDetailTabs(ctx: JobDetailTabContext) {
     label: tab.label,
   }));
 
-  // Overview now lives in the expandable card on the project's Sync Jobs tab.
-  // Keep existing bookmarks useful by replacing the retired tab in-place.
+  // Keep existing Sync & Schedule bookmarks useful by replacing the retired
+  // tab with the new Overview in-place.
   useEffect(() => {
-    if (rawRequestedTab !== 'overview') return;
+    if (rawRequestedTab !== 'schedule') return;
 
     const next = new URLSearchParams(searchParams);
     next.set('tab', DEFAULT_TAB_ID);
