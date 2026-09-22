@@ -6,6 +6,7 @@ import GlobalLoader, { PageLoader } from '@/components/shared/GlobalLoader';
 import { SynkazoWordmark } from '@/components/branding/SynkazoMark';
 import { NavMain } from '@/components/layout/nav-main';
 import { NavUser } from '@/components/layout/nav-user';
+import NotificationsMenu from '@/components/layout/NotificationsMenu';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -112,12 +113,18 @@ function SuperAdminHeader() {
       </div>
 
       <div className="ml-4 flex shrink-0 items-center gap-2 sm:ml-6">
-        <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
+        <Button
+          asChild
+          variant="ghost"
+          size="sm"
+          className="hidden sm:inline-flex"
+        >
           <Link to="/dashboard">
             <ArrowLeft className="size-4" aria-hidden />
             Return to workspace
           </Link>
         </Button>
+        <NotificationsMenu />
         <Separator
           orientation="vertical"
           className="h-6 data-vertical:self-center"
@@ -142,7 +149,7 @@ export default function SuperAdminLayout() {
 
         {/* Recognisable visual context (SA-107) so an operator never confuses a
             platform action with a tenant action. Distinct color, distinct copy. */}
-        <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 sm:px-6">
+        <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 sm:px-6">
           <div className="container mx-auto flex items-center gap-2 text-xs text-amber-900">
             <Shield className="size-3.5 shrink-0" aria-hidden />
             <span>
