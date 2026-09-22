@@ -342,6 +342,12 @@
     box-shadow: var(--layout-surface-shadow) !important;
   }
 
+  /* These two compact cards sit on a transparent portaled surface, so the
+     standard outer-card shadow is too subtle to keep them visually distinct. */
+  html[data-layout-style='shadow'] [data-notification-surface] {
+    --layout-surface-shadow: var(--shadow-lg);
+  }
+
   /* Project connection states use their border as a status indicator. Keep that
      indicator visible when the global shadow layout hides ordinary card borders. */
   html[data-layout-style='shadow'] [data-project-connections-tab] [data-layout-surface='outer'][data-connection-state='connected'] {

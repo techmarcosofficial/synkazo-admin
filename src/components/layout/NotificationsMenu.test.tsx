@@ -117,7 +117,14 @@ describe('NotificationsMenu', () => {
     const popover = document.querySelector('[data-slot="popover-content"]');
     expect(popover).toBeInTheDocument();
     expect(popover).toHaveClass('bg-transparent', 'shadow-none', 'ring-0');
-    expect(popover?.querySelectorAll('[data-slot="card"]')).toHaveLength(2);
+    const notificationSurfaces = popover?.querySelectorAll(
+      '[data-notification-surface]',
+    );
+    expect(notificationSurfaces).toHaveLength(2);
+    notificationSurfaces?.forEach((surface) => {
+      expect(surface).toHaveAttribute('data-layout-surface', 'outer');
+      expect(surface).not.toHaveClass('shadow-lg');
+    });
     expect(popover?.querySelector('[data-slot="tabs-list"]')).toHaveAttribute(
       'data-variant',
       'line',

@@ -363,7 +363,11 @@ export default function NotificationsMenu() {
           onValueChange={(value) => setTab(value as FilterTab)}
           className="w-[calc(100vw-2rem)] gap-2 sm:w-[27rem]"
         >
-          <Card size="sm" className="gap-0 overflow-hidden py-0 shadow-lg">
+          <Card
+            size="sm"
+            data-notification-surface
+            className="gap-0 overflow-hidden py-0"
+          >
             <div className="flex items-start justify-between gap-4 px-4 pt-3 pb-1">
               <PopoverHeader>
                 <div className="flex items-center gap-2">
@@ -420,7 +424,11 @@ export default function NotificationsMenu() {
             </div>
           </Card>
 
-          <Card size="sm" className="gap-0 overflow-hidden py-0 shadow-lg">
+          <Card
+            size="sm"
+            data-notification-surface
+            className="gap-0 overflow-hidden py-0"
+          >
             <div className="max-h-[min(22rem,50vh)] overflow-y-auto overscroll-contain">
               {isLoading ? (
                 <NotificationListSkeleton />
