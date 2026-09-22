@@ -57,6 +57,10 @@ export interface SyncLogRecord {
   skipReasonDetail?: string | null;
   failReason?: string | null;
   failReasonDetail?: string | null;
+  /** Existing record-log payloads returned by the records endpoint. */
+  sourceData?: string | Record<string, unknown> | null;
+  mappedData?: string | Record<string, unknown> | null;
+  destResponse?: string | Record<string, unknown> | null;
   pageNumber?: number;
 }
 
