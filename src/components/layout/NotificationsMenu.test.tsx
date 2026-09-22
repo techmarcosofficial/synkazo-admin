@@ -116,6 +116,12 @@ describe('NotificationsMenu', () => {
 
     const popover = document.querySelector('[data-slot="popover-content"]');
     expect(popover).toBeInTheDocument();
+    expect(popover).toHaveClass('bg-transparent', 'shadow-none', 'ring-0');
+    expect(popover?.querySelectorAll('[data-slot="card"]')).toHaveLength(2);
+    expect(popover?.querySelector('[data-slot="tabs-list"]')).toHaveAttribute(
+      'data-variant',
+      'line',
+    );
     expect(
       within(popover as HTMLElement).getByText('Here are your latest updates.'),
     ).toBeVisible();
