@@ -1,7 +1,9 @@
 import { formatDistanceToNow } from 'date-fns';
-import { Building2, ExternalLink } from 'lucide-react';
+import { Building2, ExternalLink, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+
+import ProvisionOrganisationDialog from './organisations/ProvisionOrganisationDialog';
 
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
@@ -31,7 +33,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { useSuperAdminOrganisationsQuery } from '@/queries/useSuperAdmin';
+import { showToast } from '@/lib/toast';
+import {
+  useProvisionSuperAdminOrganisationMutation,
+  useSuperAdminOrganisationsQuery,
+} from '@/queries/useSuperAdmin';
 import type { OrgStatus, SubscriptionStatus } from '@/types';
 
 // SA-400 Phase 4 organisation directory. Server-side pagination, search,
@@ -171,12 +177,22 @@ export default function OrganisationsPage() {
     subscriptionParam !== 'all' ||
     !!debouncedSearch;
 
+  const navigate = useNavigate();
+  const provisionMutation = useProvisionSuperAdminOrganisationMutation();
+  const [provisionOpen, setProvisionOpen] = useState(false);
+
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        title="Organisations"
-        description="Every customer organisation on the platform. Use filters to narrow, or click a row to open the operator overview."
-      />
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <PageHeader
+          title="Organisations"
+          description="Every customer organisation on the platform. Use filters to narrow, or click a row to open the operator overview."
+        />
+        <Button onClick={() => setProvisionOpen(true)}>
+          <Plus className="size-4" aria-hidden />
+          Provision organisation
+        </Button>
+      </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <InputGroup className="flex-1">
@@ -344,6 +360,43 @@ export default function OrganisationsPage() {
         onPageSizeChange={(size) => {
           setPageSize(size);
           setPage(1);
+        }}
+      />
+
+      <ProvisionOrganisationDialog
+        open={provisionOpen}
+        onOpenChange={setProvisionOpen}
+        isSubmitting={provisionMutation.isPending}
+        errorMessage={
+          provisionMutation.isError
+            ? ((provisionMutation.error as {
+                response?: { data?: { message?: string } };
+              }).response?.data?.message ??
+              'The request failed. Try again.')
+            : null
+        }
+        onSubmit={(values) => {
+          provisionMutation.mutate(values, {
+            onSuccess: (data) => {
+              if (data.reused) {
+                showToast.info(
+                  `Organisation already existed — opening ${data.slug}.`,
+                );
+              } else if (data.invitationSent) {
+                showToast.success(
+                  `Provisioned. Owner invitation sent to the supplied email.`,
+                );
+              } else {
+                showToast.success(
+                  `Provisioned. Invite an owner from the Members page when ready.`,
+                );
+              }
+              setProvisionOpen(false);
+              navigate(
+                `/super-admin/organisations/${data.organisationId}/overview`,
+              );
+            },
+          });
         }}
       />
     </div>

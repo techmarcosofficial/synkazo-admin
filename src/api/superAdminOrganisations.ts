@@ -1,6 +1,8 @@
 import apiClient from './apiClient';
 
 import type {
+  ProvisionOrganisationDto,
+  ProvisionOrganisationResponse,
   SuperAdminPage,
   SuperAdminOrganisationDetail,
   SuperAdminOrganisationListItem,
@@ -46,4 +48,12 @@ export const superAdminOrganisationsApi = {
     apiClient
       .patch(`/super-admin/organisations/${organisationId}`, dto)
       .then(d),
+
+  // SA-401..404 — provision a new organisation via the Super Admin
+  // dedicated contract. Idempotent on slug — repeated calls with the
+  // same slug return the pre-existing record.
+  provision: (
+    dto: ProvisionOrganisationDto,
+  ): Promise<ProvisionOrganisationResponse> =>
+    apiClient.post('/super-admin/organisations', dto).then(d),
 };
