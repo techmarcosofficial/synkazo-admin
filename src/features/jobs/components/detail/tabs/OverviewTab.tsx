@@ -10,7 +10,7 @@ import {
   X,
   type LucideIcon,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useJobDetailContext } from '../context';
 
@@ -120,8 +120,12 @@ export default function OverviewTab() {
   const {
     projectId,
     job,
+    project,
+    jobFieldMappings,
+    hasConnection,
     refetch,
     isSyncing,
+    toggling,
     stopping,
     cancellingQueue,
     retryingQueue,
@@ -138,9 +142,41 @@ export default function OverviewTab() {
     handleStop,
     handleCancelQueue,
     handleRetryQueue,
+    handleToggle,
     handleTabChange,
   } = useJobDetailContext();
   const [manualDialogOpen, setManualDialogOpen] = useState(false);
+  // Ref to the existing "Job is inactive" inline alert — used to scroll it into
+  // view and briefly ring-highlight it when the user clicks Sync now while the
+  // job is inactive, guiding them to the blocker without a toast or modal.
+  const inactiveAlertRef = useRef<HTMLDivElement>(null);
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [highlighted, setHighlighted] = useState(false);
+  const highlightInactiveAlert = useCallback(() => {
+    const el = inactiveAlertRef.current;
+    if (!el) return;
+    if (highlightTimerRef.current) {
+      clearTimeout(highlightTimerRef.current);
+    }
+    el.focus({ preventScroll: true });
+    const { top, bottom } = el.getBoundingClientRect();
+    if (top < 0 || bottom > window.innerHeight) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    setHighlighted(true);
+    highlightTimerRef.current = setTimeout(() => {
+      setHighlighted(false);
+      highlightTimerRef.current = null;
+    }, 1800);
+  }, []);
+  useEffect(
+    () => () => {
+      if (highlightTimerRef.current) {
+        clearTimeout(highlightTimerRef.current);
+      }
+    },
+    [],
+  );
 
   const priorityQueueQuery = usePriorityQueueQuery(projectId);
   const priorityModeActive =
@@ -236,8 +272,17 @@ export default function OverviewTab() {
       icon: Play,
     },
   ];
+  const canActivate =
+    project?.status === 'active' &&
+    hasConnection &&
+    jobFieldMappings.length > 0 &&
+    jobFieldMappings.some((mapping) => mapping.matchDestKey);
 
-  const manualRunBlocked = !job.isEnabled || queued || isSyncing;
+  // Sync is physically impossible when already running or queued — keep disabled.
+  // When inactive the button stays clickable; clicking it guides to the existing
+  // inline alert below instead of opening the dialog.
+  const syncBlocked = queued || isSyncing;
+  const inactiveBlocked = !job.isEnabled;
   const liveProcessed =
     liveProgress?.recordsProcessed ??
     (activeRunLog?.createdCount ?? 0) +
@@ -300,8 +345,17 @@ export default function OverviewTab() {
               </Button>
             )}
             <Button
-              onClick={() => setManualDialogOpen(true)}
-              disabled={manualRunBlocked}
+              onClick={() => {
+                if (inactiveBlocked) {
+                  highlightInactiveAlert();
+                  return;
+                }
+                setManualDialogOpen(true);
+              }}
+              disabled={syncBlocked}
+              aria-controls={
+                inactiveBlocked ? 'job-inactive-notification' : undefined
+              }
             >
               <Play /> Sync now
             </Button>
@@ -315,12 +369,36 @@ export default function OverviewTab() {
           </div>
 
           {!job.isEnabled && !isSyncing && (
-            <Alert className="py-2.5">
+            <Alert
+              id="job-inactive-notification"
+              ref={inactiveAlertRef}
+              tabIndex={-1}
+              className={`py-2.5 transition-shadow duration-300 outline-none ${
+                highlighted
+                  ? 'ring-primary ring-offset-background ring-2 ring-offset-2'
+                  : ''
+              }`}
+            >
               <Info />
               <AlertDescription className="space-y-0.5 [&_p:not(:last-child)]:mb-0">
                 <p className="text-foreground font-semibold">Job is inactive</p>
                 <p>
-                  Set the job status to Active before starting a manual run.
+                  {canActivate ? (
+                    <>
+                      <Button
+                        variant="link"
+                        size="xs"
+                        className="h-auto p-0"
+                        onClick={() => void handleToggle()}
+                        disabled={toggling}
+                      >
+                        {toggling ? 'Activating…' : 'Activate job'}
+                      </Button>{' '}
+                      before starting a manual run.
+                    </>
+                  ) : (
+                    'Complete the required setup before activating this job and starting a manual run.'
+                  )}
                 </p>
               </AlertDescription>
             </Alert>
@@ -412,7 +490,7 @@ export default function OverviewTab() {
           hasBaseline={!!job.lastSyncedAt}
           pipelineRequired={pipelineRequired}
           pipelineConfigured={pipelineConfigured}
-          disabled={manualRunBlocked}
+          disabled={syncBlocked}
           onGoToPipeline={() => {
             setManualDialogOpen(false);
             handleTabChange('pipeline');
