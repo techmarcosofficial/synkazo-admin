@@ -848,6 +848,12 @@ interface FieldMappingCanvasProps {
   toolbarContainer?: HTMLElement | null;
   /** Control height for a toolbar rendered outside the canvas. */
   toolbarControlSize?: 'sm' | 'default';
+  /**
+   * When true (no mappings saved yet), Auto-map becomes the primary CTA and
+   * Add mapping is rendered as an outline/secondary action. Reverts to normal
+   * once any mapping exists. Pure UX hint — no logic or data changes.
+   */
+  isFirstTime?: boolean;
 }
 
 export default function FieldMappingCanvas({
@@ -873,6 +879,7 @@ export default function FieldMappingCanvas({
   showHeading = true,
   toolbarContainer,
   toolbarControlSize = 'sm',
+  isFirstTime = false,
 }: FieldMappingCanvasProps) {
   const attentionSectionRef = useRef<HTMLDivElement>(null);
   const [showComposer, setShowComposer] = useState(false);
@@ -1818,7 +1825,7 @@ export default function FieldMappingCanvas({
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
-            variant="default"
+            variant={isFirstTime ? 'outline' : 'default'}
             size={toolbarControlSize}
             onClick={() => {
               if (!canManualMap) {
@@ -2330,6 +2337,7 @@ export default function FieldMappingCanvas({
 
             {/* Auto-map: pinned to the right on lg+, full-width row on mobile */}
             <Button
+              variant={isFirstTime ? 'default' : 'outline'}
               onClick={handleAutoMapClick}
               size="sm"
               className="shrink-0"
