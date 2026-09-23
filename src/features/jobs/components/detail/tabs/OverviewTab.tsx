@@ -283,28 +283,57 @@ export default function OverviewTab() {
   // inline alert below instead of opening the dialog.
   const syncBlocked = queued || isSyncing;
   const inactiveBlocked = !job.isEnabled;
-  const liveProcessed =
-    liveProgress?.recordsProcessed ??
-    (activeRunLog?.createdCount ?? 0) +
-      (activeRunLog?.updatedCount ?? 0) +
-      (activeRunLog?.skippedCount ?? 0) +
-      (activeRunLog?.failedCount ?? 0);
-  const liveTotal = liveProgress?.totalRecords;
-  const showingProgress = activeRunLog?.status === 'running' || isSyncing;
-  const progress = showingProgress ? (
-    <SyncRunProgress
-      totalRecords={liveTotal}
-      processedRecords={liveProcessed}
-      createdCount={activeRunLog?.createdCount}
-      updatedCount={activeRunLog?.updatedCount}
-      skippedCount={activeRunLog?.skippedCount}
-      failedCount={activeRunLog?.failedCount}
-      etaSeconds={liveProgress?.etaSeconds}
-      description="Syncing records for this job."
-      onStop={() => void handleStop()}
-      stopping={stopping}
-    />
-  ) : null;
+  const summaryRun =
+    activeRunLog?.status === 'running' || activeRunLog?.id
+      ? activeRunLog
+      : runLogs[0];
+  const summaryRunning = isSyncing || summaryRun?.status === 'running';
+  const summaryProcessed =
+    (summaryRunning ? liveProgress?.recordsProcessed : undefined) ??
+    summaryRun?.recordsProcessed ??
+    summaryRun?.totalFetched ??
+    (summaryRun?.createdCount ?? 0) +
+      (summaryRun?.updatedCount ?? 0) +
+      (summaryRun?.skippedCount ?? 0) +
+      (summaryRun?.failedCount ?? 0);
+  const summaryTotal =
+    (summaryRunning ? liveProgress?.totalRecords : undefined) ??
+    summaryRun?.totalFetched ??
+    summaryRun?.recordsProcessed ??
+    summaryProcessed;
+  const showingSummary = summaryRunning || !!summaryRun?.id;
+  const renderProgress = (variant: 'default' | 'compact') =>
+    showingSummary ? (
+      <SyncRunProgress
+        variant={variant}
+        runId={summaryRun?.id}
+        jobId={job.id}
+        status={
+          summaryRunning
+            ? 'running'
+            : (summaryRun?.executionStatus ?? summaryRun?.status)
+        }
+        totalRecords={summaryTotal}
+        processedRecords={summaryProcessed}
+        createdCount={summaryRun?.createdCount}
+        updatedCount={summaryRun?.updatedCount}
+        skippedCount={summaryRun?.skippedCount}
+        failedCount={summaryRun?.failedCount}
+        etaSeconds={summaryRunning ? liveProgress?.etaSeconds : undefined}
+        ratePerSec={summaryRunning ? liveProgress?.ratePerSec : undefined}
+        startedAt={summaryRun?.startedAt}
+        finishedAt={summaryRun?.finishedAt}
+        durationMs={summaryRun?.durationMs}
+        triggeredBy={summaryRun?.triggeredBy}
+        sourceLabel={summaryRun?.sourceObject ?? job.sourceObject}
+        destinationLabel={summaryRun?.destObject ?? job.destObject}
+        sourceStatus={hasConnection ? 'Connected' : 'Unavailable'}
+        errorMessage={summaryRun?.errorMessage}
+        onStop={summaryRunning ? () => void handleStop() : undefined}
+        stopping={stopping}
+      />
+    ) : null;
+  const progress = renderProgress('default');
   const recentRuns = runLogs.slice(0, 5);
 
   return (
@@ -500,7 +529,7 @@ export default function OverviewTab() {
           onLimitSyncStarted={() => void beginTracking()}
           onLimitSyncDone={() => void refetch()}
           onSyncAll={(range) => void handleSyncAll(undefined, range)}
-          runProgress={progress}
+          runProgress={renderProgress('compact')}
         />
       )}
 
