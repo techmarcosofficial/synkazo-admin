@@ -7,16 +7,9 @@ import { jobsApi } from '@/api/jobs';
 import { notificationsApi } from '@/api/notificationsApi';
 import { syncLogsApi } from '@/api/syncLogs';
 import { sseClient } from '@/lib/sseClient';
+import { mergeSyncProgress } from '@/lib/mergeSyncProgress';
 import { showToast } from '@/lib/toast';
-import type { Job } from '@/types';
-
-interface LiveProgress {
-  jobId?: string | number;
-  totalRecords?: number;
-  recordsProcessed?: number;
-  etaSeconds?: number;
-  ratePerSec?: number;
-}
+import type { Job, SyncProgressEvent } from '@/types';
 
 interface UseJobRunStateInput {
   projectId: string;
@@ -50,7 +43,9 @@ export function useJobRunState({
   const [scheduleToggling, setScheduleToggling] = useState(false);
   const [cancellingQueue, setCancellingQueue] = useState(false);
   const [retryingQueue, setRetryingQueue] = useState(false);
-  const [liveProgress, setLiveProgress] = useState<LiveProgress | null>(null);
+  const [liveProgress, setLiveProgress] = useState<SyncProgressEvent | null>(
+    null,
+  );
   const [upgradeDialog, setUpgradeDialog] = useState<{
     open: boolean;
     message: string;
@@ -59,8 +54,12 @@ export function useJobRunState({
 
   useEffect(() => {
     const handler = (data: unknown) => {
-      const d = data as LiveProgress;
-      if (String(d.jobId) === String(jobId)) setLiveProgress(d);
+      if (!data || typeof data !== 'object') return;
+      const d = data as SyncProgressEvent;
+      if (String(d.jobId) !== String(jobId)) return;
+      setLiveProgress((previous) => {
+        return mergeSyncProgress(previous, d);
+      });
     };
     sseClient.on('sync:progress', handler);
     return () => {
@@ -128,6 +127,7 @@ export function useJobRunState({
   // Full Resync trigger the API call, and by LimitSyncModal's onDone (which
   // triggers its own run API call before handing control back here).
   const beginTracking = useCallback(async () => {
+    setLiveProgress(null);
     setActiveRunLog({
       id: undefined,
       status: 'running',

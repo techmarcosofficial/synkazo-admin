@@ -7,7 +7,7 @@ import type {
   ScheduleTogglePayload,
 } from '@/features/jobs/hooks';
 import type { JobDetailTabId } from '@/features/jobs/lib/jobDetailTabs';
-import type { Project } from '@/types';
+import type { Project, SyncProgressEvent } from '@/types';
 
 export interface JobDetailContextValue {
   projectId: string;
@@ -29,12 +29,7 @@ export interface JobDetailContextValue {
 
   // Run/schedule state — see useJobRunState.
   activeRunLog: Partial<ExtSyncRun> | null;
-  liveProgress: {
-    totalRecords?: number;
-    recordsProcessed?: number;
-    etaSeconds?: number;
-    ratePerSec?: number;
-  } | null;
+  liveProgress: SyncProgressEvent | null;
   upgradeDialog: { open: boolean; message: string };
   setUpgradeDialog: (value: { open: boolean; message: string }) => void;
   isSyncing: boolean;

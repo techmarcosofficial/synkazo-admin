@@ -26,8 +26,10 @@ import {
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
+import { sseClient } from '@/lib/sseClient';
+import { mergeSyncProgress } from '@/lib/mergeSyncProgress';
 import { cn } from '@/lib/utils';
-import type { Job, SyncRun } from '@/types';
+import type { Job, SyncProgressEvent, SyncRun } from '@/types';
 
 const MAX_POLL_COUNT = 180;
 const STUCK_THRESHOLD = 30;
@@ -125,6 +127,9 @@ export default function LimitSyncModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [runLog, setRunLog] = useState<SyncRun | null>(null);
+  const [liveProgress, setLiveProgress] = useState<SyncProgressEvent | null>(
+    null,
+  );
   const [stopping, setStopping] = useState(false);
   const [stuckWarning, setStuckWarning] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
@@ -145,12 +150,52 @@ export default function LimitSyncModal({
     [],
   );
 
+  useEffect(() => {
+    if (step !== 'running') return;
+    return sseClient.on('sync:progress', (data: unknown) => {
+      if (!data || typeof data !== 'object') return;
+      const event = data as SyncProgressEvent;
+      if (String(event.jobId) !== String(jobId)) return;
+      if (activeRunId.current && event.runId !== activeRunId.current) return;
+      setLiveProgress((previous) => {
+        return mergeSyncProgress(previous, event);
+      });
+    });
+  }, [jobId, step]);
+
   const safeLimit = Math.max(1, limit || 1);
   const safeBatch = Math.max(10, Math.min(500, batchSize || 100));
   const safeStart = Math.max(1, startPage || 1);
   const estBatches = Math.ceil(safeLimit / safeBatch);
   const estSrcPages = Math.ceil(safeLimit / 500);
   const srcPageEnd = safeStart + estSrcPages - 1;
+  const progress =
+    liveProgress && (!runLog || liveProgress.runId === runLog.id)
+      ? liveProgress
+      : null;
+  const created = Math.max(
+    runLog?.createdCount ?? 0,
+    progress?.createdCount ?? 0,
+  );
+  const updated = Math.max(
+    runLog?.updatedCount ?? 0,
+    progress?.updatedCount ?? 0,
+  );
+  const skipped = Math.max(
+    runLog?.skippedCount ?? 0,
+    progress?.skippedCount ?? 0,
+  );
+  const failed = Math.max(runLog?.failedCount ?? 0, progress?.failedCount ?? 0);
+  const attempted = Math.max(
+    created + updated + skipped + failed,
+    progress?.recordsAttempted ?? 0,
+    (progress?.recordsProcessed ?? 0) + (progress?.failedCount ?? 0),
+    (runLog?.recordsProcessed ?? 0) + (runLog?.failedCount ?? 0),
+  );
+  const completedBatches = Math.max(
+    runLog?.totalPages ?? 0,
+    progress?.page ?? 0,
+  );
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -251,6 +296,9 @@ export default function LimitSyncModal({
     lastFetched.current = 0;
     setStuckWarning(false);
     setTimedOut(false);
+    setLiveProgress(null);
+    setRunLog(null);
+    activeRunId.current = null;
     const triggerTime = Date.now();
     try {
       const resp = (await jobsApi.limitSync(projectId, jobId, {
@@ -521,14 +569,18 @@ export default function LimitSyncModal({
               jobId={jobId}
               status="running"
               variant="compact"
-              totalRecords={safeLimit}
-              processedRecords={
-                runLog?.recordsProcessed ?? runLog?.totalFetched ?? 0
-              }
-              createdCount={runLog?.createdCount}
-              updatedCount={runLog?.updatedCount}
-              skippedCount={runLog?.skippedCount}
-              failedCount={runLog?.failedCount}
+              totalRecords={progress?.totalRecords ?? safeLimit}
+              processedRecords={attempted}
+              completedBatches={completedBatches}
+              currentBatch={progress?.currentBatch}
+              batchProcessed={progress?.batchProcessed}
+              batchTotal={progress?.batchTotal}
+              totalBatches={progress?.totalBatches ?? estBatches}
+              createdCount={created}
+              updatedCount={updated}
+              skippedCount={skipped}
+              failedCount={failed}
+              ratePerSec={progress?.ratePerSec}
               startedAt={runLog?.startedAt}
               triggeredBy={runLog?.triggeredBy ?? 'limit_sync'}
               sourceLabel={runLog?.sourceObject ?? job?.sourceObject}
@@ -576,19 +628,25 @@ export default function LimitSyncModal({
                     ? 'stopped'
                     : (runLog?.executionStatus ?? runLog?.status ?? 'completed')
                 }
-                totalRecords={safeLimit}
-                processedRecords={
-                  runLog?.recordsProcessed ??
-                  runLog?.totalFetched ??
-                  (runLog?.createdCount ?? 0) +
-                    (runLog?.updatedCount ?? 0) +
-                    (runLog?.skippedCount ?? 0) +
-                    (runLog?.failedCount ?? 0)
+                totalRecords={
+                  !timedOut && runLog?.status === 'completed'
+                    ? runLog.totalFetched
+                    : (progress?.totalRecords ?? safeLimit)
                 }
-                createdCount={runLog?.createdCount}
-                updatedCount={runLog?.updatedCount}
-                skippedCount={runLog?.skippedCount}
-                failedCount={runLog?.failedCount}
+                processedRecords={attempted}
+                completedBatches={completedBatches}
+                currentBatch={progress?.currentBatch}
+                batchProcessed={progress?.batchProcessed}
+                batchTotal={progress?.batchTotal}
+                totalBatches={
+                  runLog?.status === 'completed'
+                    ? runLog.totalPages
+                    : (progress?.totalBatches ?? estBatches)
+                }
+                createdCount={created}
+                updatedCount={updated}
+                skippedCount={skipped}
+                failedCount={failed}
                 startedAt={runLog?.startedAt}
                 finishedAt={runLog?.finishedAt}
                 durationMs={runLog?.durationMs}

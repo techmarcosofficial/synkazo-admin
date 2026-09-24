@@ -288,19 +288,41 @@ export default function OverviewTab() {
       ? activeRunLog
       : runLogs[0];
   const summaryRunning = isSyncing || summaryRun?.status === 'running';
-  const summaryProcessed =
-    (summaryRunning ? liveProgress?.recordsProcessed : undefined) ??
-    summaryRun?.recordsProcessed ??
-    summaryRun?.totalFetched ??
-    (summaryRun?.createdCount ?? 0) +
-      (summaryRun?.updatedCount ?? 0) +
-      (summaryRun?.skippedCount ?? 0) +
-      (summaryRun?.failedCount ?? 0);
+  const currentProgress =
+    liveProgress && (!summaryRun?.id || liveProgress.runId === summaryRun.id)
+      ? liveProgress
+      : null;
+  const createdCount = Math.max(
+    currentProgress?.createdCount ?? 0,
+    summaryRun?.createdCount ?? 0,
+  );
+  const updatedCount = Math.max(
+    currentProgress?.updatedCount ?? 0,
+    summaryRun?.updatedCount ?? 0,
+  );
+  const skippedCount = Math.max(
+    currentProgress?.skippedCount ?? 0,
+    summaryRun?.skippedCount ?? 0,
+  );
+  const failedCount = Math.max(
+    currentProgress?.failedCount ?? 0,
+    summaryRun?.failedCount ?? 0,
+  );
+  const summaryProcessed = Math.max(
+    currentProgress?.recordsAttempted ?? 0,
+    (currentProgress?.recordsProcessed ?? 0) +
+      (currentProgress?.failedCount ?? 0),
+    summaryRun?.status === 'completed' ? (summaryRun.totalFetched ?? 0) : 0,
+    createdCount + updatedCount + skippedCount + failedCount,
+  );
   const summaryTotal =
-    (summaryRunning ? liveProgress?.totalRecords : undefined) ??
-    summaryRun?.totalFetched ??
-    summaryRun?.recordsProcessed ??
-    summaryProcessed;
+    (summaryRun?.status === 'completed' ? summaryRun.totalFetched : null) ??
+    currentProgress?.totalRecords ??
+    (summaryRun?.triggeredBy === 'limit_sync'
+      ? summaryRun.recordLimit
+      : summaryRunning && summaryRun?.triggeredBy !== 'sync_all'
+        ? summaryRun?.totalFetched
+        : undefined);
   const showingSummary = summaryRunning || !!summaryRun?.id;
   const renderProgress = (variant: 'default' | 'compact') =>
     showingSummary ? (
@@ -308,6 +330,7 @@ export default function OverviewTab() {
         variant={variant}
         runId={summaryRun?.id}
         jobId={job.id}
+        jobName={job.name}
         status={
           summaryRunning
             ? 'running'
@@ -315,12 +338,24 @@ export default function OverviewTab() {
         }
         totalRecords={summaryTotal}
         processedRecords={summaryProcessed}
-        createdCount={summaryRun?.createdCount}
-        updatedCount={summaryRun?.updatedCount}
-        skippedCount={summaryRun?.skippedCount}
-        failedCount={summaryRun?.failedCount}
-        etaSeconds={summaryRunning ? liveProgress?.etaSeconds : undefined}
-        ratePerSec={summaryRunning ? liveProgress?.ratePerSec : undefined}
+        completedBatches={Math.max(
+          currentProgress?.page ?? 0,
+          summaryRun?.totalPages ?? 0,
+        )}
+        currentBatch={currentProgress?.currentBatch}
+        batchProcessed={currentProgress?.batchProcessed}
+        batchTotal={currentProgress?.batchTotal}
+        totalBatches={
+          summaryRun?.status === 'completed'
+            ? summaryRun.totalPages
+            : currentProgress?.totalBatches
+        }
+        createdCount={createdCount}
+        updatedCount={updatedCount}
+        skippedCount={skippedCount}
+        failedCount={failedCount}
+        etaSeconds={currentProgress?.etaSeconds}
+        ratePerSec={currentProgress?.ratePerSec}
         startedAt={summaryRun?.startedAt}
         finishedAt={summaryRun?.finishedAt}
         durationMs={summaryRun?.durationMs}
@@ -331,6 +366,7 @@ export default function OverviewTab() {
         errorMessage={summaryRun?.errorMessage}
         onStop={summaryRunning ? () => void handleStop() : undefined}
         stopping={stopping}
+        onViewHistory={() => handleTabChange('run-history')}
       />
     ) : null;
   const progress = renderProgress('default');
