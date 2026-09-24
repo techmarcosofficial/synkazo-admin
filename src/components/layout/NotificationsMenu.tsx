@@ -9,6 +9,7 @@ import {
   Clock,
   CreditCard,
   RefreshCw,
+  Settings,
   Settings2,
   Webhook,
   WifiOff,
@@ -167,7 +168,7 @@ function NotificationItem({
           data-slot="notification-icon"
           className="mt-0.5 flex size-7 shrink-0 items-center justify-center"
         >
-          <Icon className={cn('size-5 stroke-[1.75]', tone)} aria-hidden />
+          <Icon className={cn('size-4 stroke-[1.75]', tone)} aria-hidden />
         </div>
         <div className="min-w-0 flex-1 space-y-0.5">
           <div className="flex items-start gap-2">
@@ -359,7 +360,7 @@ export default function NotificationsMenu() {
         <Tabs
           value={tab}
           onValueChange={(value) => setTab(value as FilterTab)}
-          className="w-[calc(100vw-2rem)] gap-2 sm:w-[27rem]"
+          className="w-[calc(100vw-2rem)] gap-2 sm:w-[24rem]"
         >
           <Card
             size="sm"

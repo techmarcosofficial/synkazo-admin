@@ -708,8 +708,8 @@
 }
 
 .synkazo-sync-source-card .synkazo-sync-tool-logo img {
-  width: 32px;
-  height: 32px;
+  width: 88%;
+  height: 88%;
 }
 
 .synkazo-sync-sources:hover .synkazo-sync-source-card,
@@ -751,8 +751,8 @@
 }
 
 .synkazo-sync-tool-logo img {
-  width: 32px;
-  height: 32px;
+  width: 88%;
+  height: 88%;
   object-fit: contain;
 }
 
@@ -805,8 +805,19 @@
   background: #fb173f;
 }
 
+.is-dataforma .synkazo-sync-tool-logo img,
+.is-hubspot .synkazo-sync-tool-logo img {
+  width: 100%;
+  height: 100%;
+}
+
 .is-texada .synkazo-sync-tool-logo {
-  background: #383b3e;
+  background: #fff;
+}
+
+.is-texada .synkazo-sync-tool-logo img {
+  width: 100%;
+  height: 100%;
 }
 
 .synkazo-sync-core {
@@ -854,7 +865,7 @@
 }
 
 .is-hubspot .synkazo-sync-tool-logo {
-  background: linear-gradient(145deg, #ff784f, #ff5f34);
+  background: #ff7a59;
 }
 
 .is-hubspot .synkazo-sync-tool-logo img {
@@ -1083,11 +1094,11 @@
 }
 
 .light .is-texada .synkazo-sync-tool-logo {
-  background: #383b3e;
+  background: #fff;
 }
 
 .light .is-hubspot .synkazo-sync-tool-logo {
-  background: linear-gradient(145deg, #ff784f, #ff5f34);
+  background: #ff7a59;
 }
 
 .light .synkazo-sync-tool-copy strong {

@@ -12,13 +12,13 @@ const integrations = [
   {
     name: 'Dataforma',
     description: 'Back Office',
-    logo: '/dataforma-logo.svg',
+    logo: '/dataforma-logo.png',
     className: 'is-dataforma',
   },
   {
     name: 'Texada',
     description: 'Equipment Data',
-    logo: '/texada-logo.svg',
+    logo: '/texada-logo.png',
     className: 'is-texada',
   },
 ];
