@@ -1,4 +1,3 @@
-import { ChevronDown, RefreshCw } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
 import { ChoiceCardItem } from '@/components/form/ChoiceCard';
@@ -10,12 +9,12 @@ import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { RadioGroup } from '@/components/ui/radio-group';
 import type { ExtJob } from '@/features/jobs/hooks/useJobDetail';
-import { cn } from '@/lib/utils';
 
 interface StartSyncModalProps {
   projectId: string;
@@ -27,12 +26,13 @@ interface StartSyncModalProps {
   onGoToPipeline: () => void;
   onClose: () => void;
   onRunNow: () => void;
+  onLimitSyncStarted?: () => void;
   onLimitSyncDone: () => void;
   onSyncAll: (range: { startDate?: string; endDate?: string }) => void;
   /** Live status rendered directly above the all-records action row. */
   runProgress?: ReactNode;
   disabled?: boolean;
-  /** Renders the same run workflow directly inside the Sync & Schedule page. */
+  /** Renders the same run workflow directly inside a parent surface. */
   embedded?: boolean;
 }
 
@@ -46,6 +46,7 @@ function ManualSyncContent({
   onGoToPipeline,
   onClose,
   onRunNow,
+  onLimitSyncStarted,
   onLimitSyncDone,
   onSyncAll,
   runProgress,
@@ -57,7 +58,6 @@ function ManualSyncContent({
 
   return (
     <div className="space-y-4">
-
       <p className="text-sm font-medium">What records do you want to sync?</p>
 
       <RadioGroup
@@ -105,6 +105,7 @@ function ManualSyncContent({
             jobId={jobId}
             job={job}
             onClose={embedded ? () => setRunType('all') : onClose}
+            onStarted={onLimitSyncStarted}
             onDone={onLimitSyncDone}
             pipelineRequired={pipelineRequired}
             pipelineConfigured={pipelineConfigured}
@@ -142,6 +143,9 @@ export default function StartSyncModal(props: StartSyncModalProps) {
       <DialogContent size="md" className="flex max-h-[85vh] flex-col">
         <DialogHeader>
           <DialogTitle>Run manually</DialogTitle>
+          <DialogDescription>
+            Sync data now without changing the automatic schedule.
+          </DialogDescription>
         </DialogHeader>
         <div className="overflow-y-auto">
           <ManualSyncContent {...props} />

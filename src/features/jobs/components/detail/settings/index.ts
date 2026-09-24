@@ -4,3 +4,5 @@ export { default as JobRetryCard } from './JobRetryCard';
 export { default as JobSyncDirectionCard } from './JobSyncDirectionCard';
 export { default as JobDangerZoneCard } from './JobDangerZoneCard';
 export { default as DataformaCustomerCursorCard } from './DataformaCustomerCursorCard';
+export { default as JobScheduleSettings } from './JobScheduleSettings';
+export { JobScheduleSettingsHeader } from './JobScheduleSettings';

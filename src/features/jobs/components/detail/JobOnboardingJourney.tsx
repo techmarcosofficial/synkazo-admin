@@ -64,14 +64,17 @@ export default function JobOnboardingJourney() {
       description:
         'Run the job once and review the result before automating it.',
       status: stepStatus(state.testComplete, 'test'),
-      onSelect: () => handleTabChange('schedule'),
+      onSelect: () => handleTabChange('overview'),
     },
     {
       title: 'Automate (optional)',
       description: 'Add a schedule later if this job should run automatically.',
       status: 'upcoming',
       optional: true,
-      onSelect: () => handleTabChange('schedule'),
+      onSelect: () =>
+        navigate(
+          `/projects/${projectId}/jobs/${job.id}?tab=settings&section=schedule`,
+        ),
     },
   ];
 
@@ -93,18 +96,18 @@ export default function JobOnboardingJourney() {
       ? {
           title: 'Map the fields for this sync job',
           description:
-            'Choose how source data should match destination fields, then select at least one Match Field to identify existing records.',
+            'Map source and destination fields, then choose at least one Match Field.',
         }
       : state.stage === 'configure'
         ? {
             title: 'Finish the required sync configuration',
             description:
-              'This type of data needs a destination pipeline before it can be tested safely.',
+              'Choose the destination pipeline required before testing.',
           }
         : {
             title: 'Test and review your sync job',
             description:
-              'Your mapping and required settings are ready. Run the job once and review the result before relying on it.',
+              'Run the job once and review the result before automating it.',
           };
 
   const targetTab =
@@ -112,7 +115,7 @@ export default function JobOnboardingJourney() {
       ? 'field-mapping'
       : state.stage === 'configure'
         ? 'pipeline'
-        : 'schedule';
+        : 'overview';
   const previousTab =
     state.stage === 'configure'
       ? 'field-mapping'
@@ -127,16 +130,22 @@ export default function JobOnboardingJourney() {
     previousPage: previousTab,
   });
 
-  if (action === 'none') return null;
-
   return (
     <SetupJourneyCard
       eyebrow="Job setup"
       title={content.title}
       description={content.description}
       steps={steps}
-      actionLabel={action === 'next' ? 'Next' : 'Continue setup'}
-      onContinue={() => handleTabChange(targetTab)}
+      actionLabel={
+        action === 'none'
+          ? undefined
+          : action === 'next'
+            ? 'Next'
+            : 'Continue setup'
+      }
+      onContinue={
+        action === 'none' ? undefined : () => handleTabChange(targetTab)
+      }
     />
   );
 }

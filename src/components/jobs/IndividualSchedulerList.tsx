@@ -319,7 +319,7 @@ function JobCard({
                 </p>
                 <Button asChild variant="outline" size="sm">
                   <Link
-                    to={`/projects/${projectId}/jobs/${job.id}?tab=schedule`}
+                    to={`/projects/${projectId}/jobs/${job.id}?tab=settings&section=schedule`}
                   >
                     Edit schedule
                   </Link>

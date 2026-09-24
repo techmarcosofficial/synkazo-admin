@@ -291,7 +291,7 @@ function JobRow({
   const showIcon = !NO_ICON_BUCKETS.has(job.bucket);
   const viewHref = prioritySchedulingEnabled
     ? `/projects/${job.projectId}?tab=settings&section=schedule`
-    : `/projects/${job.projectId}/jobs/${job.id}?tab=schedule`;
+    : `/projects/${job.projectId}/jobs/${job.id}?tab=settings&section=schedule`;
   return (
     <TableRow>
       <TableCell>

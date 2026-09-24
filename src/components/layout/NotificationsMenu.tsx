@@ -1,38 +1,49 @@
 import { formatDistanceToNow } from 'date-fns';
 import {
+  Activity,
+  AlertCircle,
   AlertTriangle,
   Bell,
+  BellOff,
   CheckCircle2,
   Clock,
   CreditCard,
+  RefreshCw,
+  Settings2,
   Webhook,
   WifiOff,
   XCircle,
   type LucideIcon,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { notificationsApi, type Notification } from '@/api/notificationsApi';
-import EmptyState from '@/components/shared/EmptyState';
+import type { Notification } from '@/api/notificationsApi';
 import ListRow from '@/components/shared/list/ListRow';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet';
+  Popover,
+  PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { sseClient } from '@/lib/sseClient';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { useNotifications } from '@/queries/useNotifications';
 
 type NotifTone = 'success' | 'warning' | 'danger' | 'info';
 type NotifCategory = 'sync' | 'system';
+type FilterTab = 'all' | 'unread' | 'sync' | 'system';
 
 const TONE_CLASSES: Record<NotifTone, { bg: string; text: string }> = {
   success: { bg: 'bg-success/10', text: 'text-success' },
@@ -88,82 +99,31 @@ const DEFAULT_META: (typeof NOTIF_META)[string] = {
   category: 'system',
 };
 
-/** Where clicking a notification should take the user — mirrors the resource links the
- *  backend itself uses for notification emails (see NotificationsService.dispatchEmail). */
-function notificationLink(n: Notification): string {
-  const jobId = n.data?.jobId as string | undefined;
-  const projectId = n.data?.projectId as string | undefined;
+const TAB_LABELS: Record<FilterTab, string> = {
+  all: 'All',
+  unread: 'Unread',
+  sync: 'Sync',
+  system: 'System',
+};
+
+/** Mirrors the resource links used by notification emails. */
+function notificationLink(notification: Notification): string {
+  const jobId = notification.data?.jobId;
+  const projectId = notification.data?.projectId;
   if (jobId && projectId) return `/projects/${projectId}/jobs/${jobId}`;
   if (
-    n.type === 'webhook_registration_failed' ||
-    n.type === 'webhook_subscription_lost'
+    notification.type === 'webhook_registration_failed' ||
+    notification.type === 'webhook_subscription_lost'
   ) {
     return '/connections';
   }
   if (
-    n.type === 'subscription_past_due' ||
-    n.type === 'subscription_canceled'
+    notification.type === 'subscription_past_due' ||
+    notification.type === 'subscription_canceled'
   ) {
     return '/organization/billing/overview';
   }
   return '/scheduler';
-}
-
-function useNotifications() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  const load = useCallback(async () => {
-    try {
-      const [res, countRes] = await Promise.all([
-        notificationsApi.list({ limit: 50 }),
-        notificationsApi.unreadCount(),
-      ]);
-      setNotifications(res.data ?? []);
-      setUnreadCount(countRes.count ?? 0);
-    } catch {
-      /* non-fatal */
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-    const handler = (data: unknown) => {
-      setUnreadCount((prev) => prev + 1);
-      setNotifications((prev) => [data as Notification, ...prev].slice(0, 50));
-    };
-    return sseClient.on('notification:new', handler);
-  }, [load]);
-
-  const markRead = useCallback(async (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) =>
-        n.id === id && !n.readAt
-          ? { ...n, readAt: new Date().toISOString() }
-          : n,
-      ),
-    );
-    setUnreadCount((prev) => Math.max(0, prev - 1));
-    try {
-      await notificationsApi.markRead(id);
-    } catch {
-      /* non-fatal */
-    }
-  }, []);
-
-  const markAllRead = useCallback(async () => {
-    setUnreadCount(0);
-    setNotifications((prev) =>
-      prev.map((n) => ({ ...n, readAt: n.readAt ?? new Date().toISOString() })),
-    );
-    try {
-      await notificationsApi.markAllRead();
-    } catch {
-      /* non-fatal */
-    }
-  }, []);
-
-  return { notifications, unreadCount, markRead, markAllRead };
 }
 
 function NotificationItem({
@@ -183,7 +143,10 @@ function NotificationItem({
   return (
     <ListRow
       asChild
-      className={cn('items-start px-4 py-2.5', isUnread && 'bg-primary/3')}
+      className={cn(
+        'group items-start gap-3 px-4 py-3.5',
+        isUnread && 'bg-primary/5',
+      )}
     >
       <Link
         to={notificationLink(notification)}
@@ -202,40 +165,39 @@ function NotificationItem({
       >
         <div
           className={cn(
-            'flex size-8 shrink-0 items-center justify-center rounded-lg',
+            'mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full',
             tone.bg,
           )}
         >
-          <Icon className={cn('size-4', tone.text)} />
+          <Icon className={cn('size-4', tone.text)} aria-hidden />
         </div>
         <div className="min-w-0 flex-1 space-y-0.5">
-          <div className="flex items-start justify-between gap-2">
-            <p className="text-sm leading-snug font-medium">
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-sm leading-5 font-medium">
               {notification.title || notification.message}
             </p>
             {isUnread && (
-              <span className="bg-primary mt-1.5 size-1.5 shrink-0 rounded-full" />
+              <span
+                className="bg-primary mt-1.5 size-2 shrink-0 rounded-full"
+                aria-label="Unread"
+              />
             )}
           </div>
           {notification.title && (
-            <p className="text-muted-foreground text-xs leading-relaxed">
+            <p className="text-muted-foreground line-clamp-2 text-xs leading-5">
               {notification.message}
             </p>
           )}
-          <p
-            className="text-muted-foreground pt-0.5 text-[11px]"
-            title={
-              notification.createdAt
-                ? new Date(notification.createdAt).toLocaleString()
-                : undefined
-            }
-          >
-            {notification.createdAt
-              ? formatDistanceToNow(new Date(notification.createdAt), {
-                  addSuffix: true,
-                })
-              : ''}
-          </p>
+          {notification.createdAt && (
+            <p
+              className="text-muted-foreground pt-0.5 text-[11px] leading-4"
+              title={new Date(notification.createdAt).toLocaleString()}
+            >
+              {formatDistanceToNow(new Date(notification.createdAt), {
+                addSuffix: true,
+              })}
+            </p>
+          )}
         </div>
       </Link>
     </ListRow>
@@ -255,22 +217,24 @@ function NotificationList({
 }) {
   if (items.length === 0) {
     return (
-      <div className="p-6">
-        <EmptyState
-          icon={Bell}
-          title={emptyTitle}
-          description="You're all caught up."
-        />
+      <div className="flex h-56 flex-col items-center justify-center px-8 text-center">
+        <div className="bg-muted mb-3 flex size-10 items-center justify-center rounded-full">
+          <BellOff className="text-muted-foreground size-5" aria-hidden />
+        </div>
+        <p className="text-sm font-medium">{emptyTitle}</p>
+        <p className="text-muted-foreground mt-1 text-xs">
+          You&apos;re all caught up. New updates will appear here.
+        </p>
       </div>
     );
   }
 
   return (
-    <div>
-      {items.map((n) => (
+    <div aria-live="polite">
+      {items.map((notification) => (
         <NotificationItem
-          key={n.id}
-          notification={n}
+          key={notification.id}
+          notification={notification}
           onRead={onRead}
           onNavigate={onNavigate}
         />
@@ -279,129 +243,207 @@ function NotificationList({
   );
 }
 
-type FilterTab = 'all' | 'unread' | 'sync' | 'system';
+function NotificationListSkeleton() {
+  return (
+    <div className="space-y-1 p-3" aria-label="Loading notifications">
+      {Array.from({ length: 4 }, (_, index) => (
+        <div key={index} className="flex items-start gap-3 px-1 py-2.5">
+          <Skeleton className="size-8 shrink-0 rounded-full" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-3.5 w-2/3" />
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-2.5 w-20" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function NotificationError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div
+      className="flex h-56 flex-col items-center justify-center px-8 text-center"
+      role="alert"
+    >
+      <div className="bg-destructive/10 mb-3 flex size-10 items-center justify-center rounded-full">
+        <AlertCircle className="text-destructive size-5" aria-hidden />
+      </div>
+      <p className="text-sm font-medium">Notifications couldn&apos;t load</p>
+      <p className="text-muted-foreground mt-1 text-xs">
+        Check your connection, then try again.
+      </p>
+      <Button variant="outline" size="sm" className="mt-4" onClick={onRetry}>
+        <RefreshCw aria-hidden />
+        Try again
+      </Button>
+    </div>
+  );
+}
 
 export default function NotificationsMenu() {
-  const { notifications, unreadCount, markRead, markAllRead } =
-    useNotifications();
+  const {
+    notifications,
+    totalCount,
+    unreadCount,
+    isLoading,
+    isError,
+    isRefreshing,
+    refetch,
+    markRead,
+    markAllRead,
+    isMarkAllPending,
+  } = useNotifications();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<FilterTab>('all');
 
-  const unread = useMemo(
-    () => notifications.filter((n) => !n.readAt),
-    [notifications],
-  );
-  const sync = useMemo(
-    () =>
-      notifications.filter(
-        (n) => (NOTIF_META[n.type] ?? DEFAULT_META).category === 'sync',
+  const groups = useMemo(
+    () => ({
+      all: notifications,
+      unread: notifications.filter((notification) => !notification.readAt),
+      sync: notifications.filter(
+        (notification) =>
+          (NOTIF_META[notification.type] ?? DEFAULT_META).category === 'sync',
       ),
-    [notifications],
-  );
-  const system = useMemo(
-    () =>
-      notifications.filter(
-        (n) => (NOTIF_META[n.type] ?? DEFAULT_META).category === 'system',
+      system: notifications.filter(
+        (notification) =>
+          (NOTIF_META[notification.type] ?? DEFAULT_META).category === 'system',
       ),
+    }),
     [notifications],
   );
 
+  const counts: Record<FilterTab, number> = {
+    all: totalCount,
+    unread: unreadCount,
+    sync: groups.sync.length,
+    system: groups.system.length,
+  };
+  const emptyTitles: Record<FilterTab, string> = {
+    all: 'No notifications yet',
+    unread: 'No unread notifications',
+    sync: 'No sync notifications',
+    system: 'No system notifications',
+  };
   const close = () => setOpen(false);
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
         <Button
           variant="ghost"
           size="icon"
           className="relative"
-          aria-label="Notifications"
+          aria-label={
+            unreadCount > 0
+              ? `Notifications, ${unreadCount} unread`
+              : 'Notifications'
+          }
         >
-          <Bell />
+          <Bell aria-hidden />
           {unreadCount > 0 && (
-            <span className="bg-destructive absolute top-1.5 right-1.5 size-2 rounded-full" />
+            <span
+              className="bg-destructive ring-card absolute top-1.5 right-1.5 size-2 rounded-full ring-2"
+              aria-hidden
+            />
           )}
         </Button>
-      </SheetTrigger>
-      <SheetContent className="sm:max-w-lg">
-        <Tabs
-          value={tab}
-          onValueChange={(v) => setTab(v as FilterTab)}
-          className="min-h-0 flex-1 gap-0"
-        >
-          <SheetHeader>
-            <div className="flex items-center gap-2">
-              <div className="space-y-1">
-                <SheetTitle className="text-lg">Notifications</SheetTitle>
-                <p className="text-xs">
-                  Here your notification see the latest update
-                </p>
-              </div>
-              {unreadCount > 0 && (
+      </PopoverTrigger>
+
+      <PopoverContent align="end" sideOffset={10} className="w-auto gap-0 p-0">
+        <div className="w-[calc(100vw-2rem)] overflow-hidden sm:w-[27rem]">
+          <div className="flex items-start justify-between gap-4 px-4 pt-4 pb-3">
+            <PopoverHeader>
+              <div className="flex items-center gap-2">
+                <PopoverTitle>Notifications</PopoverTitle>
                 <Badge variant="secondary" className="rounded-full">
-                  {unreadCount}
+                  {totalCount}
                 </Badge>
-              )}
-            </div>
-          </SheetHeader>
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="unread">Unread</TabsTrigger>
-            <TabsTrigger value="sync">Sync</TabsTrigger>
-            <TabsTrigger value="system">System</TabsTrigger>
-          </TabsList>
+                {isRefreshing && (
+                  <RefreshCw
+                    className="text-muted-foreground size-3 animate-spin"
+                    aria-label="Refreshing notifications"
+                  />
+                )}
+              </div>
+              <PopoverDescription>
+                Here are your latest updates.
+              </PopoverDescription>
+            </PopoverHeader>
 
-          <ScrollArea className="min-h-0 flex-1">
-            <TabsContent value="all" className="mt-0">
-              <NotificationList
-                items={notifications}
-                emptyTitle="No notifications yet"
-                onRead={markRead}
-                onNavigate={close}
-              />
-            </TabsContent>
-            <TabsContent value="unread" className="mt-0">
-              <NotificationList
-                items={unread}
-                emptyTitle="You're all caught up"
-                onRead={markRead}
-                onNavigate={close}
-              />
-            </TabsContent>
-            <TabsContent value="sync" className="mt-0">
-              <NotificationList
-                items={sync}
-                emptyTitle="No sync notifications"
-                onRead={markRead}
-                onNavigate={close}
-              />
-            </TabsContent>
-            <TabsContent value="system" className="mt-0">
-              <NotificationList
-                items={system}
-                emptyTitle="No system notifications"
-                onRead={markRead}
-                onNavigate={close}
-              />
-            </TabsContent>
-          </ScrollArea>
-        </Tabs>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button asChild variant="ghost" size="icon-sm">
+                  <Link
+                    to="/settings/preferences"
+                    onClick={close}
+                    aria-label="Notification preferences"
+                  >
+                    <Settings2 aria-hidden />
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Notification preferences</TooltipContent>
+            </Tooltip>
+          </div>
 
-        <SheetFooter className="flex-row items-center justify-between border-t">
-          <Button asChild variant="link" size="sm" onClick={close}>
-            <Link to="/scheduler">Queue health</Link>
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground"
-            onClick={markAllRead}
-            disabled={unreadCount === 0}
+          <Tabs
+            value={tab}
+            onValueChange={(value) => setTab(value as FilterTab)}
+            className="gap-0"
           >
-            Mark all as read
-          </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+            <div className="px-3 pb-2">
+              <TabsList className="grid w-full grid-cols-4">
+                {(Object.keys(TAB_LABELS) as FilterTab[]).map((value) => (
+                  <TabsTrigger key={value} value={value}>
+                    <span>{TAB_LABELS[value]}</span>
+                    <span className="text-[11px] tabular-nums">
+                      {counts[value]}
+                    </span>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
+
+            <ScrollArea className="h-[min(25rem,55vh)] border-y">
+              {isLoading ? (
+                <NotificationListSkeleton />
+              ) : isError ? (
+                <NotificationError onRetry={() => void refetch()} />
+              ) : (
+                (Object.keys(TAB_LABELS) as FilterTab[]).map((value) => (
+                  <TabsContent key={value} value={value} className="mt-0">
+                    <NotificationList
+                      items={groups[value]}
+                      emptyTitle={emptyTitles[value]}
+                      onRead={markRead}
+                      onNavigate={close}
+                    />
+                  </TabsContent>
+                ))
+              )}
+            </ScrollArea>
+          </Tabs>
+
+          <div className="bg-muted/30 flex items-center justify-between gap-3 px-3 py-2.5">
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/scheduler" onClick={close}>
+                <Activity aria-hidden />
+                Queue health
+              </Link>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => markAllRead()}
+              disabled={unreadCount === 0}
+              loading={isMarkAllPending}
+            >
+              Mark all as read
+            </Button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }

@@ -62,6 +62,10 @@ export const queryKeys = {
     health: ['scheduler', 'health'] as const,
     queueStats: ['scheduler', 'queueStats'] as const,
   },
+  notifications: {
+    list: ['notifications', 'list'] as const,
+    unreadCount: ['notifications', 'unreadCount'] as const,
+  },
   priorityQueue: {
     detail: (projectId: string) => ['priorityQueue', projectId] as const,
   },
@@ -150,8 +154,8 @@ export const queryKeys = {
     all: ['invitations'] as const,
   },
   // Super Admin workspace. Every org-scoped key includes organisationId in
-// its second slot so React Query never returns Organisation A's cached
-// data while the sidebar is displaying Organisation B (SA-202, SA-213).
+  // its second slot so React Query never returns Organisation A's cached
+  // data while the sidebar is displaying Organisation B (SA-202, SA-213).
   superAdmin: {
     platform: {
       overview: ['superAdmin', 'platform', 'overview'] as const,
@@ -228,13 +232,7 @@ export const queryKeys = {
       project: (organisationId: string, projectId: string) =>
         ['superAdmin', organisationId, 'projects', projectId] as const,
       jobs: (organisationId: string, projectId: string) =>
-        [
-          'superAdmin',
-          organisationId,
-          'projects',
-          projectId,
-          'jobs',
-        ] as const,
+        ['superAdmin', organisationId, 'projects', projectId, 'jobs'] as const,
       job: (organisationId: string, projectId: string, jobId: string) =>
         [
           'superAdmin',
