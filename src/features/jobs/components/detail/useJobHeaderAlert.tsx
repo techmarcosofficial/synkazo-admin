@@ -151,7 +151,9 @@ export function useJobHeaderAlert(): ResolvedJobHeaderAlert | undefined {
       key: 'ready-to-activate',
       variant: 'success',
       icon: Check,
-      title: 'Setup complete — activate to start scheduled syncing',
+      title: onboardingComplete
+        ? 'Setup complete — activate to start scheduled syncing'
+        : 'Ready to activate — run the job once to test it first',
       description: (
         <>
           This project is fully configured.{' '}

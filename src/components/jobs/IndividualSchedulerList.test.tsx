@@ -87,7 +87,7 @@ describe('IndividualSchedulerList', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Expand Customers' }));
     expect(screen.getByRole('link', { name: 'Edit schedule' })).toHaveAttribute(
       'href',
-      '/projects/project-1/jobs/job-1?tab=schedule',
+      '/projects/project-1/jobs/job-1?tab=settings&section=schedule',
     );
   });
 });

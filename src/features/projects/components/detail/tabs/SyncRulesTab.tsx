@@ -276,7 +276,7 @@ function SyncJobCard({ job, projectId }: { job: JobExt; projectId: string }) {
         </div>
 
         <CollapsibleContent>
-          <div className="bg-muted space-y-3 border-t px-3 py-4 sm:px-4">
+          <div className="bg-muted space-y-3 border-t py-2 px-1.5">
             {detailQuery.isLoading ? (
               <div className="grid grid-cols-2 md:grid-cols-4">
                 {Array.from({ length: 4 }).map((_, index) => (

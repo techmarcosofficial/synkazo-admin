@@ -1,7 +1,7 @@
 export type JobDetailTabId =
+  | 'overview'
   | 'field-mapping'
   | 'pipeline'
-  | 'schedule'
   | 'run-history'
   | 'conflicts'
   | 'webhook-events'
@@ -19,16 +19,16 @@ export interface JobDetailTabDef {
   visible?: (ctx: JobDetailTabContext) => boolean;
 }
 
-export const DEFAULT_TAB_ID: JobDetailTabId = 'field-mapping';
+export const DEFAULT_TAB_ID: JobDetailTabId = 'overview';
 
 export const TAB_DEFS: JobDetailTabDef[] = [
+  { id: 'overview', label: 'Overview' },
   { id: 'field-mapping', label: 'Field Mapping' },
   {
     id: 'pipeline',
     label: 'Pipeline',
     visible: ({ pipelineRequired }) => pipelineRequired,
   },
-  { id: 'schedule', label: 'Sync & Schedule' },
   { id: 'run-history', label: 'Run History' },
   { id: 'conflicts', label: 'Conflicts', visible: ({ isTwoWay }) => isTwoWay },
   {

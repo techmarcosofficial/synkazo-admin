@@ -1,27 +1,22 @@
-import { format } from 'date-fns';
-import { Building2, ShieldCheck, Trash2 } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { Building2, ExternalLink, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+
+import ProvisionOrganisationDialog from './organisations/ProvisionOrganisationDialog';
 
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
-import ManagementToolbar from '@/components/shared/ManagementToolbar';
 import PageHeader from '@/components/shared/PageHeader';
 import PaginationBar from '@/components/shared/PaginationBar';
 import SkeletonList from '@/components/shared/skeletons/SkeletonList';
-import SortableTableHead from '@/components/shared/SortableTableHead';
-import StatusBadge from '@/components/shared/StatusBadge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from '@/components/ui/input-group';
 import {
   Select,
   SelectContent,
@@ -37,401 +32,371 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import { usePagination } from '@/hooks/usePagination';
-import { useSort } from '@/hooks/useSort';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { showToast } from '@/lib/toast';
 import {
-  useAdminPlansQuery,
-  useAssignPlanMutation,
-} from '@/queries/useBilling';
-import { useDeleteOrgMutation, useOrgsQuery } from '@/queries/useOrganisations';
-import { useProjectsQuery } from '@/queries/useProjects';
-import { useUsersQuery } from '@/queries/useUsers';
-import type { Organisation } from '@/types';
+  useProvisionSuperAdminOrganisationMutation,
+  useSuperAdminOrganisationsQuery,
+} from '@/queries/useSuperAdmin';
+import type { OrgStatus, SubscriptionStatus } from '@/types';
 
-interface OrgWithMeta extends Organisation {
-  ownerEmail?: string;
-  status?: string;
-  membershipPlanId?: string | null;
-  projectCount: number;
+// SA-400 Phase 4 organisation directory. Server-side pagination, search,
+// and status/subscription filters, driven by URL params so the Overview
+// deep-links (?status=suspended, ?subscriptionStatus=past_due) land the
+// operator on the pre-filtered view — no manual re-filter step.
+
+const STATUS_LABELS: Record<OrgStatus | 'all', string> = {
+  all: 'All statuses',
+  active: 'Active',
+  suspended: 'Suspended',
+  pending: 'Pending',
+  archived: 'Archived',
+};
+
+const SUBSCRIPTION_LABELS: Record<SubscriptionStatus | 'all', string> = {
+  all: 'All billing',
+  none: 'No subscription',
+  trialing: 'Trialing',
+  active: 'Active',
+  past_due: 'Past due',
+  canceled: 'Cancelled',
+  incomplete: 'Incomplete',
+  unpaid: 'Unpaid',
+  paused: 'Paused',
+  pending_cancel: 'Cancelling',
+};
+
+function toneForOrgStatus(status: OrgStatus): 'default' | 'warning' | 'muted' {
+  if (status === 'suspended') return 'warning';
+  if (status === 'pending' || status === 'archived') return 'muted';
+  return 'default';
 }
 
-interface AssignPlanDialogProps {
-  org: OrgWithMeta | null;
-  onOpenChange: (open: boolean) => void;
+function toneForSubscription(
+  status: SubscriptionStatus,
+): 'default' | 'warning' | 'muted' | 'destructive' {
+  if (status === 'past_due' || status === 'unpaid') return 'destructive';
+  if (status === 'trialing' || status === 'pending_cancel') return 'warning';
+  if (status === 'active') return 'default';
+  return 'muted';
 }
 
-function AssignPlanDialog({ org, onOpenChange }: AssignPlanDialogProps) {
-  const plansQuery = useAdminPlansQuery();
-  const assignPlanMutation = useAssignPlanMutation();
-  const [planId, setPlanId] = useState<string>('');
+function ToneBadge({
+  tone,
+  children,
+}: {
+  tone: 'default' | 'warning' | 'muted' | 'destructive';
+  children: React.ReactNode;
+}) {
+  const classes =
+    tone === 'destructive'
+      ? 'bg-red-100 text-red-900'
+      : tone === 'warning'
+        ? 'bg-amber-100 text-amber-900'
+        : tone === 'muted'
+          ? 'bg-muted text-muted-foreground'
+          : 'bg-emerald-100 text-emerald-900';
+  return <Badge className={`rounded-full ${classes}`}>{children}</Badge>;
+}
 
-  const activePlans = (plansQuery.data ?? []).filter((p) => p.isActive);
+export default function OrganisationsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const statusParam = (searchParams.get('status') ?? 'all') as
+    | OrgStatus
+    | 'all';
+  const subscriptionParam = (searchParams.get('subscriptionStatus') ??
+    'all') as SubscriptionStatus | 'all';
+  const searchInput = searchParams.get('search') ?? '';
+  const pageParam = Number(searchParams.get('page') ?? '1') || 1;
+
+  const [searchDraft, setSearchDraft] = useState(searchInput);
+  const debouncedSearch = useDebouncedValue(searchDraft, 250);
+
+  // Push the debounced value back into the URL so the query param stays
+  // canonical (deep-linkable + refresh-safe) rather than living in a
+  // separate piece of local state that the URL doesn't know about.
+  useMemo(() => {
+    if (debouncedSearch === (searchParams.get('search') ?? '')) return;
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (debouncedSearch) next.set('search', debouncedSearch);
+        else next.delete('search');
+        next.delete('page');
+        return next;
+      },
+      { replace: true },
+    );
+  }, [debouncedSearch, searchParams, setSearchParams]);
+
+  const [pageSize, setPageSize] = useState(10);
+
+  const query = useSuperAdminOrganisationsQuery({
+    page: pageParam,
+    limit: pageSize,
+    search: debouncedSearch || undefined,
+    status: statusParam !== 'all' ? statusParam : undefined,
+    subscriptionStatus:
+      subscriptionParam !== 'all' ? subscriptionParam : undefined,
+    sortBy: 'createdAt',
+    sortOrder: 'desc',
+  });
+
+  const rows = query.data?.data ?? [];
+  const total = query.data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  const setParam = (key: string, value: string | null) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (value === null || value === 'all') next.delete(key);
+        else next.set(key, value);
+        next.delete('page');
+        return next;
+      },
+      { replace: false },
+    );
+  };
+
+  const setPage = (page: number) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (page <= 1) next.delete('page');
+        else next.set('page', String(page));
+        return next;
+      },
+      { replace: false },
+    );
+  };
+
+  const hasActiveFilters =
+    statusParam !== 'all' ||
+    subscriptionParam !== 'all' ||
+    !!debouncedSearch;
+
+  const navigate = useNavigate();
+  const provisionMutation = useProvisionSuperAdminOrganisationMutation();
+  const [provisionOpen, setProvisionOpen] = useState(false);
 
   return (
-    <Dialog
-      open={!!org}
-      onOpenChange={(open) => {
-        if (!open) setPlanId('');
-        onOpenChange(open);
-      }}
-    >
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Assign plan</DialogTitle>
-          <DialogDescription>
-            {org?.name} will function exactly per the selected plan's limits and
-            features, without going through checkout or being billed.
-          </DialogDescription>
-        </DialogHeader>
-        <Select value={planId} onValueChange={setPlanId}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select a plan…" />
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <PageHeader
+          title="Organisations"
+          description="Every customer organisation on the platform. Use filters to narrow, or click a row to open the operator overview."
+        />
+        <Button onClick={() => setProvisionOpen(true)}>
+          <Plus className="size-4" aria-hidden />
+          Provision organisation
+        </Button>
+      </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <InputGroup className="flex-1">
+          <InputGroupAddon>
+            <Building2 className="size-4" aria-hidden />
+          </InputGroupAddon>
+          <InputGroupInput
+            placeholder="Search name, slug, or owner email…"
+            value={searchDraft}
+            onChange={(e) => setSearchDraft(e.target.value)}
+          />
+        </InputGroup>
+
+        <Select
+          value={statusParam}
+          onValueChange={(v) => setParam('status', v)}
+        >
+          <SelectTrigger className="sm:w-44">
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {activePlans.map((plan) => (
-              <SelectItem key={plan.id} value={plan.id}>
-                {plan.name}
+            {(Object.keys(STATUS_LABELS) as Array<keyof typeof STATUS_LABELS>).map(
+              (key) => (
+                <SelectItem key={key} value={key}>
+                  {STATUS_LABELS[key]}
+                </SelectItem>
+              ),
+            )}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={subscriptionParam}
+          onValueChange={(v) => setParam('subscriptionStatus', v)}
+        >
+          <SelectTrigger className="sm:w-44">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {(
+              Object.keys(SUBSCRIPTION_LABELS) as Array<
+                keyof typeof SUBSCRIPTION_LABELS
+              >
+            ).map((key) => (
+              <SelectItem key={key} value={key}>
+                {SUBSCRIPTION_LABELS[key]}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
+
+        {hasActiveFilters ? (
           <Button
-            disabled={!planId || assignPlanMutation.isPending}
-            onClick={() => {
-              if (!org) return;
-              assignPlanMutation.mutate(
-                { organisationId: org.id, planId },
-                {
-                  onSuccess: () => {
-                    showToast.success(`Plan assigned to ${org.name}.`);
-                    onOpenChange(false);
-                  },
-                  onError: (err) => {
-                    const e = err as {
-                      response?: { data?: { message?: string } };
-                    };
-                    showToast.error(
-                      e?.response?.data?.message ?? 'Failed to assign plan',
-                    );
-                  },
-                },
-              );
-            }}
+            variant="ghost"
+            size="sm"
+            onClick={() => setSearchParams(new URLSearchParams())}
           >
-            Assign
+            Clear filters
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-type StatusFilter = 'all' | 'active' | 'inactive';
-type SortKey = 'name' | 'owner' | 'projects' | 'status';
-
-function compareOrgs(a: OrgWithMeta, b: OrgWithMeta, key: SortKey) {
-  switch (key) {
-    case 'name':
-      return (a.name || '').localeCompare(b.name || '');
-    case 'owner':
-      return (a.ownerEmail || '').localeCompare(b.ownerEmail || '');
-    case 'projects':
-      return a.projectCount - b.projectCount;
-    case 'status':
-      return Number(a.status !== 'inactive') - Number(b.status !== 'inactive');
-  }
-}
-
-export default function OrganisationsPage() {
-  const orgsQuery = useOrgsQuery();
-  const usersQuery = useUsersQuery();
-  const projectsQuery = useProjectsQuery();
-  const deleteOrgMutation = useDeleteOrgMutation();
-  const { confirm } = useConfirmDialog();
-
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [assigningPlanOrg, setAssigningPlanOrg] = useState<OrgWithMeta | null>(
-    null,
-  );
-
-  const isLoading =
-    orgsQuery.isLoading || usersQuery.isLoading || projectsQuery.isLoading;
-  const hasNoData =
-    (orgsQuery.isError && orgsQuery.data === undefined) ||
-    (usersQuery.isError && usersQuery.data === undefined) ||
-    (projectsQuery.isError && projectsQuery.data === undefined);
-
-  const users = usersQuery.data ?? [];
-  const projects = projectsQuery.data ?? [];
-  const superAdminEmails = new Set(
-    users.filter((u) => u.role === 'super_admin').map((u) => u.email),
-  );
-
-  const organisations: OrgWithMeta[] = useMemo(
-    () =>
-      (
-        (orgsQuery.data ?? []) as (Organisation & {
-          ownerEmail?: string;
-          status?: string;
-          membershipPlanId?: string | null;
-        })[]
-      ).map((org) => ({
-        ...org,
-        projectCount: projects.filter((p) => p.organisationId === org.id)
-          .length,
-      })),
-    [orgsQuery.data, projects],
-  );
-
-  const filteredOrgs = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return organisations.filter((org) => {
-      const matchesSearch =
-        !q ||
-        org.name?.toLowerCase().includes(q) ||
-        org.ownerEmail?.toLowerCase().includes(q);
-      const status = org.status || 'active';
-      const matchesStatus = statusFilter === 'all' || status === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
-  }, [organisations, search, statusFilter]);
-
-  const { sorted, sortKey, direction, toggleSort } = useSort<
-    OrgWithMeta,
-    SortKey
-  >(filteredOrgs, compareOrgs);
-
-  const { page, setPage, pageSize, setPageSize, totalPages, pageItems, total } =
-    usePagination(sorted, 10);
-
-  const deleteOrg = (org: OrgWithMeta) => {
-    confirm({
-      variant: 'danger',
-      title: `Delete ${org.name}?`,
-      description:
-        'This soft-deletes the organisation, deactivates all its users, and pauses all its jobs/association rules.',
-      confirmLabel: 'Delete Organisation',
-      onConfirm: () =>
-        deleteOrgMutation.mutate(org.id, {
-          onSuccess: () => showToast.success('Organisation deleted.'),
-          onError: (err) => {
-            const e = err as { response?: { data?: { message?: string } } };
-            showToast.error(
-              e?.response?.data?.message ?? 'Failed to delete organisation',
-            );
-          },
-        }),
-    });
-  };
-
-  const header = (
-    <PageHeader
-      backTo={{ label: 'Back to Super Admin', to: '/super-admin' }}
-      title="Organisations"
-      description="View and manage tenant organisations across the platform"
-    />
-  );
-
-  if (isLoading) {
-    return (
-      <div className="animate-fade-in-up space-y-6">
-        {header}
-        <Card className="p-0">
-          <SkeletonList count={5} />
-        </Card>
+        ) : null}
       </div>
-    );
-  }
 
-  if (hasNoData) {
-    return (
-      <div className="animate-fade-in-up space-y-6">
-        {header}
+      {query.isLoading ? (
+        <SkeletonList count={5} />
+      ) : query.isError ? (
         <ErrorState
-          onRetry={() => {
-            orgsQuery.refetch();
-            usersQuery.refetch();
-            projectsQuery.refetch();
-          }}
+          title="Could not load organisations"
+          description={
+            (query.error as Error)?.message ??
+            'The Super Admin organisations endpoint returned an error.'
+          }
+          onRetry={() => query.refetch()}
         />
-      </div>
-    );
-  }
+      ) : rows.length === 0 ? (
+        <EmptyState
+          icon={Building2}
+          title="No organisations match your filters"
+          description={
+            hasActiveFilters
+              ? 'Try clearing filters or searching for something else.'
+              : 'No customer organisations exist yet.'
+          }
+        />
+      ) : (
+        <div className="bg-card overflow-hidden rounded-lg border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Organisation</TableHead>
+                <TableHead>Owner</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Subscription</TableHead>
+                <TableHead>Plan</TableHead>
+                <TableHead className="text-right">Members</TableHead>
+                <TableHead className="text-right">Projects</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead className="w-8"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((row) => (
+                <TableRow key={row.id}>
+                  <TableCell>
+                    <Link
+                      to={`/super-admin/organisations/${row.id}/overview`}
+                      className="hover:text-primary flex flex-col"
+                    >
+                      <span className="font-medium">{row.name}</span>
+                      <span className="text-muted-foreground text-xs">
+                        {row.slug}
+                      </span>
+                    </Link>
+                  </TableCell>
+                  <TableCell className="max-w-56 truncate text-sm">
+                    {row.owner?.email || (
+                      <span className="text-muted-foreground italic">
+                        No owner
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <ToneBadge tone={toneForOrgStatus(row.status)}>
+                      {STATUS_LABELS[row.status] ?? row.status}
+                    </ToneBadge>
+                  </TableCell>
+                  <TableCell>
+                    <ToneBadge tone={toneForSubscription(row.subscriptionStatus)}>
+                      {SUBSCRIPTION_LABELS[row.subscriptionStatus] ??
+                        row.subscriptionStatus}
+                    </ToneBadge>
+                  </TableCell>
+                  <TableCell className="text-sm">{row.plan.name}</TableCell>
+                  <TableCell className="text-right font-mono text-sm">
+                    {row.memberCount}
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-sm">
+                    {row.projectCount}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {formatDistanceToNow(new Date(row.createdAt), {
+                      addSuffix: true,
+                    })}
+                  </TableCell>
+                  <TableCell>
+                    <Link
+                      to={`/super-admin/organisations/${row.id}/overview`}
+                      aria-label={`Open ${row.name}`}
+                    >
+                      <ExternalLink className="text-muted-foreground size-3.5" />
+                    </Link>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
 
-  const paginationBar = (
-    <PaginationBar
-      page={page}
-      totalPages={totalPages}
-      total={total}
-      pageSize={pageSize}
-      onPageChange={setPage}
-      onPageSizeChange={setPageSize}
-    />
-  );
+      <PaginationBar
+        page={pageParam}
+        totalPages={totalPages}
+        total={total}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          setPage(1);
+        }}
+      />
 
-  return (
-    <div className="animate-fade-in-up space-y-6">
-      {header}
-      <Card>
-        <CardContent className="space-y-6">
-          <div className="flex justify-between">
-            <div className="space-y-1">
-              <h3 className="text-2xl font-semibold">Manage organisations</h3>
-              <p className="text-muted-foreground text-sm">
-                View and manage tenant organisations across the platform
-              </p>
-            </div>
-            <ManagementToolbar
-              searchValue={search}
-              onSearchChange={setSearch}
-              searchPlaceholder="Search organisations…"
-              filters={
-                <Select
-                  value={statusFilter}
-                  onValueChange={(v: StatusFilter) => setStatusFilter(v)}
-                >
-                  <SelectTrigger className="bg-muted sm:w-36">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All statuses</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
+      <ProvisionOrganisationDialog
+        open={provisionOpen}
+        onOpenChange={setProvisionOpen}
+        isSubmitting={provisionMutation.isPending}
+        errorMessage={
+          provisionMutation.isError
+            ? ((provisionMutation.error as {
+                response?: { data?: { message?: string } };
+              }).response?.data?.message ??
+              'The request failed. Try again.')
+            : null
+        }
+        onSubmit={(values) => {
+          provisionMutation.mutate(values, {
+            onSuccess: (data) => {
+              if (data.reused) {
+                showToast.info(
+                  `Organisation already existed — opening ${data.slug}.`,
+                );
+              } else if (data.invitationSent) {
+                showToast.success(
+                  `Provisioned. Owner invitation sent to the supplied email.`,
+                );
+              } else {
+                showToast.success(
+                  `Provisioned. Invite an owner from the Members page when ready.`,
+                );
               }
-            />
-          </div>
-          {filteredOrgs.length === 0 ? (
-            <EmptyState
-              icon={Building2}
-              title="No organisations match your filters"
-              viewMode="table"
-            />
-          ) : (
-            <div className="overflow-hidden rounded-4xl border">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted hover:bg-muted/50">
-                    <SortableTableHead
-                      active={sortKey === 'name'}
-                      direction={direction}
-                      onClick={() => toggleSort('name')}
-                    >
-                      Organisation
-                    </SortableTableHead>
-                    <SortableTableHead
-                      active={sortKey === 'owner'}
-                      direction={direction}
-                      onClick={() => toggleSort('owner')}
-                    >
-                      Owner
-                    </SortableTableHead>
-                    <SortableTableHead
-                      active={sortKey === 'projects'}
-                      direction={direction}
-                      onClick={() => toggleSort('projects')}
-                    >
-                      Projects
-                    </SortableTableHead>
-                    <SortableTableHead
-                      active={sortKey === 'status'}
-                      direction={direction}
-                      onClick={() => toggleSort('status')}
-                    >
-                      Status
-                    </SortableTableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pageItems.map((org) => {
-                    const orgOwnedBySuperAdmin = org.ownerEmail
-                      ? superAdminEmails.has(org.ownerEmail)
-                      : false;
-                    return (
-                      <TableRow key={org.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <Avatar className="size-8">
-                              <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
-                                {org.name?.charAt(0)?.toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="text-sm font-medium">{org.name}</p>
-                              <p className="text-muted-foreground text-xs">
-                                {org.createdAt
-                                  ? format(
-                                      new Date(org.createdAt),
-                                      'MMM d, yyyy',
-                                    )
-                                  : '—'}
-                              </p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {org.ownerEmail || '—'}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">
-                            {org.projectCount} projects
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <StatusBadge
-                            status={org.status || 'active'}
-                            size="sm"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon-xs"
-                              onClick={() => setAssigningPlanOrg(org)}
-                              title="Assign plan"
-                            >
-                              <ShieldCheck className="size-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon-xs"
-                              className="text-destructive"
-                              onClick={() => deleteOrg(org)}
-                              disabled={orgOwnedBySuperAdmin}
-                              title={
-                                orgOwnedBySuperAdmin
-                                  ? 'Cannot delete an organisation created by a super admin'
-                                  : 'Delete organisation'
-                              }
-                            >
-                              <Trash2 className="size-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-        <CardFooter>{paginationBar}</CardFooter>
-      </Card>
-      <AssignPlanDialog
-        org={assigningPlanOrg}
-        onOpenChange={(open) => {
-          if (!open) setAssigningPlanOrg(null);
+              setProvisionOpen(false);
+              navigate(
+                `/super-admin/organisations/${data.organisationId}/overview`,
+              );
+            },
+          });
         }}
       />
     </div>

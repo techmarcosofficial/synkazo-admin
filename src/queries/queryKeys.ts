@@ -62,6 +62,10 @@ export const queryKeys = {
     health: ['scheduler', 'health'] as const,
     queueStats: ['scheduler', 'queueStats'] as const,
   },
+  notifications: {
+    list: ['notifications', 'list'] as const,
+    unreadCount: ['notifications', 'unreadCount'] as const,
+  },
   priorityQueue: {
     detail: (projectId: string) => ['priorityQueue', projectId] as const,
   },
@@ -148,6 +152,148 @@ export const queryKeys = {
   },
   invitations: {
     all: ['invitations'] as const,
+  },
+  // Super Admin workspace. Every org-scoped key includes organisationId in
+  // its second slot so React Query never returns Organisation A's cached
+  // data while the sidebar is displaying Organisation B (SA-202, SA-213).
+  superAdmin: {
+    platform: {
+      overview: ['superAdmin', 'platform', 'overview'] as const,
+      failedPayments: (
+        page: number,
+        limit: number,
+        filters: Record<string, unknown> = {},
+      ) =>
+        [
+          'superAdmin',
+          'platform',
+          'failedPayments',
+          page,
+          limit,
+          filters,
+        ] as const,
+    },
+    organisations: {
+      list: (
+        page: number,
+        limit: number,
+        filters: Record<string, unknown> = {},
+      ) => ['superAdmin', 'organisations', page, limit, filters] as const,
+      detail: (organisationId: string) =>
+        ['superAdmin', 'organisations', organisationId] as const,
+    },
+    members: {
+      list: (
+        organisationId: string,
+        page: number,
+        limit: number,
+        filters: Record<string, unknown> = {},
+      ) =>
+        [
+          'superAdmin',
+          organisationId,
+          'members',
+          page,
+          limit,
+          filters,
+        ] as const,
+    },
+    invitations: {
+      list: (
+        organisationId: string,
+        page: number,
+        limit: number,
+        filters: Record<string, unknown> = {},
+      ) =>
+        [
+          'superAdmin',
+          organisationId,
+          'invitations',
+          page,
+          limit,
+          filters,
+        ] as const,
+    },
+    operations: {
+      projects: (
+        organisationId: string,
+        page: number,
+        limit: number,
+        filters: Record<string, unknown> = {},
+      ) =>
+        [
+          'superAdmin',
+          organisationId,
+          'projects',
+          page,
+          limit,
+          filters,
+        ] as const,
+      project: (organisationId: string, projectId: string) =>
+        ['superAdmin', organisationId, 'projects', projectId] as const,
+      jobs: (organisationId: string, projectId: string) =>
+        ['superAdmin', organisationId, 'projects', projectId, 'jobs'] as const,
+      job: (organisationId: string, projectId: string, jobId: string) =>
+        [
+          'superAdmin',
+          organisationId,
+          'projects',
+          projectId,
+          'jobs',
+          jobId,
+        ] as const,
+      runStatus: (
+        organisationId: string,
+        projectId: string,
+        jobId: string,
+        bullJobId: string,
+      ) =>
+        [
+          'superAdmin',
+          organisationId,
+          'projects',
+          projectId,
+          'jobs',
+          jobId,
+          'runs',
+          bullJobId,
+        ] as const,
+    },
+    billing: {
+      overview: (organisationId: string) =>
+        ['superAdmin', organisationId, 'billing', 'overview'] as const,
+      invoices: (organisationId: string, page: number, limit: number) =>
+        [
+          'superAdmin',
+          organisationId,
+          'billing',
+          'invoices',
+          page,
+          limit,
+        ] as const,
+    },
+    activity: {
+      list: (
+        organisationId: string,
+        page: number,
+        limit: number,
+        filters: Record<string, unknown> = {},
+      ) =>
+        [
+          'superAdmin',
+          organisationId,
+          'activity',
+          page,
+          limit,
+          filters,
+        ] as const,
+    },
+    // Prefix used to nuke every cached entry for one organisation on
+    // context switch. Any org-scoped key above lives under
+    // ['superAdmin', <organisationId>, ...] — so removing that prefix
+    // invalidates the whole workspace in one line (SA-213).
+    orgScope: (organisationId: string) =>
+      ['superAdmin', organisationId] as const,
   },
   billing: {
     plan: ['billing', 'plan'] as const,

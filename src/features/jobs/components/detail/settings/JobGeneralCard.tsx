@@ -5,7 +5,6 @@ import { z } from 'zod';
 
 import { jobsApi } from '@/api/jobs';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import {
   Field,
   FieldContent,
@@ -79,59 +78,57 @@ export default function JobGeneralCard({
   });
 
   return (
-    <Card>
-      <CardContent>
-        <h3 className="mb-4 font-semibold">General</h3>
-        <form onSubmit={onSubmit} className="space-y-4">
-          <Field>
-            <FieldLabel htmlFor="job-name" required>
-              Job Name
-            </FieldLabel>
-            <FieldContent>
-              <Input id="job-name" {...form.register('name')} />
-            </FieldContent>
-            <FieldError>{form.formState.errors.name?.message}</FieldError>
-          </Field>
+    <section aria-labelledby="job-general-title">
+      <h3 id="job-general-title" className="mb-4 font-semibold">
+        Job details
+      </h3>
+      <form onSubmit={onSubmit} className="space-y-4">
+        <Field>
+          <FieldLabel htmlFor="job-name" required>
+            Job Name
+          </FieldLabel>
+          <FieldContent>
+            <Input id="job-name" {...form.register('name')} />
+          </FieldContent>
+          <FieldError>{form.formState.errors.name?.message}</FieldError>
+        </Field>
 
-          <FieldGroup className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-muted-foreground mb-1 text-xs">
-                Source Object
-              </p>
-              <div className="bg-muted text-muted-foreground truncate rounded-3xl px-3 py-2">
-                {job.sourceObject}
-              </div>
+        <FieldGroup className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <p className="text-muted-foreground mb-1 text-xs">Source Object</p>
+            <div className="bg-muted text-muted-foreground truncate rounded-3xl px-3 py-2">
+              {job.sourceObject}
             </div>
-            <div>
-              <p className="text-muted-foreground mb-1 text-xs">
-                Destination Object
-              </p>
-              <div className="bg-muted text-muted-foreground truncate rounded-3xl px-3 py-2">
-                {job.destObject}
-              </div>
+          </div>
+          <div>
+            <p className="text-muted-foreground mb-1 text-xs">
+              Destination Object
+            </p>
+            <div className="bg-muted text-muted-foreground truncate rounded-3xl px-3 py-2">
+              {job.destObject}
             </div>
-          </FieldGroup>
+          </div>
+        </FieldGroup>
 
-          <Field>
-            <FieldLabel htmlFor="last-synced-at">Last Synced Date</FieldLabel>
-            <FieldContent>
-              <Input
-                id="last-synced-at"
-                readOnly
-                value={formatLastSyncedAt(job.lastSyncedAt)}
-              />
-            </FieldContent>
-          </Field>
+        <Field>
+          <FieldLabel htmlFor="last-synced-at">Last Synced Date</FieldLabel>
+          <FieldContent>
+            <Input
+              id="last-synced-at"
+              readOnly
+              value={formatLastSyncedAt(job.lastSyncedAt)}
+            />
+          </FieldContent>
+        </Field>
 
-          <Button type="submit" disabled={saving || !form.formState.isDirty}>
-            {saving
-              ? 'Saving…'
-              : form.formState.isSubmitSuccessful && !form.formState.isDirty
-                ? 'Saved'
-                : 'Save Changes'}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+        <Button type="submit" disabled={saving || !form.formState.isDirty}>
+          {saving
+            ? 'Saving…'
+            : form.formState.isSubmitSuccessful && !form.formState.isDirty
+              ? 'Saved'
+              : 'Save Changes'}
+        </Button>
+      </form>
+    </section>
   );
 }

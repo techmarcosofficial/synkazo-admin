@@ -4,7 +4,6 @@ import { useJobDetailContext } from '../context';
 
 import { jobsApi } from '@/api/jobs';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import SyncDirectionFields from '@/features/jobs/components/SyncDirectionFields';
 import { showToast } from '@/lib/toast';
 import { useProjectConnectionsQuery } from '@/queries/useConnections';
@@ -88,47 +87,47 @@ export default function JobSyncDirectionCard() {
   };
 
   return (
-    <Card>
-      <CardContent>
-        <h3 className="font-semibold">Sync Direction</h3>
-        <p className="text-muted-foreground mb-4 text-xs">
-          How this job moves records between platforms. Set at creation and
-          locked from here on, aside from the HubSpot webhook opt-in.
-        </p>
+    <section aria-labelledby="job-sync-direction-title">
+      <h3 id="job-sync-direction-title" className="font-semibold">
+        Sync Direction &amp; Behavior
+      </h3>
+      <p className="text-muted-foreground mb-4 text-xs">
+        How this job moves records between platforms. Set at creation and locked
+        from here on, aside from the HubSpot webhook opt-in.
+      </p>
 
-        <SyncDirectionFields
-          syncDirection={syncDirection}
-          sourceOfTruth={sourceOfTruth}
-          deleteHandling={deleteHandling}
-          hubspotWebhookEnabled={hubspotWebhookEnabled}
-          syncTrigger={syncTrigger}
-          sourcePlatform={sourcePlatformId}
-          destPlatform={destPlatformId}
-          availablePlatforms={availablePlatforms}
-          sourceConnection={getConnectionForPlatform(sourcePlatformId)}
-          destConnection={getConnectionForPlatform(destPlatformId)}
-          projectId={projectId}
-          onSyncDirectionChange={withDirty(setSyncDirection)}
-          onSourceOfTruthChange={withDirty(setSourceOfTruth)}
-          onDeleteHandlingChange={withDirty(setDeleteHandling)}
-          onHubspotWebhookEnabledChange={withDirty(setHubspotWebhookEnabled)}
-          onSyncTriggerChange={withDirty(setSyncTrigger)}
-          fieldMappingLocationLabel="the Field Mapping tab"
-          readOnly
-        />
+      <SyncDirectionFields
+        syncDirection={syncDirection}
+        sourceOfTruth={sourceOfTruth}
+        deleteHandling={deleteHandling}
+        hubspotWebhookEnabled={hubspotWebhookEnabled}
+        syncTrigger={syncTrigger}
+        sourcePlatform={sourcePlatformId}
+        destPlatform={destPlatformId}
+        availablePlatforms={availablePlatforms}
+        sourceConnection={getConnectionForPlatform(sourcePlatformId)}
+        destConnection={getConnectionForPlatform(destPlatformId)}
+        projectId={projectId}
+        onSyncDirectionChange={withDirty(setSyncDirection)}
+        onSourceOfTruthChange={withDirty(setSourceOfTruth)}
+        onDeleteHandlingChange={withDirty(setDeleteHandling)}
+        onHubspotWebhookEnabledChange={withDirty(setHubspotWebhookEnabled)}
+        onSyncTriggerChange={withDirty(setSyncTrigger)}
+        fieldMappingLocationLabel="the Field Mapping tab"
+        readOnly
+      />
 
-        {/* Structural fields are locked after creation; only the webhook opt-in
+      {/* Structural fields are locked after creation; only the webhook opt-in
             (two-way) can still be saved. */}
-        {isTwoWay && (
-          <Button
-            onClick={handleSave}
-            disabled={saving || !dirty}
-            className="mt-5"
-          >
-            {saving ? 'Saving…' : 'Save Changes'}
-          </Button>
-        )}
-      </CardContent>
-    </Card>
+      {isTwoWay && (
+        <Button
+          onClick={handleSave}
+          disabled={saving || !dirty}
+          className="mt-5"
+        >
+          {saving ? 'Saving…' : 'Save Changes'}
+        </Button>
+      )}
+    </section>
   );
 }

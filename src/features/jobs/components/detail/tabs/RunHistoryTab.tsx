@@ -2,7 +2,6 @@ import { format } from 'date-fns';
 import {
   ArrowLeft,
   ArrowRight,
-  ArrowUp,
   CalendarDays,
   CircleAlert,
   ChevronRight,
@@ -33,6 +32,7 @@ import ErrorState from '@/components/shared/ErrorState';
 import ListStack from '@/components/shared/list/ListStack';
 import PaginationBar from '@/components/shared/PaginationBar';
 import StatusBadge from '@/components/shared/StatusBadge';
+import SyncRunProgress from '@/components/sync/SyncRunProgress';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -213,117 +213,6 @@ function ExpandChevron({
         )}
       />
     </div>
-  );
-}
-
-function LiveProgressBar({
-  runLog,
-  liveProgress,
-}: {
-  runLog: Partial<ExtSyncRun> | null;
-  liveProgress: {
-    totalRecords?: number;
-    recordsProcessed?: number;
-    etaSeconds?: number;
-    ratePerSec?: number;
-  } | null;
-}) {
-  if (!runLog) return null;
-  const {
-    totalFetched,
-    createdCount = 0,
-    updatedCount = 0,
-    skippedCount = 0,
-    failedCount = 0,
-    status,
-  } = runLog;
-  const processed = createdCount + updatedCount + skippedCount + failedCount;
-
-  const totalRecs = liveProgress?.totalRecords ?? totalFetched ?? 0;
-  const liveProcessed = liveProgress?.recordsProcessed ?? processed;
-  const pct =
-    totalRecs > 0
-      ? Math.min(100, Math.round((liveProcessed / totalRecs) * 100))
-      : 0;
-  const isRunning = status === 'running';
-  const indeterminate = isRunning && totalRecs === 0;
-
-  const etaSec = liveProgress?.etaSeconds;
-  const ratePerSec = liveProgress?.ratePerSec;
-  const etaLabel =
-    etaSec != null
-      ? etaSec > 3600
-        ? `${Math.round(etaSec / 3600)}h ${Math.round((etaSec % 3600) / 60)}m`
-        : etaSec > 60
-          ? `${Math.round(etaSec / 60)}m ${etaSec % 60}s`
-          : `${etaSec}s`
-      : null;
-
-  return (
-    <Card className="border-info/30 mb-4">
-      <CardContent className="p-4">
-        <div className="mb-2 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="bg-info size-2 animate-pulse rounded-full" />
-            <span className="text-sm font-medium">Sync in progress…</span>
-            {ratePerSec != null && (
-              <span className="text-muted-foreground text-xs">
-                {ratePerSec} rec/s
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            {etaLabel && (
-              <span className="text-muted-foreground text-xs">
-                ETA: {etaLabel}
-              </span>
-            )}
-            <span className="text-muted-foreground font-mono text-xs">
-              {liveProcessed} / {totalRecs || '?'} records
-            </span>
-          </div>
-        </div>
-        <div className="bg-border mb-3 h-1.5 overflow-hidden rounded-full">
-          <div
-            className={cn(
-              'bg-info h-full rounded-full transition-all duration-500',
-              indeterminate && 'animate-pulse',
-            )}
-            style={{ width: `${indeterminate ? 100 : pct}%` }}
-          />
-        </div>
-        {!indeterminate && (
-          <div className="mb-1 flex h-1.5 items-center gap-1.5">
-            <div
-              className="bg-success h-full rounded-full transition-all duration-500"
-              style={{
-                width: `${Math.round((createdCount / Math.max(liveProcessed, 1)) * 100)}%`,
-              }}
-            />
-            <div
-              className="bg-info h-full rounded-full transition-all duration-500"
-              style={{
-                width: `${Math.round((updatedCount / Math.max(liveProcessed, 1)) * 100)}%`,
-              }}
-            />
-          </div>
-        )}
-        <div className="flex gap-4 text-xs">
-          <span className="text-success">+{createdCount} created</span>
-          <span className="text-info inline-flex items-center">
-            <ArrowUp className="size-3" />
-            {updatedCount} updated
-          </span>
-          <span className="text-muted-foreground">–{skippedCount} skipped</span>
-          {failedCount > 0 && (
-            <span className="text-destructive inline-flex items-center">
-              <X className="size-3" />
-              {failedCount} failed
-            </span>
-          )}
-        </div>
-      </CardContent>
-    </Card>
   );
 }
 
@@ -1041,8 +930,17 @@ function RunLogRow({
 }
 
 export default function RunHistoryTab() {
-  const { projectId, job, activeRunLog, liveProgress, refetch } =
-    useJobDetailContext();
+  const {
+    projectId,
+    job,
+    activeRunLog,
+    liveProgress,
+    runLogs: detailRunLogs,
+    hasConnection,
+    stopping,
+    refetch,
+    handleStop,
+  } = useJobDetailContext();
   const jobId = job.id;
 
   const [page, setPage] = useState(1);
@@ -1114,6 +1012,25 @@ export default function RunHistoryTab() {
   const runLogs = runLogsQuery.data?.data ?? [];
   const total = runLogsQuery.data?.total ?? runLogs.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  const summaryRun =
+    activeRunLog?.status === 'running' || activeRunLog?.id
+      ? activeRunLog
+      : detailRunLogs[0];
+  const summaryRunning = summaryRun?.status === 'running';
+  const summaryProcessed =
+    (summaryRunning ? liveProgress?.recordsProcessed : undefined) ??
+    summaryRun?.recordsProcessed ??
+    summaryRun?.totalFetched ??
+    (summaryRun?.createdCount ?? 0) +
+      (summaryRun?.updatedCount ?? 0) +
+      (summaryRun?.skippedCount ?? 0) +
+      (summaryRun?.failedCount ?? 0);
+  const summaryTotal =
+    (summaryRunning ? liveProgress?.totalRecords : undefined) ??
+    summaryRun?.totalFetched ??
+    summaryRun?.recordsProcessed ??
+    summaryProcessed;
 
   const clearFilters = () => {
     setStatus(ALL_FILTER_VALUE);
@@ -1207,8 +1124,34 @@ export default function RunHistoryTab() {
           page you expand.
         </div>
 
-        {activeRunLog?.status === 'running' && (
-          <LiveProgressBar runLog={activeRunLog} liveProgress={liveProgress} />
+        {summaryRun && (
+          <SyncRunProgress
+            runId={summaryRun.id}
+            jobId={jobId}
+            status={
+              summaryRunning
+                ? 'running'
+                : (summaryRun.executionStatus ?? summaryRun.status)
+            }
+            totalRecords={summaryTotal}
+            processedRecords={summaryProcessed}
+            createdCount={summaryRun.createdCount}
+            updatedCount={summaryRun.updatedCount}
+            skippedCount={summaryRun.skippedCount}
+            failedCount={summaryRun.failedCount}
+            etaSeconds={summaryRunning ? liveProgress?.etaSeconds : undefined}
+            ratePerSec={summaryRunning ? liveProgress?.ratePerSec : undefined}
+            startedAt={summaryRun.startedAt}
+            finishedAt={summaryRun.finishedAt}
+            durationMs={summaryRun.durationMs}
+            triggeredBy={summaryRun.triggeredBy}
+            sourceLabel={summaryRun.sourceObject ?? job.sourceObject}
+            destinationLabel={summaryRun.destObject ?? job.destObject}
+            sourceStatus={hasConnection ? 'Connected' : 'Unavailable'}
+            errorMessage={summaryRun.errorMessage}
+            onStop={summaryRunning ? () => void handleStop() : undefined}
+            stopping={stopping}
+          />
         )}
 
         {runLogsQuery.isError ? (

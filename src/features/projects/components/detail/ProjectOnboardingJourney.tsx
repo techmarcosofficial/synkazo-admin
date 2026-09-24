@@ -30,7 +30,7 @@ export default function ProjectOnboardingJourney() {
       onSelect: () => handleTabChange('connections'),
     },
     {
-      title: 'Create First Sync Job',
+      title: 'Create First Job',
       description: 'Choose what data should move between your platforms.',
       status:
         stage === 'complete'
