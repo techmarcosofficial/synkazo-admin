@@ -97,11 +97,32 @@ export function useConnectionsManager({
   useEffect(() => {
     const connected = searchParams.get('connected');
     const oauthError = searchParams.get('hubspot_error');
+    const rescoped = searchParams.get('rescoped');
+    const added = Number(searchParams.get('added') ?? 0);
+    const removed = Number(searchParams.get('removed') ?? 0);
     const envParam = searchParams.get('env');
     if (envParam === 'production' || envParam === 'sandbox') {
       setActiveEnv(envParam);
     }
-    if (connected === 'hubspot') {
+    if (rescoped) {
+      if (removed > 0) {
+        toast.warning(
+          `HubSpot permissions updated. ${removed} permission(s) removed. Some features may now be unavailable.`,
+        );
+      } else if (added > 0) {
+        toast.success(
+          `HubSpot permissions updated. ${added} permission(s) added.`,
+        );
+      } else {
+        toast.success('HubSpot permissions reviewed. No changes were made.');
+      }
+      loadConnections();
+      const next = new URLSearchParams(searchParams);
+      next.delete('rescoped');
+      next.delete('added');
+      next.delete('removed');
+      setSearchParams(next, { replace: true });
+    } else if (connected === 'hubspot') {
       toast.success('HubSpot connected via OAuth');
       loadConnections();
       const next = new URLSearchParams(searchParams);
@@ -109,7 +130,13 @@ export function useConnectionsManager({
       next.delete('env');
       setSearchParams(next, { replace: true });
     } else if (oauthError) {
-      toast.error(`HubSpot OAuth failed: ${oauthError}`);
+      if (oauthError === 'access_denied') {
+        toast.info(
+          'Permission update cancelled. Your existing HubSpot connection is unchanged.',
+        );
+      } else {
+        toast.error(`HubSpot OAuth failed: ${oauthError}`);
+      }
       const next = new URLSearchParams(searchParams);
       next.delete('hubspot_error');
       next.delete('env');

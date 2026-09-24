@@ -24,11 +24,35 @@ import {
   FieldLabel,
 } from '@/components/ui/field';
 import { loginSchema, type LoginFormValues } from '@/lib/authValidation';
-import { consumePendingPlan, savePendingPlan } from '@/lib/pendingPlan';
+import {
+  consumePendingPlan,
+  readPendingPlan,
+  savePendingPlan,
+} from '@/lib/pendingPlan';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { showToast } from '@/lib/toast';
 import { tokenStorage } from '@/lib/tokenStorage';
 import { authPagesSettingsApi } from '@/api/auth-pages-settings';
+import { PlatformIcon } from '@/components/platform';
+
+const HUBSPOT_ERROR_MESSAGES: Record<string, string> = {
+  access_denied: 'HubSpot login was cancelled. No changes were made.',
+  state_missing: 'The HubSpot login request is incomplete. Please try again.',
+  state_expired:
+    'The HubSpot login expired or was already used. Please try again.',
+  invalid_hubspot_identity:
+    'HubSpot did not return enough information to identify your account.',
+  account_blocked: 'Your Synkazo account is blocked. Contact an administrator.',
+  organisation_suspended:
+    'Your Synkazo organisation is suspended. Contact an administrator.',
+  registration_disabled:
+    'New account registration is currently disabled. Existing users can still sign in.',
+  portal_already_linked:
+    'This HubSpot account is already connected to a Synkazo organisation. Ask its administrator to invite you.',
+  identity_conflict:
+    'This HubSpot identity cannot be linked safely. Contact Synkazo support.',
+  callback_failed: 'We could not complete HubSpot login. Please try again.',
+};
 
 export default function Login() {
   const { login, currentUser, isLoading } = useSynkazoAuth();
@@ -37,6 +61,7 @@ export default function Login() {
   const [error, setError] = useState('');
   const [unverifiedEmail, setUnverifiedEmail] = useState('');
   const [registrationEnabled, setRegistrationEnabled] = useState(true);
+  const [hubspotRedirecting, setHubspotRedirecting] = useState(false);
   const {
     register: registerField,
     control,
@@ -74,6 +99,22 @@ export default function Login() {
         interval: params.get('interval') === 'year' ? 'year' : 'month',
       });
     }
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('hubspot_error');
+    if (!code) return;
+    setError(
+      HUBSPOT_ERROR_MESSAGES[code] ?? HUBSPOT_ERROR_MESSAGES.callback_failed,
+    );
+    params.delete('hubspot_error');
+    const query = params.toString();
+    window.history.replaceState(
+      null,
+      '',
+      `${window.location.pathname}${query ? `?${query}` : ''}`,
+    );
   }, []);
 
   // Fetch auth pages settings to check if registration is enabled
@@ -148,6 +189,22 @@ export default function Login() {
     }
   };
 
+  const handleHubSpotLogin = () => {
+    if (hubspotRedirecting) return;
+    setHubspotRedirecting(true);
+    const pending = readPendingPlan();
+    const returnTo =
+      redirectTo ??
+      (pending
+        ? `/checkout?plan=${encodeURIComponent(pending.plan)}&interval=${pending.interval}`
+        : '/dashboard');
+    const apiBase =
+      import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+    window.location.assign(
+      `${apiBase}/marketplace/hubspot/login?returnTo=${encodeURIComponent(returnTo)}`,
+    );
+  };
+
   return (
     <SplitAuthLayout
       variant="immersive"
@@ -207,6 +264,30 @@ export default function Login() {
         </Alert>
       ) : null}
 
+      <div className="mt-7 space-y-5">
+        <Button
+          type="button"
+          size="lg"
+          variant="outline"
+          className="w-full"
+          aria-label="Login with HubSpot"
+          disabled={hubspotRedirecting}
+          onClick={handleHubSpotLogin}
+        >
+          <PlatformIcon platformId="hubspot" size={20} />
+          {hubspotRedirecting
+            ? 'Redirecting to HubSpot…'
+            : 'Login with HubSpot'}
+        </Button>
+        <div className="flex items-center gap-3" aria-hidden="true">
+          <span className="bg-border h-px flex-1" />
+          <span className="text-muted-foreground text-xs font-medium uppercase">
+            or
+          </span>
+          <span className="bg-border h-px flex-1" />
+        </div>
+      </div>
+
       <form
         onSubmit={handleSubmit(onSubmit)}
         className="synkazo-login-form"
@@ -259,10 +340,7 @@ export default function Login() {
               />
               Remember me
             </label>
-            <Link
-              to="/forgot-password"
-              className="synkazo-login-forgot"
-            >
+            <Link to="/forgot-password" className="synkazo-login-forgot">
               Forgot password?
             </Link>
           </div>
@@ -296,7 +374,6 @@ export default function Login() {
           </Link>
         </p>
       )}
-
     </SplitAuthLayout>
   );
 }

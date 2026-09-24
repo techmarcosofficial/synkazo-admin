@@ -143,7 +143,9 @@ export default function PlatformCard({
                   onClick={() => setShowPermissions(true)}
                 >
                   <ShieldCheck />
-                  Permissions
+                  {conn.platformId === 'hubspot'
+                    ? 'Permissions & Rescoping'
+                    : 'Permissions'}
                 </Button>
 
                 {/* Disconnect */}

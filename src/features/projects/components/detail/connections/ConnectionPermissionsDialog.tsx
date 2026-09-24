@@ -29,6 +29,33 @@ interface ConnectionPermissionsDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+const HUBSPOT_SCOPE_LABELS: Record<string, string> = {
+  oauth: 'Connect your HubSpot account',
+  'crm.objects.contacts.read': 'Contacts — read',
+  'crm.objects.contacts.write': 'Contacts — write',
+  'crm.objects.companies.read': 'Companies — read',
+  'crm.objects.companies.write': 'Companies — write',
+  'crm.objects.deals.read': 'Deals — read',
+  'crm.objects.deals.write': 'Deals — write',
+  'crm.schemas.contacts.read': 'Contact properties',
+  'crm.schemas.companies.read': 'Company properties',
+  'crm.schemas.deals.read': 'Deal properties',
+  'crm.schemas.custom.read': 'Custom object schemas — read',
+  'crm.schemas.custom.write': 'Custom object schemas — write',
+  'crm.objects.custom.read': 'Custom objects — read',
+  'crm.objects.custom.write': 'Custom objects — write',
+  'crm.objects.projects.read': 'HubSpot projects — read',
+  'crm.objects.projects.write': 'HubSpot projects — write',
+  'crm.objects.owners.read': 'Owners — read',
+  'crm.objects.appointments.read': 'Appointments — read',
+  'crm.objects.appointments.write': 'Appointments — write',
+  'crm.schemas.appointments.read': 'Appointment properties',
+  'crm.objects.invoices.read': 'Invoices — read',
+  'crm.objects.invoices.write': 'Invoices — write',
+  'crm.objects.line_items.read': 'Line items — read',
+  'crm.objects.line_items.write': 'Line items — write',
+};
+
 export default function ConnectionPermissionsDialog({
   conn,
   open,
@@ -43,7 +70,8 @@ export default function ConnectionPermissionsDialog({
   const [error, setError] = useState<string | null>(null);
   const [resyncing, setResyncing] = useState(false);
   const [rescoping, setRescoping] = useState(false);
-  const isHubSpotOAuth = conn.platformId === 'hubspot' && data?.kind === 'hubspot_oauth';
+  const isHubSpotOAuth =
+    conn.platformId === 'hubspot' && data?.kind === 'hubspot_oauth';
 
   useEffect(() => {
     if (!open || !conn.id) return;
@@ -117,7 +145,9 @@ export default function ConnectionPermissionsDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ShieldCheck className="size-4" />
-            {meta.label} Permissions
+            {isHubSpotOAuth
+              ? 'HubSpot Permissions & Rescoping'
+              : `${meta.label} Permissions`}
           </DialogTitle>
           <DialogDescription>
             {conn.environment === 'sandbox' ? 'Sandbox' : 'Production'}{' '}
@@ -168,7 +198,7 @@ export default function ConnectionPermissionsDialog({
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground text-xs font-medium">
-                    Granted scopes
+                    Currently granted permissions
                   </span>
                   <Badge variant="secondary" className="text-xs">
                     Live from HubSpot
@@ -176,13 +206,19 @@ export default function ConnectionPermissionsDialog({
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {data.scopes.map((scope) => (
-                    <Badge
+                    <div
                       key={scope}
-                      variant="secondary"
-                      className="font-mono text-xs"
+                      className="bg-muted rounded-md border px-2.5 py-1.5"
                     >
-                      {scope}
-                    </Badge>
+                      <p className="text-xs font-medium">
+                        {HUBSPOT_SCOPE_LABELS[scope] ?? scope}
+                      </p>
+                      {HUBSPOT_SCOPE_LABELS[scope] && (
+                        <p className="text-muted-foreground mt-0.5 font-mono text-[10px]">
+                          {scope}
+                        </p>
+                      )}
+                    </div>
                   ))}
                 </div>
                 {data.hubDomain && (
@@ -324,15 +360,18 @@ export default function ConnectionPermissionsDialog({
                   onClick={handleReconnect}
                 >
                   <KeyRound
-                    className={rescoping ? 'size-3.5 animate-pulse' : 'size-3.5'}
+                    className={
+                      rescoping ? 'size-3.5 animate-pulse' : 'size-3.5'
+                    }
                   />
                   {rescoping
                     ? 'Redirecting to HubSpot…'
-                    : 'Manage HubSpot access'}
+                    : 'Review or Add Permissions in HubSpot'}
                 </Button>
                 <p className="text-muted-foreground mt-2 text-xs">
-                  Opens HubSpot's consent screen so you can add or remove
-                  optional permissions. Your existing connection stays in place.
+                  You’ll return to HubSpot to add or remove optional
+                  permissions. Synkazo updates this existing connection. Your
+                  project, jobs, mappings, and schedules are not deleted.
                 </p>
               </div>
             )}
@@ -409,8 +448,8 @@ function UngrantedFeaturesHint({
         ))}
       </div>
       <p className="text-muted-foreground mt-2 text-xs">
-        Use "Manage HubSpot access" below to grant these on your next
-        reconnect. Custom-object features require HubSpot Enterprise.
+        Use “Review or Add Permissions in HubSpot” below to grant these on your
+        next reconnect. Custom-object features require HubSpot Enterprise.
       </p>
     </div>
   );
