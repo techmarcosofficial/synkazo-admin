@@ -87,6 +87,30 @@ function JobRow({ job, onRun, runDisabled }: JobRowProps) {
           ? formatDistanceToNow(new Date(job.nextRunAt), { addSuffix: true })
           : '—'}
       </TableCell>
+      {/* GAP-014 — checkpoint visibility. The next run resumes from
+          checkpointPage/checkpointSince. `—` when the job has never
+          run or has just completed a full sweep. */}
+      <TableCell className="text-muted-foreground text-sm">
+        {job.checkpointPage != null || job.checkpointSince != null ? (
+          <span
+            title={
+              job.checkpointRunId
+                ? `Set by run ${job.checkpointRunId}`
+                : 'Latest checkpoint'
+            }
+          >
+            {job.checkpointPage != null ? `page ${job.checkpointPage}` : ''}
+            {job.checkpointPage != null && job.checkpointSince != null
+              ? ' · '
+              : ''}
+            {job.checkpointSince
+              ? `since ${new Date(job.checkpointSince).toISOString().slice(0, 10)}`
+              : ''}
+          </span>
+        ) : (
+          '—'
+        )}
+      </TableCell>
       <TableCell className="text-right">
         <Button
           size="sm"
@@ -251,6 +275,7 @@ export default function OrganisationProjectDetailPage() {
                   <TableHead>Live</TableHead>
                   <TableHead>Last sync</TableHead>
                   <TableHead>Next run</TableHead>
+                  <TableHead>Checkpoint</TableHead>
                   <TableHead className="w-24 text-right"></TableHead>
                 </TableRow>
               </TableHeader>
