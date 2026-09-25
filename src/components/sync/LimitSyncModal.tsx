@@ -93,7 +93,7 @@ function Frame({
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        size="sm"
+        size="md"
         className="flex max-h-[90vh] flex-col"
         onEscapeKeyDown={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
