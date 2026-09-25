@@ -73,7 +73,7 @@ export interface ConsolidatedMapping extends Omit<FieldMapping, 'destField'> {
   /** Only meaningful for destinations whose destUpdatePolicy entry is 'fill_if_empty' —
    *  see conflictScope on FieldMapping. */
   destConflictScope?: Record<string, 'field' | 'record'>;
-  transformConfig?: unknown;
+  transformConfig?: Record<string, unknown> | null;
   isRequired?: boolean;
   /** Set by the canvas when the user waves off a type mismatch. Not persisted. */
   dismissed?: boolean;

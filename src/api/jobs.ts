@@ -37,6 +37,25 @@ interface PriorityUpdate {
   priority: number;
 }
 
+export interface CrossObjectPropertyOption {
+  objectType: string;
+  label: string;
+  lookupModes: Array<'id' | 'name'>;
+}
+
+export interface CrossObjectProperty {
+  id: string;
+  relatedObject: string;
+  relatedObjectLabel: string;
+  lookupMode: 'id' | 'name';
+  lookupField: string;
+  lookupFieldLabel: string;
+  importedProperty: string;
+  importedPropertyLabel: string;
+  sourceFieldKey: string;
+  displayLabel: string;
+}
+
 export const jobsApi = {
   listAllJobs: (): Promise<Job[]> => apiClient.get('/jobs').then(d),
 
@@ -228,6 +247,44 @@ export const jobsApi = {
   ): Promise<void> =>
     apiClient
       .delete(`${p(projectId)}/${jobId}/field-mappings/${mappingId}`)
+      .then(d),
+
+  getCrossObjectPropertyOptions: (
+    projectId: string,
+    jobId: string,
+  ): Promise<{
+    platformId: string | null;
+    supported: boolean;
+    objects: CrossObjectPropertyOption[];
+  }> =>
+    apiClient
+      .get(`${p(projectId)}/${jobId}/cross-object-properties/options`)
+      .then(d),
+  listCrossObjectProperties: (
+    projectId: string,
+    jobId: string,
+  ): Promise<CrossObjectProperty[]> =>
+    apiClient.get(`${p(projectId)}/${jobId}/cross-object-properties`).then(d),
+  createCrossObjectProperty: (
+    projectId: string,
+    jobId: string,
+    data: {
+      relatedObject: string;
+      lookupMode: 'id' | 'name';
+      lookupField: string;
+      importedProperty: string;
+    },
+  ): Promise<CrossObjectProperty> =>
+    apiClient
+      .post(`${p(projectId)}/${jobId}/cross-object-properties`, data)
+      .then(d),
+  deleteCrossObjectProperty: (
+    projectId: string,
+    jobId: string,
+    propertyId: string,
+  ): Promise<void> =>
+    apiClient
+      .delete(`${p(projectId)}/${jobId}/cross-object-properties/${propertyId}`)
       .then(d),
 
   // Re-export SyncRun so callers have access from a single import

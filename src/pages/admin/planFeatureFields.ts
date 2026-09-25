@@ -48,6 +48,7 @@ const TRANSFORM_TYPE_OPTIONS: FeatureFieldOption[] = [
   { value: 'date_format', label: 'Date format' },
   { value: 'value_map', label: 'Value map' },
   { value: 'concat', label: 'Concat' },
+  { value: 'combine', label: 'Combine fields' },
   { value: 'static', label: 'Static' },
   { value: 'boolean', label: 'Boolean' },
   { value: 'number', label: 'Number' },

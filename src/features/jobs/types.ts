@@ -2,7 +2,10 @@
 // (Job Detail's composite-query types live in hooks/useJobDetail.ts, mirroring
 // how features/projects/hooks/useProjectDetail.ts owns ProjectExt/JobExt.)
 
-import type { ExcludeCondition } from '@/types/conditions';
+import type {
+  DestinationSkipCondition,
+  ExcludeCondition,
+} from '@/types/conditions';
 
 export interface MappingRow {
   sourceField: string;
@@ -10,6 +13,7 @@ export interface MappingRow {
   sourceType?: string;
   destType?: string;
   transformType?: string;
+  transformConfig?: Record<string, unknown> | null;
   rules?: unknown[];
   /** Which of this row's (possibly several) destinations is the match/lookup field, if any. */
   matchDestKey?: string | null;
@@ -59,6 +63,7 @@ export interface JobConfig {
   idMappingDestField: string;
   excludeConditions?: ExcludeCondition[];
   excludeConditionLogic?: 'AND' | 'OR';
+  destinationSkipConditions?: DestinationSkipCondition[];
   skipUpdateOnMatch?: boolean;
 }
 

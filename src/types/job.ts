@@ -1,4 +1,4 @@
-import type { ExcludeCondition } from './conditions';
+import type { DestinationSkipCondition, ExcludeCondition } from './conditions';
 
 export type JobStatus =
   'active' | 'paused' | 'error' | 'idle' | 'running' | 'draft';
@@ -66,6 +66,9 @@ export interface Job {
    *  source record before any mapping runs. Null/empty means no filtering. */
   excludeConditions?: ExcludeCondition[] | null;
   excludeConditionLogic?: 'AND' | 'OR';
+  /** Destination-aware update gates. Each condition is evaluated against the
+   * current matched destination record; matching any condition skips the update. */
+  destinationSkipConditions?: DestinationSkipCondition[] | null;
   /** When true, a matched record is left completely untouched, never updated. */
   skipUpdateOnMatch?: boolean;
 }
@@ -129,6 +132,8 @@ export interface FieldMapping {
    *  it again after creation, or only fill it in if the destination's
    *  current value is empty (logging a conflict otherwise). */
   updatePolicy?: UpdatePolicy;
+  transformType?: string | null;
+  transformConfig?: Record<string, unknown> | null;
   transform?: string | null;
   enabled?: boolean;
   order?: number;

@@ -1,6 +1,7 @@
 import { AlertCircleIcon, RefreshCw, X } from 'lucide-react';
 
 import ExcludeConditionsEditor from '@/components/fieldmapping/ExcludeConditionsEditor';
+import DestinationSkipConditionsEditor from '@/components/fieldmapping/DestinationSkipConditionsEditor';
 import FieldMappingCanvas, {
   type FieldDef as CanvasFieldDef,
   type MappingRow as CanvasMappingRow,
@@ -14,7 +15,10 @@ import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import type { MappingRow } from '@/features/jobs/types';
 import type { CanvasField } from '@/features/jobs/utils';
-import type { ExcludeCondition } from '@/types/conditions';
+import type {
+  DestinationSkipCondition,
+  ExcludeCondition,
+} from '@/types/conditions';
 
 export default function FieldMappingStep({
   sourcePlatform,
@@ -42,6 +46,8 @@ export default function FieldMappingStep({
   excludeConditions,
   excludeConditionLogic,
   onExcludeConditionsChange,
+  destinationSkipConditions,
+  onDestinationSkipConditionsChange,
   skipUpdateOnMatch,
   onSkipUpdateOnMatchChange,
 }: {
@@ -75,6 +81,10 @@ export default function FieldMappingStep({
   onExcludeConditionsChange: (
     conditions: ExcludeCondition[],
     logic: 'AND' | 'OR',
+  ) => void;
+  destinationSkipConditions: DestinationSkipCondition[];
+  onDestinationSkipConditionsChange: (
+    conditions: DestinationSkipCondition[],
   ) => void;
   skipUpdateOnMatch: boolean;
   onSkipUpdateOnMatchChange: (value: boolean) => void;
@@ -201,6 +211,14 @@ export default function FieldMappingStep({
             conditionLogic={excludeConditionLogic}
             onChange={onExcludeConditionsChange}
           />
+          <div className="mt-4">
+            <DestinationSkipConditionsEditor
+              sourceFields={sourceFields as unknown as CanvasFieldDef[]}
+              destinationFields={destFields as unknown as CanvasFieldDef[]}
+              conditions={destinationSkipConditions}
+              onChange={onDestinationSkipConditionsChange}
+            />
+          </div>
         </CardContent>
       </Card>
 

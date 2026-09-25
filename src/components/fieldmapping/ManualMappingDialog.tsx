@@ -580,12 +580,21 @@ export default function ManualMappingDialog({
                             {pairReasons.length > 0 && (
                               <div className="mt-1 border-t pt-3">
                                 <EmptyValuePolicy
+                                  defaultOnly
                                   reasons={pairReasons}
                                   value={{
-                                    onEmpty: d.onEmpty,
-                                    defaultValue: d.defaultValue,
+                                    onEmpty: 'default',
+                                    defaultValue:
+                                      d.onEmpty === 'default'
+                                        ? d.defaultValue
+                                        : '',
                                   }}
-                                  onChange={(v) => updateDraft(d.id, v)}
+                                  onChange={(v) =>
+                                    updateDraft(d.id, {
+                                      ...v,
+                                      onEmpty: 'default',
+                                    })
+                                  }
                                 />
                               </div>
                             )}
