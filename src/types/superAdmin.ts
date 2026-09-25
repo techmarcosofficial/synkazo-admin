@@ -127,6 +127,13 @@ export interface SuperAdminJobListItem {
   syncDirection: string;
   lastSyncedAt: string | null;
   nextRunAt: string | null;
+  // GAP-014 — checkpoint visibility. The next run resumes from these
+  // values, so support conversations that turn on "why did the run
+  // rewind / skip ahead" are answerable from the detail page.
+  checkpointPage: number | null;
+  checkpointSince: string | null;
+  checkpointRunId: string | null;
+  syncAllPage: number | null;
   createdAt: string;
   updatedAt: string;
 }
