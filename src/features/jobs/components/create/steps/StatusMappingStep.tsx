@@ -79,15 +79,14 @@ export default function StatusMappingStep({
   return (
     <div className="space-y-5">
       <div>
-        <h3 className="text-sm font-medium">Pipeline Configuration</h3>
+        <h3 className="text-sm font-medium">Sales Deal Stages (HubSpot Pipeline)</h3>
         <p className="text-muted-foreground mt-1 text-xs">
-          Choose which HubSpot pipeline to use, then map each source status to a
-          pipeline stage.
+          Choose which sales pipeline to use, then map each job status to a deal stage in HubSpot.
         </p>
       </div>
 
       <Field>
-        <FieldLabel>HubSpot Pipeline</FieldLabel>
+        <FieldLabel>Sales Pipeline (HubSpot Pipeline)</FieldLabel>
         {pipelines.length === 0 ? (
           <p className="text-destructive text-xs">
             No pipelines found for this object type. Create one in HubSpot

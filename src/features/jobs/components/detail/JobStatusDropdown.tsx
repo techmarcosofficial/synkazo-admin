@@ -47,10 +47,10 @@ export default function JobStatusDropdown({
   const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false);
 
   const disabledReason = !hasConnection
-    ? 'Connect platforms first'
+    ? 'Connect both platforms first'
     : fieldMappingCount === 0
-      ? 'Add field mappings first'
-      : 'Mark at least 1 Match Field';
+      ? 'Map your fields first'
+      : 'Designate a Unique Identifier (Match Field) first';
 
   return (
     <>

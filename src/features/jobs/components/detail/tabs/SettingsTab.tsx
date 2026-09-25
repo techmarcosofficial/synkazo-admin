@@ -83,16 +83,15 @@ function CheckpointInformation() {
   return (
     <section aria-labelledby="job-checkpoint-title">
       <h3 id="job-checkpoint-title" className="font-semibold">
-        Resume &amp; Checkpoint
+        Sync Progress Bookmark (Checkpoint)
       </h3>
       <p className="text-muted-foreground mb-4 text-xs">
-        Saved progress used to continue an interrupted sync without starting
-        over.
+        Saved progress used to continue an interrupted sync without starting over from scratch.
       </p>
 
       <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="bg-muted/50 rounded-3xl border px-3 py-2.5">
-          <dt className="text-muted-foreground text-xs">Sync page</dt>
+          <dt className="text-muted-foreground text-xs">Current Bookmark (Page)</dt>
           <dd className="mt-1 text-sm font-medium">
             {job.checkpointPage != null
               ? `Page ${job.checkpointPage}`
@@ -100,13 +99,13 @@ function CheckpointInformation() {
           </dd>
         </div>
         <div className="bg-muted/50 rounded-3xl border px-3 py-2.5">
-          <dt className="text-muted-foreground text-xs">Checkpoint date</dt>
+          <dt className="text-muted-foreground text-xs">Bookmark Timestamp</dt>
           <dd className="mt-1 text-sm font-medium">
             {formatCheckpointDate(job.checkpointSince)}
           </dd>
         </div>
         <div className="bg-muted/50 rounded-3xl border px-3 py-2.5">
-          <dt className="text-muted-foreground text-xs">Full resync page</dt>
+          <dt className="text-muted-foreground text-xs">Full Resync Bookmark</dt>
           <dd className="mt-1 text-sm font-medium">
             {job.syncAllPage != null
               ? `Page ${job.syncAllPage}`

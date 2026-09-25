@@ -1,9 +1,10 @@
-import { ArrowLeftRight, InfoIcon } from 'lucide-react';
+import { ArrowLeftRight, InfoIcon, Sparkles } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
 
 import PlatformObjectSelector from '../PlatformObjectSelector';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -13,6 +14,63 @@ import { supportsCustomObjects } from '@/lib/platformCapabilities';
 import { cn } from '@/lib/utils';
 import type { ObjectItem } from '@/queries/useConnections';
 import type { Connection } from '@/types';
+
+interface SyncRecipe {
+  id: string;
+  title: string;
+  description: string;
+  sourcePlatform: string;
+  destPlatform: string;
+  sourceObject: string;
+  destObject: string;
+  name: string;
+  badge?: string;
+}
+
+const PRESET_RECIPES: SyncRecipe[] = [
+  {
+    id: 'st-hb-customers-contacts',
+    title: 'Customers → Contacts',
+    description: 'Sync homeowner and commercial client profiles into HubSpot CRM contacts.',
+    sourcePlatform: 'servicetitan',
+    destPlatform: 'hubspot',
+    sourceObject: 'customers',
+    destObject: 'contacts',
+    name: 'Customers → Contacts',
+    badge: 'Most Popular',
+  },
+  {
+    id: 'st-hb-jobs-deals',
+    title: 'Jobs → Deals',
+    description: 'Sync booked, active, and completed jobs into HubSpot sales pipeline deals.',
+    sourcePlatform: 'servicetitan',
+    destPlatform: 'hubspot',
+    sourceObject: 'jobs',
+    destObject: 'deals',
+    name: 'Jobs → Deals',
+  },
+  {
+    id: 'st-hb-invoices-deals',
+    title: 'Invoices → Deals',
+    description: 'Track invoice totals, payments, and balances directly inside HubSpot deals.',
+    sourcePlatform: 'servicetitan',
+    destPlatform: 'hubspot',
+    sourceObject: 'invoices',
+    destObject: 'deals',
+    name: 'Invoices → Deals',
+  },
+  {
+    id: 'hb-st-contacts-customers',
+    title: 'Contacts → Customers',
+    description: 'Sync inbound CRM marketing leads and contacts into ServiceTitan customer records.',
+    sourcePlatform: 'hubspot',
+    destPlatform: 'servicetitan',
+    sourceObject: 'contacts',
+    destObject: 'customers',
+    name: 'Contacts → Customers',
+    badge: 'Two-Way Sync',
+  },
+];
 
 const DEFAULT_CUSTOM_OBJECT_TOOLTIP = (side: 'source' | 'destination') =>
   `This platform's objects are fixed — custom objects must be created in the ${side} platform`;
@@ -67,6 +125,12 @@ export default function JobDetailsStep({
   /** Uses tighter spacing and concise copy in the standalone create dialog. */
   compact?: boolean;
 }) {
+  const relevantRecipes = PRESET_RECIPES.filter(
+    (r) =>
+      r.sourcePlatform === config.sourcePlatform &&
+      r.destPlatform === config.destPlatform,
+  );
+
   const sourceGating = customObjectGating(
     config.sourcePlatform,
     sourceConnection,
@@ -102,6 +166,76 @@ export default function JobDetailsStep({
 
   return (
     <div className={cn(compact ? 'space-y-4' : 'space-y-6')}>
+      {/* Recommended Recipes */}
+      {relevantRecipes.length > 0 && (
+        <div className={cn('rounded-3xl border bg-muted/20 p-4 space-y-3', compact && 'p-3')}>
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-1.5 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+              <Sparkles className="size-3.5 text-primary" />
+              Recommended Sync Recipes (1-Click)
+            </span>
+            <span className="text-[11px] text-muted-foreground">
+              Select to auto-fill records & name
+            </span>
+          </div>
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+            {relevantRecipes.map((recipe) => {
+              const isSelected =
+                config.sourceObject === recipe.sourceObject &&
+                config.destObject === recipe.destObject;
+              return (
+                <button
+                  key={recipe.id}
+                  type="button"
+                  onClick={() => {
+                    setConfig((c) => ({
+                      ...c,
+                      sourceObject: recipe.sourceObject,
+                      destObject: recipe.destObject,
+                      name: recipe.name,
+                    }));
+                    setErrors((errs) => ({
+                      ...errs,
+                      sourceObject: undefined,
+                      destObject: undefined,
+                      name: undefined,
+                    }));
+                  }}
+                  className={cn(
+                    'group relative flex flex-col justify-between rounded-2xl border p-3 text-left transition-all',
+                    isSelected
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary shadow-xs'
+                      : 'border-border/70 bg-card hover:border-primary/50 hover:bg-muted/40',
+                  )}
+                >
+                  <div>
+                    <div className="mb-1 flex items-center justify-between gap-1.5">
+                      <span className="text-sm font-semibold transition-colors group-hover:text-primary">
+                        {recipe.title}
+                      </span>
+                      {recipe.badge && (
+                        <Badge
+                          variant="secondary"
+                          className="border-primary/20 bg-primary/10 text-primary px-1.5 py-0 text-[10px]"
+                        >
+                          {recipe.badge}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                      {recipe.description}
+                    </p>
+                  </div>
+                  <div className="mt-2.5 flex items-center gap-1 text-[11px] font-medium text-primary">
+                    {isSelected ? '✓ Selected recipe' : 'Apply recipe →'}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Connection */}
       <div className={cn(compact ? 'space-y-2' : 'space-y-3')}>
         {!compact && (

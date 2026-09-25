@@ -52,7 +52,7 @@ export default function CreateProjectDialog() {
             onSelectionChange={setSelection}
             onSuccess={(project) => {
               close();
-              navigate(`/projects/${project.id}`);
+              navigate(`/projects/${project.id}?tab=connections`);
             }}
           />
         </div>

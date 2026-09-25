@@ -42,6 +42,12 @@ import {
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { useOnboardingState } from '@/features/onboarding';
 import {
+  useJourneyState,
+  JourneyStorylineBanner,
+  DraftResumptionBanner,
+} from '@/features/journey';
+import { useCreateProjectStore } from '@/features/projects/store/useCreateProjectStore';
+import {
   useDashboardSummaryQuery,
   useDashboardSyncMetricsQuery,
   useOrgSyncLogsQuery,
@@ -142,6 +148,12 @@ export default function Dashboard() {
     jobs,
     connections,
   );
+  const openCreateProjectDialog = useCreateProjectStore((s) => s.open);
+  const journey = useJourneyState({
+    projects: projectsQuery.data,
+    jobs,
+    connections,
+  });
   const activityLogs = unwrapOrganizationLogs(activityQuery.data);
   const firstName = currentUser?.fullName?.trim().split(/\s+/)[0];
   const greeting = `${getGreeting()}${firstName ? `, ${firstName}` : ''}`;
@@ -211,10 +223,32 @@ export default function Dashboard() {
     );
   }
 
-  if (onboardingState.stage !== 'complete') {
+  if (!journey.isGraduated) {
     return (
       <div className="w-full space-y-6">
         {header}
+        <DraftResumptionBanner />
+        <JourneyStorylineBanner
+          nextAction={journey.nextAction}
+          onTriggerModal={(key) => {
+            if (key === 'create_project') {
+              openCreateProjectDialog();
+            }
+          }}
+          stepNumber={
+            journey.currentState === 'S03_NO_PROJECT'
+              ? 1
+              : journey.currentState === 'S04_PROJECT_NO_CONNECTIONS' ||
+                  journey.currentState === 'S05_ONE_CONNECTION_MISSING'
+                ? 2
+                : journey.currentState === 'S06_CONNECTIONS_READY' ||
+                    journey.currentState === 'S07_SYNC_RECIPE_SELECTED' ||
+                    journey.currentState === 'S08_MAPPING_INCOMPLETE'
+                  ? 3
+                  : 4
+          }
+          totalSteps={4}
+        />
         <DashboardOnboardingEmptyState
           state={onboardingState}
           canManage={hasRole('org_admin')}
@@ -234,6 +268,7 @@ export default function Dashboard() {
     <div className="w-full space-y-6">
       {header}
       <AccountContextAlert />
+      <DraftResumptionBanner />
 
       <section aria-label="Organization statistics">
         <div className="grid grid-cols-1 items-stretch gap-4 sm:grid-cols-3">

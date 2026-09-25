@@ -121,7 +121,7 @@ export default function LimitSyncModal({
   const pipelineBlocked = pipelineRequired && !pipelineConfigured;
   const [step, setStep] = useState('config');
 
-  const [limit, setLimit] = useState<number>(100);
+  const [limit, setLimit] = useState<number>(!job?.lastSyncedAt ? 5 : 100);
   const [startPage, setStartPage] = useState<number>(1);
   const [batchSize, setBatchSize] = useState<number>(100);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -376,7 +376,7 @@ export default function LimitSyncModal({
                     <Sliders className="text-primary size-4" />
                   </div>
                   <div>
-                    <div>Limited run</div>
+                    <div>Sample Test & Limited Run</div>
                     <p className="text-muted-foreground flex items-center gap-1 text-xs font-normal">
                       {job?.sourceObject} <ArrowRight className="size-3" />{' '}
                       {job?.destObject}
@@ -418,14 +418,61 @@ export default function LimitSyncModal({
                 <Info className="text-primary" />
                 <AlertDescription className="space-y-0.5 [&_p:not(:last-child)]:mb-0">
                   <p className="text-foreground font-semibold">
-                    About limited runs
+                    {!job?.lastSyncedAt
+                      ? 'Safe Confidence Testing (Recommended)'
+                      : 'About Limited Runs'}
                   </p>
                   <p>
-                    Process a controlled subset using this job's existing sync
-                    rules. This does not update the last synced timestamp.
+                    {!job?.lastSyncedAt
+                      ? 'Safely test your mappings and transformation rules on 5 sample records before activating scheduled automation. This does not advance your production baseline.'
+                      : "Process a controlled subset using this job's existing sync rules. This does not update the last synced timestamp."}
                   </p>
                 </AlertDescription>
               </Alert>
+
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-foreground">
+                  Quick Test Presets
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant={limit === 5 ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => {
+                      setLimit(5);
+                      setErrors((e) => ({ ...e, limit: '' }));
+                    }}
+                    className="h-7 text-xs"
+                  >
+                    5 Records (Recommended Test)
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={limit === 50 ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => {
+                      setLimit(50);
+                      setErrors((e) => ({ ...e, limit: '' }));
+                    }}
+                    className="h-7 text-xs"
+                  >
+                    50 Records
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={limit === 100 ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => {
+                      setLimit(100);
+                      setErrors((e) => ({ ...e, limit: '' }));
+                    }}
+                    className="h-7 text-xs"
+                  >
+                    100 Records
+                  </Button>
+                </div>
+              </div>
 
               <FieldGroup className="grid gap-3 sm:grid-cols-3">
                 <Field data-invalid={!!errors.limit}>
@@ -561,7 +608,7 @@ export default function LimitSyncModal({
                 disabled={pipelineBlocked || disabled}
                 className={compact ? undefined : 'flex-1'}
               >
-                <Play /> Start Sync
+                <Play /> {!job?.lastSyncedAt ? 'Run Test (Safe Preview)' : 'Start Sync'}
               </Button>
             </DialogFooter>
           </>

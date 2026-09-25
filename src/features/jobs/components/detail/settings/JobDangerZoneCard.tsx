@@ -1,7 +1,9 @@
 import { Trash2 } from 'lucide-react';
 
+import { ActionTooltip } from '@/features/journey';
 import { Button } from '@/components/ui/button';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 
 export default function JobDangerZoneCard({
   onDelete,
@@ -9,6 +11,8 @@ export default function JobDangerZoneCard({
   onDelete: () => Promise<void>;
 }) {
   const { confirm } = useConfirmDialog();
+  const { hasRole } = useSynkazoAuth();
+  const canManage = hasRole('org_admin');
 
   return (
     <section
@@ -27,23 +31,33 @@ export default function JobDangerZoneCard({
         <p className="text-muted-foreground mb-3 text-xs">
           Permanently deletes this job and all its logs.
         </p>
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-destructive hover:bg-destructive/10"
-          onClick={() =>
-            confirm({
-              variant: 'danger',
-              title: 'Delete this job?',
-              description:
-                'This permanently deletes the job and all its logs. This cannot be undone.',
-              confirmLabel: 'Yes, delete',
-              onConfirm: onDelete,
-            })
+        <ActionTooltip
+          tooltip={
+            !canManage
+              ? 'Organization Admin role required to delete a sync job.'
+              : undefined
           }
         >
-          <Trash2 /> Delete Job
-        </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-destructive hover:bg-destructive/10"
+            disabled={!canManage}
+            onClick={() =>
+              canManage &&
+              confirm({
+                variant: 'danger',
+                title: 'Delete this job?',
+                description:
+                  'This permanently deletes the job and all its logs. This cannot be undone.',
+                confirmLabel: 'Yes, delete',
+                onConfirm: onDelete,
+              })
+            }
+          >
+            <Trash2 /> Delete Job
+          </Button>
+        </ActionTooltip>
       </div>
     </section>
   );

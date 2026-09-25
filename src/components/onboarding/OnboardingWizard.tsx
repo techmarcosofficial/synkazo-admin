@@ -30,6 +30,12 @@ interface ConnectResult {
   msg: string;
 }
 
+/**
+ * @deprecated Standalone OnboardingWizard has been superseded by the in-situ
+ * Human-First Journey Architecture (JourneyStorylineBanner + in-app route progression).
+ * New users are guided directly through contextual application routes rather than an isolated modal.
+ * Retained for backward compatibility.
+ */
 export default function OnboardingWizard({ onDismiss }: OnboardingWizardProps) {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);

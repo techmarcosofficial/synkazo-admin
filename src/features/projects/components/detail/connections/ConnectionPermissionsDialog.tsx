@@ -6,6 +6,7 @@ import { PLATFORM_META } from '@/components/connections/platformMeta';
 import type { ExtConnection } from '@/components/connections/types';
 import PageContextAlert from '@/components/shared/PageContextAlert';
 import StatusBadge from '@/components/shared/StatusBadge';
+import { ActionTooltip } from '@/features/journey';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -310,11 +311,17 @@ export default function ConnectionPermissionsDialog({
                     <h3 className="font-heading text-sm font-semibold">
                       Webhook subscriptions
                     </h3>
-                    {canManageWebhooks && (
+                    <ActionTooltip
+                      tooltip={
+                        !canManageWebhooks
+                          ? 'Organization Admin role required to force re-sync webhooks.'
+                          : undefined
+                      }
+                    >
                       <Button
                         variant="outline"
                         size="sm"
-                        disabled={resyncing}
+                        disabled={!canManageWebhooks || resyncing}
                         onClick={handleResync}
                       >
                         <RefreshCw
@@ -325,7 +332,7 @@ export default function ConnectionPermissionsDialog({
                         />
                         Force re-sync
                       </Button>
-                    )}
+                    </ActionTooltip>
                   </div>
                   {data.webhookHealth.subscriptions.length === 0 ? (
                     <p className="text-muted-foreground text-sm leading-relaxed">

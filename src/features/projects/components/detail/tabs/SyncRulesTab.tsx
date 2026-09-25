@@ -36,6 +36,8 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateJobDialog } from '@/features/jobs/components/create';
 import { useJobDetailQuery, type JobDetailData } from '@/features/jobs/hooks';
+import { ActionTooltip } from '@/features/journey';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import SetupJourneyCard, {
   type SetupJourneyStep,
 } from '@/features/onboarding/components/SetupJourneyCard';
@@ -331,15 +333,30 @@ export default function SyncRulesTab() {
   const navigate = useNavigate();
   const { project, jobs, showCreateJob, setShowCreateJob, refetch } =
     useProjectDetailContext();
-  // Explain the sync-job allowance up front rather than after a 403 from the create call.
+  const { hasRole } = useSynkazoAuth();
+  const canManage = hasRole('org_admin');
   const { canAddJob } = useEntitlements();
   const { prompt, dialog: upgradeDialog } = usePlanUpgradePrompt();
-  const startCreateJob = () =>
-    canAddJob
-      ? setShowCreateJob(true)
-      : prompt(
-          "You've reached the number of sync jobs your plan allows. Upgrade to add more.",
-        );
+
+  const isBlockedByRole = !canManage;
+  const isBlockedByPlan = canManage && !canAddJob;
+
+  const tooltipExplanation = isBlockedByRole
+    ? 'Only Organization Admins can create sync flows. Contact your administrator.'
+    : isBlockedByPlan
+      ? "You've reached your plan's sync flow limit. Upgrade to add more."
+      : undefined;
+
+  const startCreateJob = () => {
+    if (isBlockedByRole) return;
+    if (isBlockedByPlan) {
+      prompt(
+        "You've reached the number of sync jobs your plan allows. Upgrade to add more.",
+      );
+      return;
+    }
+    setShowCreateJob(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -360,27 +377,45 @@ export default function SyncRulesTab() {
       <Card>
         <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0 space-y-1">
-            <CardTitle>Sync jobs</CardTitle>
+            <CardTitle>Sync flows</CardTitle>
             <CardDescription>
-              View each data flow and expand a job to review its recent
+              View each data flow and expand a sync flow to review its recent
               performance.
             </CardDescription>
           </div>
-          <Button
-            className="shrink-0 self-start sm:self-auto"
-            onClick={startCreateJob}
+          <ActionTooltip
+            tooltip={tooltipExplanation}
+            disabled={isBlockedByRole || isBlockedByPlan}
           >
-            {canAddJob ? <Plus /> : <Lock />}
-            Create Sync Job
-          </Button>
+            <Button
+              className="shrink-0 self-start sm:self-auto"
+              disabled={isBlockedByRole}
+              onClick={startCreateJob}
+            >
+              {canManage && canAddJob ? <Plus /> : <Lock />}
+              Create Sync Flow
+            </Button>
+          </ActionTooltip>
         </CardHeader>
 
         <CardContent className={jobs.length > 0 ? 'space-y-3' : undefined}>
           {jobs.length === 0 ? (
             <EmptyState
               icon={ArrowLeftRight}
-              title="No sync jobs yet"
-              description="Create your first sync job to start syncing data between platforms."
+              title="No sync flows configured yet"
+              description="Create your first sync flow to automatically sync data between your connected platforms."
+              action={{
+                label: 'Create Sync Flow',
+                onClick: startCreateJob,
+                disabled: isBlockedByRole,
+                tooltip: tooltipExplanation,
+                timeEstimate: 'Takes ~2 mins',
+                icon: Plus,
+              }}
+              helpLink={{
+                label: 'Learn how sync flows work',
+                href: 'https://docs.synkazo.com/sync-flows',
+              }}
             />
           ) : (
             jobs.map((job) => (

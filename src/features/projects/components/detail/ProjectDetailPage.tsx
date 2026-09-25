@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
 
 import {
   ProjectDetailProvider,
@@ -29,6 +29,7 @@ import { hasBothConnections as computeHasBothConnections } from '@/features/proj
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const projectId = id!;
 
   const detailQuery = useProjectDetailQuery(projectId);
@@ -42,7 +43,24 @@ export default function ProjectDetailPage() {
   const connections = detailQuery.data?.connections ?? [];
   const logs = detailQuery.data?.logs ?? [];
 
-  const [showCreateJob, setShowCreateJob] = useState(false);
+  const [showCreateJob, setShowCreateJob] = useState(
+    () => searchParams.get('create') === 'true' || searchParams.get('create') === '1',
+  );
+
+  useEffect(() => {
+    if (searchParams.get('create') === 'true' || searchParams.get('create') === '1') {
+      setShowCreateJob(true);
+    }
+  }, [searchParams]);
+
+  const handleSetShowCreateJob = (show: boolean) => {
+    setShowCreateJob(show);
+    if (!show && searchParams.get('create')) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('create');
+      setSearchParams(next, { replace: true });
+    }
+  };
 
   const hasBothConnections = computeHasBothConnections(connections);
   const hasJobs = jobs.length > 0;
@@ -117,10 +135,10 @@ export default function ProjectDetailPage() {
     refetch,
     handleTabChange,
     showCreateJob,
-    setShowCreateJob,
+    setShowCreateJob: handleSetShowCreateJob,
     onCreateSyncRule: () => {
       handleTabChange('sync-rules');
-      setShowCreateJob(true);
+      handleSetShowCreateJob(true);
     },
     projectActiveEnv: envActivation.projectActiveEnv,
     envActivating: envActivation.envActivating,

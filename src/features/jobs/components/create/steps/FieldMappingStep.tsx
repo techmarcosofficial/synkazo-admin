@@ -1,4 +1,11 @@
-import { AlertCircleIcon, RefreshCw, X } from 'lucide-react';
+import {
+  AlertCircleIcon,
+  CheckCircle2,
+  Key,
+  Link2,
+  RefreshCw,
+  X,
+} from 'lucide-react';
 
 import ExcludeConditionsEditor from '@/components/fieldmapping/ExcludeConditionsEditor';
 import FieldMappingCanvas, {
@@ -129,6 +136,51 @@ export default function FieldMappingStep({
               </AlertDescription>
             </Alert>
           )}
+          {(() => {
+            const hasMatchField = fieldMappings.some(
+              (m) => Boolean(m.isMatchField || m.matchDestKey),
+            );
+            return (
+              <div className="rounded-3xl border border-info/30 bg-info/5 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-info/10 text-info">
+                    {hasMatchField ? (
+                      <CheckCircle2 className="text-success size-3.5" />
+                    ) : (
+                      <Key className="size-3.5" />
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h4 className="text-foreground text-sm font-semibold">
+                        How should we identify matching records? (Unique Identifier)
+                      </h4>
+                      {hasMatchField ? (
+                        <Badge
+                          variant="secondary"
+                          className="border-success/20 bg-success/10 text-success text-[10px]"
+                        >
+                          Identifier Configured
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant="secondary"
+                          className="border-warning/20 bg-warning/10 text-warning text-[10px]"
+                        >
+                          Required Before Next Step
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-muted-foreground text-xs leading-relaxed">
+                      To prevent duplicate records from being created in your destination platform,
+                      choose at least one field that uniquely identifies each record (such as Email, Phone, or ID).
+                      Click the <strong>key icon</strong> next to the primary matching field in the canvas below.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
           <FieldMappingCanvas
             sourceFields={sourceFields as unknown as CanvasFieldDef[]}
             destFields={destFields as unknown as CanvasFieldDef[]}
@@ -225,6 +277,22 @@ export default function FieldMappingStep({
           </Field>
         </CardContent>
       </Card>
+
+      <div className="border-border/60 bg-muted/40 flex flex-col gap-3 rounded-2xl border p-3.5 text-xs sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-xl">
+            <Link2 className="size-4" />
+          </div>
+          <div>
+            <p className="text-foreground font-semibold">
+              Linking Related Records (e.g. Contacts to Companies)
+            </p>
+            <p className="text-muted-foreground text-xs">
+              Field mapping synchronizes record attributes. To associate records across platforms, configure Record Associations in Project Settings once your flows are set up.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

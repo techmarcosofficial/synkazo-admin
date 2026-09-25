@@ -26,7 +26,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { ActionTooltip } from '@/features/journey';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { cn } from '@/lib/utils';
 
 interface PlatformCardProps {
@@ -48,6 +50,8 @@ export default function PlatformCard({
   const envLabel = conn.environment === 'sandbox' ? 'Sandbox' : 'Production';
   const isSlot = !conn.id;
 
+  const { hasRole } = useSynkazoAuth();
+  const canManage = hasRole('org_admin');
   const { confirm } = useConfirmDialog();
   const { testing, testResult, handleTest, handleDisconnect } =
     useConnectionTestAndDisconnect(conn, onUpdated);
@@ -80,18 +84,28 @@ export default function PlatformCard({
           </div>
 
           {isSlot ? (
-            <Button
-              variant={nextRequired ? 'default' : 'secondary'}
-              size="sm"
-              className="w-full md:ml-auto md:w-auto"
-              onClick={() => onConnect(conn)}
-              disabled={connectDisabled}
+            <ActionTooltip
+              tooltip={
+                !canManage
+                  ? 'Organization Admin role required to configure platform credentials.'
+                  : connectDisabled
+                    ? 'Connect source platform first.'
+                    : undefined
+              }
             >
-              <PlugZap />
-              {connectDisabled
-                ? 'Connect source first'
-                : `Connect ${meta.label}`}
-            </Button>
+              <Button
+                variant={nextRequired ? 'default' : 'secondary'}
+                size="sm"
+                className="w-full md:ml-auto md:w-auto"
+                onClick={() => canManage && onConnect(conn)}
+                disabled={!canManage || connectDisabled}
+              >
+                <PlugZap />
+                {connectDisabled
+                  ? 'Connect source first'
+                  : `Connect ${meta.label}`}
+              </Button>
+            </ActionTooltip>
           ) : (
             <>
               <Separator className="md:hidden" />
@@ -127,14 +141,23 @@ export default function PlatformCard({
                 </Button>
 
                 {/* Edit */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onConnect(conn)}
+                <ActionTooltip
+                  tooltip={
+                    !canManage
+                      ? 'Organization Admin role required to edit platform credentials.'
+                      : undefined
+                  }
                 >
-                  <SquarePen />
-                  Edit
-                </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => canManage && onConnect(conn)}
+                    disabled={!canManage}
+                  >
+                    <SquarePen />
+                    Edit
+                  </Button>
+                </ActionTooltip>
 
                 {/* Permissions */}
                 <Button
@@ -149,24 +172,34 @@ export default function PlatformCard({
                 </Button>
 
                 {/* Disconnect */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  onClick={() =>
-                    confirm({
-                      variant: 'danger',
-                      title: `Disconnect ${meta.label}?`,
-                      description: `${envLabel} environment — this will remove the stored credentials.`,
-                      body: <DisconnectImpactBody projectId={conn.projectId} />,
-                      confirmLabel: 'Yes, Disconnect',
-                      onConfirm: handleDisconnect,
-                    })
+                <ActionTooltip
+                  tooltip={
+                    !canManage
+                      ? 'Organization Admin role required to disconnect platform integrations.'
+                      : undefined
                   }
                 >
-                  <Trash2 />
-                  Disconnect
-                </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    disabled={!canManage}
+                    onClick={() =>
+                      canManage &&
+                      confirm({
+                        variant: 'danger',
+                        title: `Disconnect ${meta.label}?`,
+                        description: `${envLabel} environment — this will remove the stored credentials.`,
+                        body: <DisconnectImpactBody projectId={conn.projectId} />,
+                        confirmLabel: 'Yes, Disconnect',
+                        onConfirm: handleDisconnect,
+                      })
+                    }
+                  >
+                    <Trash2 />
+                    Disconnect
+                  </Button>
+                </ActionTooltip>
               </div>
             </>
           )}

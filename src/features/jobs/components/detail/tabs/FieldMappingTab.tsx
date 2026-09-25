@@ -1,12 +1,15 @@
 import {
   AlertTriangle,
   Check,
+  ExternalLink,
+  Link2,
   ListFilter,
   Plus,
   RotateCcw,
   Search,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { useJobDetailContext } from '../context';
@@ -289,7 +292,6 @@ export default function FieldMappingTab() {
   const [fieldsLoading, setFieldsLoading] = useState(true);
   const [srcPlatform, setSrcPlatform] = useState('servicetitan');
   const [dstPlatform, setDstPlatform] = useState('hubspot');
-
 
   const loadFields = useCallback(
     (refresh = false) => {
@@ -857,18 +859,23 @@ export default function FieldMappingTab() {
             <TabsContent value="field-mapping" className="space-y-4 p-5">
               {fieldMappings.length > 0 &&
                 !fieldMappings.some((mapping) => mapping.matchDestKey) && (
-                  <div className="bg-destructive/10 flex items-start gap-3 rounded-4xl px-4 py-3">
-                    <AlertTriangle className="text-destructive mt-0.5 size-4 shrink-0" />
-                    <div>
-                      <p className="text-destructive text-sm font-medium">
-                        Match Field required
-                      </p>
-                      <p className="text-muted-foreground mt-0.5 text-xs">
-                        Toggle the{' '}
-                        <strong className="text-foreground">switch</strong> on
-                        at least one mapped field to mark it as a Match Field.
-                        This tells the sync how to find existing records in
-                        HubSpot. Without it the job cannot be activated.
+                  <div className="border-warning/30 bg-warning/10 flex items-start gap-3 rounded-3xl border px-4 py-3.5">
+                    <AlertTriangle className="text-warning mt-0.5 size-4 shrink-0" />
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-foreground text-xs font-semibold">
+                          How should we identify matching records?
+                        </p>
+                        <span className="text-muted-foreground bg-background rounded-full border px-2 py-0.5 text-[10px] font-medium">
+                          Identifier / Match Field
+                        </span>
+                      </div>
+                      <p className="text-muted-foreground text-xs leading-relaxed">
+                        Toggle the switch on at least one mapped field (like{' '}
+                        <strong className="text-foreground">Email</strong> or{' '}
+                        <strong className="text-foreground">Record ID</strong>)
+                        to identify matching records. Synkazo uses this to
+                        update existing records instead of creating duplicates.
                       </p>
                     </div>
                   </div>
@@ -903,6 +910,35 @@ export default function FieldMappingTab() {
                 }
                 isFirstTime={isFirstTime}
               />
+
+              <div className="border-border/60 bg-muted/40 mt-4 flex flex-col gap-3 rounded-2xl border p-3.5 text-xs sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-xl">
+                    <Link2 className="size-4" />
+                  </div>
+                  <div>
+                    <p className="text-foreground font-semibold">
+                      Need to link related records together?
+                    </p>
+                    <p className="text-muted-foreground text-xs">
+                      Configure Record Associations to automatically link synced records (e.g. Contacts to Companies or Jobs to Customers).
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 gap-1.5 text-xs font-medium"
+                >
+                  <Link
+                    to={`/projects/${projectId}?tab=settings&section=associations`}
+                  >
+                    <span>Configure Associations</span>
+                    <ExternalLink className="size-3.5" />
+                  </Link>
+                </Button>
+              </div>
             </TabsContent>
 
             <TabsContent value="default-mapping" className="p-5">

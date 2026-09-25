@@ -10,6 +10,7 @@ import PaginationBar from '@/components/shared/PaginationBar';
 import SkeletonList from '@/components/shared/skeletons/SkeletonList';
 import SortableTableHead from '@/components/shared/SortableTableHead';
 import StatusBadge from '@/components/shared/StatusBadge';
+import { ActionTooltip } from '@/features/journey';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -68,15 +69,22 @@ export default function OrgMembersTab() {
   const clearActions = useHeaderStore((state) => state.clearActions);
 
   useEffect(() => {
-    if (canEdit) {
-      setActions(
-        <Button onClick={() => setInviteOpen(true)}>
+    setActions(
+      <ActionTooltip
+        tooltip={
+          !canEdit
+            ? 'Organization Admin role required to invite team members.'
+            : undefined
+        }
+      >
+        <Button
+          onClick={() => canEdit && setInviteOpen(true)}
+          disabled={!canEdit}
+        >
           <Plus /> Invite Member
-        </Button>,
-      );
-    } else {
-      clearActions();
-    }
+        </Button>
+      </ActionTooltip>,
+    );
     return () => clearActions();
   }, [canEdit, setActions, clearActions]);
 
@@ -120,15 +128,15 @@ export default function OrgMembersTab() {
             title="No members yet"
             description="Invited people appear here once they accept."
             viewMode="table"
-            action={
-              canEdit
-                ? {
-                    onClick: () => setInviteOpen(true),
-                    icon: Plus,
-                    label: 'Invite Member',
-                  }
-                : undefined
-            }
+            action={{
+              onClick: () => setInviteOpen(true),
+              icon: Plus,
+              label: 'Invite Member',
+              disabled: !canEdit,
+              tooltip: !canEdit
+                ? 'Organization Admin role required to invite team members.'
+                : undefined,
+            }}
           />
         ) : filteredMembers.length === 0 ? (
           <EmptyState

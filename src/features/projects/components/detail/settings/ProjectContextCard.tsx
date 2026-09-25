@@ -91,6 +91,14 @@ export default function ProjectContextCard({
                   Not activated
                 </span>
               )}
+              {environmentsHref && (
+                <Button asChild variant="ghost" size="sm">
+                  <Link to={environmentsHref}>
+                    View environments
+                    <ExternalLink aria-hidden="true" />
+                  </Link>
+                </Button>
+              )}
             </dd>
           </div>
         </dl>

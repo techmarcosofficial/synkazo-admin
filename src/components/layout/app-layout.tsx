@@ -67,7 +67,7 @@ export default function AppLayout() {
           <WelcomeGuideModal onClose={() => setShowWelcome(false)} />
         )}
         <SourceSetupDialog />
-        {hasPermission('project.create') && <CreateProjectDialog />}
+        <CreateProjectDialog />
         <AppSidebar />
         <SidebarInset className="[--app-shell-header-height:--spacing(16)]">
           <SiteHeader />

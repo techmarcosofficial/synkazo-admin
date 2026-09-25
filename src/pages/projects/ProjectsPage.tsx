@@ -1,7 +1,7 @@
 import { formatDistanceToNow } from 'date-fns';
 import { ArrowRight } from 'lucide-react';
 import { useEffect, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 import ErrorState from '@/components/shared/ErrorState';
 import ManagementToolbar from '@/components/shared/ManagementToolbar';
@@ -32,6 +32,7 @@ import {
   ProjectEmptyState,
   ProjectGrid,
 } from '@/features/projects';
+import { useCreateProjectStore } from '@/features/projects/store/useCreateProjectStore';
 import { ProjectPlatformPair } from '@/features/projects/components/cards';
 import { useProjectFilters } from '@/features/projects/hooks';
 import { PROJECT_STATUS_OPTIONS } from '@/features/projects/types';
@@ -115,8 +116,24 @@ function compareProjects(a: ProjectWithMeta, b: ProjectWithMeta, key: SortKey) {
 
 export default function ProjectsPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { hasPermission } = useSynkazoAuth();
   const canCreateProject = hasPermission('project.create');
+  const openCreateProjectDialog = useCreateProjectStore((s) => s.open);
+
+  useEffect(() => {
+    if (searchParams.get('new') === '1' && canCreateProject) {
+      openCreateProjectDialog();
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete('new');
+          return next;
+        },
+        { replace: true },
+      );
+    }
+  }, [searchParams, canCreateProject, openCreateProjectDialog, setSearchParams]);
 
   const projectsQuery = useProjectsQuery();
   const jobsQuery = useJobsQuery();

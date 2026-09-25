@@ -15,6 +15,7 @@ import {
   RefreshCw,
   Search,
   SkipForward,
+  Wrench,
   X,
   XCircle,
 } from 'lucide-react';
@@ -22,6 +23,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 import { useJobDetailContext } from '../context';
+import { TriageDrawer } from '../TriageDrawer';
 import { RecordReason } from './RecordReason';
 
 import { jobsApi } from '@/api/jobs';
@@ -614,6 +616,7 @@ function RunLogRow({
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [detailError, setDetailError] = useState(false);
   const [stoppingRun, setStoppingRun] = useState(false);
+  const [showTriage, setShowTriage] = useState(false);
 
   const displayStatus = getRunStatus(run);
   const recordsSynced = (run.createdCount ?? 0) + (run.updatedCount ?? 0);
@@ -667,11 +670,12 @@ function RunLogRow({
   };
 
   return (
-    <Collapsible
-      open={expanded}
-      onOpenChange={handleOpenChange}
-      className="bg-card overflow-hidden rounded-4xl border"
-    >
+    <>
+      <Collapsible
+        open={expanded}
+        onOpenChange={handleOpenChange}
+        className="bg-card overflow-hidden rounded-4xl border"
+      >
       <div className="hover:bg-muted/30 flex items-stretch transition-colors">
         <CollapsibleTrigger
           className="group flex min-w-0 flex-1 items-center gap-3 px-4 py-2.5 text-left"
@@ -738,6 +742,25 @@ function RunLogRow({
           </div>
 
           <div className="ml-auto flex shrink-0 items-center gap-2 lg:ml-0">
+            {((run.failedCount ?? 0) > 0 || (run.skippedCount ?? 0) > 0) && (
+              <Button
+                variant="ghost"
+                size="xs"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowTriage(true);
+                }}
+                className={cn(
+                  'h-6 px-2 text-[11px] gap-1',
+                  (run.failedCount ?? 0) > 0
+                    ? 'bg-destructive/10 text-destructive hover:bg-destructive/20'
+                    : 'bg-warning/10 text-warning hover:bg-warning/20',
+                )}
+                title="Triage issues for this run"
+              >
+                <Wrench className="size-3" /> Triage
+              </Button>
+            )}
             {loadingDetails && (
               <RefreshCw className="text-muted-foreground size-3 animate-spin" />
             )}
@@ -825,6 +848,33 @@ function RunLogRow({
               ))}
             </div>
           </section>
+
+          {((run.failedCount ?? 0) > 0 || (run.skippedCount ?? 0) > 0) && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-destructive/20 bg-destructive/5 p-3.5">
+              <div className="flex items-center gap-2.5">
+                <Wrench className="size-4 text-destructive shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-foreground">
+                    {(run.failedCount ?? 0) > 0
+                      ? `${run.failedCount} record${run.failedCount !== 1 ? 's' : ''} failed during sync`
+                      : `${run.skippedCount} record${run.skippedCount !== 1 ? 's' : ''} skipped`}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Review root cause diagnosis and recover failed records with 1 click.
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowTriage(true)}
+                className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 text-xs"
+              >
+                <Wrench className="size-3.5" />
+                Triage Issues ({(run.failedCount ?? 0) + (run.skippedCount ?? 0)})
+              </Button>
+            </div>
+          )}
 
           {runMessage && (
             <div
@@ -926,6 +976,15 @@ function RunLogRow({
         </div>
       </CollapsibleContent>
     </Collapsible>
+    <TriageDrawer
+      open={showTriage}
+      onOpenChange={setShowTriage}
+      projectId={projectId}
+      jobId={jobId}
+      run={run}
+      onRefreshHistory={onRefresh}
+    />
+  </>
   );
 }
 
