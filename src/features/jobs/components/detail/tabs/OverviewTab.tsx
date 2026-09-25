@@ -2,7 +2,6 @@ import {
   CalendarClock,
   Clock,
   Database,
-  History,
   Info,
   Play,
   RotateCcw,
@@ -15,7 +14,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useJobDetailContext } from '../context';
 
 import UpgradeRequiredDialog from '@/components/shared/UpgradeRequiredDialog';
-import StatusBadge from '@/components/shared/StatusBadge';
 import StartSyncModal from '@/components/sync/StartSyncModal';
 import SyncRunProgress from '@/components/sync/SyncRunProgress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -28,7 +26,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import type { ExtSyncRun } from '@/features/jobs/hooks';
 import {
   capitalizeFirst,
   formatScheduledAt,
@@ -73,46 +70,6 @@ function SyncSummaryCard({
         </div>
       </CardContent>
     </Card>
-  );
-}
-
-function formatRunTime(value?: string) {
-  if (!value) return 'Time unavailable';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Time unavailable';
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date);
-}
-
-function triggerLabel(value?: string) {
-  if (!value) return 'Manual';
-  const labels: Record<string, string> = {
-    manual: 'Manual',
-    sync_all: 'All records',
-    limit_sync: 'Limited run',
-    cron: 'Automatic schedule',
-    resume: 'Resumed',
-    webhook: 'Webhook',
-    api: 'API',
-  };
-  return (
-    labels[value] ??
-    value
-      .split('_')
-      .map((part) => part[0]?.toUpperCase() + part.slice(1))
-      .join(' ')
-  );
-}
-
-function processedRecords(run: ExtSyncRun) {
-  return (
-    run.recordsProcessed ??
-    (run.createdCount ?? 0) +
-      (run.updatedCount ?? 0) +
-      (run.skippedCount ?? 0) +
-      (run.failedCount ?? 0)
   );
 }
 
@@ -324,13 +281,16 @@ export default function OverviewTab() {
         ? summaryRun?.totalFetched
         : undefined);
   const showingSummary = summaryRunning || !!summaryRun?.id;
-  const renderProgress = (variant: 'default' | 'compact') =>
+  const renderProgress = (
+    variant: 'default' | 'compact',
+    defaultOpen = true,
+  ) =>
     showingSummary ? (
       <SyncRunProgress
         variant={variant}
+        defaultOpen={defaultOpen}
         runId={summaryRun?.id}
         jobId={job.id}
-        jobName={job.name}
         status={
           summaryRunning
             ? 'running'
@@ -355,22 +315,18 @@ export default function OverviewTab() {
         skippedCount={skippedCount}
         failedCount={failedCount}
         etaSeconds={currentProgress?.etaSeconds}
-        ratePerSec={currentProgress?.ratePerSec}
         startedAt={summaryRun?.startedAt}
         finishedAt={summaryRun?.finishedAt}
         durationMs={summaryRun?.durationMs}
         triggeredBy={summaryRun?.triggeredBy}
         sourceLabel={summaryRun?.sourceObject ?? job.sourceObject}
         destinationLabel={summaryRun?.destObject ?? job.destObject}
-        sourceStatus={hasConnection ? 'Connected' : 'Unavailable'}
         errorMessage={summaryRun?.errorMessage}
         onStop={summaryRunning ? () => void handleStop() : undefined}
         stopping={stopping}
-        onViewHistory={() => handleTabChange('run-history')}
       />
     ) : null;
-  const progress = renderProgress('default');
-  const recentRuns = runLogs.slice(0, 5);
+  const progress = renderProgress('default', true);
 
   return (
     <div className="space-y-5">
@@ -483,70 +439,6 @@ export default function OverviewTab() {
         </CardContent>
       </Card>
 
-      <Card size="sm" className="min-w-0 rounded-4xl">
-        <CardHeader>
-          <div className="flex items-start gap-3">
-            <span className="bg-muted text-muted-foreground flex size-10 shrink-0 items-center justify-center rounded-xl">
-              <History className="size-4.5" aria-hidden="true" />
-            </span>
-            <div className="space-y-0.5">
-              <CardTitle className="text-sm font-semibold">
-                Recent activity
-              </CardTitle>
-              <CardDescription className="text-xs leading-tight">
-                The five most recent runs for this job.
-              </CardDescription>
-            </div>
-          </div>
-          <CardAction>
-            <Button
-              variant="link"
-              size="sm"
-              onClick={() => handleTabChange('run-history')}
-            >
-              View all
-            </Button>
-          </CardAction>
-        </CardHeader>
-        <CardContent>
-          {recentRuns.length === 0 ? (
-            <div className="text-muted-foreground rounded-3xl border border-dashed px-4 py-8 text-center text-sm">
-              No runs yet. Start a manual sync to see activity here.
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {recentRuns.map((run) => (
-                <div
-                  key={run.id}
-                  className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-3xl border px-4 py-3"
-                >
-                  <StatusBadge
-                    status={run.executionStatus ?? run.status}
-                    size="sm"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">
-                      {triggerLabel(run.triggeredBy)}
-                    </p>
-                    <p className="text-muted-foreground text-xs">
-                      {formatRunTime(run.startedAt)}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold tabular-nums">
-                      {processedRecords(run).toLocaleString()}
-                    </p>
-                    <p className="text-muted-foreground text-xs">
-                      records processed
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       {manualDialogOpen && (
         <StartSyncModal
           projectId={projectId}
@@ -563,9 +455,12 @@ export default function OverviewTab() {
           onClose={() => setManualDialogOpen(false)}
           onRunNow={() => void handleRunNow()}
           onLimitSyncStarted={() => void beginTracking()}
-          onLimitSyncDone={() => void refetch()}
+          onLimitSyncDone={() => {
+            setManualDialogOpen(false);
+            void refetch();
+          }}
           onSyncAll={(range) => void handleSyncAll(undefined, range)}
-          runProgress={renderProgress('compact')}
+          runProgress={summaryRunning ? renderProgress('compact', false) : undefined}
         />
       )}
 

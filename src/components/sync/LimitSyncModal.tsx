@@ -93,7 +93,7 @@ function Frame({
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        size="sm"
+        size="md"
         className="flex max-h-[90vh] flex-col"
         onEscapeKeyDown={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
@@ -234,8 +234,8 @@ export default function LimitSyncModal({
       if (updated?.status === 'running') {
         pollRef.current = setTimeout(() => pollRun(runLogId), 2000);
       } else {
-        setStep('done');
         onDone?.();
+        onClose();
       }
     } catch {
       stuckCount.current += 1;
@@ -264,8 +264,8 @@ export default function LimitSyncModal({
             if (latest.status === 'running') {
               pollRef.current = setTimeout(() => pollRun(latest.id), 2000);
             } else {
-              setStep('done');
               onDone?.();
+              onClose();
             }
             return;
           }
@@ -280,12 +280,16 @@ export default function LimitSyncModal({
       if (latest) {
         activeRunId.current = latest.id;
         setRunLog(latest);
-        setStep('done');
-        onDone?.();
+        if (latest.status === 'running') {
+          pollRef.current = setTimeout(() => pollRun(latest.id), 2000);
+          return;
+        }
       }
     } catch {
       /* ignore */
     }
+    onDone?.();
+    onClose();
   };
 
   const handleStart = async () => {
@@ -356,7 +360,8 @@ export default function LimitSyncModal({
       toast.error('Could not send stop signal — check Run History.');
     }
     setStopping(false);
-    setStep('done');
+    onDone?.();
+    onClose();
   };
 
   return (
@@ -569,6 +574,7 @@ export default function LimitSyncModal({
               jobId={jobId}
               status="running"
               variant="compact"
+              defaultOpen={false}
               totalRecords={progress?.totalRecords ?? safeLimit}
               processedRecords={attempted}
               completedBatches={completedBatches}
@@ -580,7 +586,6 @@ export default function LimitSyncModal({
               updatedCount={updated}
               skippedCount={skipped}
               failedCount={failed}
-              ratePerSec={progress?.ratePerSec}
               startedAt={runLog?.startedAt}
               triggeredBy={runLog?.triggeredBy ?? 'limit_sync'}
               sourceLabel={runLog?.sourceObject ?? job?.sourceObject}
@@ -605,7 +610,7 @@ export default function LimitSyncModal({
           <>
             {!embedded && (
               <DialogHeader className="sr-only">
-                <DialogTitle>Sync result</DialogTitle>
+                <DialogTitle>Sync timed out</DialogTitle>
               </DialogHeader>
             )}
             <div className="flex-1 space-y-4 overflow-y-auto">
@@ -619,48 +624,14 @@ export default function LimitSyncModal({
                   </AlertDescription>
                 </Alert>
               )}
-              <SyncRunProgress
-                runId={runLog?.id}
-                variant="compact"
-                jobId={jobId}
-                status={
-                  timedOut
-                    ? 'stopped'
-                    : (runLog?.executionStatus ?? runLog?.status ?? 'completed')
-                }
-                totalRecords={
-                  !timedOut && runLog?.status === 'completed'
-                    ? runLog.totalFetched
-                    : (progress?.totalRecords ?? safeLimit)
-                }
-                processedRecords={attempted}
-                completedBatches={completedBatches}
-                currentBatch={progress?.currentBatch}
-                batchProcessed={progress?.batchProcessed}
-                batchTotal={progress?.batchTotal}
-                totalBatches={
-                  runLog?.status === 'completed'
-                    ? runLog.totalPages
-                    : (progress?.totalBatches ?? estBatches)
-                }
-                createdCount={created}
-                updatedCount={updated}
-                skippedCount={skipped}
-                failedCount={failed}
-                startedAt={runLog?.startedAt}
-                finishedAt={runLog?.finishedAt}
-                durationMs={runLog?.durationMs}
-                triggeredBy={runLog?.triggeredBy ?? 'limit_sync'}
-                sourceLabel={runLog?.sourceObject ?? job?.sourceObject}
-                destinationLabel={runLog?.destObject ?? job?.destObject}
-                errorMessage={
-                  timedOut
-                    ? 'Live polling timed out. Run History will show the final result.'
-                    : runLog?.errorMessage
-                }
-                onDismiss={onClose}
-              />
             </div>
+            {!compact && (
+              <DialogFooter>
+                <Button variant="outline" onClick={onClose} className="w-full">
+                  Close
+                </Button>
+              </DialogFooter>
+            )}
           </>
         )}
       </Frame>

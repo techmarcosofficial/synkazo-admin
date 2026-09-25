@@ -1150,7 +1150,6 @@ export default function RunHistoryTab() {
           <SyncRunProgress
             runId={summaryRun.id}
             jobId={jobId}
-            jobName={job.name}
             status={
               summaryRunning
                 ? 'running'
@@ -1175,15 +1174,14 @@ export default function RunHistoryTab() {
             skippedCount={skippedCount}
             failedCount={failedCount}
             etaSeconds={currentProgress?.etaSeconds}
-            ratePerSec={currentProgress?.ratePerSec}
             startedAt={summaryRun.startedAt}
             finishedAt={summaryRun.finishedAt}
             durationMs={summaryRun.durationMs}
             triggeredBy={summaryRun.triggeredBy}
             sourceLabel={summaryRun.sourceObject ?? job.sourceObject}
             destinationLabel={summaryRun.destObject ?? job.destObject}
-            sourceStatus={hasConnection ? 'Connected' : 'Unavailable'}
             errorMessage={summaryRun.errorMessage}
+            defaultOpen={false}
             onStop={summaryRunning ? () => void handleStop() : undefined}
             stopping={stopping}
           />

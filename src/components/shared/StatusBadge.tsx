@@ -135,6 +135,8 @@ const STATUS_CONFIG: Record<
   limit_reached: { tone: 'muted', label: 'Limit reached' },
   time_limit_reached: { tone: 'warning', label: 'Time limit reached' },
   disconnected: { tone: 'danger', label: 'Disconnected' },
+  queued: { tone: 'warning', label: 'Queued' },
+  stopped: { tone: 'warning', label: 'Stopped' },
 
   idle: { tone: 'muted', label: 'Idle' },
   skipped: { tone: 'muted', label: 'Skipped' },
@@ -173,6 +175,7 @@ interface StatusBadgeProps {
   size?: Size;
   variant?: Variant;
   showDescription?: boolean;
+  className?: string;
 }
 
 export default function StatusBadge({
@@ -180,6 +183,7 @@ export default function StatusBadge({
   size = 'default',
   variant = 'default',
   showDescription = false,
+  className,
 }: StatusBadgeProps) {
   const cfg = STATUS_CONFIG[status] ?? {
     tone: 'muted' as Tone,
@@ -189,7 +193,7 @@ export default function StatusBadge({
 
   if (variant === 'menu') {
     return (
-      <div className="flex flex-col">
+      <div className={cn('flex flex-col', className)}>
         <div className="flex items-center gap-2 font-medium">
           {Icon ? (
             <Icon className="size-3.5" aria-hidden="true" />
@@ -222,6 +226,7 @@ export default function StatusBadge({
           tone: cfg.tone,
           size,
         }),
+        className,
       )}
     >
       {Icon ? (
@@ -238,3 +243,4 @@ export default function StatusBadge({
     </Badge>
   );
 }
+
