@@ -92,6 +92,30 @@ export function getPlatformLogoUrl(platformId: string): string | undefined {
   return PLATFORMS[platformId]?.logoUrl;
 }
 
+/** Logos with their own background fill the tile; transparent marks use the tile surface. */
+export function getPlatformLogoImageClass(platformId: string): string {
+  if (platformId === 'dataforma' || platformId === 'hubspot') {
+    return 'h-full w-full object-cover';
+  }
+  if (platformId === 'texada') {
+    return 'h-full w-full object-contain';
+  }
+  return 'h-[88%] w-[88%] object-contain';
+}
+
+export function getPlatformLogoTileClass(platformId: string): string {
+  switch (platformId) {
+    case 'servicetitan':
+      return 'bg-servicetitan-tile';
+    case 'hubspot':
+      return 'bg-hubspot';
+    case 'dataforma':
+      return 'bg-dataforma';
+    default:
+      return 'bg-background';
+  }
+}
+
 /**
  * Get a platform by ID.
  * Returns the platform object or undefined if not found.

@@ -3,6 +3,8 @@ import { Lock } from 'lucide-react';
 import {
   getPlatform,
   getPlatformLogoUrl,
+  getPlatformLogoImageClass,
+  getPlatformLogoTileClass,
   getPlatformInitials,
   getPlatformBadgeClass,
   isPlatformComingSoon,
@@ -151,7 +153,7 @@ export function PlatformIcon({
     return (
       <div
         className={cn(
-          badgeClass,
+          logoUrl ? getPlatformLogoTileClass(platformId) : badgeClass,
           'inline-flex shrink-0 items-center justify-center overflow-hidden rounded-xl',
           iconSizeClass,
           className,
@@ -163,7 +165,7 @@ export function PlatformIcon({
             src={logoUrl}
             alt={platform.name}
             draggable={false}
-            className="h-[85%] w-[85%] object-contain"
+            className={getPlatformLogoImageClass(platformId)}
           />
         ) : (
           <span className="text-foreground text-xs font-semibold">
@@ -195,7 +197,8 @@ export function PlatformIcon({
       >
         <div
           className={cn(
-            'bg-background inline-flex shrink-0 items-center justify-center overflow-hidden rounded-xl',
+            'inline-flex shrink-0 items-center justify-center overflow-hidden rounded-xl',
+            getPlatformLogoTileClass(platformId),
             iconSizeClass,
           )}
           style={iconStyle}
@@ -205,7 +208,7 @@ export function PlatformIcon({
               src={logoUrl}
               alt={platform.name}
               draggable={false}
-              className="h-[70%] w-[70%] object-contain"
+              className={getPlatformLogoImageClass(platformId)}
             />
           ) : (
             <span className="text-foreground text-xs font-semibold">
@@ -234,7 +237,8 @@ export function PlatformIcon({
       >
         <div
           className={cn(
-            'bg-background inline-flex shrink-0 items-center justify-center overflow-hidden rounded-lg',
+            'inline-flex shrink-0 items-center justify-center overflow-hidden rounded-lg',
+            getPlatformLogoTileClass(platformId),
             iconSizeClass,
           )}
           style={iconStyle}
@@ -244,7 +248,7 @@ export function PlatformIcon({
               src={logoUrl}
               alt={platform.name}
               draggable={false}
-              className="h-[70%] w-[70%] object-contain"
+              className={getPlatformLogoImageClass(platformId)}
             />
           ) : (
             <span className="text-foreground text-xs font-semibold">

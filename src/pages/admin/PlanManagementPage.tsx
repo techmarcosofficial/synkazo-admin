@@ -781,7 +781,7 @@ function PriceGroup({
               key={price.id}
               htmlFor={`price-${price.id}`}
               className={cn(
-                'flex cursor-pointer items-center gap-2 rounded-3xl border px-3 py-1.5 transition-all',
+                'flex flex-wrap cursor-pointer items-center gap-2 rounded-3xl border px-3 py-1.5 transition-all',
                 selected
                   ? 'border-primary bg-primary/5'
                   : 'hover:border-primary/40 hover:bg-muted/40',

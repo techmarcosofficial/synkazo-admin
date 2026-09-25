@@ -16,6 +16,7 @@ import { Spinner } from '@/components/ui/spinner';
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
   const resetToken = searchParams.get('token');
+  const isInitialPassword = searchParams.get('mode') === 'set';
 
   const [form, setForm] = useState({ newPassword: '', confirmPassword: '' });
   const [loading, setLoading] = useState(false);
@@ -73,8 +74,12 @@ export default function ResetPassword() {
           <AuthStatus
             icon={CheckCircle2}
             tone="success"
-            title="Password reset!"
-            description="Your password has been updated successfully."
+            title={isInitialPassword ? 'Password set!' : 'Password reset!'}
+            description={
+              isInitialPassword
+                ? 'Your password is ready. You can now sign in with HubSpot or your email and password.'
+                : 'Your password has been updated successfully.'
+            }
           >
             <Button asChild>
               <Link to="/login">Sign in</Link>
@@ -85,7 +90,7 @@ export default function ResetPassword() {
         <>
           <div className="mt-9 space-y-1.5">
             <h1 className="text-2xl font-bold tracking-tight">
-              Set new password
+              {isInitialPassword ? 'Set your password' : 'Set new password'}
             </h1>
             <p className="text-muted-foreground text-sm">
               Enter and confirm your new password.
@@ -131,7 +136,13 @@ export default function ResetPassword() {
                 />
               </Field>
               <Button type="submit" disabled={loading} className="w-full">
-                {loading ? <Spinner /> : 'Reset password'}
+                {loading ? (
+                  <Spinner />
+                ) : isInitialPassword ? (
+                  'Set password'
+                ) : (
+                  'Reset password'
+                )}
               </Button>
             </FieldGroup>
           </form>

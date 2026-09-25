@@ -10,7 +10,7 @@ import {
   X,
   type LucideIcon,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useJobDetailContext } from '../context';
 
@@ -120,8 +120,12 @@ export default function OverviewTab() {
   const {
     projectId,
     job,
+    project,
+    jobFieldMappings,
+    hasConnection,
     refetch,
     isSyncing,
+    toggling,
     stopping,
     cancellingQueue,
     retryingQueue,
@@ -138,9 +142,41 @@ export default function OverviewTab() {
     handleStop,
     handleCancelQueue,
     handleRetryQueue,
+    handleToggle,
     handleTabChange,
   } = useJobDetailContext();
   const [manualDialogOpen, setManualDialogOpen] = useState(false);
+  // Ref to the existing "Job is inactive" inline alert — used to scroll it into
+  // view and briefly ring-highlight it when the user clicks Sync now while the
+  // job is inactive, guiding them to the blocker without a toast or modal.
+  const inactiveAlertRef = useRef<HTMLDivElement>(null);
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [highlighted, setHighlighted] = useState(false);
+  const highlightInactiveAlert = useCallback(() => {
+    const el = inactiveAlertRef.current;
+    if (!el) return;
+    if (highlightTimerRef.current) {
+      clearTimeout(highlightTimerRef.current);
+    }
+    el.focus({ preventScroll: true });
+    const { top, bottom } = el.getBoundingClientRect();
+    if (top < 0 || bottom > window.innerHeight) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    setHighlighted(true);
+    highlightTimerRef.current = setTimeout(() => {
+      setHighlighted(false);
+      highlightTimerRef.current = null;
+    }, 1800);
+  }, []);
+  useEffect(
+    () => () => {
+      if (highlightTimerRef.current) {
+        clearTimeout(highlightTimerRef.current);
+      }
+    },
+    [],
+  );
 
   const priorityQueueQuery = usePriorityQueueQuery(projectId);
   const priorityModeActive =
@@ -236,30 +272,104 @@ export default function OverviewTab() {
       icon: Play,
     },
   ];
+  const canActivate =
+    project?.status === 'active' &&
+    hasConnection &&
+    jobFieldMappings.length > 0 &&
+    jobFieldMappings.some((mapping) => mapping.matchDestKey);
 
-  const manualRunBlocked = !job.isEnabled || queued || isSyncing;
-  const liveProcessed =
-    liveProgress?.recordsProcessed ??
-    (activeRunLog?.createdCount ?? 0) +
-      (activeRunLog?.updatedCount ?? 0) +
-      (activeRunLog?.skippedCount ?? 0) +
-      (activeRunLog?.failedCount ?? 0);
-  const liveTotal = liveProgress?.totalRecords;
-  const showingProgress = activeRunLog?.status === 'running' || isSyncing;
-  const progress = showingProgress ? (
-    <SyncRunProgress
-      totalRecords={liveTotal}
-      processedRecords={liveProcessed}
-      createdCount={activeRunLog?.createdCount}
-      updatedCount={activeRunLog?.updatedCount}
-      skippedCount={activeRunLog?.skippedCount}
-      failedCount={activeRunLog?.failedCount}
-      etaSeconds={liveProgress?.etaSeconds}
-      description="Syncing records for this job."
-      onStop={() => void handleStop()}
-      stopping={stopping}
-    />
-  ) : null;
+  // Sync is physically impossible when already running or queued — keep disabled.
+  // When inactive the button stays clickable; clicking it guides to the existing
+  // inline alert below instead of opening the dialog.
+  const syncBlocked = queued || isSyncing;
+  const inactiveBlocked = !job.isEnabled;
+  const summaryRun =
+    activeRunLog?.status === 'running' || activeRunLog?.id
+      ? activeRunLog
+      : runLogs[0];
+  const summaryRunning = isSyncing || summaryRun?.status === 'running';
+  const currentProgress =
+    liveProgress && (!summaryRun?.id || liveProgress.runId === summaryRun.id)
+      ? liveProgress
+      : null;
+  const createdCount = Math.max(
+    currentProgress?.createdCount ?? 0,
+    summaryRun?.createdCount ?? 0,
+  );
+  const updatedCount = Math.max(
+    currentProgress?.updatedCount ?? 0,
+    summaryRun?.updatedCount ?? 0,
+  );
+  const skippedCount = Math.max(
+    currentProgress?.skippedCount ?? 0,
+    summaryRun?.skippedCount ?? 0,
+  );
+  const failedCount = Math.max(
+    currentProgress?.failedCount ?? 0,
+    summaryRun?.failedCount ?? 0,
+  );
+  const summaryProcessed = Math.max(
+    currentProgress?.recordsAttempted ?? 0,
+    (currentProgress?.recordsProcessed ?? 0) +
+      (currentProgress?.failedCount ?? 0),
+    summaryRun?.status === 'completed' ? (summaryRun.totalFetched ?? 0) : 0,
+    createdCount + updatedCount + skippedCount + failedCount,
+  );
+  const summaryTotal =
+    (summaryRun?.status === 'completed' ? summaryRun.totalFetched : null) ??
+    currentProgress?.totalRecords ??
+    (summaryRun?.triggeredBy === 'limit_sync'
+      ? summaryRun.recordLimit
+      : summaryRunning && summaryRun?.triggeredBy !== 'sync_all'
+        ? summaryRun?.totalFetched
+        : undefined);
+  const showingSummary = summaryRunning || !!summaryRun?.id;
+  const renderProgress = (variant: 'default' | 'compact') =>
+    showingSummary ? (
+      <SyncRunProgress
+        variant={variant}
+        runId={summaryRun?.id}
+        jobId={job.id}
+        jobName={job.name}
+        status={
+          summaryRunning
+            ? 'running'
+            : (summaryRun?.executionStatus ?? summaryRun?.status)
+        }
+        totalRecords={summaryTotal}
+        processedRecords={summaryProcessed}
+        completedBatches={Math.max(
+          currentProgress?.page ?? 0,
+          summaryRun?.totalPages ?? 0,
+        )}
+        currentBatch={currentProgress?.currentBatch}
+        batchProcessed={currentProgress?.batchProcessed}
+        batchTotal={currentProgress?.batchTotal}
+        totalBatches={
+          summaryRun?.status === 'completed'
+            ? summaryRun.totalPages
+            : currentProgress?.totalBatches
+        }
+        createdCount={createdCount}
+        updatedCount={updatedCount}
+        skippedCount={skippedCount}
+        failedCount={failedCount}
+        etaSeconds={currentProgress?.etaSeconds}
+        ratePerSec={currentProgress?.ratePerSec}
+        startedAt={summaryRun?.startedAt}
+        finishedAt={summaryRun?.finishedAt}
+        durationMs={summaryRun?.durationMs}
+        triggeredBy={summaryRun?.triggeredBy}
+        sourceLabel={summaryRun?.sourceObject ?? job.sourceObject}
+        destinationLabel={summaryRun?.destObject ?? job.destObject}
+        sourceStatus={hasConnection ? 'Connected' : 'Unavailable'}
+        errorMessage={summaryRun?.errorMessage}
+        onStop={summaryRunning ? () => void handleStop() : undefined}
+        stopping={stopping}
+        onViewHistory={() => handleTabChange('run-history')}
+      />
+    ) : null;
+  const progress = renderProgress('default');
   const recentRuns = runLogs.slice(0, 5);
 
   return (
@@ -300,8 +410,17 @@ export default function OverviewTab() {
               </Button>
             )}
             <Button
-              onClick={() => setManualDialogOpen(true)}
-              disabled={manualRunBlocked}
+              onClick={() => {
+                if (inactiveBlocked) {
+                  highlightInactiveAlert();
+                  return;
+                }
+                setManualDialogOpen(true);
+              }}
+              disabled={syncBlocked}
+              aria-controls={
+                inactiveBlocked ? 'job-inactive-notification' : undefined
+              }
             >
               <Play /> Sync now
             </Button>
@@ -315,12 +434,36 @@ export default function OverviewTab() {
           </div>
 
           {!job.isEnabled && !isSyncing && (
-            <Alert className="py-2.5">
+            <Alert
+              id="job-inactive-notification"
+              ref={inactiveAlertRef}
+              tabIndex={-1}
+              className={`py-2.5 transition-shadow duration-300 outline-none ${
+                highlighted
+                  ? 'ring-primary ring-offset-background ring-2 ring-offset-2'
+                  : ''
+              }`}
+            >
               <Info />
               <AlertDescription className="space-y-0.5 [&_p:not(:last-child)]:mb-0">
                 <p className="text-foreground font-semibold">Job is inactive</p>
                 <p>
-                  Set the job status to Active before starting a manual run.
+                  {canActivate ? (
+                    <>
+                      <Button
+                        variant="link"
+                        size="xs"
+                        className="h-auto p-0"
+                        onClick={() => void handleToggle()}
+                        disabled={toggling}
+                      >
+                        {toggling ? 'Activating…' : 'Activate job'}
+                      </Button>{' '}
+                      before starting a manual run.
+                    </>
+                  ) : (
+                    'Complete the required setup before activating this job and starting a manual run.'
+                  )}
                 </p>
               </AlertDescription>
             </Alert>
@@ -412,7 +555,7 @@ export default function OverviewTab() {
           hasBaseline={!!job.lastSyncedAt}
           pipelineRequired={pipelineRequired}
           pipelineConfigured={pipelineConfigured}
-          disabled={manualRunBlocked}
+          disabled={syncBlocked}
           onGoToPipeline={() => {
             setManualDialogOpen(false);
             handleTabChange('pipeline');
@@ -422,7 +565,7 @@ export default function OverviewTab() {
           onLimitSyncStarted={() => void beginTracking()}
           onLimitSyncDone={() => void refetch()}
           onSyncAll={(range) => void handleSyncAll(undefined, range)}
-          runProgress={progress}
+          runProgress={renderProgress('compact')}
         />
       )}
 

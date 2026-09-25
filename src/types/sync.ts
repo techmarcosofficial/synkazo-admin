@@ -13,6 +13,28 @@ export type SyncRunStatus =
   | 'completed'
   | 'failed';
 
+/** Existing sync:progress SSE event, extended with per-batch attempted totals. */
+export interface SyncProgressEvent {
+  jobId?: string | number;
+  runId?: string;
+  page?: number;
+  /** One-based batch currently being processed. */
+  currentBatch?: number | null;
+  /** Attempted records within the current batch, including failures. */
+  batchProcessed?: number | null;
+  batchTotal?: number | null;
+  recordsProcessed?: number;
+  recordsAttempted?: number;
+  createdCount?: number;
+  updatedCount?: number;
+  skippedCount?: number;
+  failedCount?: number;
+  totalRecords?: number | null;
+  totalBatches?: number | null;
+  etaSeconds?: number;
+  ratePerSec?: number;
+}
+
 export interface SyncRun {
   id: string;
   jobId: string;
@@ -23,6 +45,8 @@ export interface SyncRun {
   recordsUpdated?: number;
   recordsSkipped?: number;
   totalFetched?: number;
+  totalPages?: number;
+  recordLimit?: number | null;
   startedAt?: string;
   finishedAt?: string | null;
   durationMs?: number;

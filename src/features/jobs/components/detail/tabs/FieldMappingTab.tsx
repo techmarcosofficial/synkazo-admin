@@ -290,6 +290,7 @@ export default function FieldMappingTab() {
   const [srcPlatform, setSrcPlatform] = useState('servicetitan');
   const [dstPlatform, setDstPlatform] = useState('hubspot');
 
+
   const loadFields = useCallback(
     (refresh = false) => {
       if (!job.sourceObject || !job.destObject) return;
@@ -728,6 +729,14 @@ export default function FieldMappingTab() {
         ? 'Save defaults'
         : 'Save conditions';
 
+  // First-time: mappingMode is 'fresh-setup' (set when DB returned 0 rows) and
+  // nothing has been added yet this session either. Reuses existing state only.
+  const isFirstTime =
+    mappingMode === 'fresh-setup' && fieldMappings.length === 0;
+
+  // Save is actionable whenever the active tab has unsaved changes.
+  const saveEnabled = activeDirty;
+
   return (
     <div
       ref={workspaceRef}
@@ -892,6 +901,7 @@ export default function FieldMappingTab() {
                   mappingMode === 'edit' &&
                   persistedSourceFieldsRef.current.has(row.sourceField)
                 }
+                isFirstTime={isFirstTime}
               />
             </TabsContent>
 
@@ -981,7 +991,11 @@ export default function FieldMappingTab() {
               >
                 <RotateCcw /> Discard changes
               </Button>
-              <Button onClick={handleSave} disabled={saving}>
+              <Button
+                onClick={handleSave}
+                disabled={!saveEnabled || saving}
+                variant={saveEnabled ? 'default' : 'outline'}
+              >
                 {saving ? <Spinner /> : <Check />}
                 {saving ? 'Saving...' : saved ? 'Saved!' : saveLabel}
               </Button>

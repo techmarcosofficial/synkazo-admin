@@ -1,7 +1,6 @@
 import {
   AlertTriangle,
   ArrowRight,
-  CheckCircle2,
   ChevronRight,
   Info,
   Play,
@@ -27,32 +26,13 @@ import {
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
+import { sseClient } from '@/lib/sseClient';
+import { mergeSyncProgress } from '@/lib/mergeSyncProgress';
 import { cn } from '@/lib/utils';
-import type { Job, SyncRun } from '@/types';
+import type { Job, SyncProgressEvent, SyncRun } from '@/types';
 
 const MAX_POLL_COUNT = 180;
 const STUCK_THRESHOLD = 30;
-
-function Stat({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value?: number | null;
-  tone?: string;
-}) {
-  return (
-    <div className="bg-muted/40 flex min-w-[72px] flex-col items-center gap-0.5 rounded-4xl border px-3 py-2">
-      <span className={cn('text-base font-bold', tone ?? 'text-foreground')}>
-        {value ?? 0}
-      </span>
-      <span className="text-muted-foreground text-center text-[10px] leading-tight">
-        {label}
-      </span>
-    </div>
-  );
-}
 
 interface LimitSyncModalProps {
   projectId: string;
@@ -147,6 +127,9 @@ export default function LimitSyncModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [runLog, setRunLog] = useState<SyncRun | null>(null);
+  const [liveProgress, setLiveProgress] = useState<SyncProgressEvent | null>(
+    null,
+  );
   const [stopping, setStopping] = useState(false);
   const [stuckWarning, setStuckWarning] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
@@ -167,12 +150,52 @@ export default function LimitSyncModal({
     [],
   );
 
+  useEffect(() => {
+    if (step !== 'running') return;
+    return sseClient.on('sync:progress', (data: unknown) => {
+      if (!data || typeof data !== 'object') return;
+      const event = data as SyncProgressEvent;
+      if (String(event.jobId) !== String(jobId)) return;
+      if (activeRunId.current && event.runId !== activeRunId.current) return;
+      setLiveProgress((previous) => {
+        return mergeSyncProgress(previous, event);
+      });
+    });
+  }, [jobId, step]);
+
   const safeLimit = Math.max(1, limit || 1);
   const safeBatch = Math.max(10, Math.min(500, batchSize || 100));
   const safeStart = Math.max(1, startPage || 1);
   const estBatches = Math.ceil(safeLimit / safeBatch);
   const estSrcPages = Math.ceil(safeLimit / 500);
   const srcPageEnd = safeStart + estSrcPages - 1;
+  const progress =
+    liveProgress && (!runLog || liveProgress.runId === runLog.id)
+      ? liveProgress
+      : null;
+  const created = Math.max(
+    runLog?.createdCount ?? 0,
+    progress?.createdCount ?? 0,
+  );
+  const updated = Math.max(
+    runLog?.updatedCount ?? 0,
+    progress?.updatedCount ?? 0,
+  );
+  const skipped = Math.max(
+    runLog?.skippedCount ?? 0,
+    progress?.skippedCount ?? 0,
+  );
+  const failed = Math.max(runLog?.failedCount ?? 0, progress?.failedCount ?? 0);
+  const attempted = Math.max(
+    created + updated + skipped + failed,
+    progress?.recordsAttempted ?? 0,
+    (progress?.recordsProcessed ?? 0) + (progress?.failedCount ?? 0),
+    (runLog?.recordsProcessed ?? 0) + (runLog?.failedCount ?? 0),
+  );
+  const completedBatches = Math.max(
+    runLog?.totalPages ?? 0,
+    progress?.page ?? 0,
+  );
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -273,6 +296,9 @@ export default function LimitSyncModal({
     lastFetched.current = 0;
     setStuckWarning(false);
     setTimedOut(false);
+    setLiveProgress(null);
+    setRunLog(null);
+    activeRunId.current = null;
     const triggerTime = Date.now();
     try {
       const resp = (await jobsApi.limitSync(projectId, jobId, {
@@ -539,13 +565,26 @@ export default function LimitSyncModal({
         {step === 'running' && (
           <div className="flex flex-col gap-4">
             <SyncRunProgress
-              totalRecords={safeLimit}
-              processedRecords={runLog?.totalFetched ?? 0}
-              createdCount={runLog?.createdCount}
-              updatedCount={runLog?.updatedCount}
-              skippedCount={runLog?.skippedCount}
-              failedCount={runLog?.failedCount}
-              description={`Up to ${safeLimit.toLocaleString()} records · starting page ${safeStart}`}
+              runId={runLog?.id}
+              jobId={jobId}
+              status="running"
+              variant="compact"
+              totalRecords={progress?.totalRecords ?? safeLimit}
+              processedRecords={attempted}
+              completedBatches={completedBatches}
+              currentBatch={progress?.currentBatch}
+              batchProcessed={progress?.batchProcessed}
+              batchTotal={progress?.batchTotal}
+              totalBatches={progress?.totalBatches ?? estBatches}
+              createdCount={created}
+              updatedCount={updated}
+              skippedCount={skipped}
+              failedCount={failed}
+              ratePerSec={progress?.ratePerSec}
+              startedAt={runLog?.startedAt}
+              triggeredBy={runLog?.triggeredBy ?? 'limit_sync'}
+              sourceLabel={runLog?.sourceObject ?? job?.sourceObject}
+              destinationLabel={runLog?.destObject ?? job?.destObject}
               onStop={() => void handleStop()}
               stopping={stopping}
             />
@@ -564,35 +603,11 @@ export default function LimitSyncModal({
 
         {step === 'done' && (
           <>
-            <DialogHeader>
-              <Title embedded={embedded} className="flex items-center gap-3">
-                <div
-                  className={cn(
-                    'flex size-9 items-center justify-center rounded-xl',
-                    timedOut || (runLog?.failedCount ?? 0) > 0
-                      ? 'bg-warning/10'
-                      : 'bg-success/10',
-                  )}
-                >
-                  {timedOut || (runLog?.failedCount ?? 0) > 0 ? (
-                    <AlertTriangle className="text-warning size-4" />
-                  ) : (
-                    <CheckCircle2 className="text-success size-4" />
-                  )}
-                </div>
-                <div>
-                  <div className="capitalize">
-                    {timedOut
-                      ? 'Run timed out'
-                      : `Limited run ${runLog?.status ?? 'done'}`}
-                  </div>
-                  <p className="text-muted-foreground text-xs font-normal">
-                    {safeLimit.toLocaleString()} records · page {safeStart}
-                  </p>
-                </div>
-              </Title>
-            </DialogHeader>
-
+            {!embedded && (
+              <DialogHeader className="sr-only">
+                <DialogTitle>Sync result</DialogTitle>
+              </DialogHeader>
+            )}
             <div className="flex-1 space-y-4 overflow-y-auto">
               {timedOut && (
                 <Alert className="bg-warning/10 border-warning/25">
@@ -604,58 +619,48 @@ export default function LimitSyncModal({
                   </AlertDescription>
                 </Alert>
               )}
-              {runLog && (
-                <>
-                  <div className="flex flex-wrap gap-2">
-                    <Stat
-                      label="Processed"
-                      value={
-                        (runLog.createdCount ?? 0) + (runLog.updatedCount ?? 0)
-                      }
-                      tone="text-primary"
-                    />
-                    <Stat
-                      label="Created"
-                      value={runLog.createdCount}
-                      tone="text-success"
-                    />
-                    <Stat
-                      label="Updated"
-                      value={runLog.updatedCount}
-                      tone="text-info"
-                    />
-                    <Stat label="Skipped" value={runLog.skippedCount} />
-                    <Stat
-                      label="Failed"
-                      value={runLog.failedCount}
-                      tone="text-destructive"
-                    />
-                    <Stat label="Fetched" value={runLog.totalFetched} />
-                  </div>
-                  {runLog.durationMs != null && (
-                    <p className="text-muted-foreground text-xs">
-                      Completed in {(runLog.durationMs / 1000).toFixed(1)}s
-                      {runLog.errorMessage && (
-                        <span className="text-destructive ml-2">
-                          {runLog.errorMessage}
-                        </span>
-                      )}
-                    </p>
-                  )}
-                </>
-              )}
-              {!runLog && !timedOut && (
-                <p className="text-muted-foreground text-sm">
-                  No run data available. Check Run History for details.
-                </p>
-              )}
+              <SyncRunProgress
+                runId={runLog?.id}
+                variant="compact"
+                jobId={jobId}
+                status={
+                  timedOut
+                    ? 'stopped'
+                    : (runLog?.executionStatus ?? runLog?.status ?? 'completed')
+                }
+                totalRecords={
+                  !timedOut && runLog?.status === 'completed'
+                    ? runLog.totalFetched
+                    : (progress?.totalRecords ?? safeLimit)
+                }
+                processedRecords={attempted}
+                completedBatches={completedBatches}
+                currentBatch={progress?.currentBatch}
+                batchProcessed={progress?.batchProcessed}
+                batchTotal={progress?.batchTotal}
+                totalBatches={
+                  runLog?.status === 'completed'
+                    ? runLog.totalPages
+                    : (progress?.totalBatches ?? estBatches)
+                }
+                createdCount={created}
+                updatedCount={updated}
+                skippedCount={skipped}
+                failedCount={failed}
+                startedAt={runLog?.startedAt}
+                finishedAt={runLog?.finishedAt}
+                durationMs={runLog?.durationMs}
+                triggeredBy={runLog?.triggeredBy ?? 'limit_sync'}
+                sourceLabel={runLog?.sourceObject ?? job?.sourceObject}
+                destinationLabel={runLog?.destObject ?? job?.destObject}
+                errorMessage={
+                  timedOut
+                    ? 'Live polling timed out. Run History will show the final result.'
+                    : runLog?.errorMessage
+                }
+                onDismiss={onClose}
+              />
             </div>
-
-            <DialogFooter>
-              <Button onClick={onClose} className="w-full">
-                Done <ArrowRight />
-              </Button>
-            </DialogFooter>
           </>
         )}
       </Frame>

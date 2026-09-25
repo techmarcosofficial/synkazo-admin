@@ -9,6 +9,7 @@ import {
   Clock,
   CreditCard,
   RefreshCw,
+  Settings,
   Settings2,
   Webhook,
   WifiOff,
@@ -22,6 +23,7 @@ import type { Notification } from '@/api/notificationsApi';
 import ListRow from '@/components/shared/list/ListRow';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import {
   Popover,
   PopoverContent,
@@ -30,7 +32,6 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -45,11 +46,11 @@ type NotifTone = 'success' | 'warning' | 'danger' | 'info';
 type NotifCategory = 'sync' | 'system';
 type FilterTab = 'all' | 'unread' | 'sync' | 'system';
 
-const TONE_CLASSES: Record<NotifTone, { bg: string; text: string }> = {
-  success: { bg: 'bg-success/10', text: 'text-success' },
-  warning: { bg: 'bg-warning/10', text: 'text-warning' },
-  danger: { bg: 'bg-destructive/10', text: 'text-destructive' },
-  info: { bg: 'bg-info/10', text: 'text-info' },
+const TONE_CLASSES: Record<NotifTone, string> = {
+  success: 'text-success',
+  warning: 'text-warning',
+  danger: 'text-destructive',
+  info: 'text-info',
 };
 
 // One entry per backend NotificationType (see notifications/entities/notification.entity.ts).
@@ -144,7 +145,7 @@ function NotificationItem({
     <ListRow
       asChild
       className={cn(
-        'group items-start gap-3 px-4 py-3.5',
+        'group items-start gap-2.5 px-3.5 py-2.5',
         isUnread && 'bg-primary/5',
       )}
     >
@@ -164,38 +165,39 @@ function NotificationItem({
         }}
       >
         <div
-          className={cn(
-            'mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full',
-            tone.bg,
-          )}
+          data-slot="notification-icon"
+          className="mt-0.5 flex size-7 shrink-0 items-center justify-center"
         >
-          <Icon className={cn('size-4', tone.text)} aria-hidden />
+          <Icon className={cn('size-4 stroke-[1.75]', tone)} aria-hidden />
         </div>
         <div className="min-w-0 flex-1 space-y-0.5">
-          <div className="flex items-start justify-between gap-3">
-            <p className="text-sm leading-5 font-medium">
+          <div className="flex items-start gap-2">
+            <p className="min-w-0 flex-1 truncate text-sm leading-4.5 font-medium">
               {notification.title || notification.message}
             </p>
-            {isUnread && (
-              <span
-                className="bg-primary mt-1.5 size-2 shrink-0 rounded-full"
-                aria-label="Unread"
-              />
-            )}
+            <div className="flex shrink-0 items-center gap-2">
+              {notification.createdAt && (
+                <time
+                  className="text-muted-foreground text-[11px] leading-4 whitespace-nowrap"
+                  dateTime={notification.createdAt}
+                  title={new Date(notification.createdAt).toLocaleString()}
+                >
+                  {formatDistanceToNow(new Date(notification.createdAt), {
+                    addSuffix: true,
+                  })}
+                </time>
+              )}
+              {isUnread && (
+                <span
+                  className="bg-primary size-2 shrink-0 rounded-full"
+                  aria-label="Unread"
+                />
+              )}
+            </div>
           </div>
           {notification.title && (
-            <p className="text-muted-foreground line-clamp-2 text-xs leading-5">
+            <p className="text-muted-foreground line-clamp-1 text-xs leading-4">
               {notification.message}
-            </p>
-          )}
-          {notification.createdAt && (
-            <p
-              className="text-muted-foreground pt-0.5 text-[11px] leading-4"
-              title={new Date(notification.createdAt).toLocaleString()}
-            >
-              {formatDistanceToNow(new Date(notification.createdAt), {
-                addSuffix: true,
-              })}
             </p>
           )}
         </div>
@@ -217,7 +219,7 @@ function NotificationList({
 }) {
   if (items.length === 0) {
     return (
-      <div className="flex h-56 flex-col items-center justify-center px-8 text-center">
+      <div className="flex min-h-40 flex-col items-center justify-center px-8 py-6 text-center">
         <div className="bg-muted mb-3 flex size-10 items-center justify-center rounded-full">
           <BellOff className="text-muted-foreground size-5" aria-hidden />
         </div>
@@ -245,11 +247,11 @@ function NotificationList({
 
 function NotificationListSkeleton() {
   return (
-    <div className="space-y-1 p-3" aria-label="Loading notifications">
+    <div className="space-y-0.5 p-2.5" aria-label="Loading notifications">
       {Array.from({ length: 4 }, (_, index) => (
-        <div key={index} className="flex items-start gap-3 px-1 py-2.5">
-          <Skeleton className="size-8 shrink-0 rounded-full" />
-          <div className="flex-1 space-y-2">
+        <div key={index} className="flex items-start gap-2.5 px-1 py-2">
+          <Skeleton className="size-7 shrink-0 rounded-full" />
+          <div className="flex-1 space-y-1.5">
             <Skeleton className="h-3.5 w-2/3" />
             <Skeleton className="h-3 w-full" />
             <Skeleton className="h-2.5 w-20" />
@@ -263,7 +265,7 @@ function NotificationListSkeleton() {
 function NotificationError({ onRetry }: { onRetry: () => void }) {
   return (
     <div
-      className="flex h-56 flex-col items-center justify-center px-8 text-center"
+      className="flex min-h-40 flex-col items-center justify-center px-8 py-6 text-center"
       role="alert"
     >
       <div className="bg-destructive/10 mb-3 flex size-10 items-center justify-center rounded-full">
@@ -350,52 +352,67 @@ export default function NotificationsMenu() {
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent align="end" sideOffset={10} className="w-auto gap-0 p-0">
-        <div className="w-[calc(100vw-2rem)] overflow-hidden sm:w-[27rem]">
-          <div className="flex items-start justify-between gap-4 px-4 pt-4 pb-3">
-            <PopoverHeader>
-              <div className="flex items-center gap-2">
-                <PopoverTitle>Notifications</PopoverTitle>
-                <Badge variant="secondary" className="rounded-full">
-                  {totalCount}
-                </Badge>
-                {isRefreshing && (
-                  <RefreshCw
-                    className="text-muted-foreground size-3 animate-spin"
-                    aria-label="Refreshing notifications"
-                  />
-                )}
-              </div>
-              <PopoverDescription>
-                Here are your latest updates.
-              </PopoverDescription>
-            </PopoverHeader>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button asChild variant="ghost" size="icon-sm">
-                  <Link
-                    to="/settings/preferences"
-                    onClick={close}
-                    aria-label="Notification preferences"
-                  >
-                    <Settings2 aria-hidden />
-                  </Link>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Notification preferences</TooltipContent>
-            </Tooltip>
-          </div>
-
-          <Tabs
-            value={tab}
-            onValueChange={(value) => setTab(value as FilterTab)}
-            className="gap-0"
+      <PopoverContent
+        align="end"
+        sideOffset={10}
+        className="w-auto gap-0 rounded-none bg-transparent p-0 shadow-none ring-0 dark:ring-0"
+      >
+        <Tabs
+          value={tab}
+          onValueChange={(value) => setTab(value as FilterTab)}
+          className="w-[calc(100vw-2rem)] gap-2 sm:w-[24rem]"
+        >
+          <Card
+            size="sm"
+            data-notification-surface
+            className="gap-0 overflow-hidden py-0"
           >
-            <div className="px-3 pb-2">
-              <TabsList className="grid w-full grid-cols-4">
+            <div className="flex items-start justify-between gap-4 px-4 pt-3 pb-1">
+              <PopoverHeader>
+                <div className="flex items-center gap-2">
+                  <PopoverTitle>Notifications</PopoverTitle>
+                  <Badge variant="secondary" className="rounded-full">
+                    {totalCount}
+                  </Badge>
+                  {isRefreshing && (
+                    <RefreshCw
+                      className="text-muted-foreground size-3 animate-spin"
+                      aria-label="Refreshing notifications"
+                    />
+                  )}
+                </div>
+                <PopoverDescription>
+                  Here are your latest updates.
+                </PopoverDescription>
+              </PopoverHeader>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button asChild variant="ghost" size="icon-sm">
+                    <Link
+                      to="/settings/preferences"
+                      onClick={close}
+                      aria-label="Notification preferences"
+                    >
+                      <Settings2 aria-hidden />
+                    </Link>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Notification preferences</TooltipContent>
+              </Tooltip>
+            </div>
+
+            <div className="overflow-x-auto px-4">
+              <TabsList
+                variant="line"
+                className="h-9 min-w-max justify-start gap-4 overflow-hidden p-0"
+              >
                 {(Object.keys(TAB_LABELS) as FilterTab[]).map((value) => (
-                  <TabsTrigger key={value} value={value}>
+                  <TabsTrigger
+                    key={value}
+                    value={value}
+                    className="after:bg-primary rounded-full py-2 font-semibold after:-bottom-0.5! after:h-1!"
+                  >
                     <span>{TAB_LABELS[value]}</span>
                     <span className="text-[11px] tabular-nums">
                       {counts[value]}
@@ -404,8 +421,14 @@ export default function NotificationsMenu() {
                 ))}
               </TabsList>
             </div>
+          </Card>
 
-            <ScrollArea className="h-[min(25rem,55vh)] border-y">
+          <Card
+            size="sm"
+            data-notification-surface
+            className="gap-0 overflow-hidden py-0"
+          >
+            <div className="max-h-[min(22rem,50vh)] overflow-y-auto overscroll-contain">
               {isLoading ? (
                 <NotificationListSkeleton />
               ) : isError ? (
@@ -422,27 +445,27 @@ export default function NotificationsMenu() {
                   </TabsContent>
                 ))
               )}
-            </ScrollArea>
-          </Tabs>
+            </div>
 
-          <div className="bg-muted/30 flex items-center justify-between gap-3 px-3 py-2.5">
-            <Button asChild variant="ghost" size="sm">
-              <Link to="/scheduler" onClick={close}>
-                <Activity aria-hidden />
-                Queue health
-              </Link>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => markAllRead()}
-              disabled={unreadCount === 0}
-              loading={isMarkAllPending}
-            >
-              Mark all as read
-            </Button>
-          </div>
-        </div>
+            <div className="bg-muted/30 flex items-center justify-between gap-3 border-t px-3 py-2">
+              <Button asChild variant="ghost" size="sm">
+                <Link to="/scheduler" onClick={close}>
+                  <Activity aria-hidden />
+                  Queue health
+                </Link>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => markAllRead()}
+                disabled={unreadCount === 0}
+                loading={isMarkAllPending}
+              >
+                Mark all as read
+              </Button>
+            </div>
+          </Card>
+        </Tabs>
       </PopoverContent>
     </Popover>
   );
