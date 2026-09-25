@@ -1,8 +1,13 @@
-import { CheckCircle2, Loader2, ShieldAlert, XCircle } from 'lucide-react';
+import { CheckCircle2, Loader2, RefreshCw, ShieldAlert, X, XCircle } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { useSuperAdminRunStatusQuery } from '@/queries/useSuperAdmin';
+import { showToast } from '@/lib/toast';
+import {
+  useSuperAdminCancelRunMutation,
+  useSuperAdminRetryRunMutation,
+  useSuperAdminRunStatusQuery,
+} from '@/queries/useSuperAdmin';
 
 interface RunStatusPollerProps {
   organisationId: string;
@@ -10,6 +15,14 @@ interface RunStatusPollerProps {
   jobId: string;
   bullJobId: string;
   onDismiss: () => void;
+}
+
+// Local error extractor. Duplicated across a few super-admin pages
+// (FailedPaymentsPage, OrganisationProjectsPage) — the shape is small
+// enough that a shared util isn't earning its keep yet.
+function extractErrorMessage(err: unknown): string {
+  const e = err as { response?: { data?: { message?: string } } };
+  return e?.response?.data?.message ?? 'The request failed. Try again.';
 }
 
 // Renders after a super-admin manual run is accepted. Auto-polls the
@@ -29,9 +42,48 @@ export default function RunStatusPoller({
     jobId,
     bullJobId,
   );
+  const cancelMutation = useSuperAdminCancelRunMutation(
+    organisationId,
+    projectId,
+    jobId,
+  );
+  const retryMutation = useSuperAdminRetryRunMutation(
+    organisationId,
+    projectId,
+    jobId,
+  );
 
   const state = query.data?.state ?? 'accepted';
   const isTerminal = state === 'completed' || state === 'failed';
+  // GAP-011 — cancellable states per BullMQ + the API guard: only queued
+  // runs (waiting / delayed / paused / prioritized) accept a cancel;
+  // active/completed/failed reject with 404 uniformly.
+  const isCancellable =
+    state === 'accepted' ||
+    state === 'waiting' ||
+    state === 'delayed' ||
+    state === 'paused' ||
+    state === 'prioritized';
+  // GAP-012 — retry only makes sense from `failed`.
+  const isRetryable = state === 'failed';
+
+  const handleCancel = async () => {
+    try {
+      await cancelMutation.mutateAsync(bullJobId);
+      showToast.success('Queued run cancelled.');
+    } catch (err) {
+      showToast.error(extractErrorMessage(err));
+    }
+  };
+
+  const handleRetry = async () => {
+    try {
+      await retryMutation.mutateAsync(bullJobId);
+      showToast.success('Run re-queued for retry.');
+    } catch (err) {
+      showToast.error(extractErrorMessage(err));
+    }
+  };
   const tone: 'default' | 'success' | 'destructive' =
     state === 'completed'
       ? 'success'
@@ -87,13 +139,35 @@ export default function RunStatusPoller({
         </div>
       </Alert>
 
-      {isTerminal ? (
-        <div>
+      <div className="flex flex-wrap gap-2">
+        {isCancellable ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCancel}
+            disabled={cancelMutation.isPending}
+          >
+            <X className="size-4" aria-hidden />
+            {cancelMutation.isPending ? 'Cancelling…' : 'Cancel run'}
+          </Button>
+        ) : null}
+        {isRetryable ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRetry}
+            disabled={retryMutation.isPending}
+          >
+            <RefreshCw className="size-4" aria-hidden />
+            {retryMutation.isPending ? 'Retrying…' : 'Retry run'}
+          </Button>
+        ) : null}
+        {isTerminal ? (
           <Button variant="outline" size="sm" onClick={onDismiss}>
             Dismiss
           </Button>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </div>
   );
 }
