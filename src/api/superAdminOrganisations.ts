@@ -1,3 +1,5 @@
+import type { AxiosResponse } from 'axios';
+
 import apiClient from './apiClient';
 
 import type {
@@ -9,14 +11,22 @@ import type {
   SuperAdminUpdateOrganisationDto,
 } from '@/types';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const d = (r: any): any => r.data.data;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const paginated = <T>(r: any): SuperAdminPage<T> => ({
-  data: r.data.data,
-  total: r.data.total,
-  page: r.data.page,
-  limit: r.data.limit,
+interface PaginatedEnvelope<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+const d = <T>({ data }: AxiosResponse<{ data: T }>): T => data.data;
+
+const paginated = <T>({
+  data,
+}: AxiosResponse<PaginatedEnvelope<T>>): SuperAdminPage<T> => ({
+  data: data.data,
+  total: data.total,
+  page: data.page,
+  limit: data.limit,
 });
 
 export interface ListSuperAdminOrganisationsParams {
@@ -35,18 +45,28 @@ export const superAdminOrganisationsApi = {
     params: ListSuperAdminOrganisationsParams = {},
   ): Promise<SuperAdminPage<SuperAdminOrganisationListItem>> =>
     apiClient
-      .get('/super-admin/organisations', { params })
+      .get<PaginatedEnvelope<SuperAdminOrganisationListItem>>(
+        '/super-admin/organisations',
+        { params },
+      )
       .then(paginated<SuperAdminOrganisationListItem>),
 
   get: (organisationId: string): Promise<SuperAdminOrganisationDetail> =>
-    apiClient.get(`/super-admin/organisations/${organisationId}`).then(d),
+    apiClient
+      .get<{ data: SuperAdminOrganisationDetail }>(
+        `/super-admin/organisations/${organisationId}`,
+      )
+      .then(d),
 
   update: (
     organisationId: string,
     dto: SuperAdminUpdateOrganisationDto,
   ): Promise<SuperAdminOrganisationDetail> =>
     apiClient
-      .patch(`/super-admin/organisations/${organisationId}`, dto)
+      .patch<{ data: SuperAdminOrganisationDetail }>(
+        `/super-admin/organisations/${organisationId}`,
+        dto,
+      )
       .then(d),
 
   // SA-401..404 — provision a new organisation via the Super Admin
@@ -55,5 +75,10 @@ export const superAdminOrganisationsApi = {
   provision: (
     dto: ProvisionOrganisationDto,
   ): Promise<ProvisionOrganisationResponse> =>
-    apiClient.post('/super-admin/organisations', dto).then(d),
+    apiClient
+      .post<{ data: ProvisionOrganisationResponse }>(
+        '/super-admin/organisations',
+        dto,
+      )
+      .then(d),
 };
