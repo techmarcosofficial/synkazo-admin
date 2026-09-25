@@ -1,5 +1,5 @@
 import { formatDistanceToNow } from 'date-fns';
-import { ArrowLeft, Trash2, UserPlus, Users } from 'lucide-react';
+import { ArrowLeft, Send, Trash2, UserPlus, Users } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
@@ -24,6 +24,7 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { showToast } from '@/lib/toast';
 import {
   useInviteSuperAdminMemberMutation,
+  useResendSuperAdminInvitationMutation,
   useRevokeSuperAdminInvitationMutation,
   useSuperAdminInvitationsQuery,
   useSuperAdminMembersQuery,
@@ -71,6 +72,9 @@ export default function OrganisationMembersPage() {
   const revokeMutation = useRevokeSuperAdminInvitationMutation(
     organisationId ?? '',
   );
+  const resendMutation = useResendSuperAdminInvitationMutation(
+    organisationId ?? '',
+  );
 
   if (!organisationId) {
     return (
@@ -109,6 +113,18 @@ export default function OrganisationMembersPage() {
         }
       },
     });
+  };
+
+  // GAP-006 — resend a pending invite with a fresh token and 7-day expiry.
+  // The server does the token rotation + email re-send; the invitee's
+  // previous link stops working once the token is rotated.
+  const handleResend = async (invitationId: string, email: string) => {
+    try {
+      await resendMutation.mutateAsync(invitationId);
+      showToast.success(`Invite resent to ${email}.`);
+    } catch (err) {
+      showToast.error(extractErrorMessage(err));
+    }
   };
 
   return (
@@ -284,16 +300,33 @@ export default function OrganisationMembersPage() {
                         : '—'}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          handleRevoke(invitation.id, invitation.email)
-                        }
-                        aria-label={`Revoke invite for ${invitation.email}`}
-                      >
-                        <Trash2 className="text-destructive size-4" aria-hidden />
-                      </Button>
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            handleResend(invitation.id, invitation.email)
+                          }
+                          disabled={resendMutation.isPending}
+                          aria-label={`Resend invite to ${invitation.email}`}
+                          title="Resend invite (fresh token + 7-day expiry)"
+                        >
+                          <Send className="size-4" aria-hidden />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            handleRevoke(invitation.id, invitation.email)
+                          }
+                          aria-label={`Revoke invite for ${invitation.email}`}
+                        >
+                          <Trash2
+                            className="text-destructive size-4"
+                            aria-hidden
+                          />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
