@@ -2,7 +2,7 @@ import apiClient from './apiClient';
 
 import type { HubspotWebhookSettings } from '@/types';
 
-const base = '/webhooks/hubspot/settings';
+const base = '/super-admin/webhooks/hubspot/settings';
 
 // Super-admin-only — HubSpot's webhooks-v3 API has no per-portal target URL,
 // so this is one app-wide value shared by every connected portal. Unlike
