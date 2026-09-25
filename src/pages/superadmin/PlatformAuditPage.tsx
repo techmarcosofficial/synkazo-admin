@@ -101,6 +101,21 @@ const SEVERITY_FILTER_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'critical', label: 'Critical' },
 ];
 
+// GAP-055 — audit rows carry a small fixed vocabulary in `resource`.
+// Kept as a Select rather than free text so the operator can't miss
+// an exact-match filter with a typo, and so the option list matches
+// the actual audit vocabulary emitted by AuditService callers.
+const RESOURCE_FILTER_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: 'all', label: 'All resources' },
+  { value: 'organisation', label: 'Organisation' },
+  { value: 'user', label: 'User' },
+  { value: 'invoice', label: 'Invoice' },
+  { value: 'subscription', label: 'Subscription' },
+  { value: 'project', label: 'Project' },
+  { value: 'job', label: 'Job' },
+  { value: 'connection', label: 'Connection' },
+];
+
 export default function PlatformAuditPage() {
   const [activeTab, setActiveTab] = useState<'audit' | 'system'>('audit');
 
@@ -114,12 +129,17 @@ export default function PlatformAuditPage() {
   const [severity, setSeverity] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  // GAP-055 — extra filter axes required by SA-804 acceptance.
+  const [actorEmail, setActorEmail] = useState('');
+  const [resource, setResource] = useState('all');
 
   const auditFilters = {
     search: search.trim() || undefined,
     organisationId: organisationId === 'all' ? undefined : organisationId,
     userId: userId === 'all' ? undefined : userId,
+    actorEmail: actorEmail.trim() || undefined,
     action: action.trim() || undefined,
+    resource: resource === 'all' ? undefined : resource,
     severity: severity === 'all' ? undefined : (severity as AuditSeverity),
     dateFrom: dateFrom || undefined,
     dateTo: dateTo || undefined,
@@ -180,7 +200,9 @@ export default function PlatformAuditPage() {
     !!search.trim() ||
     organisationId !== 'all' ||
     userId !== 'all' ||
+    !!actorEmail.trim() ||
     !!action.trim() ||
+    resource !== 'all' ||
     severity !== 'all' ||
     !!dateFrom ||
     !!dateTo;
@@ -363,6 +385,36 @@ export default function PlatformAuditPage() {
                               placeholder="Event type…"
                               className="bg-muted sm:w-36"
                             />
+
+                            <Input
+                              value={actorEmail}
+                              onChange={(e) => {
+                                setActorEmail(e.target.value);
+                                setPage(1);
+                              }}
+                              placeholder="Actor email…"
+                              type="email"
+                              className="bg-muted sm:w-48"
+                            />
+
+                            <Select
+                              value={resource}
+                              onValueChange={(v) => {
+                                setResource(v);
+                                setPage(1);
+                              }}
+                            >
+                              <SelectTrigger className="bg-muted sm:w-40">
+                                <SelectValue placeholder="Resource" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {RESOURCE_FILTER_OPTIONS.map((opt) => (
+                                  <SelectItem key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
 
                             <Select
                               value={severity}
