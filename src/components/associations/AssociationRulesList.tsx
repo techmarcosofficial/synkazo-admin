@@ -30,7 +30,6 @@ import {
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
-import CompanyOwnerSection from './CompanyOwnerSection';
 import AssociationRuleFormDialog from './AssociationRuleFormDialog';
 import AssociationRunsList, {
   type AssociationResultFilter,
@@ -1048,12 +1047,8 @@ function AssociationMetric({
 
 export default function AssociationRulesList({
   projectId,
-  showCompanyOwnerSection = true,
-  ownerSourcePlatform = 'servicetitan',
 }: {
   projectId: string;
-  showCompanyOwnerSection?: boolean;
-  ownerSourcePlatform?: 'servicetitan' | 'dataforma' | null;
 }) {
   const [rules, setRules] = useState<AssociationRule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1283,13 +1278,6 @@ export default function AssociationRulesList({
           )}
         </CardContent>
       </Card>
-
-      {showCompanyOwnerSection && (
-        <CompanyOwnerSection
-          projectId={projectId}
-          sourcePlatform={ownerSourcePlatform ?? 'servicetitan'}
-        />
-      )}
 
       {showCreate && (
         <AssociationRuleFormDialog

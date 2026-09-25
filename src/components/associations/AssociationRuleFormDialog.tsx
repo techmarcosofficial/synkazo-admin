@@ -72,6 +72,11 @@ interface FormErrors {
 }
 
 const STEPS = ['Match records', 'Rule details'];
+const RECORD_OWNER_OBJECT = 'record_owner';
+const isRecordOwner = (targetObject: string) =>
+  targetObject === RECORD_OWNER_OBJECT;
+const targetObjectLabel = (targetObject: string) =>
+  isRecordOwner(targetObject) ? 'Record Owner' : targetObject;
 
 function HelpTooltip({
   label,
@@ -187,7 +192,10 @@ export default function AssociationRuleFormDialog({
   }, [form.sourceObject, projectId]);
 
   useEffect(() => {
-    if (!form.targetObject) return;
+    if (!form.targetObject || isRecordOwner(form.targetObject)) {
+      setTargetFields([]);
+      return;
+    }
     associationsApi
       .getObjectFields(projectId, form.targetObject)
       .then((f: unknown) =>
@@ -206,7 +214,7 @@ export default function AssociationRuleFormDialog({
 
   useEffect(() => {
     if (mode === 'edit' || form.name) return;
-    const autoName = `${form.sourceObject} ↔ ${form.targetObject}`;
+    const autoName = `${form.sourceObject} ↔ ${targetObjectLabel(form.targetObject)}`;
     if (form.sourceObject && form.targetObject) {
       setForm((f) => ({ ...f, name: autoName }));
     }
@@ -214,6 +222,7 @@ export default function AssociationRuleFormDialog({
 
   useEffect(() => {
     if (!form.hsSourceObjectType || !form.hsTargetObjectType) return;
+    if (isRecordOwner(form.targetObject)) return;
     if (mode === 'edit') return;
     setLoadingTypes(true);
     associationsApi
@@ -225,7 +234,13 @@ export default function AssociationRuleFormDialog({
       .then((data: unknown) => setAssociationTypes(data as AssociationType[]))
       .catch(() => setAssociationTypes([]))
       .finally(() => setLoadingTypes(false));
-  }, [form.hsSourceObjectType, form.hsTargetObjectType, mode, projectId]);
+  }, [
+    form.hsSourceObjectType,
+    form.hsTargetObjectType,
+    form.targetObject,
+    mode,
+    projectId,
+  ]);
 
   const validate = () => {
     const errs: FormErrors = {};
@@ -236,14 +251,21 @@ export default function AssociationRuleFormDialog({
       if (!form.targetObject) errs.targetObject = 'Select target object';
       if (!form.targetMatchField)
         errs.targetMatchField = 'Select target match field';
-      if (form.sourceObject === form.targetObject)
+      if (
+        !isRecordOwner(form.targetObject) &&
+        form.sourceObject === form.targetObject
+      )
         errs.targetObject = 'Source and target must be different objects';
     }
     if (step === 1) {
       const condErr = validateConditions(conditions);
       if (condErr) errs.conditions = condErr;
       if (!form.name.trim()) errs.name = 'Name is required';
-      if (mode === 'create' && !form.hsAssociationTypeId)
+      if (
+        mode === 'create' &&
+        !isRecordOwner(form.targetObject) &&
+        !form.hsAssociationTypeId
+      )
         errs.hsAssociationTypeId = 'Select an association type';
     }
     setErrors(errs);
@@ -278,10 +300,18 @@ export default function AssociationRuleFormDialog({
           targetObject: form.targetObject,
           targetMatchField: form.targetMatchField,
           destTargetObjectType: form.hsTargetObjectType,
-          assocTypeId: Number(form.hsAssociationTypeId),
-          assocCategory: selectedType?.category ?? 'HUBSPOT_DEFINED',
-          assocLabel: selectedType?.label ?? null,
-          cardinality: form.cardinality,
+          assocTypeId: isRecordOwner(form.targetObject)
+            ? undefined
+            : Number(form.hsAssociationTypeId),
+          assocCategory: isRecordOwner(form.targetObject)
+            ? undefined
+            : (selectedType?.category ?? 'HUBSPOT_DEFINED'),
+          assocLabel: isRecordOwner(form.targetObject)
+            ? undefined
+            : (selectedType?.label ?? null),
+          cardinality: isRecordOwner(form.targetObject)
+            ? 'one_to_one'
+            : form.cardinality,
           conditions: conditions.length > 0 ? conditions : undefined,
           conditionLogic,
         });
@@ -331,7 +361,10 @@ export default function AssociationRuleFormDialog({
             <Button
               onClick={handleSubmit}
               disabled={
-                saving || (mode === 'create' && !form.hsAssociationTypeId)
+                saving ||
+                (mode === 'create' &&
+                  !isRecordOwner(form.targetObject) &&
+                  !form.hsAssociationTypeId)
               }
             >
               {saving && <Spinner />}
@@ -520,6 +553,19 @@ export default function AssociationRuleFormDialog({
                           value={form.targetObject}
                           disabled={mode === 'edit'}
                           onValueChange={(v) => {
+                            if (isRecordOwner(v)) {
+                              setForm((f) => ({
+                                ...f,
+                                targetObject: RECORD_OWNER_OBJECT,
+                                hsTargetObjectType: 'owners',
+                                targetMatchField: 'email',
+                                hsAssociationTypeId: '',
+                                hsAssociationCategory: 'OWNER_ASSIGNMENT',
+                                hsAssociationLabel: 'Record Owner',
+                                cardinality: 'one_to_one',
+                              }));
+                              return;
+                            }
                             const obj = projectObjects.find(
                               (o) => o.sourceObject === v,
                             );
@@ -540,6 +586,9 @@ export default function AssociationRuleFormDialog({
                             <SelectValue placeholder="Select object…" />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value={RECORD_OWNER_OBJECT}>
+                              Record Owner
+                            </SelectItem>
                             {projectObjects
                               .filter(
                                 (o) => o.sourceObject !== form.sourceObject,
@@ -571,7 +620,16 @@ export default function AssociationRuleFormDialog({
                               Must equal the selected source match field value.
                             </HelpTooltip>
                           </FieldLabel>
-                          {targetFields.length > 0 ? (
+                          {isRecordOwner(form.targetObject) ? (
+                            <Select value="email" disabled>
+                              <SelectTrigger className="w-full">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="email">email</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          ) : targetFields.length > 0 ? (
                             <Select
                               value={form.targetMatchField}
                               disabled={mode === 'edit'}
@@ -630,7 +688,7 @@ export default function AssociationRuleFormDialog({
                       </span>
                       <span className="text-muted-foreground">matches</span>
                       <span className="text-primary">
-                        {form.targetObject}.
+                        {targetObjectLabel(form.targetObject)}.
                         <strong>{form.targetMatchField}</strong>
                       </span>
                     </div>
@@ -659,7 +717,7 @@ export default function AssociationRuleFormDialog({
                               name: e.target.value,
                             }))
                           }
-                          placeholder={`${form.sourceObject} ↔ ${form.targetObject}`}
+                          placeholder={`${form.sourceObject} ↔ ${targetObjectLabel(form.targetObject)}`}
                         />
                         {errors.name && (
                           <p className="text-destructive text-xs">
@@ -668,37 +726,39 @@ export default function AssociationRuleFormDialog({
                         )}
                       </Field>
 
-                      <Field>
-                        <FieldLabel>
-                          Cardinality
-                          <HelpTooltip label="About association cardinality">
-                            Controls whether one or many records may be linked
-                            on each side.
-                          </HelpTooltip>
-                        </FieldLabel>
-                        <Select
-                          value={form.cardinality}
-                          disabled={mode === 'edit'}
-                          onValueChange={(v) =>
-                            setForm((f) => ({ ...f, cardinality: v }))
-                          }
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="one_to_one">
-                              One-to-One
-                            </SelectItem>
-                            <SelectItem value="one_to_many">
-                              One-to-Many
-                            </SelectItem>
-                            <SelectItem value="many_to_many">
-                              Many-to-Many
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </Field>
+                      {!isRecordOwner(form.targetObject) && (
+                        <Field>
+                          <FieldLabel>
+                            Cardinality
+                            <HelpTooltip label="About association cardinality">
+                              Controls whether one or many records may be linked
+                              on each side.
+                            </HelpTooltip>
+                          </FieldLabel>
+                          <Select
+                            value={form.cardinality}
+                            disabled={mode === 'edit'}
+                            onValueChange={(v) =>
+                              setForm((f) => ({ ...f, cardinality: v }))
+                            }
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="one_to_one">
+                                One-to-One
+                              </SelectItem>
+                              <SelectItem value="one_to_many">
+                                One-to-Many
+                              </SelectItem>
+                              <SelectItem value="many_to_many">
+                                Many-to-Many
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </Field>
+                      )}
 
                       <div className="bg-muted/30 flex flex-wrap items-center gap-2 rounded-3xl px-3 py-2 font-mono text-xs">
                         <span>
@@ -706,101 +766,104 @@ export default function AssociationRuleFormDialog({
                         </span>
                         <ArrowLeftRight className="text-muted-foreground size-3.5" />
                         <span>
-                          {form.targetObject}.{form.targetMatchField}
+                          {targetObjectLabel(form.targetObject)}.
+                          {form.targetMatchField}
                         </span>
                       </div>
                     </FieldGroup>
                   </section>
 
-                  <section className="border-t p-4 lg:border-t-0">
-                    <div className="mb-4 flex items-center gap-2">
-                      <h3 className="text-sm font-semibold">
-                        HubSpot association type
-                      </h3>
-                      <HelpTooltip label="About HubSpot association types">
-                        The relationship label HubSpot applies to this link.
-                      </HelpTooltip>
-                    </div>
-                    {mode === 'edit' ? (
-                      <Field>
-                        <FieldLabel>Association type</FieldLabel>
-                        <div className="bg-muted/30 rounded-3xl px-3 py-2 text-sm">
-                          <div className="font-medium">
-                            {form.hsAssociationLabel ||
-                              (form.hsAssociationTypeId
-                                ? `Type ${form.hsAssociationTypeId}`
-                                : 'Configured in HubSpot')}
-                          </div>
-                          <div className="text-muted-foreground mt-0.5 text-xs">
-                            {form.hsAssociationCategory}
-                            {form.hsAssociationTypeId
-                              ? ` · ID ${form.hsAssociationTypeId}`
-                              : ''}
-                          </div>
-                        </div>
-                      </Field>
-                    ) : loadingTypes ? (
-                      <div className="text-muted-foreground flex items-center gap-2 py-6 text-sm">
-                        <Spinner /> Loading association types from HubSpot…
+                  {!isRecordOwner(form.targetObject) && (
+                    <section className="border-t p-4 lg:border-t-0">
+                      <div className="mb-4 flex items-center gap-2">
+                        <h3 className="text-sm font-semibold">
+                          HubSpot association type
+                        </h3>
+                        <HelpTooltip label="About HubSpot association types">
+                          The relationship label HubSpot applies to this link.
+                        </HelpTooltip>
                       </div>
-                    ) : associationTypes.length === 0 ? (
-                      <Alert variant="destructive">
-                        <AlertCircle />
-                        <AlertDescription>
-                          No association types found for{' '}
-                          <strong className="inline-flex items-center gap-1">
-                            {form.hsSourceObjectType}{' '}
-                            <ArrowRight className="size-3" />{' '}
-                            {form.hsTargetObjectType}
-                          </strong>
-                          . This association type may need to be defined in
-                          HubSpot first.
-                        </AlertDescription>
-                      </Alert>
-                    ) : (
-                      <Field data-invalid={!!errors.hsAssociationTypeId}>
-                        <FieldLabel required>Association type</FieldLabel>
-                        <div className="max-h-52 space-y-2 overflow-y-auto pr-1">
-                          {associationTypes.map((t) => {
-                            const isSelected =
-                              String(form.hsAssociationTypeId) ===
-                              String(t.typeId);
-                            return (
-                              <button
-                                key={t.typeId}
-                                type="button"
-                                aria-pressed={isSelected}
-                                onClick={() =>
-                                  setForm((f) => ({
-                                    ...f,
-                                    hsAssociationTypeId: String(t.typeId),
-                                    hsAssociationCategory: t.category,
-                                    hsAssociationLabel: t.label,
-                                  }))
-                                }
-                                className={cn(
-                                  'w-full rounded-3xl border px-3 py-2 text-left text-sm transition-colors',
-                                  isSelected
-                                    ? 'border-primary bg-primary/5 text-primary'
-                                    : 'bg-muted/30 text-muted-foreground hover:bg-muted',
-                                )}
-                              >
-                                <div className="font-medium">{t.label}</div>
-                                <div className="mt-0.5 text-xs opacity-60">
-                                  {t.category} · ID {t.typeId}
-                                </div>
-                              </button>
-                            );
-                          })}
+                      {mode === 'edit' ? (
+                        <Field>
+                          <FieldLabel>Association type</FieldLabel>
+                          <div className="bg-muted/30 rounded-3xl px-3 py-2 text-sm">
+                            <div className="font-medium">
+                              {form.hsAssociationLabel ||
+                                (form.hsAssociationTypeId
+                                  ? `Type ${form.hsAssociationTypeId}`
+                                  : 'Configured in HubSpot')}
+                            </div>
+                            <div className="text-muted-foreground mt-0.5 text-xs">
+                              {form.hsAssociationCategory}
+                              {form.hsAssociationTypeId
+                                ? ` · ID ${form.hsAssociationTypeId}`
+                                : ''}
+                            </div>
+                          </div>
+                        </Field>
+                      ) : loadingTypes ? (
+                        <div className="text-muted-foreground flex items-center gap-2 py-6 text-sm">
+                          <Spinner /> Loading association types from HubSpot…
                         </div>
-                        {errors.hsAssociationTypeId && (
-                          <p className="text-destructive text-xs">
-                            {errors.hsAssociationTypeId}
-                          </p>
-                        )}
-                      </Field>
-                    )}
-                  </section>
+                      ) : associationTypes.length === 0 ? (
+                        <Alert variant="destructive">
+                          <AlertCircle />
+                          <AlertDescription>
+                            No association types found for{' '}
+                            <strong className="inline-flex items-center gap-1">
+                              {form.hsSourceObjectType}{' '}
+                              <ArrowRight className="size-3" />{' '}
+                              {form.hsTargetObjectType}
+                            </strong>
+                            . This association type may need to be defined in
+                            HubSpot first.
+                          </AlertDescription>
+                        </Alert>
+                      ) : (
+                        <Field data-invalid={!!errors.hsAssociationTypeId}>
+                          <FieldLabel required>Association type</FieldLabel>
+                          <div className="max-h-52 space-y-2 overflow-y-auto pr-1">
+                            {associationTypes.map((t) => {
+                              const isSelected =
+                                String(form.hsAssociationTypeId) ===
+                                String(t.typeId);
+                              return (
+                                <button
+                                  key={t.typeId}
+                                  type="button"
+                                  aria-pressed={isSelected}
+                                  onClick={() =>
+                                    setForm((f) => ({
+                                      ...f,
+                                      hsAssociationTypeId: String(t.typeId),
+                                      hsAssociationCategory: t.category,
+                                      hsAssociationLabel: t.label,
+                                    }))
+                                  }
+                                  className={cn(
+                                    'w-full rounded-3xl border px-3 py-2 text-left text-sm transition-colors',
+                                    isSelected
+                                      ? 'border-primary bg-primary/5 text-primary'
+                                      : 'bg-muted/30 text-muted-foreground hover:bg-muted',
+                                  )}
+                                >
+                                  <div className="font-medium">{t.label}</div>
+                                  <div className="mt-0.5 text-xs opacity-60">
+                                    {t.category} · ID {t.typeId}
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                          {errors.hsAssociationTypeId && (
+                            <p className="text-destructive text-xs">
+                              {errors.hsAssociationTypeId}
+                            </p>
+                          )}
+                        </Field>
+                      )}
+                    </section>
+                  )}
                 </div>
 
                 <AssociationConditionsEditor

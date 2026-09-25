@@ -363,9 +363,7 @@ describe('AssociationRulesList', () => {
   });
 
   it('shows the cumulative total on the association row with run actions', async () => {
-    renderWithClient(
-      <AssociationRulesList projectId="p1" showCompanyOwnerSection={false} />,
-    );
+    renderWithClient(<AssociationRulesList projectId="p1" />);
 
     expect(await screen.findByText('Contact → Company')).toBeInTheDocument();
     expect(
@@ -399,9 +397,7 @@ describe('AssociationRulesList', () => {
 
   it('embeds related runs directly inside the expanded association row', async () => {
     const user = userEvent.setup();
-    renderWithClient(
-      <AssociationRulesList projectId="p1" showCompanyOwnerSection={false} />,
-    );
+    renderWithClient(<AssociationRulesList projectId="p1" />);
 
     await user.click(await screen.findByText('Contact → Company'));
 
@@ -427,9 +423,7 @@ describe('AssociationRulesList', () => {
       .mockRejectedValueOnce(new Error('offline'))
       .mockResolvedValueOnce([]);
 
-    renderWithClient(
-      <AssociationRulesList projectId="p1" showCompanyOwnerSection={false} />,
-    );
+    renderWithClient(<AssociationRulesList projectId="p1" />);
 
     expect(
       await screen.findByText('Association rules could not be loaded.'),

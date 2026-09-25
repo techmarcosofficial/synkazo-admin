@@ -104,4 +104,34 @@ describe('AssociationRuleFormDialog', () => {
       document.querySelector('[data-slot="sheet-content"]'),
     ).not.toBeInTheDocument();
   });
+
+  it('skips association type settings for a Record Owner rule', async () => {
+    render(
+      <AssociationRuleFormDialog
+        mode="edit"
+        projectId="project-1"
+        rule={{
+          ...rule,
+          name: 'Customer owner',
+          targetObject: 'record_owner',
+          targetMatchField: 'email',
+          destTargetObjectType: 'owners',
+          assocTypeId: 0,
+          assocCategory: 'OWNER_ASSIGNMENT',
+          assocLabel: 'Record Owner',
+        }}
+        onSuccess={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(
+      await screen.findByDisplayValue('Customer owner'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Record Owner.email')).toBeInTheDocument();
+    expect(
+      screen.queryByText('HubSpot association type'),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('Cardinality')).not.toBeInTheDocument();
+  });
 });
