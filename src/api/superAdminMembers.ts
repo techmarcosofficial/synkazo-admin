@@ -1,3 +1,5 @@
+import type { AxiosResponse } from 'axios';
+
 import apiClient from './apiClient';
 
 import type {
@@ -7,14 +9,22 @@ import type {
   SuperAdminMemberListItem,
 } from '@/types';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const d = (r: any): any => r.data.data;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const paginated = <T>(r: any): SuperAdminPage<T> => ({
-  data: r.data.data,
-  total: r.data.total,
-  page: r.data.page,
-  limit: r.data.limit,
+interface PaginatedEnvelope<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+const d = <T>({ data }: AxiosResponse<{ data: T }>): T => data.data;
+
+const paginated = <T>({
+  data,
+}: AxiosResponse<PaginatedEnvelope<T>>): SuperAdminPage<T> => ({
+  data: data.data,
+  total: data.total,
+  page: data.page,
+  limit: data.limit,
 });
 
 export interface ListMembersParams {
@@ -37,7 +47,10 @@ export const superAdminMembersApi = {
     params: ListMembersParams = {},
   ): Promise<SuperAdminPage<SuperAdminMemberListItem>> =>
     apiClient
-      .get(`/super-admin/organisations/${organisationId}/members`, { params })
+      .get<PaginatedEnvelope<SuperAdminMemberListItem>>(
+        `/super-admin/organisations/${organisationId}/members`,
+        { params },
+      )
       .then(paginated<SuperAdminMemberListItem>),
 
   listInvitations: (
@@ -45,9 +58,10 @@ export const superAdminMembersApi = {
     params: ListInvitationsParams = {},
   ): Promise<SuperAdminPage<SuperAdminInvitationListItem>> =>
     apiClient
-      .get(`/super-admin/organisations/${organisationId}/invitations`, {
-        params,
-      })
+      .get<PaginatedEnvelope<SuperAdminInvitationListItem>>(
+        `/super-admin/organisations/${organisationId}/invitations`,
+        { params },
+      )
       .then(paginated<SuperAdminInvitationListItem>),
 
   invite: (
@@ -55,7 +69,10 @@ export const superAdminMembersApi = {
     dto: SuperAdminInviteMemberDto,
   ): Promise<SuperAdminInvitationListItem> =>
     apiClient
-      .post(`/super-admin/organisations/${organisationId}/invitations`, dto)
+      .post<{ data: SuperAdminInvitationListItem }>(
+        `/super-admin/organisations/${organisationId}/invitations`,
+        dto,
+      )
       .then(d),
 
   revokeInvitation: (
@@ -63,7 +80,7 @@ export const superAdminMembersApi = {
     invitationId: string,
   ): Promise<void> =>
     apiClient
-      .delete(
+      .delete<{ data: void }>(
         `/super-admin/organisations/${organisationId}/invitations/${invitationId}`,
       )
       .then(d),

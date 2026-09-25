@@ -1,13 +1,23 @@
+import type { AxiosResponse } from 'axios';
+
 import apiClient from './apiClient';
 
 import type { FailedPaymentRow, SubscriptionStatus, SuperAdminPage } from '@/types';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const paginated = <T>(r: any): SuperAdminPage<T> => ({
-  data: r.data.data,
-  total: r.data.total,
-  page: r.data.page,
-  limit: r.data.limit,
+interface PaginatedEnvelope<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+const paginated = <T>({
+  data,
+}: AxiosResponse<PaginatedEnvelope<T>>): SuperAdminPage<T> => ({
+  data: data.data,
+  total: data.total,
+  page: data.page,
+  limit: data.limit,
 });
 
 export interface ListFailedPaymentsParams {
@@ -26,6 +36,9 @@ export const superAdminPlatformBillingApi = {
     params: ListFailedPaymentsParams = {},
   ): Promise<SuperAdminPage<FailedPaymentRow>> =>
     apiClient
-      .get('/super-admin/billing/failed-payments', { params })
+      .get<PaginatedEnvelope<FailedPaymentRow>>(
+        '/super-admin/billing/failed-payments',
+        { params },
+      )
       .then(paginated<FailedPaymentRow>),
 };
