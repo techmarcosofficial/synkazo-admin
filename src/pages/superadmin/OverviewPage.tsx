@@ -168,6 +168,23 @@ function RecentAlerts({
   );
 }
 
+// GAP-043 / SA-302 — compact inline banner for a section-level error.
+// The whole overview still renders even if one aggregate query fails on
+// the API side; this banner appears just above the widget whose section
+// returned an error so an operator can see the failure without missing
+// the working data.
+function SectionErrorBanner({ label, error }: { label: string; error: string }) {
+  return (
+    <div className="border-amber-300 bg-amber-50 text-amber-900 flex items-start gap-2 rounded-md border px-3 py-2 text-xs">
+      <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+      <div className="min-w-0 flex-1">
+        <div className="font-medium">{label}</div>
+        <div className="truncate">{error}</div>
+      </div>
+    </div>
+  );
+}
+
 export default function OverviewPage() {
   const query = useSuperAdminPlatformOverviewQuery();
 
@@ -202,6 +219,9 @@ export default function OverviewPage() {
   }
 
   const data = query.data!;
+  // GAP-043 — per-widget errors surfaced by the API's Promise.allSettled
+  // path. Absent when every section loaded cleanly.
+  const errors = data.errors;
   const relative = useRelative(data.generatedAt);
   const subscriptionRows = Object.entries(data.organisations.bySubscriptionStatus)
     .filter(([, value]) => value > 0)
@@ -238,6 +258,13 @@ export default function OverviewPage() {
         </Button>
       </div>
 
+      {errors?.organisations ? (
+        <SectionErrorBanner
+          label="Organisation counts unavailable"
+          error={errors.organisations}
+        />
+      ) : null}
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           label="Organisations"
@@ -273,22 +300,44 @@ export default function OverviewPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <BreakdownList
-          title="Subscriptions by status"
-          rows={subscriptionRows}
-          linkFor={(key) =>
-            `/super-admin/organisations?subscriptionStatus=${encodeURIComponent(
-              key,
-            )}`
-          }
-        />
-        <BreakdownList
-          title="Queue by state"
-          rows={queueRows}
-          linkFor={() => '/admin/queues'}
-        />
+        <div className="flex flex-col gap-2">
+          {errors?.subscriptions ? (
+            <SectionErrorBanner
+              label="Subscriptions counts unavailable"
+              error={errors.subscriptions}
+            />
+          ) : null}
+          <BreakdownList
+            title="Subscriptions by status"
+            rows={subscriptionRows}
+            linkFor={(key) =>
+              `/super-admin/organisations?subscriptionStatus=${encodeURIComponent(
+                key,
+              )}`
+            }
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          {errors?.queue ? (
+            <SectionErrorBanner
+              label="Queue snapshot unavailable"
+              error={errors.queue}
+            />
+          ) : null}
+          <BreakdownList
+            title="Queue by state"
+            rows={queueRows}
+            linkFor={() => '/admin/queues'}
+          />
+        </div>
       </div>
 
+      {errors?.recentAlerts ? (
+        <SectionErrorBanner
+          label="Recent alerts unavailable"
+          error={errors.recentAlerts}
+        />
+      ) : null}
       <RecentAlerts alerts={data.recentAlerts} />
     </div>
   );
