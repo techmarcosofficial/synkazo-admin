@@ -101,39 +101,10 @@ export default function OverviewTab() {
     handleRetryQueue,
     handleToggle,
     handleTabChange,
+    manualDialogOpen,
+    setManualDialogOpen,
+    triggerInactiveGuide,
   } = useJobDetailContext();
-  const [manualDialogOpen, setManualDialogOpen] = useState(false);
-  // Ref to the existing "Job is inactive" inline alert — used to scroll it into
-  // view and briefly ring-highlight it when the user clicks Sync now while the
-  // job is inactive, guiding them to the blocker without a toast or modal.
-  const inactiveAlertRef = useRef<HTMLDivElement>(null);
-  const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [highlighted, setHighlighted] = useState(false);
-  const highlightInactiveAlert = useCallback(() => {
-    const el = inactiveAlertRef.current;
-    if (!el) return;
-    if (highlightTimerRef.current) {
-      clearTimeout(highlightTimerRef.current);
-    }
-    el.focus({ preventScroll: true });
-    const { top, bottom } = el.getBoundingClientRect();
-    if (top < 0 || bottom > window.innerHeight) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-    setHighlighted(true);
-    highlightTimerRef.current = setTimeout(() => {
-      setHighlighted(false);
-      highlightTimerRef.current = null;
-    }, 1800);
-  }, []);
-  useEffect(
-    () => () => {
-      if (highlightTimerRef.current) {
-        clearTimeout(highlightTimerRef.current);
-      }
-    },
-    [],
-  );
 
   const priorityQueueQuery = usePriorityQueueQuery(projectId);
   const priorityModeActive =
@@ -368,15 +339,12 @@ export default function OverviewTab() {
             <Button
               onClick={() => {
                 if (inactiveBlocked) {
-                  highlightInactiveAlert();
+                  triggerInactiveGuide();
                   return;
                 }
                 setManualDialogOpen(true);
               }}
               disabled={syncBlocked}
-              aria-controls={
-                inactiveBlocked ? 'job-inactive-notification' : undefined
-              }
             >
               <Play /> Sync now
             </Button>
@@ -388,42 +356,6 @@ export default function OverviewTab() {
               <SyncSummaryCard key={card.label} {...card} />
             ))}
           </div>
-
-          {!job.isEnabled && !isSyncing && (
-            <Alert
-              id="job-inactive-notification"
-              ref={inactiveAlertRef}
-              tabIndex={-1}
-              className={`py-2.5 transition-shadow duration-300 outline-none ${
-                highlighted
-                  ? 'ring-primary ring-offset-background ring-2 ring-offset-2'
-                  : ''
-              }`}
-            >
-              <Info />
-              <AlertDescription className="space-y-0.5 [&_p:not(:last-child)]:mb-0">
-                <p className="text-foreground font-semibold">Job is inactive</p>
-                <p>
-                  {canActivate ? (
-                    <>
-                      <Button
-                        variant="link"
-                        size="xs"
-                        className="h-auto p-0"
-                        onClick={() => void handleToggle()}
-                        disabled={toggling}
-                      >
-                        {toggling ? 'Activating…' : 'Activate job'}
-                      </Button>{' '}
-                      before starting a manual run.
-                    </>
-                  ) : (
-                    'Complete the required setup before activating this job and starting a manual run.'
-                  )}
-                </p>
-              </AlertDescription>
-            </Alert>
-          )}
 
           {queued && !isSyncing && (
             <Alert className="py-2.5">
@@ -444,7 +376,12 @@ export default function OverviewTab() {
           projectId={projectId}
           jobId={job.id}
           job={job}
-          hasBaseline={!!job.lastSyncedAt}
+          hasBaseline={Boolean(
+            job.lastSyncedAt ||
+              runLogs.some(
+                (r) => r.status === 'completed' || r.status === 'success',
+              ),
+          )}
           pipelineRequired={pipelineRequired}
           pipelineConfigured={pipelineConfigured}
           disabled={syncBlocked}
@@ -460,7 +397,9 @@ export default function OverviewTab() {
             void refetch();
           }}
           onSyncAll={(range) => void handleSyncAll(undefined, range)}
-          runProgress={summaryRunning ? renderProgress('compact', false) : undefined}
+          runProgress={
+            summaryRunning ? renderProgress('compact', false) : undefined
+          }
         />
       )}
 

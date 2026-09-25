@@ -18,6 +18,8 @@ export default function JobHeader() {
     isSyncing,
     toggling,
     handleToggle,
+    handleStop,
+    highlightStatusGuide,
   } = useJobDetailContext();
 
   const isActive = !!job.isEnabled;
@@ -84,6 +86,9 @@ export default function JobHeader() {
               fieldMappingCount={jobFieldMappings.length}
               toggling={toggling}
               onToggle={handleToggle}
+              isSyncing={isSyncing}
+              onStop={handleStop}
+              highlighted={highlightStatusGuide}
             />
           </div>
           <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-1.5 text-sm leading-5">

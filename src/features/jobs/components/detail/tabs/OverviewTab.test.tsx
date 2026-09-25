@@ -101,76 +101,41 @@ function buildContext(
     handleCancelQueue: vi.fn().mockResolvedValue(undefined),
     handleRetryQueue: vi.fn().mockResolvedValue(undefined),
     handleToggle: vi.fn().mockResolvedValue(undefined),
+
+    highlightStatusGuide: false,
+    triggerInactiveGuide: vi.fn(),
+    manualDialogOpen: false,
+    setManualDialogOpen: vi.fn(),
     ...overrides,
   };
-}
-
-function getInactiveNotification(): HTMLElement {
-  return screen
-    .getByText('Job is inactive')
-    .closest<HTMLElement>('[role="alert"]')!;
 }
 
 describe('OverviewTab sync prerequisite guidance', () => {
   beforeEach(() => {
     mockContext = buildContext();
-    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
-      configurable: true,
-      value: vi.fn(),
-    });
   });
 
-  it('focuses and highlights the visible inactive notification without opening sync', () => {
+  it('triggers the inactive guide when clicking sync on an inactive job without opening dialog', () => {
     render(<OverviewTab />);
-
-    const notification = getInactiveNotification();
-    fireEvent.click(screen.getByRole('button', { name: /sync now/i }));
-
-    expect(notification).toHaveFocus();
-    expect(notification).toHaveClass('ring-2');
-    expect(notification.scrollIntoView).not.toHaveBeenCalled();
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(mockContext.handleRunNow).not.toHaveBeenCalled();
-  });
-
-  it('scrolls an inactive notification into view when it is below the viewport', () => {
-    render(<OverviewTab />);
-
-    const notification = getInactiveNotification();
-    vi.spyOn(notification, 'getBoundingClientRect').mockReturnValue({
-      top: 900,
-      bottom: 980,
-      left: 0,
-      right: 600,
-      width: 600,
-      height: 80,
-      x: 0,
-      y: 900,
-      toJSON: () => ({}),
-    });
 
     fireEvent.click(screen.getByRole('button', { name: /sync now/i }));
 
-    expect(notification.scrollIntoView).toHaveBeenCalledWith({
-      behavior: 'smooth',
-      block: 'nearest',
-    });
-    expect(notification).toHaveFocus();
+    expect(mockContext.triggerInactiveGuide).toHaveBeenCalledOnce();
+    expect(mockContext.setManualDialogOpen).not.toHaveBeenCalled();
+    expect(mockContext.handleRunNow).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('restarts guidance on repeated blocked clicks without starting a sync', () => {
+  it('does not render duplicate inactive alert inside OverviewTab (single source of truth)', () => {
     render(<OverviewTab />);
 
-    const syncNow = screen.getByRole('button', { name: /sync now/i });
-    fireEvent.click(syncNow);
-    fireEvent.click(syncNow);
-
-    expect(getInactiveNotification()).toHaveFocus();
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(mockContext.handleRunNow).not.toHaveBeenCalled();
+    expect(screen.queryByText('Job is inactive')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /activate job/i }),
+    ).not.toBeInTheDocument();
   });
 
-  it('opens the existing sync dialog normally for an active job', () => {
+  it('opens the sync dialog for an active job', () => {
     mockContext = buildContext({
       job: {
         ...buildContext().job,
@@ -181,52 +146,25 @@ describe('OverviewTab sync prerequisite guidance', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /sync now/i }));
 
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.queryByText('Job is inactive')).not.toBeInTheDocument();
+    expect(mockContext.setManualDialogOpen).toHaveBeenCalledWith(true);
+    expect(mockContext.triggerInactiveGuide).not.toHaveBeenCalled();
   });
 
-  it('keeps an incomplete inactive notification informational', () => {
+  it('renders StartSyncModal when manualDialogOpen is true', () => {
     mockContext = buildContext({
-      jobFieldMappings: [],
-      hasConnection: false,
+      manualDialogOpen: true,
     });
     render(<OverviewTab />);
 
-    expect(
-      screen.getByText(/complete the required setup before activating/i),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: /activate job/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
-  it('offers activation when configuration is complete and preserves failure state', async () => {
-    const handleToggle = vi.fn().mockResolvedValue(undefined);
-    mockContext = buildContext({ handleToggle });
+  it('renders run queued alert when a run is queued', () => {
+    mockContext = buildContext({
+      runLogs: [{ id: 'run-1', status: 'queued', bullmqJobId: 'bull-1' } as JobDetailContextValue['runLogs'][number]],
+    });
     render(<OverviewTab />);
 
-    fireEvent.click(screen.getByRole('button', { name: /activate job/i }));
-
-    await waitFor(() => expect(handleToggle).toHaveBeenCalledOnce());
-    expect(getInactiveNotification()).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /sync now/i })).toBeEnabled();
-  });
-
-  it('returns to normal sync behavior after activation succeeds', async () => {
-    const handleToggle = vi.fn().mockResolvedValue(undefined);
-    mockContext = buildContext({ handleToggle });
-    const { rerender } = render(<OverviewTab />);
-
-    fireEvent.click(screen.getByRole('button', { name: /activate job/i }));
-    await waitFor(() => expect(handleToggle).toHaveBeenCalledOnce());
-
-    mockContext = {
-      ...mockContext,
-      job: { ...mockContext.job, isEnabled: true },
-    };
-    rerender(<OverviewTab />);
-    fireEvent.click(screen.getByRole('button', { name: /sync now/i }));
-
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText('Run queued')).toBeInTheDocument();
   });
 });

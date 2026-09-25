@@ -601,3 +601,34 @@
 .recharts-cartesian-grid-vertical line {
   stroke: var(--border) !important;
 }
+
+/* Alert focus shake animation for guiding user to setup blockers */
+@keyframes alert-focus-shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  20%, 60% {
+    transform: translateX(-5px);
+  }
+  40%, 80% {
+    transform: translateX(5px);
+  }
+}
+
+.animate-alert-shake {
+  animation: alert-focus-shake 0.5s ease-in-out;
+}
+
+/* Gentle pointer nudge to draw attention to interactive controls like status switch */
+@keyframes pointer-nudge {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.animate-pointer-nudge {
+  animation: pointer-nudge 1.2s ease-in-out infinite;
+}
