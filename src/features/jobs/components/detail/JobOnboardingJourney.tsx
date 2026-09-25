@@ -10,7 +10,6 @@ import {
   selectContextualSetupAction,
   selectJobOnboardingState,
 } from '@/features/onboarding';
-import { cn } from '@/lib/utils';
 
 export default function JobOnboardingJourney() {
   const navigate = useNavigate();
@@ -23,7 +22,6 @@ export default function JobOnboardingJourney() {
     pipelineConfigured,
     activeTab,
     handleTabChange,
-    highlightStatusGuide,
     setManualDialogOpen,
     handleToggle,
     toggling,
@@ -155,24 +153,13 @@ export default function JobOnboardingJourney() {
   }
 
   return (
-    <div
-      id="job-onboarding-journey"
-      tabIndex={-1}
-      className={cn(
-        'transition-all duration-300 outline-none rounded-2xl',
-        highlightStatusGuide &&
-          !job.isEnabled &&
-          'ring-primary animate-alert-shake ring-2 ring-offset-2',
-      )}
-    >
-      <SetupJourneyCard
-        eyebrow="Job setup"
-        title={content.title}
-        description={content.description}
-        steps={steps}
-        actionLabel={actionLabel}
-        onContinue={onContinue}
-      />
-    </div>
+    <SetupJourneyCard
+      eyebrow="Job setup"
+      title={content.title}
+      description={content.description}
+      steps={steps}
+      actionLabel={actionLabel}
+      onContinue={onContinue}
+    />
   );
 }

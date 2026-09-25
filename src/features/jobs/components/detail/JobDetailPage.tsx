@@ -128,7 +128,6 @@ export default function JobDetailPage() {
     setHighlightStatusGuide(true);
     const target =
       document.getElementById('job-contextual-alert') ||
-      document.getElementById('job-onboarding-journey') ||
       document.getElementById('job-status-dropdown');
     if (target) {
       target.scrollIntoView({ behavior: 'smooth', block: 'center' });
