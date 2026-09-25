@@ -1,3 +1,5 @@
+import type { AxiosResponse } from 'axios';
+
 import apiClient from './apiClient';
 
 import type {
@@ -10,8 +12,7 @@ import type {
   TransitionOrganisationStatusDto,
 } from '@/types';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const d = (r: any): any => r.data.data;
+const d = <T>({ data }: AxiosResponse<{ data: T }>): T => data.data;
 
 // Lifecycle actions for a selected organisation. Every method targets a
 // dedicated route (never a single generic "update" call) so the operator
@@ -23,7 +24,10 @@ export const superAdminOrganisationLifecycleApi = {
     dto: TransitionOrganisationStatusDto,
   ): Promise<LifecycleTransitionResponse> =>
     apiClient
-      .patch(`/super-admin/organisations/${organisationId}/status`, dto)
+      .patch<{ data: LifecycleTransitionResponse }>(
+        `/super-admin/organisations/${organisationId}/status`,
+        dto,
+      )
       .then(d),
 
   hold: (
@@ -31,12 +35,17 @@ export const superAdminOrganisationLifecycleApi = {
     dto: HoldWorkDto,
   ): Promise<HoldWorkResponse> =>
     apiClient
-      .post(`/super-admin/organisations/${organisationId}/hold`, dto)
+      .post<{ data: HoldWorkResponse }>(
+        `/super-admin/organisations/${organisationId}/hold`,
+        dto,
+      )
       .then(d),
 
   resume: (organisationId: string): Promise<ResumeWorkResponse> =>
     apiClient
-      .post(`/super-admin/organisations/${organisationId}/resume`)
+      .post<{ data: ResumeWorkResponse }>(
+        `/super-admin/organisations/${organisationId}/resume`,
+      )
       .then(d),
 
   imposePaymentHold: (
@@ -44,7 +53,7 @@ export const superAdminOrganisationLifecycleApi = {
     dto: PaymentHoldDto,
   ): Promise<{ paymentHoldActive: true }> =>
     apiClient
-      .post(
+      .post<{ data: { paymentHoldActive: true } }>(
         `/super-admin/organisations/${organisationId}/payment-hold`,
         dto,
       )
@@ -55,8 +64,9 @@ export const superAdminOrganisationLifecycleApi = {
     dto: ClearPaymentHoldDto,
   ): Promise<{ paymentHoldActive: false }> =>
     apiClient
-      .delete(`/super-admin/organisations/${organisationId}/payment-hold`, {
-        data: dto,
-      })
+      .delete<{ data: { paymentHoldActive: false } }>(
+        `/super-admin/organisations/${organisationId}/payment-hold`,
+        { data: dto },
+      )
       .then(d),
 };

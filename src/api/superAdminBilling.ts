@@ -1,3 +1,5 @@
+import type { AxiosResponse } from 'axios';
+
 import apiClient from './apiClient';
 
 import type {
@@ -8,14 +10,22 @@ import type {
   SuperAdminInvoiceListItem,
 } from '@/types';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const d = (r: any): any => r.data.data;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const paginated = <T>(r: any): SuperAdminPage<T> => ({
-  data: r.data.data,
-  total: r.data.total,
-  page: r.data.page,
-  limit: r.data.limit,
+interface PaginatedEnvelope<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+const d = <T>({ data }: AxiosResponse<{ data: T }>): T => data.data;
+
+const paginated = <T>({
+  data,
+}: AxiosResponse<PaginatedEnvelope<T>>): SuperAdminPage<T> => ({
+  data: data.data,
+  total: data.total,
+  page: data.page,
+  limit: data.limit,
 });
 
 export interface ListInvoicesParams {
@@ -28,7 +38,9 @@ export interface ListInvoicesParams {
 export const superAdminBillingApi = {
   overview: (organisationId: string): Promise<SuperAdminBillingOverview> =>
     apiClient
-      .get(`/super-admin/organisations/${organisationId}/billing/overview`)
+      .get<{ data: SuperAdminBillingOverview }>(
+        `/super-admin/organisations/${organisationId}/billing/overview`,
+      )
       .then(d),
 
   invoices: (
@@ -36,9 +48,10 @@ export const superAdminBillingApi = {
     params: ListInvoicesParams = {},
   ): Promise<SuperAdminPage<SuperAdminInvoiceListItem>> =>
     apiClient
-      .get(`/super-admin/organisations/${organisationId}/billing/invoices`, {
-        params,
-      })
+      .get<PaginatedEnvelope<SuperAdminInvoiceListItem>>(
+        `/super-admin/organisations/${organisationId}/billing/invoices`,
+        { params },
+      )
       .then(paginated<SuperAdminInvoiceListItem>),
 
   // SA-706 — retry a specific invoice through Stripe. The dry-run
@@ -49,7 +62,7 @@ export const superAdminBillingApi = {
     dto: RetryInvoiceDto,
   ): Promise<RetryInvoiceResponse> =>
     apiClient
-      .post(
+      .post<{ data: RetryInvoiceResponse }>(
         `/super-admin/organisations/${organisationId}/billing/invoices/${invoiceId}/retry`,
         dto,
       )

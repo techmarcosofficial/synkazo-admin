@@ -1,3 +1,5 @@
+import type { AxiosResponse } from 'axios';
+
 import apiClient from './apiClient';
 
 import type {
@@ -10,14 +12,28 @@ import type {
   SuperAdminRunStatus,
 } from '@/types';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const d = (r: any): any => r.data.data;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const paginated = <T>(r: any): SuperAdminPage<T> => ({
-  data: r.data.data,
-  total: r.data.total,
-  page: r.data.page,
-  limit: r.data.limit,
+interface PaginatedEnvelope<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+interface RunJobResponse {
+  success: boolean;
+  bullJobId?: string;
+  message?: string;
+}
+
+const d = <T>({ data }: AxiosResponse<{ data: T }>): T => data.data;
+
+const paginated = <T>({
+  data,
+}: AxiosResponse<PaginatedEnvelope<T>>): SuperAdminPage<T> => ({
+  data: data.data,
+  total: data.total,
+  page: data.page,
+  limit: data.limit,
 });
 
 export interface ListProjectsParams {
@@ -39,7 +55,10 @@ export const superAdminOperationsApi = {
     params: ListProjectsParams = {},
   ): Promise<SuperAdminPage<SuperAdminProjectListItem>> =>
     apiClient
-      .get(`/super-admin/organisations/${organisationId}/projects`, { params })
+      .get<PaginatedEnvelope<SuperAdminProjectListItem>>(
+        `/super-admin/organisations/${organisationId}/projects`,
+        { params },
+      )
       .then(paginated<SuperAdminProjectListItem>),
 
   getProject: (
@@ -47,7 +66,7 @@ export const superAdminOperationsApi = {
     projectId: string,
   ): Promise<SuperAdminProjectDetail> =>
     apiClient
-      .get(
+      .get<{ data: SuperAdminProjectDetail }>(
         `/super-admin/organisations/${organisationId}/projects/${projectId}`,
       )
       .then(d),
@@ -57,7 +76,7 @@ export const superAdminOperationsApi = {
     projectId: string,
   ): Promise<SuperAdminJobListItem[]> =>
     apiClient
-      .get(
+      .get<{ data: SuperAdminJobListItem[] }>(
         `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs`,
       )
       .then(d),
@@ -68,7 +87,7 @@ export const superAdminOperationsApi = {
     jobId: string,
   ): Promise<SuperAdminJobDetail> =>
     apiClient
-      .get(
+      .get<{ data: SuperAdminJobDetail }>(
         `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs/${jobId}`,
       )
       .then(d),
@@ -80,9 +99,9 @@ export const superAdminOperationsApi = {
     projectId: string,
     jobId: string,
     dto: SuperAdminRunJobDto,
-  ): Promise<{ success: boolean; bullJobId?: string; message?: string }> =>
+  ): Promise<RunJobResponse> =>
     apiClient
-      .post(
+      .post<RunJobResponse>(
         `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs/${jobId}/run`,
         dto,
       )
@@ -97,7 +116,7 @@ export const superAdminOperationsApi = {
     bullJobId: string,
   ): Promise<SuperAdminRunStatus> =>
     apiClient
-      .get(
+      .get<{ data: SuperAdminRunStatus }>(
         `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs/${jobId}/runs/${bullJobId}`,
       )
       .then(d),

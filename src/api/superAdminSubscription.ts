@@ -1,3 +1,5 @@
+import type { AxiosResponse } from 'axios';
+
 import apiClient from './apiClient';
 
 import type {
@@ -9,8 +11,7 @@ import type {
   ResumeSubscriptionResponse,
 } from '@/types';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const d = (r: any): any => r.data.data;
+const d = <T>({ data }: AxiosResponse<{ data: T }>): T => data.data;
 
 // SA-703/704 subscription lifecycle commands. One method per intent —
 // the doc bans consolidating cancel-at-period-end / immediate cancel /
@@ -23,7 +24,7 @@ export const superAdminSubscriptionApi = {
     dto: CancelAtPeriodEndDto,
   ): Promise<CancelAtPeriodEndResponse> =>
     apiClient
-      .post(
+      .post<{ data: CancelAtPeriodEndResponse }>(
         `/super-admin/organisations/${organisationId}/billing/subscription/cancel-at-period-end`,
         dto,
       )
@@ -34,7 +35,7 @@ export const superAdminSubscriptionApi = {
     dto: ResumeSubscriptionDto,
   ): Promise<ResumeSubscriptionResponse> =>
     apiClient
-      .post(
+      .post<{ data: ResumeSubscriptionResponse }>(
         `/super-admin/organisations/${organisationId}/billing/subscription/resume`,
         dto,
       )
@@ -45,7 +46,7 @@ export const superAdminSubscriptionApi = {
     dto: CancelSubscriptionImmediateDto,
   ): Promise<CancelSubscriptionImmediateResponse> =>
     apiClient
-      .delete(
+      .delete<{ data: CancelSubscriptionImmediateResponse }>(
         `/super-admin/organisations/${organisationId}/billing/subscription`,
         { data: dto },
       )
