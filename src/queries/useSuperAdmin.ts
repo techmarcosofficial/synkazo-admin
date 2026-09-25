@@ -348,6 +348,19 @@ export function useRevokeSuperAdminInvitationMutation(organisationId: string) {
   });
 }
 
+export function useResendSuperAdminInvitationMutation(organisationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (invitationId: string) =>
+      superAdminMembersApi.resendInvitation(organisationId, invitationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['superAdmin', organisationId, 'invitations'],
+      });
+    },
+  });
+}
+
 // ── Projects + jobs + manual run ──────────────────────────────────────
 
 export function useSuperAdminProjectsQuery(

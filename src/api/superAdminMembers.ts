@@ -84,4 +84,17 @@ export const superAdminMembersApi = {
         `/super-admin/organisations/${organisationId}/invitations/${invitationId}`,
       )
       .then(d),
+
+  // GAP-006 — resend a pending invitation. Rotates the token + extends
+  // expiry + re-sends the email server-side; the returned DTO carries
+  // no token, matching the SA-501 rule.
+  resendInvitation: (
+    organisationId: string,
+    invitationId: string,
+  ): Promise<SuperAdminInvitationListItem> =>
+    apiClient
+      .post<{ data: SuperAdminInvitationListItem }>(
+        `/super-admin/organisations/${organisationId}/invitations/${invitationId}/resend`,
+      )
+      .then(d),
 };
