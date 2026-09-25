@@ -483,6 +483,64 @@ export function useSuperAdminRunStatusQuery(
   });
 }
 
+// GAP-011 — cancel a queued Bull run. Invalidates the run-status query
+// so the poller shows the resulting 404 (uniform response for cancelled/
+// cross-org/unknown so SA-SEC-001 stays preserved).
+export function useSuperAdminCancelRunMutation(
+  organisationId: string,
+  projectId: string,
+  jobId: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (bullJobId: string) =>
+      superAdminOperationsApi.cancelRun(
+        organisationId,
+        projectId,
+        jobId,
+        bullJobId,
+      ),
+    onSuccess: (_data, bullJobId) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.superAdmin.operations.runStatus(
+          organisationId,
+          projectId,
+          jobId,
+          bullJobId,
+        ),
+      });
+    },
+  });
+}
+
+// GAP-012 — retry a failed run. Same invalidation as cancel.
+export function useSuperAdminRetryRunMutation(
+  organisationId: string,
+  projectId: string,
+  jobId: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (bullJobId: string) =>
+      superAdminOperationsApi.retryRun(
+        organisationId,
+        projectId,
+        jobId,
+        bullJobId,
+      ),
+    onSuccess: (_data, bullJobId) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.superAdmin.operations.runStatus(
+          organisationId,
+          projectId,
+          jobId,
+          bullJobId,
+        ),
+      });
+    },
+  });
+}
+
 // ── Billing ───────────────────────────────────────────────────────────
 
 export function useSuperAdminBillingOverviewQuery(organisationId: string) {
