@@ -9,11 +9,9 @@ afterEach(() => {
 });
 
 describe('SyncRunProgress', () => {
-  it('renders scheduled run context and live progress', () => {
+  it('shows one live overall bar with record and batch counts', () => {
     const { rerender } = render(
       <SyncRunProgress
-        runId="run-1"
-        jobId="job-1"
         status="running"
         totalRecords={200}
         processedRecords={50}
@@ -22,34 +20,30 @@ describe('SyncRunProgress', () => {
         batchProcessed={10}
         batchTotal={20}
         totalBatches={10}
-        createdCount={30}
-        updatedCount={15}
-        skippedCount={4}
-        failedCount={1}
-        ratePerSec={2}
-        startedAt="2026-09-23T10:00:00.000Z"
-        triggeredBy="cron"
         sourceLabel="Customers"
         destinationLabel="Companies"
+        startedAt="2026-09-23T10:00:00.000Z"
+        triggeredBy="cron"
+        etaSeconds={120}
       />,
     );
 
     expect(screen.getByText('Sync in progress')).toBeInTheDocument();
-    expect(screen.getByText('Scheduled run')).toBeInTheDocument();
+    expect(screen.getByText('Customers → Companies')).toBeInTheDocument();
     expect(screen.getByText('25%')).toBeInTheDocument();
     expect(screen.getByText('50 of 200 records processed')).toBeInTheDocument();
-    expect(screen.getByText('Batch 4 / 10')).toBeInTheDocument();
-    expect(screen.getByText(/Customers → Companies/)).toBeInTheDocument();
-    expect(screen.getByText('Duration')).toBeInTheDocument();
-    expect(screen.queryByText('Processing rate')).not.toBeInTheDocument();
-    expect(screen.queryByText('Source status')).not.toBeInTheDocument();
-    expect(screen.queryByText('Trigger type')).not.toBeInTheDocument();
-    expect(screen.queryByText('Ended at')).not.toBeInTheDocument();
+    expect(screen.getByText('4/10')).toBeInTheDocument();
+    expect(screen.getByText('Batches')).toBeInTheDocument();
+    expect(screen.getByText('4 of 10 batches')).toBeInTheDocument();
+    expect(screen.getByText('Scheduled')).toBeInTheDocument();
+    expect(screen.getByText('2m 0s')).toBeInTheDocument();
+    expect(screen.getAllByRole('progressbar')).toHaveLength(1);
+    expect(
+      screen.getByRole('progressbar', { name: 'Overall progress' }),
+    ).toHaveAttribute('aria-valuenow', '25');
 
     rerender(
       <SyncRunProgress
-        runId="run-1"
-        jobId="job-1"
         status="running"
         totalRecords={200}
         processedRecords={100}
@@ -58,157 +52,44 @@ describe('SyncRunProgress', () => {
         batchProcessed={0}
         batchTotal={20}
         totalBatches={10}
-        triggeredBy="cron"
       />,
     );
     expect(screen.getByText('50%')).toBeInTheDocument();
-    expect(screen.getByText('Batch 6 / 10')).toBeInTheDocument();
-  });
-
-  it('fills one real batch from zero to full, then resets for the next batch', () => {
-    const { rerender } = render(
-      <SyncRunProgress
-        status="running"
-        totalRecords={1000}
-        processedRecords={500}
-        failedCount={500}
-        completedBatches={50}
-        currentBatch={51}
-        batchProcessed={0}
-        batchTotal={10}
-        totalBatches={100}
-      />,
-    );
-
-    expect(screen.getByText('50%')).toBeInTheDocument();
-    expect(
-      screen.getByText('500 of 1,000 records processed'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('6/10')).toBeInTheDocument();
+    expect(screen.getByText('6 of 10 batches')).toBeInTheDocument();
     expect(
       screen.getByRole('progressbar', { name: 'Overall progress' }),
     ).toHaveAttribute('aria-valuenow', '50');
-    expect(screen.getByText('Batch 51 / 100')).toBeInTheDocument();
-    const batchBar = screen.getByRole('progressbar', {
-      name: 'Batch progress',
-    });
-    expect(batchBar).toHaveAttribute('aria-valuenow', '0');
-
-    rerender(
-      <SyncRunProgress
-        status="running"
-        totalRecords={1000}
-        processedRecords={505}
-        failedCount={505}
-        completedBatches={50}
-        currentBatch={51}
-        batchProcessed={5}
-        batchTotal={10}
-        totalBatches={100}
-      />,
-    );
-    expect(batchBar).toHaveAttribute('aria-valuenow', '50');
-    expect(batchBar).toHaveClass('[&_[data-slot=progress-indicator]]:bg-info');
-
-    rerender(
-      <SyncRunProgress
-        status="running"
-        totalRecords={1000}
-        processedRecords={510}
-        failedCount={510}
-        completedBatches={51}
-        currentBatch={51}
-        batchProcessed={10}
-        batchTotal={10}
-        totalBatches={100}
-      />,
-    );
-    expect(batchBar).toHaveAttribute('aria-valuenow', '100');
-    expect(batchBar).toHaveClass(
-      '[&_[data-slot=progress-indicator]]:bg-success',
-    );
-
-    rerender(
-      <SyncRunProgress
-        status="running"
-        totalRecords={1000}
-        processedRecords={510}
-        failedCount={510}
-        completedBatches={51}
-        currentBatch={52}
-        batchProcessed={0}
-        batchTotal={10}
-        totalBatches={100}
-      />,
-    );
-    expect(screen.getByText('Batch 52 / 100')).toBeInTheDocument();
-    expect(
-      screen.getByRole('progressbar', { name: 'Batch progress' }),
-    ).toHaveAttribute('aria-valuenow', '0');
-    expect(
-      screen.getByRole('progressbar', { name: 'Overall progress' }),
-    ).toHaveAttribute('aria-valuenow', '51');
-
-    rerender(
-      <SyncRunProgress
-        status="completed"
-        totalRecords={1000}
-        processedRecords={1000}
-        failedCount={500}
-        completedBatches={100}
-        totalBatches={100}
-      />,
-    );
-    expect(screen.getAllByText('100%')).toHaveLength(2);
-    expect(screen.getByText('Batch 100 / 100')).toBeInTheDocument();
-    expect(
-      screen.getByRole('progressbar', { name: 'Batch progress' }),
-    ).toHaveAttribute('aria-valuenow', '100');
   });
 
-  it('shows only the active batch for 1,000 batches', () => {
-    render(
-      <SyncRunProgress
-        status="running"
-        totalRecords={10_000}
-        processedRecords={9_990}
-        completedBatches={999}
-        currentBatch={1000}
-        batchProcessed={0}
-        batchTotal={10}
-        totalBatches={1_000}
-      />,
-    );
-    const batchBar = screen.getByRole('progressbar', {
-      name: 'Batch progress',
-    });
-    expect(screen.getByText('Batch 1,000 / 1,000')).toBeInTheDocument();
-    expect(batchBar).toHaveAttribute('aria-valuenow', '0');
-  });
-
-  it('renders manual context and keeps the stop action interactive', () => {
+  it('keeps the subtitle limited to the platform pair and the stop action functional', () => {
     const onStop = vi.fn();
-
     render(
       <SyncRunProgress
         status="running"
-        processedRecords={12}
-        triggeredBy="limit_sync"
         variant="compact"
+        jobId="job-1"
+        processedRecords={12}
+        sourceLabel="Customers"
+        destinationLabel="Companies"
         onStop={onStop}
       />,
     );
 
-    expect(screen.getByText('Manual run')).toBeInTheDocument();
+    expect(screen.getByText('Customers → Companies')).toBeInTheDocument();
+    expect(screen.queryByText(/Job job-1/)).not.toBeInTheDocument();
     expect(screen.getByLabelText('Sync in progress')).toHaveAttribute(
       'data-variant',
       'compact',
     );
-
+    expect(
+      screen.queryByRole('button', { name: 'Close' }),
+    ).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Stop sync' }));
     expect(onStop).toHaveBeenCalledOnce();
   });
 
-  it('renders a completed summary and persists dismissal for that run only', () => {
+  it('shows completed counts and remembers dismissal for only that run', () => {
     const props = {
       runId: 'run-complete',
       jobId: 'job-1',
@@ -222,21 +103,16 @@ describe('SyncRunProgress', () => {
       durationMs: 60_000,
       triggeredBy: 'cron',
     };
-
     render(<SyncRunProgress {...props} />);
 
     expect(screen.getByText('Sync completed')).toBeInTheDocument();
-    expect(screen.getAllByText('Completed').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('100%')).toBeInTheDocument();
-    expect(screen.getByText('Ended at')).toBeInTheDocument();
-    expect(screen.getByText('Duration')).toBeInTheDocument();
-    expect(screen.getByText('1m 0s')).toBeInTheDocument();
     expect(screen.getByLabelText('Record statistics').children).toHaveLength(5);
+    expect(screen.getByText('Ended at')).toBeInTheDocument();
+    expect(screen.getByText('1m 0s')).toBeInTheDocument();
     expect(
-      screen
-        .getByRole('button', { name: 'Close' })
-        .closest('[data-slot="sync-summary-header"]'),
-    ).toBeInTheDocument();
+      screen.queryByRole('button', { name: 'Stop sync' }),
+    ).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     expect(screen.queryByText('Sync completed')).not.toBeInTheDocument();
@@ -253,42 +129,7 @@ describe('SyncRunProgress', () => {
     expect(screen.getByText('Sync completed')).toBeInTheDocument();
   });
 
-  it('renders failed and stopped terminal variants', () => {
-    const { rerender } = render(
-      <SyncRunProgress
-        runId="run-failed"
-        jobId="job-1"
-        status="failed"
-        failedCount={3}
-        errorMessage="The destination rejected the request."
-      />,
-    );
-
-    expect(screen.getByText('Sync failed')).toBeInTheDocument();
-    expect(screen.getAllByText('Failed').length).toBeGreaterThanOrEqual(2);
-    expect(
-      screen.getByText(
-        '3 records failed. This run could not be completed. Review run history for details.',
-      ),
-    ).toBeInTheDocument();
-
-    rerender(
-      <SyncRunProgress
-        runId="run-stopped"
-        jobId="job-1"
-        status="cancelled"
-        processedRecords={20}
-      />,
-    );
-
-    expect(screen.getByText('Sync stopped')).toBeInTheDocument();
-    expect(screen.getAllByText('Stopped').length).toBeGreaterThanOrEqual(1);
-    expect(
-      screen.getByText('This sync stopped before completion.'),
-    ).toBeInTheDocument();
-  });
-
-  it('shows an indeterminate queued state and safe unknown totals', () => {
+  it('keeps unknown totals indeterminate without inventing a batch', () => {
     render(
       <SyncRunProgress
         status="queued"
@@ -297,60 +138,55 @@ describe('SyncRunProgress', () => {
         startedAt="invalid"
       />,
     );
-    expect(screen.getAllByText('Queued').length).toBeGreaterThan(0);
-    expect(
-      screen.queryByText('Waiting for this sync to start…'),
-    ).not.toBeInTheDocument();
+    expect(screen.getByText('Sync preparing')).toBeInTheDocument();
+    expect(screen.getByText('Queued')).toBeInTheDocument();
     expect(screen.queryByText('0%')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Batch /)).not.toBeInTheDocument();
     expect(
       screen.getByRole('progressbar', { name: 'Overall progress unknown' }),
     ).toBeInTheDocument();
-    expect(
-      screen.getAllByText('—', { selector: 'strong' }).length,
-    ).toBeGreaterThan(0);
+    expect(screen.getAllByRole('progressbar')).toHaveLength(1);
   });
 
-  it('does not invent a first batch or percentage before batch data arrives', () => {
+  it('shows completed batch counts when the active batch has not arrived', () => {
     render(
       <SyncRunProgress
         status="running"
-        totalRecords={null}
-        completedBatches={0}
+        totalRecords={100}
+        processedRecords={20}
+        completedBatches={2}
+        totalBatches={10}
       />,
     );
-    expect(screen.getByText('Batch progress')).toBeInTheDocument();
-    expect(screen.queryByText('Batch 1')).not.toBeInTheDocument();
-    expect(
-      screen.getByRole('progressbar', { name: 'Overall progress unknown' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('progressbar', { name: 'Batch progress unknown' }),
-    ).toBeInTheDocument();
+    expect(screen.getByText('2/10')).toBeInTheDocument();
+    expect(screen.getByText('2 of 10 batches')).toBeInTheDocument();
   });
 
-  it('keeps actual failed progress and opens failed-record history', () => {
-    const onViewHistory = vi.fn();
+  it('keeps actual failed progress and shows the issue in the footer', () => {
     render(
       <SyncRunProgress
         status="failed"
         totalRecords={100}
         processedRecords={25}
         failedCount={30}
-        onViewHistory={onViewHistory}
+        errorMessage="Authentication failed"
       />,
     );
+    expect(screen.getByText('Sync failed')).toBeInTheDocument();
     expect(screen.getByText('30%')).toBeInTheDocument();
     expect(screen.queryByText('100%')).not.toBeInTheDocument();
-    const historyAction = screen.getByRole('button', { name: /View details/ });
+    expect(screen.getByText('Issue')).toBeInTheDocument();
     expect(
-      historyAction.closest('[data-slot="sync-summary-header"]'),
+      screen.getByText(
+        'The platform connection needs attention. Reconnect it and try again.',
+      ),
     ).toBeInTheDocument();
-    fireEvent.click(historyAction);
-    expect(onViewHistory).toHaveBeenCalledOnce();
+    expect(
+      screen.queryByRole('button', { name: /View details/ }),
+    ).not.toBeInTheDocument();
   });
 
-  it('shows completed issues with final batch progress', () => {
-    const onViewHistory = vi.fn();
+  it('shows completed issues and the final batch without a second bar', () => {
     render(
       <SyncRunProgress
         status="completed"
@@ -359,56 +195,35 @@ describe('SyncRunProgress', () => {
         failedCount={2}
         completedBatches={4}
         totalBatches={4}
-        onViewHistory={onViewHistory}
       />,
     );
-    expect(screen.getAllByText('Completed with issues').length).toBeGreaterThan(
-      0,
-    );
-    expect(screen.getByText('Batch 4 / 4')).toBeInTheDocument();
+    expect(screen.getByText('Sync completed with issues')).toBeInTheDocument();
+    expect(screen.getByText('4/4')).toBeInTheDocument();
+    expect(screen.getByText('4 of 4 batches')).toBeInTheDocument();
     expect(
-      screen.getByText(
-        '2 records failed — review failed-record history for details or retry',
-      ),
+      screen.getByText('2 failed · Review run history'),
     ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /2 records failed/ }));
-    expect(onViewHistory).toHaveBeenCalledOnce();
+    expect(screen.getAllByRole('progressbar')).toHaveLength(1);
   });
 
-  it('shows live failed counts but waits until the run ends to show the failed-record action', () => {
-    const onViewHistory = vi.fn();
-    const { rerender } = render(
+  it('respects defaultOpen={false} by starting collapsed and expanding on header click', () => {
+    render(
       <SyncRunProgress
         status="running"
-        processedRecords={70}
-        failedCount={50}
-        onViewHistory={onViewHistory}
+        totalRecords={100}
+        processedRecords={50}
+        defaultOpen={false}
       />,
     );
-    expect(screen.getByText('50', { selector: 'strong' })).toBeInTheDocument();
-    expect(screen.queryByText('Processing records…')).not.toBeInTheDocument();
-    expect(
-      screen.queryByText(/review failed-record history/),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: /View details/ }),
-    ).not.toBeInTheDocument();
 
-    rerender(
-      <SyncRunProgress
-        status="completed"
-        processedRecords={70}
-        failedCount={50}
-        onViewHistory={onViewHistory}
-      />,
-    );
-    expect(
-      screen.getByText(
-        '50 records failed — review failed-record history for details or retry',
-      ),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: /View details/ }),
-    ).toBeInTheDocument();
+    const expandBtn = screen.getByRole('button', { name: 'Expand' });
+    expect(expandBtn).toBeInTheDocument();
+
+    const header = screen.getByText('Sync in progress').closest('[data-slot="sync-summary-header"]');
+    expect(header).toBeInTheDocument();
+    fireEvent.click(header!);
+
+    expect(screen.getByRole('button', { name: 'Collapse' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Record statistics')).toBeInTheDocument();
   });
 });

@@ -1,34 +1,36 @@
 import {
-  ArrowRight,
-  CalendarDays,
+  BarChart3,
   CheckCircle2,
-  CircleAlert,
+  ChevronDown,
   CircleStop,
   Clock3,
   Database,
+  Layers,
   Pencil,
   Plus,
   RefreshCw,
   SkipForward,
   Square,
-  Timer,
   TriangleAlert,
   XCircle,
   type LucideIcon,
 } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 
-import { Badge } from '@/components/ui/badge';
+import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 
-interface SyncRunProgressProps {
+export interface SyncRunProgressProps {
   runId?: string | null;
   jobId?: string | null;
-  jobName?: string | null;
   status?: string | null;
   totalRecords?: number | null;
   processedRecords?: number | null;
@@ -43,20 +45,18 @@ interface SyncRunProgressProps {
   batchTotal?: number | null;
   totalBatches?: number | null;
   etaSeconds?: number | null;
-  ratePerSec?: number | null;
   startedAt?: string | null;
   finishedAt?: string | null;
   durationMs?: number | null;
   triggeredBy?: string | null;
   sourceLabel?: string | null;
   destinationLabel?: string | null;
-  sourceStatus?: string | null;
   errorMessage?: string | null;
   onStop?: () => void;
   onDismiss?: () => void;
-  onViewHistory?: () => void;
   stopping?: boolean;
   variant?: 'default' | 'compact';
+  defaultOpen?: boolean;
   className?: string;
 }
 
@@ -74,19 +74,19 @@ function presentation(status: string | null | undefined, issues: boolean) {
     return {
       state: 'waiting' as RunState,
       title: 'Sync preparing',
-      badge: normalized === 'queued' ? 'Queued' : 'Preparing',
+      detail: normalized === 'queued' ? 'Queued' : 'Preparing',
     };
   if (normalized === 'running')
     return {
       state: 'running' as RunState,
       title: 'Sync in progress',
-      badge: 'Running',
+      detail: null,
     };
   if (['failed', 'error'].includes(normalized))
     return {
       state: 'failed' as RunState,
       title: 'Sync failed',
-      badge: 'Failed',
+      detail: null,
     };
   if (
     [
@@ -101,7 +101,7 @@ function presentation(status: string | null | undefined, issues: boolean) {
     return {
       state: 'stopped' as RunState,
       title: 'Sync stopped',
-      badge:
+      detail:
         normalized === 'limit_reached'
           ? 'Limit reached'
           : normalized === 'time_limit_reached'
@@ -110,19 +110,19 @@ function presentation(status: string | null | undefined, issues: boolean) {
     };
   return {
     state: 'completed' as RunState,
-    title: 'Sync completed',
-    badge:
+    title:
       issues || normalized === 'partial'
-        ? 'Completed with issues'
-        : 'Completed',
+        ? 'Sync completed with issues'
+        : 'Sync completed',
+    detail: null,
   };
 }
 
 function triggerLabel(value?: string | null) {
+  if (!value) return null;
   if (value === 'cron' || value === 'schedule' || value === 'scheduled')
     return 'Scheduled';
-  if (!value || ['manual', 'sync_all', 'limit_sync'].includes(value))
-    return 'Manual';
+  if (['manual', 'sync_all', 'limit_sync'].includes(value)) return 'Manual';
   return value
     .split('_')
     .map((part) => part[0]?.toUpperCase() + part.slice(1))
@@ -200,410 +200,158 @@ function wasDismissed(jobId?: string | null, runId?: string | null) {
   }
 }
 
-function SyncStatusHeader({
-  state,
-  title,
-  badge,
-  trigger,
-  subtitle,
-  compact,
-}: {
-  state: RunState;
-  title: string;
-  badge: string;
-  trigger: string;
-  subtitle: string;
-  compact: boolean;
-}) {
+function SyncStatusIcon({ state }: { state: RunState }) {
   const styles = {
-    waiting: [
-      'border-muted bg-muted/60 text-muted-foreground',
-      'border-border bg-muted/60 text-muted-foreground',
-      Clock3,
-    ],
-    running: [
-      'border-primary/20 bg-primary/10 text-primary',
-      'border-primary/20 bg-primary/10 text-primary',
-      RefreshCw,
-    ],
-    completed: [
-      'border-success/20 bg-success/10 text-success',
-      'border-success/20 bg-success/10 text-success',
-      CheckCircle2,
-    ],
-    failed: [
-      'border-destructive/20 bg-destructive/10 text-destructive',
-      'border-destructive/20 bg-destructive/10 text-destructive',
-      XCircle,
-    ],
-    stopped: [
-      'border-warning/20 bg-warning/10 text-warning',
-      'border-warning/20 bg-warning/10 text-warning',
-      CircleStop,
-    ],
-  } as const;
-  const [iconStyle, badgeStyle, Icon] = styles[state];
+    waiting: {
+      Icon: Clock3,
+      containerClass: 'bg-muted text-muted-foreground border-border/70',
+      spin: false,
+    },
+    running: {
+      Icon: RefreshCw,
+      containerClass: 'bg-primary/10 text-primary border-primary/20',
+      spin: true,
+    },
+    completed: {
+      Icon: CheckCircle2,
+      containerClass: 'bg-success/10 text-success border-success/20',
+      spin: false,
+    },
+    failed: {
+      Icon: XCircle,
+      containerClass: 'bg-destructive/10 text-destructive border-destructive/20',
+      spin: false,
+    },
+    stopped: {
+      Icon: CircleStop,
+      containerClass: 'bg-warning/10 text-warning border-warning/20',
+      spin: false,
+    },
+  };
+
+  const { Icon, containerClass, spin } = styles[state];
+
   return (
-    <header className="min-w-0 flex-1">
-      <div className="flex min-w-0 items-center gap-3">
-        <span
-          className={cn(
-            'flex size-10 shrink-0 items-center justify-center rounded-xl border',
-            compact && 'size-8 rounded-lg',
-            iconStyle,
-          )}
-        >
-          <Icon
-            className={cn(
-              compact ? 'size-4' : 'size-5',
-              state === 'running' && 'animate-spin [animation-duration:3s]',
-            )}
-            aria-hidden="true"
-          />
-        </span>
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <h2
-              className={cn(
-                'leading-5 font-semibold',
-                compact ? 'text-sm' : 'text-lg',
-              )}
-            >
-              {title}
-            </h2>
-            <Badge
-              variant="outline"
-              className={cn('px-1.5 py-0 text-[11px]', badgeStyle)}
-            >
-              {badge}
-            </Badge>
-            <Badge
-              variant="outline"
-              className="text-muted-foreground px-1.5 py-0 text-[11px]"
-            >
-              {trigger} run
-            </Badge>
-          </div>
-          <p
-            className={cn(
-              'text-muted-foreground min-w-0 truncate',
-              compact ? 'text-xs' : 'text-sm',
-            )}
-            title={subtitle}
-          >
-            {subtitle}
-          </p>
-        </div>
-      </div>
-    </header>
+    <span
+      className={cn(
+        'flex size-11 shrink-0 items-center justify-center rounded-2xl border transition-colors',
+        containerClass,
+      )}
+    >
+      <Icon
+        className={cn(
+          'size-6',
+          spin && 'animate-spin [animation-duration:3s]',
+        )}
+        aria-hidden="true"
+      />
+    </span>
   );
 }
 
-function SyncProgressBars({
-  state,
-  processed,
-  total,
-  completedBatches,
-  currentBatch,
-  batchProcessed,
-  batchTotal,
-  totalBatches,
-  note,
-  compact,
-}: {
-  state: RunState;
-  processed: number;
-  total: number | null;
-  completedBatches: number | null;
-  currentBatch: number | null;
-  batchProcessed: number | null;
-  batchTotal: number | null;
-  totalBatches: number | null;
-  note?: string;
-  compact: boolean;
-}) {
-  const active = state === 'running';
-  const waiting = state === 'waiting';
-  const percent =
-    !waiting && total != null && total > 0
-      ? Math.min(100, Math.round((processed / total) * 100))
-      : null;
-  const finishedBatches = waiting ? 0 : (completedBatches ?? 0);
-  const knownBatchTotal =
-    totalBatches != null && totalBatches > 0 ? totalBatches : null;
-  const shownBatch = waiting
-    ? null
-    : state === 'completed'
-      ? (knownBatchTotal ?? currentBatch ?? (finishedBatches || null))
-      : (currentBatch ?? (active ? null : finishedBatches || null));
-  const batchPercent = waiting
-    ? null
-    : state === 'completed' && shownBatch != null
-      ? 100
-      : batchTotal != null && batchTotal > 0 && batchProcessed != null
-        ? Math.min(100, Math.round((batchProcessed / batchTotal) * 100))
-        : null;
-  const overallColor =
-    state === 'completed'
-      ? '[&_[data-slot=progress-indicator]]:bg-success'
-      : state === 'failed'
-        ? '[&_[data-slot=progress-indicator]]:bg-destructive'
-        : '[&_[data-slot=progress-indicator]]:bg-primary';
-  const batchColor =
-    state === 'completed' || (active && batchPercent === 100)
-      ? '[&_[data-slot=progress-indicator]]:bg-success'
-      : state === 'failed'
-        ? '[&_[data-slot=progress-indicator]]:bg-destructive'
-        : '[&_[data-slot=progress-indicator]]:bg-info';
-  return (
-    <div
-      className={cn('min-w-0 space-y-2', compact && 'space-y-1.5')}
-      aria-label="Sync progress"
-    >
-      <div className="space-y-1">
-        <div className="flex min-h-6 min-w-0 items-center justify-between gap-3">
-          <span className="text-muted-foreground min-w-0 text-sm tabular-nums">
-            {processed.toLocaleString()}{' '}
-            {total != null && total > 0 ? `of ${total.toLocaleString()}` : ''}{' '}
-            records processed
-          </span>
-          <strong className="shrink-0 text-xl leading-none font-bold tabular-nums">
-            {percent == null ? '—' : `${percent}%`}
-          </strong>
-        </div>
-        {percent == null ? (
-          <div
-            role="progressbar"
-            aria-label="Overall progress unknown"
-            className="bg-muted h-2 overflow-hidden rounded-full"
-          >
-            {(active || waiting) && (
-              <div className="bg-primary/60 h-full w-1/3 animate-pulse rounded-full" />
-            )}
-          </div>
-        ) : (
-          <Progress
-            value={percent}
-            aria-label="Overall progress"
-            className={cn('h-1.5', overallColor)}
-          />
-        )}
-      </div>
-      <div className="space-y-1" title={note}>
-        {batchPercent == null ? (
-          <div
-            role="progressbar"
-            aria-label="Batch progress unknown"
-            className="bg-muted h-1.5 overflow-hidden rounded-full"
-          >
-            {(active || waiting) && (
-              <div className="bg-info/60 h-full w-1/3 animate-pulse rounded-full" />
-            )}
-          </div>
-        ) : (
-          <Progress
-            key={shownBatch ?? 'batch'}
-            value={batchPercent}
-            aria-label="Batch progress"
-            className={cn('h-1.5', batchColor)}
-          />
-        )}
-        <div className="flex min-h-6 min-w-0 items-center justify-between gap-3">
-          <span className="text-muted-foreground min-w-0 text-sm font-medium tabular-nums">
-            {shownBatch != null
-              ? `Batch ${shownBatch.toLocaleString()}${knownBatchTotal != null ? ` / ${knownBatchTotal.toLocaleString()}` : ''}`
-              : 'Batch progress'}
-          </span>
-          <strong className="shrink-0 text-sm font-semibold tabular-nums">
-            {batchPercent == null ? '—' : `${batchPercent}%`}
-          </strong>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function SyncStats({
   values,
-  compact,
 }: {
   values: [number, number, number, number, number];
-  compact: boolean;
 }) {
   const stats: {
     label: string;
     icon: LucideIcon;
     color: string;
     iconColor: string;
+    iconBg: string;
   }[] = [
     {
       label: 'Processed',
       icon: Database,
       color: 'text-foreground',
-      iconColor: 'text-muted-foreground',
+      iconColor: 'text-foreground',
+      iconBg: 'bg-muted',
     },
     {
       label: 'Created',
       icon: Plus,
       color: 'text-success',
       iconColor: 'text-success',
+      iconBg: 'bg-success/10',
     },
     {
       label: 'Updated',
       icon: Pencil,
       color: 'text-info',
       iconColor: 'text-info',
+      iconBg: 'bg-info/10',
     },
     {
       label: 'Skipped',
       icon: SkipForward,
-      color: 'text-foreground',
+      color: 'text-muted-foreground',
       iconColor: 'text-muted-foreground',
+      iconBg: 'bg-muted',
     },
     {
       label: 'Failed',
       icon: TriangleAlert,
       color: 'text-destructive',
       iconColor: 'text-destructive',
+      iconBg: 'bg-destructive/10',
     },
   ];
+
   return (
     <div
-      className={cn(
-        'grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-6',
-        !compact && 'lg:grid-cols-5',
-      )}
+      className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5"
       aria-label="Record statistics"
     >
-      {stats.map(({ label, icon: Icon, color, iconColor }, index) => (
-        <div
-          key={label}
-          className={cn(
-            'bg-card flex min-w-0 items-center gap-2 rounded-3xl border p-1',
-            index < 3 ? 'sm:col-span-2' : 'sm:col-span-3',
-            index === 4 && 'col-span-2',
-            !compact && 'lg:col-span-1',
-            compact && 'py-2',
-          )}
-        >
-          <span
-            className={cn(
-              'bg-muted flex size-8 shrink-0 items-center justify-center rounded-xl',
-              compact && 'size-7',
-              iconColor,
-            )}
+      {stats.map(
+        ({ label, icon: Icon, color, iconColor, iconBg }, index) => (
+          <div
+            key={label}
+            className="bg-card border-border/60 flex min-w-0 items-center gap-2.5 rounded-2xl border px-3 py-2.5 transition-all hover:border-border/90"
           >
-            <Icon className="size-4" aria-hidden="true" />
-          </span>
-          <span className="min-w-0">
-            <span className="text-muted-foreground block text-xs leading-4">
-              {label}
-            </span>
-            <strong
+            <span
               className={cn(
-                'block truncate text-base leading-5 font-semibold tabular-nums',
-                compact && 'text-sm leading-4',
-                color,
+                'flex size-8.5 shrink-0 items-center justify-center rounded-xl',
+                iconBg,
+                iconColor,
               )}
-              title={values[index].toLocaleString()}
             >
-              {values[index].toLocaleString()}
-            </strong>
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function SyncIssueBanner({
-  state,
-  failed,
-  skipped,
-  errorMessage,
-  onViewHistory,
-}: {
-  state: RunState;
-  failed: number;
-  skipped: number;
-  errorMessage?: string | null;
-  onViewHistory?: () => void;
-}) {
-  if (state === 'running' || state === 'waiting') return null;
-  let message: string | null = null;
-  let tone = 'bg-muted/50 text-muted-foreground';
-  let Icon: LucideIcon = CircleAlert;
-  if (state === 'failed') {
-    message = `${failed > 0 ? `${failed.toLocaleString()} record${failed === 1 ? '' : 's'} failed. ` : ''}${friendlyError(errorMessage)}`;
-    tone = 'bg-destructive/10 text-destructive';
-    Icon = TriangleAlert;
-  } else if (state === 'stopped') {
-    message = errorMessage
-      ? friendlyError(errorMessage)
-      : 'This sync stopped before completion.';
-    tone = 'bg-warning/10 text-warning';
-  } else if (failed > 0) {
-    message = `${failed.toLocaleString()} record${failed === 1 ? '' : 's'} failed — review failed-record history for details or retry`;
-    tone = 'bg-destructive/10 text-destructive';
-    Icon = TriangleAlert;
-  } else if (skipped > 0) {
-    message = `${skipped.toLocaleString()} record${skipped === 1 ? '' : 's'} skipped — review run history for details`;
-    tone = 'bg-warning/10 text-warning';
-  }
-  if (!message) return null;
-  return (
-    <div
-      className={cn(
-        'flex min-w-0 items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs',
-        tone,
-      )}
-      role={failed > 0 || state === 'failed' ? 'alert' : 'status'}
-    >
-      {onViewHistory ? (
-        <button
-          type="button"
-          onClick={onViewHistory}
-          className="flex min-w-0 flex-1 items-center gap-1.5 text-left underline-offset-2 hover:underline focus-visible:underline"
-        >
-          <Icon className="size-4 shrink-0" aria-hidden="true" />
-          <span className="min-w-0 flex-1">{message}</span>
-          <ArrowRight className="size-3.5 shrink-0" aria-hidden="true" />
-        </button>
-      ) : (
-        <>
-          <Icon className="size-4 shrink-0" aria-hidden="true" />
-          <span className="min-w-0 flex-1">{message}</span>
-        </>
+              <Icon className="size-4" aria-hidden="true" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <span className="text-muted-foreground block text-xs leading-none">
+                {label}
+              </span>
+              <strong
+                className={cn(
+                  'mt-1 block truncate text-sm font-bold tabular-nums leading-tight',
+                  color,
+                )}
+                title={values[index].toLocaleString()}
+              >
+                {values[index].toLocaleString()}
+              </strong>
+            </div>
+          </div>
+        ),
       )}
     </div>
   );
 }
 
-function MetaItem({
-  icon: Icon,
-  label,
-  children,
-}: {
-  icon: LucideIcon;
-  label: string;
-  children: ReactNode;
-}) {
+function MetaItem({ label, children }: { label: string; children: string }) {
   return (
-    <div className="bg-card flex min-w-[130px] flex-[1_1_130px] items-center gap-2 rounded-3xl border p-1">
-      <span className="bg-muted text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-xl">
-        <Icon className="size-4" aria-hidden="true" />
+    <div className="min-w-0 flex-[1_1_110px] max-w-[190px]">
+      <span className="text-muted-foreground block text-xs leading-none">
+        {label}
       </span>
-      <span className="min-w-0">
-        <span className="text-muted-foreground block text-xs leading-4">
-          {label}
-        </span>
-        <strong
-          className="block truncate text-sm leading-5 font-medium tabular-nums"
-          title={typeof children === 'string' ? children : undefined}
-        >
-          {children}
-        </strong>
-      </span>
+      <strong
+        className="mt-1 block truncate text-xs font-semibold tabular-nums text-foreground leading-tight"
+        title={children}
+      >
+        {children}
+      </strong>
     </div>
   );
 }
@@ -613,70 +361,51 @@ function SyncRunMeta({
   startedAt,
   finishedAt,
   elapsed,
-  compact,
+  errorMessage,
+  failed,
+  skipped,
+  etaSeconds,
 }: {
   state: RunState;
   startedAt?: string | null;
   finishedAt?: string | null;
   elapsed: number | null;
-  compact: boolean;
+  errorMessage?: string | null;
+  failed: number;
+  skipped: number;
+  etaSeconds?: number | null;
 }) {
+  const issue =
+    state === 'failed' || state === 'stopped'
+      ? errorMessage
+        ? friendlyError(errorMessage)
+        : state === 'stopped'
+          ? 'Stopped before completion'
+          : friendlyError(errorMessage)
+      : failed > 0
+        ? `${failed.toLocaleString()} failed · Review run history`
+        : skipped > 0
+          ? `${skipped.toLocaleString()} skipped · Review run history`
+          : null;
+
   return (
-    <div className={cn('flex min-w-0 flex-wrap gap-2', compact && 'gap-1.5')}>
-      <MetaItem icon={CalendarDays} label="Started at">
-        {formatDateTime(startedAt)}
-      </MetaItem>
+    <div className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2">
+      <MetaItem label="Started at">{formatDateTime(startedAt)}</MetaItem>
       {state !== 'running' && state !== 'waiting' && (
-        <MetaItem icon={Clock3} label="Ended at">
-          {formatDateTime(finishedAt)}
-        </MetaItem>
+        <MetaItem label="Ended at">{formatDateTime(finishedAt)}</MetaItem>
       )}
-      <MetaItem icon={Timer} label="Duration">
+      <MetaItem label="Duration">
         {elapsed == null ? '—' : formatDuration(elapsed)}
       </MetaItem>
-    </div>
-  );
-}
-
-function SyncRunActions({
-  state,
-  onStop,
-  onDismiss,
-  onViewHistory,
-  stopping,
-}: {
-  state: RunState;
-  onStop?: () => void;
-  onDismiss: () => void;
-  onViewHistory?: () => void;
-  stopping: boolean;
-}) {
-  if (state === 'waiting' || (state === 'running' && !onStop)) return null;
-  return (
-    <div className="ml-auto flex shrink-0 items-center justify-end gap-2 max-sm:w-full">
-      {state === 'running' ? (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onStop}
-          disabled={stopping}
-          className="border-destructive/30 text-destructive"
-        >
-          {stopping ? <Spinner /> : <Square className="size-3" />}
-          {stopping ? 'Stopping…' : 'Stop sync'}
-        </Button>
-      ) : (
-        <>
-          {onViewHistory && (
-            <Button size="sm" onClick={onViewHistory}>
-              View details <ArrowRight className="size-3" />
-            </Button>
-          )}
-          <Button variant="outline" size="sm" onClick={onDismiss}>
-            Close
-          </Button>
-        </>
-      )}
+      {state === 'running' &&
+        etaSeconds != null &&
+        Number.isFinite(etaSeconds) &&
+        etaSeconds > 0 && (
+          <MetaItem label="Estimated time left">
+            {formatDuration(etaSeconds * 1000)}
+          </MetaItem>
+        )}
+      {issue && <MetaItem label="Issue">{issue}</MetaItem>}
     </div>
   );
 }
@@ -685,7 +414,6 @@ function SyncRunActions({
 export default function SyncRunProgress({
   runId,
   jobId,
-  jobName,
   status,
   totalRecords,
   processedRecords,
@@ -708,11 +436,13 @@ export default function SyncRunProgress({
   errorMessage,
   onStop,
   onDismiss,
-  onViewHistory,
   stopping = false,
   variant = 'default',
+  defaultOpen = true,
   className,
 }: SyncRunProgressProps) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
   const created = finiteCount(createdCount) ?? 0;
   const updated = finiteCount(updatedCount) ?? 0;
   const skipped = finiteCount(skippedCount) ?? 0;
@@ -727,21 +457,50 @@ export default function SyncRunProgress({
   const batchDone = finiteCount(batchProcessed);
   const batchSize = finiteCount(batchTotal);
   const allBatches = finiteCount(totalBatches);
+
   const current = presentation(status, failed > 0 || skipped > 0);
   const terminal = !['running', 'waiting'].includes(current.state);
+  const active = current.state === 'running';
+  const waiting = current.state === 'waiting';
+
+  const percent =
+    !waiting && total != null && total > 0
+      ? Math.min(100, Math.round((processed / total) * 100))
+      : null;
+
+  const finishedBatches = waiting ? 0 : (completedBatches ?? 0);
+  const knownBatchTotal =
+    totalBatches != null && totalBatches > 0 ? totalBatches : null;
+  const shownBatch = waiting
+    ? null
+    : current.state === 'completed'
+      ? (knownBatchTotal ?? currentBatch ?? (finishedBatches || null))
+      : (currentBatch ?? (active ? null : finishedBatches || null));
+
+  const overallColor =
+    current.state === 'completed'
+      ? '[&_[data-slot=progress-indicator]]:bg-success'
+      : current.state === 'failed'
+        ? '[&_[data-slot=progress-indicator]]:bg-destructive'
+        : '[&_[data-slot=progress-indicator]]:bg-primary';
+
   const [now, setNow] = useState(() => Date.now());
   const [dismissed, setDismissed] = useState(
     () => terminal && wasDismissed(jobId, runId),
   );
+
   useEffect(() => {
     setDismissed(terminal && wasDismissed(jobId, runId));
   }, [jobId, runId, terminal]);
+
   useEffect(() => {
     if (terminal || !startedAt) return;
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, [startedAt, terminal]);
+
   if (dismissed) return null;
+
   const elapsed = elapsedMs(
     startedAt,
     terminal ? finishedAt : null,
@@ -753,20 +512,7 @@ export default function SyncRunProgress({
     sourceLabel && destinationLabel
       ? `${sourceLabel} → ${destinationLabel}`
       : null;
-  const identity =
-    jobName ||
-    (jobId ? `Job ${jobId}` : runId ? `Run ${runId}` : direction || 'Sync run');
-  const subtitle =
-    direction && identity !== direction
-      ? `${direction} · ${identity}`
-      : direction || identity;
-  const note =
-    current.state === 'running' &&
-    etaSeconds != null &&
-    Number.isFinite(etaSeconds) &&
-    etaSeconds > 0
-      ? `About ${Math.ceil(etaSeconds / 60)} min remaining`
-      : undefined;
+
   const handleDismiss = () => {
     const key = dismissalKey(jobId);
     if (key && runId) {
@@ -779,6 +525,59 @@ export default function SyncRunProgress({
     setDismissed(true);
     onDismiss?.();
   };
+
+  const handleHeaderClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if ((event.target as HTMLElement).closest('button, a, input, [role="button"]')) return;
+    setIsOpen((prev) => !prev);
+  };
+
+  const isCompact = variant === 'compact';
+  const normalizedStatus = (status || 'running').toLowerCase();
+  const badgeStatus = (() => {
+    if (waiting) return normalizedStatus === 'queued' ? 'queued' : 'pending';
+    if (active) return 'running';
+    if (current.state === 'failed') return 'failed';
+    if (current.state === 'stopped') {
+      if (normalizedStatus === 'limit_reached') return 'limit_reached';
+      if (normalizedStatus === 'time_limit_reached') return 'time_limit_reached';
+      return 'stopped';
+    }
+    if (failed > 0 || skipped > 0 || normalizedStatus === 'partial') return 'partial';
+    return 'completed';
+  })();
+
+  const currentBatchNum =
+    shownBatch ?? (finishedBatches > 0 ? finishedBatches : active ? 1 : null);
+
+  const batchProgressText = (() => {
+    if (waiting) return 'Preparing';
+    if (allBatches != null && allBatches > 0) {
+      if (current.state === 'completed') {
+        return `${allBatches} of ${allBatches} batches`;
+      }
+      return `${currentBatchNum ?? 1} of ${allBatches} batches`;
+    }
+    if (shownBatch != null) {
+      return `Batch ${shownBatch}`;
+    }
+    if (finishedBatches > 0) {
+      return `${finishedBatches} batches`;
+    }
+    return null;
+  })();
+
+  const batchesFraction = (() => {
+    if (allBatches != null && allBatches > 0) {
+      if (current.state === 'completed') {
+        return `${allBatches}/${allBatches}`;
+      }
+      return `${currentBatchNum ?? 1}/${allBatches}`;
+    }
+    if (shownBatch != null) return `${shownBatch}`;
+    if (finishedBatches > 0) return `${finishedBatches}`;
+    return '—';
+  })();
+
   return (
     <Card
       size="sm"
@@ -786,67 +585,257 @@ export default function SyncRunProgress({
       aria-live={terminal ? 'off' : 'polite'}
       aria-label={current.title}
       data-variant={variant}
-      className={cn('gap-0 py-0', className)}
+      className={cn(
+        'gap-0 overflow-hidden border-border/70 py-0 shadow-none',
+        isCompact ? 'rounded-2xl' : 'rounded-3xl',
+        className,
+      )}
     >
-      <div className="space-y-2 p-3">
+      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+        {/* Header Part with Progress & Integrated Status */}
         <div
           data-slot="sync-summary-header"
+          onClick={handleHeaderClick}
           className={cn(
-            'flex min-w-0 flex-wrap items-start justify-between gap-2 max-sm:flex-col',
-            variant === 'compact' && 'flex-col',
+            'hover:bg-muted/20 cursor-pointer transition-colors',
+            'grid grid-cols-[1fr_auto] gap-3.5 p-4 sm:p-5',
+            'lg:flex lg:flex-row lg:items-center lg:justify-between lg:gap-4',
+            isCompact
+              ? 'lg:min-h-[92px] lg:px-4 lg:py-2.5'
+              : 'lg:min-h-[120px] lg:h-[130px] lg:px-6 lg:py-0',
           )}
         >
-          <SyncStatusHeader
-            state={current.state}
-            title={current.title}
-            badge={current.badge}
-            trigger={trigger}
-            subtitle={subtitle}
-            compact={variant === 'compact'}
+          {/* 1. Left: Status Icon, Header Title, Subtitle, and Pill Badges */}
+          <div className="col-start-1 row-start-1 flex min-w-0 items-center gap-3 sm:gap-3.5">
+            <SyncStatusIcon state={current.state} />
+            <div className="min-w-0">
+              <h2
+                className={cn(
+                  'font-bold text-foreground tracking-tight leading-tight',
+                  isCompact ? 'text-sm' : 'text-base sm:text-lg',
+                )}
+              >
+                {current.title}
+              </h2>
+              {direction && (
+                <p
+                  className="text-muted-foreground mt-0.5 truncate text-xs font-normal"
+                  title={direction}
+                >
+                  {direction}
+                </p>
+              )}
+              <div className="flex flex-wrap items-center gap-1.5 mt-1.5 sm:mt-2">
+                <StatusBadge status={badgeStatus} size="sm" />
+                {trigger && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/60 px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                    <span className="size-1.5 rounded-full bg-muted-foreground" />
+                    {trigger}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Vertical Separator */}
+          <div
+            className="hidden lg:block h-12 w-px bg-border/60 shrink-0 self-center mx-1"
+            aria-hidden="true"
           />
-          <SyncRunActions
-            state={current.state}
-            onStop={onStop}
-            onDismiss={handleDismiss}
-            onViewHistory={onViewHistory}
-            stopping={stopping}
+
+          {/* 2. Middle: Progress occupying available space */}
+          <div className="col-span-2 row-start-2 flex w-full flex-col justify-center gap-2 px-0.5 lg:col-span-1 lg:row-start-auto lg:min-w-[180px] lg:flex-1 lg:px-3">
+            <div className="flex min-w-0 items-center justify-between gap-3 text-xs">
+              <div className="min-w-0 truncate font-medium text-foreground">
+                {batchProgressText && <span>{batchProgressText}</span>}
+                {percent != null ? (
+                  <>
+                    {batchProgressText && (
+                      <span className="text-muted-foreground/60 mx-1.5 font-normal">
+                        ·
+                      </span>
+                    )}
+                    <span
+                      className={cn(
+                        'font-semibold',
+                        current.state === 'completed' && 'text-success',
+                        current.state === 'failed' && 'text-destructive',
+                        current.state === 'running' && 'text-primary',
+                        current.state === 'stopped' && 'text-warning',
+                      )}
+                    >
+                      {percent}% complete
+                    </span>
+                  </>
+                ) : (active || waiting) && !batchProgressText ? (
+                  <span className="font-semibold text-primary">In progress</span>
+                ) : null}
+              </div>
+
+              <span className="text-muted-foreground shrink-0 tabular-nums text-xs">
+                {processed.toLocaleString()}{' '}
+                {total != null && total > 0
+                  ? `of ${total.toLocaleString()} `
+                  : ''}
+                records processed
+              </span>
+            </div>
+
+            {percent == null ? (
+              <div
+                role="progressbar"
+                aria-label="Overall progress unknown"
+                className="bg-muted h-2 w-full overflow-hidden rounded-full"
+              >
+                {(active || waiting) && (
+                  <div className="bg-gradient-to-r from-primary to-success/70 h-full w-1/3 animate-pulse rounded-full" />
+                )}
+              </div>
+            ) : (
+              <div
+                role="progressbar"
+                aria-label="Overall progress"
+                aria-valuenow={percent}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                className="bg-muted h-2 w-full overflow-hidden rounded-full"
+              >
+                <div
+                  className={cn(
+                    'h-full rounded-full transition-all duration-300',
+                    current.state === 'failed'
+                      ? 'bg-destructive'
+                      : current.state === 'stopped'
+                        ? 'bg-warning'
+                        : 'bg-gradient-to-r from-primary to-success',
+                  )}
+                  style={{ width: `${percent}%` }}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* 3. Right-Middle: Two equal-height compact metric cards */}
+          <div className="col-span-2 row-start-3 grid grid-cols-2 gap-2.5 w-full sm:flex sm:w-auto sm:shrink-0 lg:col-span-1 lg:row-start-auto lg:gap-3">
+            {/* Card 1: Completion */}
+            <div className="bg-card border-border/70 flex h-14 sm:h-16 w-full sm:w-36 shrink-0 items-center gap-2.5 sm:gap-3 rounded-2xl border px-3 sm:px-3.5 py-2 transition-colors">
+              <span className="flex size-9 sm:size-10 shrink-0 items-center justify-center rounded-xl bg-success/10 text-success">
+                <BarChart3 className="size-4.5 sm:size-5" aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <strong className="block truncate text-sm font-bold tabular-nums text-foreground leading-tight">
+                  {percent != null ? `${percent}%` : '—'}
+                </strong>
+                <span className="text-muted-foreground block truncate text-xs leading-tight">
+                  Completion
+                </span>
+              </div>
+            </div>
+
+            {/* Card 2: Batches */}
+            <div className="bg-card border-border/70 flex h-14 sm:h-16 w-full sm:w-36 shrink-0 items-center gap-2.5 sm:gap-3 rounded-2xl border px-3 sm:px-3.5 py-2 transition-colors">
+              <span className="flex size-9 sm:size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <Layers className="size-4.5 sm:size-5" aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <strong className="block truncate text-sm font-bold tabular-nums text-foreground leading-tight">
+                  {batchesFraction}
+                </strong>
+                <span className="text-muted-foreground block truncate text-xs leading-tight">
+                  Batches
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Vertical Separator */}
+          <div
+            className="hidden xl:block h-12 w-px bg-border/60 shrink-0 self-center mx-1"
+            aria-hidden="true"
           />
+
+          {/* 4. Far Right: Actions & Collapsible Chevron */}
+          <div className="col-start-2 row-start-1 flex shrink-0 items-center gap-2 justify-self-end self-start sm:self-center">
+            {current.state === 'running' && onStop ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onStop();
+                }}
+                disabled={stopping}
+                className="border-destructive/30 text-destructive hover:bg-destructive/10 h-8 rounded-xl px-3 text-xs font-semibold"
+              >
+                {stopping ? (
+                  <Spinner className="size-3" />
+                ) : (
+                  <Square className="size-3" />
+                )}
+                {stopping ? 'Stopping…' : 'Stop sync'}
+              </Button>
+            ) : terminal ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDismiss();
+                }}
+                className="text-muted-foreground hover:text-foreground hover:bg-muted/60 h-8 rounded-xl px-3 text-xs font-semibold"
+              >
+                Close
+              </Button>
+            ) : null}
+
+            <CollapsibleTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label={isOpen ? 'Collapse' : 'Expand'}
+                className="bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground size-8.5 rounded-xl transition-colors"
+              >
+                <ChevronDown
+                  className={cn(
+                    'size-4 transition-transform duration-200',
+                    isOpen && 'rotate-180',
+                  )}
+                />
+              </Button>
+            </CollapsibleTrigger>
+          </div>
         </div>
-        <div className="bg-muted/30 rounded-3xl border p-2">
-          <SyncProgressBars
-            state={current.state}
-            processed={processed}
-            total={total}
-            completedBatches={batch}
-            currentBatch={activeBatch}
-            batchProcessed={batchDone}
-            batchTotal={batchSize}
-            totalBatches={allBatches}
-            note={note}
-            compact={variant === 'compact'}
-          />
-        </div>
-        <SyncStats
-          values={[processed, created, updated, skipped, failed]}
-          compact={variant === 'compact'}
-        />
-        <SyncIssueBanner
-          state={current.state}
-          failed={failed}
-          skipped={skipped}
-          errorMessage={errorMessage}
-          onViewHistory={onViewHistory}
-        />
-        <footer>
-          <SyncRunMeta
-            state={current.state}
-            startedAt={startedAt}
-            finishedAt={finishedAt}
-            elapsed={elapsed}
-            compact={variant === 'compact'}
-          />
-        </footer>
-      </div>
+
+        {/* Collapsible Content Area */}
+        <CollapsibleContent>
+          <div
+            className={cn(
+              'border-border/60 bg-muted/15 border-t space-y-3.5',
+              isCompact ? 'p-3' : 'px-5 py-4 sm:px-6',
+            )}
+          >
+            {/* Stat Cards Grid (Responsive Wrap) */}
+            <SyncStats
+              values={[processed, created, updated, skipped, failed]}
+            />
+
+            {/* Footer Metadata */}
+            <footer className="border-border/60 border-t pt-3">
+              <SyncRunMeta
+                state={current.state}
+                startedAt={startedAt}
+                finishedAt={finishedAt}
+                elapsed={elapsed}
+                errorMessage={errorMessage}
+                failed={failed}
+                skipped={skipped}
+                etaSeconds={etaSeconds}
+              />
+            </footer>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
     </Card>
   );
 }
