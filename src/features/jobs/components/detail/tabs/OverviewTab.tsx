@@ -295,6 +295,7 @@ export default function OverviewTab() {
         destinationLabel={summaryRun?.destObject ?? job.destObject}
         errorMessage={summaryRun?.errorMessage}
         onStop={summaryRunning ? () => void handleStop() : undefined}
+        onViewHistory={() => handleTabChange('run-history')}
         stopping={stopping}
       />
     ) : null;
@@ -350,7 +351,7 @@ export default function OverviewTab() {
           </CardAction>
         </CardHeader>
 
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
           {/* Sync progress — appears right after header on sync */}
           {!manualDialogOpen && progress}
 

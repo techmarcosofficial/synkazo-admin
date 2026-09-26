@@ -45,6 +45,7 @@ interface ConnectionStepProps {
   nextRequired: boolean;
   last?: boolean;
   isTesting?: boolean;
+  onFix?: () => void;
   children: ReactNode;
 }
 
@@ -57,8 +58,10 @@ function ConnectionStep({
   nextRequired,
   last = false,
   isTesting = false,
+  onFix,
   children,
 }: ConnectionStepProps) {
+  const isError = !complete && hasConnection;
   const status = complete
     ? 'connected'
     : hasConnection
@@ -115,7 +118,15 @@ function ConnectionStep({
               {description}
             </p>
           </div>
-          <StatusBadge status={isTesting ? 'in_progress' : status} size="sm" />
+          <StatusBadge
+            status={isTesting ? 'in_progress' : status}
+            action={
+              !isTesting && isError && onFix
+                ? { label: 'Fix', onClick: onFix }
+                : undefined
+            }
+            size="sm"
+          />
         </div>
 
         <Separator />
@@ -244,6 +255,7 @@ export default function ConnectionBoard({
           hasConnection={Boolean(sourceConn)}
           nextRequired={nextRequired === 'source'}
           isTesting={testingSource}
+          onFix={sourceConn ? () => openConnect(sourceConn) : undefined}
         >
           {sourcePlatformId ? (
             <PlatformCard
@@ -266,6 +278,7 @@ export default function ConnectionBoard({
           hasConnection={Boolean(destConn)}
           nextRequired={nextRequired === 'destination'}
           isTesting={testingDest}
+          onFix={destConn ? () => openConnect(destConn) : undefined}
           last
         >
           {destPlatformId ? (

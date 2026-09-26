@@ -1,4 +1,4 @@
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, XIcon } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
 import { ChoiceCardItem } from '@/components/form/ChoiceCard';
@@ -170,28 +170,48 @@ export default function StartSyncModal(props: StartSyncModalProps) {
 
   return (
     <Dialog open onOpenChange={(open) => !open && props.onClose()}>
-      <DialogContent size="md" className="flex max-h-[85vh] flex-col">
-        <DialogHeader>
-          <div className="flex items-center justify-between gap-3 pr-6">
-            <DialogTitle>Run manually</DialogTitle>
-            {props.environment && (
-              <StatusBadge
-                status={props.environment}
-                label={isSandbox ? 'Sandbox (Test Mode)' : 'Production (Live)'}
-                title={
-                  isSandbox
-                    ? 'Operating in Sandbox — Live customer data is not affected'
-                    : 'Live Production Sync active'
-                }
-                size="sm"
-              />
-            )}
+      <DialogContent
+        size="md"
+        showCloseButton={false}
+        className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0 rounded-4xl"
+      >
+        <DialogHeader className="shrink-0 flex-row items-center justify-between gap-4 border-b px-6 py-4">
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <div className="flex items-center gap-2.5">
+              <DialogTitle className="text-base font-semibold leading-tight">
+                Run manually
+              </DialogTitle>
+              {props.environment && (
+                <StatusBadge
+                  status={props.environment}
+                  label={
+                    isSandbox ? 'Sandbox (Test Mode)' : 'Production (Live)'
+                  }
+                  title={
+                    isSandbox
+                      ? 'Operating in Sandbox — Live customer data is not affected'
+                      : 'Live Production Sync active'
+                  }
+                  size="sm"
+                />
+              )}
+            </div>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Sync data now without changing the automatic schedule.
+            </DialogDescription>
           </div>
-          <DialogDescription>
-            Sync data now without changing the automatic schedule.
-          </DialogDescription>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="bg-secondary shrink-0"
+            onClick={props.onClose}
+          >
+            <XIcon />
+            <span className="sr-only">Close</span>
+          </Button>
         </DialogHeader>
-        <div className="overflow-y-auto">
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
           <ManualSyncContent {...props} />
         </div>
       </DialogContent>

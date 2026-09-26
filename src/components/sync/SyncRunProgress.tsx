@@ -1,9 +1,11 @@
 import {
+  ArrowRight,
   CheckCircle2,
   ChevronDown,
   CircleStop,
   Clock3,
   Database,
+  Info,
   Pencil,
   Plus,
   RefreshCw,
@@ -53,6 +55,7 @@ export interface SyncRunProgressProps {
   errorMessage?: string | null;
   onStop?: () => void;
   onDismiss?: () => void;
+  onViewHistory?: () => void;
   stopping?: boolean;
   variant?: 'default' | 'compact';
   defaultOpen?: boolean;
@@ -265,98 +268,103 @@ function SyncStats({
 }) {
   const stats: {
     label: string;
+    description: string;
     icon: LucideIcon;
     color: string;
     iconColor: string;
-    iconBg: string;
   }[] = [
     {
       label: 'Processed',
+      description: 'Records processed',
       icon: Database,
       color: 'text-foreground',
       iconColor: 'text-muted-foreground',
-      iconBg: 'bg-muted',
     },
     {
       label: 'Created',
+      description: 'New records added',
       icon: Plus,
       color: 'text-foreground',
       iconColor: 'text-success',
-      iconBg: 'bg-success/10',
     },
     {
       label: 'Updated',
+      description: 'Existing updated',
       icon: Pencil,
       color: 'text-foreground',
       iconColor: 'text-info',
-      iconBg: 'bg-info/10',
     },
     {
       label: 'Skipped',
+      description: 'Unchanged / skipped',
       icon: SkipForward,
       color: 'text-muted-foreground',
       iconColor: 'text-muted-foreground',
-      iconBg: 'bg-muted',
     },
     {
       label: 'Failed',
+      description: 'Failed with errors',
       icon: TriangleAlert,
       color: values[4] > 0 ? 'text-destructive' : 'text-muted-foreground',
-      iconColor: 'text-destructive',
-      iconBg: 'bg-destructive/10',
+      iconColor: values[4] > 0 ? 'text-destructive' : 'text-muted-foreground',
     },
   ];
 
   return (
     <div
       className={cn(
-        'grid gap-2',
+        'grid border-b border-border/60',
         compact
           ? 'grid-cols-2 sm:grid-cols-3'
-          : 'grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5',
+          : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5',
       )}
       aria-label="Record statistics"
     >
-      {stats.map(({ label, icon: Icon, color, iconColor, iconBg }, index) => (
-        <div
-          key={label}
-          className={cn(
-            'bg-card border-border/60 hover:border-border/90 flex min-w-0 items-center border transition-all',
-            compact
-              ? 'gap-2 rounded-lg px-2.5 py-1.5'
-              : 'gap-2.5 rounded-xl px-3 py-2',
-          )}
-        >
-          <span
+      {stats.map(
+        ({ label, description, icon: Icon, color, iconColor }, index) => (
+          <div
+            key={label}
             className={cn(
-              'flex shrink-0 items-center justify-center',
-              compact ? 'size-6.5 rounded-md' : 'size-7.5 rounded-lg',
-              iconBg,
-              iconColor,
+              'flex min-w-0 items-center gap-3 transition-colors',
+              compact ? 'px-3 py-2' : 'px-3.5 py-2.5 sm:px-4 sm:py-3',
+              // Separator borders matching SyncJobCard pattern
+              index % 2 === 1 && 'border-l sm:border-l-0',
+              index >= 2 && 'border-t sm:border-t-0',
+              index > 0 && 'sm:border-l border-border/60',
             )}
           >
-            <Icon
-              className={compact ? 'size-3' : 'size-3.5'}
-              aria-hidden="true"
-            />
-          </span>
-          <div className="min-w-0 flex-1">
-            <span className="text-muted-foreground block text-[11px] leading-none">
-              {label}
-            </span>
-            <strong
+            <span
               className={cn(
-                'mt-1 block truncate leading-tight font-semibold tabular-nums',
-                compact ? 'text-xs sm:text-sm' : 'text-sm',
-                color,
+                'bg-card text-card-foreground flex shrink-0 items-center justify-center rounded-xl shadow-2xs border border-border/40',
+                compact ? 'size-7 rounded-lg' : 'size-8.5 rounded-xl',
               )}
-              title={values[index].toLocaleString()}
             >
-              {values[index].toLocaleString()}
-            </strong>
+              <Icon
+                className={cn(compact ? 'size-3' : 'size-3.5', iconColor)}
+                aria-hidden="true"
+              />
+            </span>
+            <div className="min-w-0">
+              <strong
+                className={cn(
+                  'block truncate leading-tight font-bold tracking-tight tabular-nums',
+                  compact ? 'text-sm' : 'text-base',
+                  color,
+                )}
+                title={values[index].toLocaleString()}
+              >
+                {values[index].toLocaleString()}
+              </strong>
+              <span className="text-muted-foreground block truncate text-xs font-medium mt-0.5">
+                {label}
+              </span>
+              <span className="text-muted-foreground block truncate text-[11px] mt-0.5">
+                {description}
+              </span>
+            </div>
           </div>
-        </div>
-      ))}
+        ),
+      )}
     </div>
   );
 }
@@ -382,6 +390,7 @@ function SyncRunMeta({
   startedAt,
   finishedAt,
   elapsed,
+  triggeredBy,
   errorMessage,
   failed,
   skipped,
@@ -391,11 +400,13 @@ function SyncRunMeta({
   startedAt?: string | null;
   finishedAt?: string | null;
   elapsed: number | null;
+  triggeredBy?: string | null;
   errorMessage?: string | null;
   failed: number;
   skipped: number;
   etaSeconds?: number | null;
 }) {
+  const trigger = triggerLabel(triggeredBy);
   const issue =
     state === 'failed' || state === 'stopped'
       ? errorMessage
@@ -423,6 +434,13 @@ function SyncRunMeta({
       <MetaItem label="Duration">
         {elapsed == null ? '—' : formatDuration(elapsed)}
       </MetaItem>
+
+      {trigger && (
+        <>
+          <Separator orientation="vertical" />
+          <MetaItem label="Sync type">{trigger}</MetaItem>
+        </>
+      )}
 
       {state === 'running' &&
         etaSeconds != null &&
@@ -471,6 +489,7 @@ export default function SyncRunProgress({
   errorMessage,
   onStop,
   onDismiss,
+  onViewHistory,
   stopping = false,
   variant = 'default',
   defaultOpen = false,
@@ -633,284 +652,454 @@ export default function SyncRunProgress({
     >
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         {/* Header Part with Progress & Integrated Status */}
+        {/* Header Part with Progress & Integrated Status */}
         <div
           data-slot="sync-summary-header"
           onClick={handleHeaderClick}
           className={cn(
-            'group/header hover:bg-muted/20 flex cursor-pointer flex-col gap-3 p-3 transition-colors sm:p-3.5 lg:flex-row lg:items-center lg:justify-between lg:gap-4',
-            isCompact ? 'gap-2.5 p-2.5 sm:p-3' : 'px-4 py-3',
+            'group/header hover:bg-muted/20 flex cursor-pointer flex-col gap-3 transition-colors',
+            isCompact
+              ? 'p-3 gap-2.5'
+              : 'p-3.5 px-4 py-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4',
           )}
         >
-          {/* 1. Left: Status Icon, Title, Direction, and Badges */}
-          <div className="flex min-w-0 items-center gap-3 shrink-0 lg:max-w-[280px] xl:max-w-[320px]">
-            <SyncStatusIcon state={current.state} compact={isCompact} />
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h2
-                  className={cn(
-                    'text-foreground leading-tight font-semibold tracking-tight truncate',
-                    isCompact ? 'text-xs sm:text-sm' : 'text-sm',
-                  )}
-                >
-                  {current.title}
-                </h2>
-                <StatusBadge status={badgeStatus} size="sm" />
-              </div>
-              <div className="flex items-center gap-2 mt-0.5">
-                {direction && (
-                  <p
-                    className={cn(
-                      'text-muted-foreground truncate font-normal',
-                      isCompact ? 'text-[11px]' : 'text-xs',
+          {isCompact ? (
+            /* ============================================================ */
+            /* COMPACT / MODAL LAYOUT: Clean stacked rows without squishing */
+            /* ============================================================ */
+            <div className="flex flex-col gap-2.5 w-full min-w-0">
+              {/* Row 1: Status Icon + Title + Direction & Stop/Dismiss/Chevron on right */}
+              <div className="flex items-center justify-between gap-2 min-w-0 w-full">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <SyncStatusIcon state={current.state} compact={true} />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <h2 className="text-foreground leading-tight font-semibold tracking-tight text-xs sm:text-sm truncate">
+                        {current.title}
+                      </h2>
+                      <StatusBadge status={badgeStatus} size="sm" />
+                    </div>
+                    {direction && (
+                      <p
+                        className="text-muted-foreground mt-0.5 truncate font-normal text-[11px]"
+                        title={direction}
+                      >
+                        {direction}
+                      </p>
                     )}
-                    title={direction}
-                  >
-                    {direction}
-                  </p>
-                )}
-                {trigger && (
-                  <span
-                    className={cn(
-                      'border-border bg-muted/60 text-muted-foreground inline-flex items-center gap-1 rounded-full border font-medium shrink-0',
-                      isCompact
-                        ? 'px-1.5 py-0 text-[10px]'
-                        : 'px-2 py-0 text-[11px]',
-                    )}
-                  >
-                    <span className="bg-muted-foreground size-1 rounded-full" />
-                    {trigger}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
+                  </div>
+                </div>
 
-          {/* 2. Middle: Progress occupying available space */}
-          <div
-            className={cn(
-              'flex min-w-0 flex-1 flex-col justify-center gap-1.5',
-              isCompact ? 'gap-1' : 'lg:px-2',
-            )}
-          >
-            <div
-              className={cn(
-                'flex min-w-0 items-center justify-between gap-2 text-xs',
-                isCompact && 'text-[11px]',
-              )}
-            >
-              <div className="text-foreground min-w-0 truncate font-medium">
-                {batchProgressText && <span>{batchProgressText}</span>}
-                {percent != null ? (
-                  <>
-                    {batchProgressText && (
-                      <span className="text-muted-foreground/60 mx-1.5 font-normal">
-                        ·
-                      </span>
-                    )}
-                    <span
-                      className={cn(
-                        'font-semibold',
-                        current.state === 'completed' && 'text-success',
-                        current.state === 'failed' && 'text-destructive',
-                        current.state === 'running' && 'text-primary',
-                        current.state === 'stopped' && 'text-warning',
-                      )}
+                {/* Right side actions in compact header */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {current.state === 'running' && onStop ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onStop();
+                      }}
+                      disabled={stopping}
+                      className="border-destructive/30 text-destructive hover:bg-destructive/10 font-semibold h-6.5 rounded-lg px-2 text-[11px]"
                     >
-                      {percent}% complete
-                    </span>
-                  </>
-                ) : (active || waiting) && !batchProgressText ? (
-                  <span className="text-primary font-semibold">
-                    In progress
+                      {stopping ? (
+                        <Spinner className="size-2.5" />
+                      ) : (
+                        <Square className="size-2.5" />
+                      )}
+                      {stopping ? 'Stopping…' : 'Stop sync'}
+                    </Button>
+                  ) : terminal ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDismiss();
+                      }}
+                      className="text-muted-foreground hover:text-foreground hover:bg-muted/60 font-medium h-6.5 rounded-lg px-2 text-[11px]"
+                    >
+                      Close
+                    </Button>
+                  ) : null}
+
+                  <CollapsibleTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={isOpen ? 'Collapse' : 'Expand'}
+                      className="text-muted-foreground hover:text-foreground hover:bg-muted/60 size-6.5 rounded-lg transition-colors"
+                    >
+                      <ChevronDown
+                        className={cn(
+                          'size-3.5 transition-transform duration-200',
+                          isOpen && 'rotate-180',
+                        )}
+                      />
+                    </Button>
+                  </CollapsibleTrigger>
+                </div>
+              </div>
+
+              {/* Row 2: Progress Bar & Status Text */}
+              <div className="space-y-1 w-full min-w-0">
+                <div className="flex items-center justify-between gap-2 text-[11px]">
+                  <div className="text-foreground font-medium truncate">
+                    {batchProgressText && <span>{batchProgressText}</span>}
+                    {percent != null ? (
+                      <>
+                        {batchProgressText && (
+                          <span className="text-muted-foreground/60 mx-1.5 font-normal">
+                            ·
+                          </span>
+                        )}
+                        <span
+                          className={cn(
+                            'font-semibold',
+                            current.state === 'completed' && 'text-success',
+                            current.state === 'failed' && 'text-destructive',
+                            current.state === 'running' && 'text-primary',
+                            current.state === 'stopped' && 'text-warning',
+                          )}
+                        >
+                          {percent}% complete
+                        </span>
+                      </>
+                    ) : (active || waiting) && !batchProgressText ? (
+                      <span className="text-primary font-semibold">
+                        In progress
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <span className="text-muted-foreground shrink-0 tabular-nums">
+                    {processed.toLocaleString()}{' '}
+                    {total != null && total > 0
+                      ? `of ${total.toLocaleString()} `
+                      : ''}
+                    records
                   </span>
-                ) : null}
-              </div>
+                </div>
 
-              <span className="text-muted-foreground shrink-0 tabular-nums">
-                {processed.toLocaleString()}{' '}
-                {total != null && total > 0
-                  ? `of ${total.toLocaleString()} `
-                  : ''}
-                records processed
-              </span>
-            </div>
-
-            {percent == null ? (
-              <div
-                role="progressbar"
-                aria-label="Overall progress unknown"
-                className={cn(
-                  'bg-muted w-full overflow-hidden rounded-full',
-                  isCompact ? 'h-1.5' : 'h-1.5 sm:h-2',
-                )}
-              >
-                {(active || waiting) && (
-                  <div className="bg-primary/60 h-full w-1/3 animate-pulse rounded-full" />
-                )}
-              </div>
-            ) : (
-              <div
-                role="progressbar"
-                aria-label="Overall progress"
-                aria-valuenow={percent}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                className={cn(
-                  'bg-muted w-full overflow-hidden rounded-full',
-                  isCompact ? 'h-1.5' : 'h-1.5 sm:h-2',
-                )}
-              >
-                <div
-                  className={cn(
-                    'h-full rounded-full transition-all duration-300',
-                    current.state === 'failed'
-                      ? 'bg-destructive'
-                      : current.state === 'stopped'
-                        ? 'bg-warning'
-                        : current.state === 'completed'
-                          ? 'bg-success'
-                          : 'bg-primary',
-                  )}
-                  style={{ width: `${percent}%` }}
-                />
-              </div>
-            )}
-          </div>
-
-          {/* 3. Right: Metrics & Actions */}
-          <div className="flex shrink-0 items-center justify-between sm:justify-end gap-2 sm:gap-2.5">
-            {/* Metric Chips */}
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              {/* Chip 1: Completion */}
-              <div
-                className={cn(
-                  'bg-muted/40 border-border/60 flex shrink-0 items-center gap-1.5 rounded-lg border px-2 py-1 transition-colors',
-                  isCompact && 'px-1.5 py-0.5 text-[11px]',
-                )}
-              >
-                <span className="text-muted-foreground text-[11px]">
-                  Completion
-                </span>
-                <strong
-                  className={cn(
-                    'text-foreground block truncate leading-tight font-semibold tabular-nums',
-                    isCompact ? 'text-[11px]' : 'text-xs',
-                  )}
-                >
-                  {percent != null ? `${percent}%` : '—'}
-                </strong>
-              </div>
-
-              {/* Chip 2: Batches */}
-              <div
-                className={cn(
-                  'bg-muted/40 border-border/60 flex shrink-0 items-center gap-1.5 rounded-lg border px-2 py-1 transition-colors',
-                  isCompact && 'px-1.5 py-0.5 text-[11px]',
-                )}
-              >
-                <span className="text-muted-foreground text-[11px]">
-                  Batches
-                </span>
-                <strong
-                  className={cn(
-                    'text-foreground block truncate leading-tight font-semibold tabular-nums',
-                    isCompact ? 'text-[11px]' : 'text-xs',
-                  )}
-                >
-                  {batchesFraction}
-                </strong>
-              </div>
-            </div>
-
-            {/* Actions: Stop or Close */}
-            {current.state === 'running' && onStop ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onStop();
-                }}
-                disabled={stopping}
-                className={cn(
-                  'border-destructive/30 text-destructive hover:bg-destructive/10 font-semibold',
-                  isCompact
-                    ? 'h-7 rounded-lg px-2 text-xs'
-                    : 'h-7.5 rounded-xl px-2.5 text-xs',
-                )}
-              >
-                {stopping ? (
-                  <Spinner className="size-3" />
+                {percent == null ? (
+                  <div
+                    role="progressbar"
+                    aria-label="Overall progress unknown"
+                    className="bg-muted w-full overflow-hidden rounded-full h-1.5"
+                  >
+                    {(active || waiting) && (
+                      <div className="bg-primary/60 h-full w-1/3 animate-pulse rounded-full" />
+                    )}
+                  </div>
                 ) : (
-                  <Square className="size-3" />
+                  <div
+                    role="progressbar"
+                    aria-label="Overall progress"
+                    aria-valuenow={percent}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    className="bg-muted w-full overflow-hidden rounded-full h-1.5"
+                  >
+                    <div
+                      className={cn(
+                        'h-full rounded-full transition-all duration-300',
+                        current.state === 'failed'
+                          ? 'bg-destructive'
+                          : current.state === 'stopped'
+                            ? 'bg-warning'
+                            : current.state === 'completed'
+                              ? 'bg-success'
+                              : 'bg-primary',
+                      )}
+                      style={{ width: `${percent}%` }}
+                    />
+                  </div>
                 )}
-                {stopping ? 'Stopping…' : 'Stop sync'}
-              </Button>
-            ) : terminal ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDismiss();
-                }}
-                className={cn(
-                  'text-muted-foreground hover:text-foreground hover:bg-muted/60 font-medium',
-                  isCompact
-                    ? 'h-7 rounded-lg px-2 text-xs'
-                    : 'h-7.5 rounded-xl px-2.5 text-xs',
-                )}
-              >
-                Close
-              </Button>
-            ) : null}
+              </div>
 
-            {/* Collapsible Trigger Chevron */}
-            <CollapsibleTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label={isOpen ? 'Collapse' : 'Expand'}
-                className="text-muted-foreground hover:text-foreground hover:bg-muted/60 size-7.5 rounded-lg transition-colors"
-              >
-                <ChevronDown
-                  className={cn(
-                    'size-4 transition-transform duration-200',
-                    isOpen && 'rotate-180',
+              {/* Row 3: Metric Chips */}
+              <div className="flex items-center gap-1.5">
+                <div className="bg-muted/40 border-border/60 flex shrink-0 items-center gap-1.5 rounded-lg border px-2 py-0.5 text-[11px]">
+                  <span className="text-muted-foreground text-[10px]">
+                    Completion
+                  </span>
+                  <strong className="text-foreground font-semibold tabular-nums text-[11px]">
+                    {percent != null ? `${percent}%` : '—'}
+                  </strong>
+                </div>
+                <div className="bg-muted/40 border-border/60 flex shrink-0 items-center gap-1.5 rounded-lg border px-2 py-0.5 text-[11px]">
+                  <span className="text-muted-foreground text-[10px]">
+                    Batches
+                  </span>
+                  <strong className="text-foreground font-semibold tabular-nums text-[11px]">
+                    {batchesFraction}
+                  </strong>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* ============================================================ */
+            /* FULL WIDE LAYOUT (Default card in overview / page views)     */
+            /* ============================================================ */
+            <>
+              {/* 1. Left: Status Icon, Title, Direction, and Badges */}
+              <div className="flex min-w-0 items-center gap-3 shrink-0 lg:max-w-[280px] xl:max-w-[320px]">
+                <SyncStatusIcon state={current.state} compact={false} />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-foreground leading-tight font-semibold tracking-tight text-sm truncate">
+                      {current.title}
+                    </h2>
+                    <StatusBadge status={badgeStatus} size="sm" />
+                  </div>
+                  {direction && (
+                    <p
+                      className="text-muted-foreground mt-0.5 truncate font-normal text-xs"
+                      title={direction}
+                    >
+                      {direction}
+                    </p>
                   )}
-                />
-              </Button>
-            </CollapsibleTrigger>
-          </div>
+                </div>
+              </div>
+
+              {/* 2. Middle: Progress occupying available space */}
+              <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5 lg:px-2">
+                <div className="flex min-w-0 items-center justify-between gap-2 text-xs">
+                  <div className="text-foreground min-w-0 truncate font-medium">
+                    {batchProgressText && <span>{batchProgressText}</span>}
+                    {percent != null ? (
+                      <>
+                        {batchProgressText && (
+                          <span className="text-muted-foreground/60 mx-1.5 font-normal">
+                            ·
+                          </span>
+                        )}
+                        <span
+                          className={cn(
+                            'font-semibold',
+                            current.state === 'completed' && 'text-success',
+                            current.state === 'failed' && 'text-destructive',
+                            current.state === 'running' && 'text-primary',
+                            current.state === 'stopped' && 'text-warning',
+                          )}
+                        >
+                          {percent}% complete
+                        </span>
+                      </>
+                    ) : (active || waiting) && !batchProgressText ? (
+                      <span className="text-primary font-semibold">
+                        In progress
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <span className="text-muted-foreground shrink-0 tabular-nums">
+                    {processed.toLocaleString()}{' '}
+                    {total != null && total > 0
+                      ? `of ${total.toLocaleString()} `
+                      : ''}
+                    records processed
+                  </span>
+                </div>
+
+                {percent == null ? (
+                  <div
+                    role="progressbar"
+                    aria-label="Overall progress unknown"
+                    className="bg-muted w-full overflow-hidden rounded-full h-1.5 sm:h-2"
+                  >
+                    {(active || waiting) && (
+                      <div className="bg-primary/60 h-full w-1/3 animate-pulse rounded-full" />
+                    )}
+                  </div>
+                ) : (
+                  <div
+                    role="progressbar"
+                    aria-label="Overall progress"
+                    aria-valuenow={percent}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    className="bg-muted w-full overflow-hidden rounded-full h-1.5 sm:h-2"
+                  >
+                    <div
+                      className={cn(
+                        'h-full rounded-full transition-all duration-300',
+                        current.state === 'failed'
+                          ? 'bg-destructive'
+                          : current.state === 'stopped'
+                            ? 'bg-warning'
+                            : current.state === 'completed'
+                              ? 'bg-success'
+                              : 'bg-primary',
+                      )}
+                      style={{ width: `${percent}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* 3. Right: Metrics & Actions */}
+              <div className="flex shrink-0 items-center justify-between sm:justify-end gap-2 sm:gap-2.5">
+                {/* Metric Chips */}
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  {/* Chip 1: Completion */}
+                  <div className="bg-muted/40 border-border/60 flex shrink-0 items-center gap-1.5 rounded-lg border px-2 py-1 transition-colors">
+                    <span className="text-muted-foreground text-[11px]">
+                      Completion
+                    </span>
+                    <strong className="text-foreground block truncate leading-tight font-semibold tabular-nums text-xs">
+                      {percent != null ? `${percent}%` : '—'}
+                    </strong>
+                  </div>
+
+                  {/* Chip 2: Batches */}
+                  <div className="bg-muted/40 border-border/60 flex shrink-0 items-center gap-1.5 rounded-lg border px-2 py-1 transition-colors">
+                    <span className="text-muted-foreground text-[11px]">
+                      Batches
+                    </span>
+                    <strong className="text-foreground block truncate leading-tight font-semibold tabular-nums text-xs">
+                      {batchesFraction}
+                    </strong>
+                  </div>
+                </div>
+
+                {/* Actions: Stop or Close */}
+                {current.state === 'running' && onStop ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onStop();
+                    }}
+                    disabled={stopping}
+                    className="border-destructive/30 text-destructive hover:bg-destructive/10 font-semibold h-7.5 rounded-xl px-2.5 text-xs"
+                  >
+                    {stopping ? (
+                      <Spinner className="size-3" />
+                    ) : (
+                      <Square className="size-3" />
+                    )}
+                    {stopping ? 'Stopping…' : 'Stop sync'}
+                  </Button>
+                ) : terminal ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDismiss();
+                    }}
+                    className="text-muted-foreground hover:text-foreground hover:bg-muted/60 font-medium h-7.5 rounded-xl px-2.5 text-xs"
+                  >
+                    Close
+                  </Button>
+                ) : null}
+
+                {/* Collapsible Trigger Chevron */}
+                <CollapsibleTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={isOpen ? 'Collapse' : 'Expand'}
+                    className="text-muted-foreground hover:text-foreground hover:bg-muted/60 size-7.5 rounded-lg transition-colors"
+                  >
+                    <ChevronDown
+                      className={cn(
+                        'size-4 transition-transform duration-200',
+                        isOpen && 'rotate-180',
+                      )}
+                    />
+                  </Button>
+                </CollapsibleTrigger>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Collapsible Content Area */}
         <CollapsibleContent>
-          <div
-            className={cn(
-              'bg-muted/40 border-t border-border/70 space-y-3',
-              isCompact ? 'p-2.5 sm:p-3' : 'p-3.5 sm:p-4',
-            )}
-          >
-            {/* Stat Cards Grid */}
+          <div className="bg-muted/40 border-t border-border/70">
+            {/* 1. Separator-based Stat Metrics Grid */}
             <SyncStats
               values={[processed, created, updated, skipped, failed]}
               compact={isCompact}
             />
 
-            {/* Footer Metadata */}
-            <footer className="border-t border-border/50 pt-2.5">
+            {/* 2. Metadata and Action Guidance Footer */}
+            <footer
+              className={cn(
+                'space-y-2.5 bg-muted/60',
+                isCompact ? 'p-2.5 sm:p-3' : 'px-4 py-3 sm:px-5',
+              )}
+            >
+              {/* Metadata items row */}
               <SyncRunMeta
                 state={current.state}
                 startedAt={startedAt}
                 finishedAt={finishedAt}
                 elapsed={elapsed}
+                triggeredBy={triggeredBy}
                 errorMessage={errorMessage}
                 failed={failed}
                 skipped={skipped}
                 etaSeconds={etaSeconds}
               />
+
+              {/* Edge Case Guidance Banner & Sync History Navigation */}
+              {terminal && onViewHistory && (
+                <div className="border-t border-border/50 pt-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-2 text-muted-foreground min-w-0">
+                    {current.state === 'failed' ? (
+                      <TriangleAlert
+                        className="size-3.5 shrink-0 text-destructive"
+                        aria-hidden="true"
+                      />
+                    ) : current.state === 'stopped' ? (
+                      <CircleStop
+                        className="size-3.5 shrink-0 text-warning"
+                        aria-hidden="true"
+                      />
+                    ) : failed > 0 ? (
+                      <TriangleAlert
+                        className="size-3.5 shrink-0 text-warning"
+                        aria-hidden="true"
+                      />
+                    ) : (
+                      <CheckCircle2
+                        className="size-3.5 shrink-0 text-success"
+                        aria-hidden="true"
+                      />
+                    )}
+                    <span className="truncate">
+                      {current.state === 'failed'
+                        ? 'Run failed. Check detailed error trace and payload logs.'
+                        : current.state === 'stopped'
+                          ? 'Run was stopped. Review captured progress and logs.'
+                          : failed > 0
+                            ? `${failed.toLocaleString()} records had errors. Review failed record logs.`
+                            : 'Sync run completed. View full execution log and audit trail.'}
+                    </span>
+                  </div>
+
+                  <Button
+                    variant="link"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onViewHistory();
+                    }}
+                    className="h-auto p-0 text-xs font-medium text-primary hover:underline shrink-0 self-start sm:self-auto inline-flex items-center gap-1"
+                  >
+                    View in Sync History
+                    <ArrowRight className="size-3" aria-hidden="true" />
+                  </Button>
+                </div>
+              )}
             </footer>
           </div>
         </CollapsibleContent>

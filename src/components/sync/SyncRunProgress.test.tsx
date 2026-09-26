@@ -230,4 +230,24 @@ describe('SyncRunProgress', () => {
     expect(screen.getByRole('button', { name: 'Collapse' })).toBeInTheDocument();
     expect(screen.getByLabelText('Record statistics')).toBeInTheDocument();
   });
+
+  it('triggers onViewHistory when clicking the action link on completed runs', () => {
+    const onViewHistory = vi.fn();
+    render(
+      <SyncRunProgress
+        status="completed"
+        totalRecords={50}
+        processedRecords={50}
+        defaultOpen={true}
+        onViewHistory={onViewHistory}
+      />,
+    );
+
+    const historyLink = screen.getByRole('button', {
+      name: /View in Sync History/i,
+    });
+    expect(historyLink).toBeInTheDocument();
+    fireEvent.click(historyLink);
+    expect(onViewHistory).toHaveBeenCalledOnce();
+  });
 });

@@ -188,6 +188,10 @@ interface StatusBadgeProps {
   variant?: Variant;
   showDescription?: boolean;
   className?: string;
+  action?: {
+    label: string;
+    onClick: () => void;
+  };
 }
 
 export default function StatusBadge({
@@ -198,6 +202,7 @@ export default function StatusBadge({
   variant = 'default',
   showDescription = false,
   className,
+  action,
 }: StatusBadgeProps) {
   const cfg = STATUS_CONFIG[status] ?? {
     tone: 'muted' as Tone,
@@ -205,6 +210,43 @@ export default function StatusBadge({
   };
   const label = customLabel ?? cfg.label;
   const Icon = cfg.icon;
+
+  if (action) {
+    return (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          action.onClick();
+        }}
+        title={title ?? `${label} - Click to ${action.label.toLowerCase()}`}
+        className={cn(
+          'inline-flex items-center rounded-full font-semibold transition-colors cursor-pointer border border-transparent bg-muted text-muted-foreground hover:bg-muted/80',
+          size === 'xs' && 'h-4 px-1.5 text-[10px] gap-1',
+          size === 'sm' && 'h-5 px-2 text-xs gap-1.5',
+          size === 'md' && 'h-6 px-2.5 text-sm gap-1.5',
+          size === 'lg' && 'h-7 px-3 text-sm gap-2',
+          size === 'default' && 'h-5 px-2 text-xs gap-1.5',
+          className,
+        )}
+      >
+        {Icon ? (
+          <Icon aria-hidden="true" />
+        ) : (
+          <span
+            className={statusDot({
+              tone: cfg.tone,
+              size,
+            })}
+          />
+        )}
+        <span>{label}</span>
+        <span className="lowercase text-destructive underline underline-offset-2 font-semibold hover:opacity-80">
+          {action.label}
+        </span>
+      </button>
+    );
+  }
 
   if (variant === 'menu') {
     return (

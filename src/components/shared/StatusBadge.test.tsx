@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import StatusBadge from '@/components/shared/StatusBadge';
 
@@ -36,5 +36,20 @@ describe('StatusBadge', () => {
       'title',
       'Operating in Sandbox — Live customer data is not affected',
     );
+  });
+
+  it('renders interactive button with fix action when action prop is provided', () => {
+    const onFix = vi.fn();
+    render(
+      <StatusBadge
+        status="error"
+        action={{ label: 'Fix', onClick: onFix }}
+      />,
+    );
+
+    const button = screen.getByRole('button', { name: /error.*fix/i });
+    expect(button).toBeInTheDocument();
+    button.click();
+    expect(onFix).toHaveBeenCalledOnce();
   });
 });

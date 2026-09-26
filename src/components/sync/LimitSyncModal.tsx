@@ -94,11 +94,13 @@ function Frame({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         size="md"
-        className="flex max-h-[90vh] flex-col"
+        className="flex max-h-[90vh] sm:max-h-[85vh] flex-col gap-0 p-0 overflow-hidden rounded-4xl"
         onEscapeKeyDown={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
       >
-        {children}
+        <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          {children}
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -370,23 +372,30 @@ export default function LimitSyncModal({
         {step === 'config' && (
           <>
             {!compact && (
-              <DialogHeader>
-                <Title embedded={embedded} className="flex items-center gap-3">
-                  <div className="bg-primary/10 flex size-8 items-center justify-center rounded-lg">
-                    <Sliders className="text-primary size-4" />
-                  </div>
-                  <div>
-                    <div>Sample Test & Limited Run</div>
-                    <p className="text-muted-foreground flex items-center gap-1 text-xs font-normal">
-                      {job?.sourceObject} <ArrowRight className="size-3" />{' '}
-                      {job?.destObject}
-                    </p>
-                  </div>
-                </Title>
-              </DialogHeader>
+              <div className="px-6 pt-6 pb-4 border-b border-border/60 shrink-0">
+                <DialogHeader>
+                  <Title embedded={embedded} className="flex items-center gap-3">
+                    <div className="bg-primary/10 flex size-8 items-center justify-center rounded-lg">
+                      <Sliders className="text-primary size-4" />
+                    </div>
+                    <div>
+                      <div>Sample Test & Limited Run</div>
+                      <p className="text-muted-foreground flex items-center gap-1 text-xs font-normal">
+                        {job?.sourceObject} <ArrowRight className="size-3" />{' '}
+                        {job?.destObject}
+                      </p>
+                    </div>
+                  </Title>
+                </DialogHeader>
+              </div>
             )}
 
-            <div className="flex-1 space-y-3 overflow-y-auto">
+            <div
+              className={cn(
+                'flex-1 min-h-0 space-y-3 overflow-y-auto',
+                !embedded && 'px-6 py-4',
+              )}
+            >
               {pipelineBlocked && (
                 <Alert variant="destructive" className="py-2.5">
                   <AlertTriangle />
@@ -597,20 +606,29 @@ export default function LimitSyncModal({
               </Card>
             </div>
 
-            <DialogFooter>
-              {!compact && (
+            {!compact && !embedded ? (
+              <DialogFooter className="shrink-0 border-t px-6 py-4">
                 <Button variant="outline" onClick={onClose} className="flex-1">
                   Cancel
                 </Button>
-              )}
-              <Button
-                onClick={handleStart}
-                disabled={pipelineBlocked || disabled}
-                className={compact ? undefined : 'flex-1'}
-              >
-                <Play /> {!job?.lastSyncedAt ? 'Run Test (Safe Preview)' : 'Start Sync'}
-              </Button>
-            </DialogFooter>
+                <Button
+                  onClick={handleStart}
+                  disabled={pipelineBlocked || disabled}
+                  className="flex-1"
+                >
+                  <Play /> {!job?.lastSyncedAt ? 'Run Test (Safe Preview)' : 'Start Sync'}
+                </Button>
+              </DialogFooter>
+            ) : (
+              <div className="border-t border-border/60 -mx-6 -mb-6 mt-6 px-6 py-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end bg-muted/20">
+                <Button
+                  onClick={handleStart}
+                  disabled={pipelineBlocked || disabled}
+                >
+                  <Play /> {!job?.lastSyncedAt ? 'Run Test (Safe Preview)' : 'Start Sync'}
+                </Button>
+              </div>
+            )}
           </>
         )}
 

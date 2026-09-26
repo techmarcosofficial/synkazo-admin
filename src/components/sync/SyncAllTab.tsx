@@ -385,9 +385,7 @@ export default function SyncAllTab({
             </>
           )}
 
-          {children}
-
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <div className="border-t border-border/60 -mx-6 -mb-6 mt-6 px-6 py-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end bg-muted/20">
             <Button variant="outline" onClick={handleCheck} disabled={checking}>
               {checking ? <Spinner /> : <Search />}
               {checking ? 'Checking…' : 'Check records'}
