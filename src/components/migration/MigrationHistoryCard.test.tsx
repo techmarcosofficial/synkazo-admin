@@ -50,7 +50,7 @@ describe('MigrationHistoryCard', () => {
         onLoadRunItems={loadRunItems}
       />,
     );
-    expect(screen.getByText('No transfer history')).toBeInTheDocument();
+    expect(screen.getByText('No transfer history available')).toBeInTheDocument();
   });
 
   it('expands item outcomes and marks the latest result', async () => {
@@ -114,5 +114,21 @@ describe('MigrationHistoryCard', () => {
     ).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(onRetry).toHaveBeenCalledOnce();
+  });
+
+  it('disables the refresh button when Production is not connected', () => {
+    render(
+      <MigrationHistoryCard
+        runs={[run]}
+        loading={false}
+        error={null}
+        isProductionReady={false}
+        onRetry={vi.fn()}
+        onLoadRunItems={loadRunItems}
+      />,
+    );
+    expect(
+      screen.getByRole('button', { name: /Refresh history/i }),
+    ).toBeDisabled();
   });
 });

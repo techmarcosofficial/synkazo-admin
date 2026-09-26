@@ -74,7 +74,7 @@ export default function SetupJourneyCard({
                 const isCurrent = step.status === 'current';
                 const isUpcoming = step.status === 'upcoming';
                 const canSelect = Boolean(
-                  step.onSelect && (isComplete || isCurrent),
+                  step.onSelect && (isComplete || isCurrent || step.optional),
                 );
                 const statusLabel = isComplete
                   ? 'Complete'
@@ -228,7 +228,8 @@ export default function SetupJourneyCard({
                 aria-label={`${eyebrow} progress`}
                 className={cn(
                   'grid gap-2 sm:grid-cols-2',
-                  steps.length > 2 && 'lg:grid-cols-4',
+                  steps.length === 3 && 'lg:grid-cols-3',
+                  steps.length >= 4 && 'lg:grid-cols-4',
                 )}
               >
                 {steps.map((step, index) => {
@@ -236,7 +237,7 @@ export default function SetupJourneyCard({
                   const isCurrent = step.status === 'current';
                   const isUpcoming = step.status === 'upcoming';
                   const canSelect = Boolean(
-                    step.onSelect && (isComplete || isCurrent),
+                    step.onSelect && (isComplete || isCurrent || step.optional),
                   );
                   const statusLabel = isComplete
                     ? 'Complete'

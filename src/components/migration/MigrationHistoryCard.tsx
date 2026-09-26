@@ -197,6 +197,7 @@ export default function MigrationHistoryCard({
   loading,
   error,
   latestRunId,
+  isProductionReady = true,
   onRetry,
   onLoadRunItems,
 }: {
@@ -204,6 +205,7 @@ export default function MigrationHistoryCard({
   loading: boolean;
   error: string | null;
   latestRunId?: string;
+  isProductionReady?: boolean;
   onRetry: () => void;
   onLoadRunItems: (runId: string) => Promise<MigrationRunItem[]>;
 }) {
@@ -222,7 +224,12 @@ export default function MigrationHistoryCard({
           variant="outline"
           size="sm"
           onClick={onRetry}
-          disabled={loading}
+          disabled={loading || !isProductionReady}
+          title={
+            !isProductionReady
+              ? 'Connect Production environment to refresh transfer history'
+              : undefined
+          }
         >
           <RefreshCw className={cn(loading && 'animate-spin')} /> Refresh
           history
@@ -250,7 +257,7 @@ export default function MigrationHistoryCard({
           <div className="px-6 pb-6">
             <EmptyState
               icon={Clock}
-              title="No transfer history"
+              title="No transfer history available"
               description="Completed configuration transfers will appear here with created, skipped, and failed item counts."
             />
           </div>

@@ -182,6 +182,8 @@ const STATUS_CONFIG: Record<
 
 interface StatusBadgeProps {
   status: string;
+  label?: string;
+  title?: string;
   size?: Size;
   variant?: Variant;
   showDescription?: boolean;
@@ -190,6 +192,8 @@ interface StatusBadgeProps {
 
 export default function StatusBadge({
   status,
+  label: customLabel,
+  title,
   size = 'default',
   variant = 'default',
   showDescription = false,
@@ -199,11 +203,12 @@ export default function StatusBadge({
     tone: 'muted' as Tone,
     label: status,
   };
+  const label = customLabel ?? cfg.label;
   const Icon = cfg.icon;
 
   if (variant === 'menu') {
     return (
-      <div className={cn('flex flex-col', className)}>
+      <div className={cn('flex flex-col', className)} title={title}>
         <div className="flex items-center gap-2 font-medium">
           {Icon ? (
             <Icon className="size-3.5" aria-hidden="true" />
@@ -215,7 +220,7 @@ export default function StatusBadge({
               })}
             />
           )}
-          {cfg.label}
+          {label}
         </div>
 
         {showDescription && cfg.description && (
@@ -229,6 +234,7 @@ export default function StatusBadge({
 
   return (
     <Badge
+      title={title}
       className={cn(
         'font-semibold',
         statusBadge({
@@ -249,7 +255,7 @@ export default function StatusBadge({
           })}
         />
       )}
-      {cfg.label}
+      {label}
     </Badge>
   );
 }

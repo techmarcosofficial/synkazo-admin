@@ -1,11 +1,9 @@
 import {
-  BarChart3,
   CheckCircle2,
   ChevronDown,
   CircleStop,
   Clock3,
   Database,
-  Layers,
   Pencil,
   Plus,
   RefreshCw,
@@ -221,7 +219,7 @@ function SyncStatusIcon({
     },
     completed: {
       Icon: CheckCircle2,
-      containerClass: 'bg-success/10 text-success border-success/20',
+      containerClass: 'bg-muted text-foreground border-border/70',
       spin: false,
     },
     failed: {
@@ -232,7 +230,7 @@ function SyncStatusIcon({
     },
     stopped: {
       Icon: CircleStop,
-      containerClass: 'bg-warning/10 text-warning border-warning/20',
+      containerClass: 'bg-muted text-muted-foreground border-border/70',
       spin: false,
     },
   };
@@ -243,13 +241,13 @@ function SyncStatusIcon({
     <span
       className={cn(
         'flex shrink-0 items-center justify-center border transition-colors',
-        compact ? 'size-9 rounded-xl' : 'size-9 rounded-2xl sm:size-10',
+        compact ? 'size-8 rounded-lg' : 'size-9 rounded-xl',
         containerClass,
       )}
     >
       <Icon
         className={cn(
-          compact ? 'size-4' : 'size-4 sm:size-5',
+          compact ? 'size-3.5' : 'size-4',
           spin && 'animate-spin [animation-duration:3s]',
         )}
         aria-hidden="true"
@@ -276,20 +274,20 @@ function SyncStats({
       label: 'Processed',
       icon: Database,
       color: 'text-foreground',
-      iconColor: 'text-foreground',
+      iconColor: 'text-muted-foreground',
       iconBg: 'bg-muted',
     },
     {
       label: 'Created',
       icon: Plus,
-      color: 'text-success',
+      color: 'text-foreground',
       iconColor: 'text-success',
       iconBg: 'bg-success/10',
     },
     {
       label: 'Updated',
       icon: Pencil,
-      color: 'text-info',
+      color: 'text-foreground',
       iconColor: 'text-info',
       iconBg: 'bg-info/10',
     },
@@ -303,7 +301,7 @@ function SyncStats({
     {
       label: 'Failed',
       icon: TriangleAlert,
-      color: 'text-destructive',
+      color: values[4] > 0 ? 'text-destructive' : 'text-muted-foreground',
       iconColor: 'text-destructive',
       iconBg: 'bg-destructive/10',
     },
@@ -315,7 +313,7 @@ function SyncStats({
         'grid gap-2',
         compact
           ? 'grid-cols-2 sm:grid-cols-3'
-          : 'grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5',
+          : 'grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5',
       )}
       aria-label="Record statistics"
     >
@@ -325,20 +323,20 @@ function SyncStats({
           className={cn(
             'bg-card border-border/60 hover:border-border/90 flex min-w-0 items-center border transition-all',
             compact
-              ? 'gap-2 rounded-xl px-2.5 py-1.5'
-              : 'gap-2.5 rounded-2xl px-3 py-2.5',
+              ? 'gap-2 rounded-lg px-2.5 py-1.5'
+              : 'gap-2.5 rounded-xl px-3 py-2',
           )}
         >
           <span
             className={cn(
               'flex shrink-0 items-center justify-center',
-              compact ? 'size-7 rounded-lg' : 'size-8.5 rounded-xl',
+              compact ? 'size-6.5 rounded-md' : 'size-7.5 rounded-lg',
               iconBg,
               iconColor,
             )}
           >
             <Icon
-              className={compact ? 'size-3.5' : 'size-4'}
+              className={compact ? 'size-3' : 'size-3.5'}
               aria-hidden="true"
             />
           </span>
@@ -348,7 +346,7 @@ function SyncStats({
             </span>
             <strong
               className={cn(
-                'mt-1 block truncate leading-tight font-bold tabular-nums',
+                'mt-1 block truncate leading-tight font-semibold tabular-nums',
                 compact ? 'text-xs sm:text-sm' : 'text-sm',
                 color,
               )}
@@ -475,7 +473,7 @@ export default function SyncRunProgress({
   onDismiss,
   stopping = false,
   variant = 'default',
-  defaultOpen = true,
+  defaultOpen = false,
   className,
 }: SyncRunProgressProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -628,7 +626,7 @@ export default function SyncRunProgress({
       aria-label={current.title}
       data-variant={variant}
       className={cn(
-        'border-border/70 gap-0 overflow-hidden py-0 shadow-none',
+        'border-border/70 bg-card gap-0 overflow-hidden py-0 shadow-none transition-colors',
         isCompact ? 'rounded-2xl' : 'rounded-3xl',
         className,
       )}
@@ -639,57 +637,47 @@ export default function SyncRunProgress({
           data-slot="sync-summary-header"
           onClick={handleHeaderClick}
           className={cn(
-            'hover:bg-muted/20 cursor-pointer transition-colors',
-            isCompact
-              ? 'grid grid-cols-[1fr_auto] gap-2.5 p-3 sm:p-3.5'
-              : 'grid grid-cols-[1fr_auto] gap-3.5 p-3 sm:p-3.5 lg:flex lg:h-[130px] lg:min-h-[120px] lg:flex-row lg:items-center lg:justify-between lg:gap-4 lg:px-4 lg:py-0',
+            'group/header hover:bg-muted/20 flex cursor-pointer flex-col gap-3 p-3 transition-colors sm:p-3.5 lg:flex-row lg:items-center lg:justify-between lg:gap-4',
+            isCompact ? 'gap-2.5 p-2.5 sm:p-3' : 'px-4 py-3',
           )}
         >
-          {/* 1. Left: Status Icon, Header Title, Subtitle, and Pill Badges */}
-          <div
-            className={cn(
-              'col-start-1 row-start-1 flex min-w-0 items-center',
-              isCompact ? 'gap-2.5' : 'gap-3 sm:gap-3.5',
-            )}
-          >
+          {/* 1. Left: Status Icon, Title, Direction, and Badges */}
+          <div className="flex min-w-0 items-center gap-3 shrink-0 lg:max-w-[280px] xl:max-w-[320px]">
             <SyncStatusIcon state={current.state} compact={isCompact} />
             <div className="min-w-0">
-              <h2
-                className={cn(
-                  'text-foreground leading-tight font-bold tracking-tight',
-                  isCompact ? 'text-sm' : 'text-base',
-                )}
-              >
-                {current.title}
-              </h2>
-              {direction && (
-                <p
+              <div className="flex items-center gap-2">
+                <h2
                   className={cn(
-                    'text-muted-foreground mt-0.5 truncate font-normal',
-                    isCompact ? 'text-[11px]' : 'text-xs',
+                    'text-foreground leading-tight font-semibold tracking-tight truncate',
+                    isCompact ? 'text-xs sm:text-sm' : 'text-sm',
                   )}
-                  title={direction}
                 >
-                  {direction}
-                </p>
-              )}
-              <div
-                className={cn(
-                  'flex flex-wrap items-center',
-                  isCompact ? 'mt-1 gap-1' : 'mt-1.5 gap-1.5 sm:mt-2',
-                )}
-              >
+                  {current.title}
+                </h2>
                 <StatusBadge status={badgeStatus} size="sm" />
+              </div>
+              <div className="flex items-center gap-2 mt-0.5">
+                {direction && (
+                  <p
+                    className={cn(
+                      'text-muted-foreground truncate font-normal',
+                      isCompact ? 'text-[11px]' : 'text-xs',
+                    )}
+                    title={direction}
+                  >
+                    {direction}
+                  </p>
+                )}
                 {trigger && (
                   <span
                     className={cn(
-                      'border-border bg-muted/60 text-muted-foreground inline-flex items-center gap-1.5 rounded-full border font-medium',
+                      'border-border bg-muted/60 text-muted-foreground inline-flex items-center gap-1 rounded-full border font-medium shrink-0',
                       isCompact
-                        ? 'px-2 py-0.5 text-[11px]'
-                        : 'px-2.5 py-0.5 text-xs',
+                        ? 'px-1.5 py-0 text-[10px]'
+                        : 'px-2 py-0 text-[11px]',
                     )}
                   >
-                    <span className="bg-muted-foreground size-1.5 rounded-full" />
+                    <span className="bg-muted-foreground size-1 rounded-full" />
                     {trigger}
                   </span>
                 )}
@@ -697,21 +685,11 @@ export default function SyncRunProgress({
             </div>
           </div>
 
-          {/* Vertical Separator */}
-          {!isCompact && (
-            <div
-              className="bg-border/60 mx-1 hidden h-12 w-px shrink-0 self-center lg:block"
-              aria-hidden="true"
-            />
-          )}
-
           {/* 2. Middle: Progress occupying available space */}
           <div
             className={cn(
-              'col-span-2 row-start-2 flex w-full flex-col justify-center',
-              isCompact
-                ? 'gap-1.5 px-0'
-                : 'gap-2 px-0.5 lg:col-span-1 lg:row-start-auto lg:min-w-[180px] lg:flex-1 lg:px-3',
+              'flex min-w-0 flex-1 flex-col justify-center gap-1.5',
+              isCompact ? 'gap-1' : 'lg:px-2',
             )}
           >
             <div
@@ -763,11 +741,11 @@ export default function SyncRunProgress({
                 aria-label="Overall progress unknown"
                 className={cn(
                   'bg-muted w-full overflow-hidden rounded-full',
-                  isCompact ? 'h-1.5' : 'h-2',
+                  isCompact ? 'h-1.5' : 'h-1.5 sm:h-2',
                 )}
               >
                 {(active || waiting) && (
-                  <div className="from-primary to-success/70 h-full w-1/3 animate-pulse rounded-full bg-gradient-to-r" />
+                  <div className="bg-primary/60 h-full w-1/3 animate-pulse rounded-full" />
                 )}
               </div>
             ) : (
@@ -779,7 +757,7 @@ export default function SyncRunProgress({
                 aria-valuemax={100}
                 className={cn(
                   'bg-muted w-full overflow-hidden rounded-full',
-                  isCompact ? 'h-1.5' : 'h-2',
+                  isCompact ? 'h-1.5' : 'h-1.5 sm:h-2',
                 )}
               >
                 <div
@@ -789,7 +767,9 @@ export default function SyncRunProgress({
                       ? 'bg-destructive'
                       : current.state === 'stopped'
                         ? 'bg-warning'
-                        : 'from-primary to-success bg-gradient-to-r',
+                        : current.state === 'completed'
+                          ? 'bg-success'
+                          : 'bg-primary',
                   )}
                   style={{ width: `${percent}%` }}
                 />
@@ -797,112 +777,52 @@ export default function SyncRunProgress({
             )}
           </div>
 
-          {/* 3. Right-Middle: Two equal-height compact metric cards */}
-          <div
-            className={cn(
-              'col-span-2 row-start-3 grid w-full grid-cols-2',
-              isCompact
-                ? 'gap-2'
-                : 'gap-2.5 sm:flex sm:w-auto sm:shrink-0 lg:col-span-1 lg:row-start-auto lg:gap-3',
-            )}
-          >
-            {/* Card 1: Completion */}
-            <div
-              className={cn(
-                'bg-card border-border/70 flex shrink-0 items-center border transition-colors',
-                isCompact
-                  ? 'h-12 w-full gap-2 rounded-xl px-2.5 py-1.5'
-                  : 'h-14 w-full gap-2.5 rounded-2xl px-2 py-1.5 sm:w-38 sm:gap-3 sm:px-2.5',
-              )}
-            >
-              <span
+          {/* 3. Right: Metrics & Actions */}
+          <div className="flex shrink-0 items-center justify-between sm:justify-end gap-2 sm:gap-2.5">
+            {/* Metric Chips */}
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              {/* Chip 1: Completion */}
+              <div
                 className={cn(
-                  'bg-success/10 text-success flex shrink-0 items-center justify-center',
-                  isCompact
-                    ? 'size-7.5 rounded-lg'
-                    : 'size-8 rounded-xl',
+                  'bg-muted/40 border-border/60 flex shrink-0 items-center gap-1.5 rounded-lg border px-2 py-1 transition-colors',
+                  isCompact && 'px-1.5 py-0.5 text-[11px]',
                 )}
               >
-                <BarChart3 className="size-4" aria-hidden="true" />
-              </span>
-              <div className="min-w-0">
+                <span className="text-muted-foreground text-[11px]">
+                  Completion
+                </span>
                 <strong
                   className={cn(
-                    'text-foreground block truncate leading-tight font-bold tabular-nums',
-                    isCompact ? 'text-xs sm:text-sm' : 'text-sm',
+                    'text-foreground block truncate leading-tight font-semibold tabular-nums',
+                    isCompact ? 'text-[11px]' : 'text-xs',
                   )}
                 >
                   {percent != null ? `${percent}%` : '—'}
                 </strong>
-                <span
-                  className={cn(
-                    'text-muted-foreground block truncate leading-tight',
-                    isCompact ? 'text-[10px] sm:text-[11px]' : 'text-xs',
-                  )}
-                >
-                  Completion
-                </span>
               </div>
-            </div>
 
-            {/* Card 2: Batches */}
-            <div
-              className={cn(
-                'bg-card border-border/70 flex shrink-0 items-center border transition-colors',
-                isCompact
-                  ? 'h-12 w-full gap-2 rounded-xl px-2.5 py-1.5'
-                  : 'h-14 w-full gap-2.5 rounded-2xl px-2 py-1.5 sm:w-38 sm:gap-3 sm:px-2.5',
-              )}
-            >
-              <span
+              {/* Chip 2: Batches */}
+              <div
                 className={cn(
-                  'bg-primary/10 text-primary flex shrink-0 items-center justify-center',
-                  isCompact
-                    ? 'size-7.5 rounded-lg'
-                    : 'size-8 rounded-xl',
+                  'bg-muted/40 border-border/60 flex shrink-0 items-center gap-1.5 rounded-lg border px-2 py-1 transition-colors',
+                  isCompact && 'px-1.5 py-0.5 text-[11px]',
                 )}
               >
-                <Layers
-                  className="size-4"
-                  aria-hidden="true"
-                />
-              </span>
-              <div className="min-w-0">
+                <span className="text-muted-foreground text-[11px]">
+                  Batches
+                </span>
                 <strong
                   className={cn(
-                    'text-foreground block truncate leading-tight font-bold tabular-nums',
-                    isCompact ? 'text-xs sm:text-sm' : 'text-sm',
+                    'text-foreground block truncate leading-tight font-semibold tabular-nums',
+                    isCompact ? 'text-[11px]' : 'text-xs',
                   )}
                 >
                   {batchesFraction}
                 </strong>
-                <span
-                  className={cn(
-                    'text-muted-foreground block truncate leading-tight',
-                    isCompact ? 'text-[10px] sm:text-[11px]' : 'text-xs',
-                  )}
-                >
-                  Batches
-                </span>
               </div>
             </div>
-          </div>
 
-          {/* Vertical Separator */}
-          {!isCompact && (
-            <div
-              className="bg-border/60 mx-1 hidden h-12 w-px shrink-0 self-center xl:block"
-              aria-hidden="true"
-            />
-          )}
-
-          {/* 4. Far Right: Actions & Collapsible Chevron */}
-          <div
-            className={cn(
-              'col-start-2 row-start-1 flex shrink-0 items-center self-start justify-self-end sm:self-center',
-              isCompact ? 'gap-1.5' : 'gap-2',
-            )}
-          >
+            {/* Actions: Stop or Close */}
             {current.state === 'running' && onStop ? (
               <Button
                 variant="outline"
@@ -915,8 +835,8 @@ export default function SyncRunProgress({
                 className={cn(
                   'border-destructive/30 text-destructive hover:bg-destructive/10 font-semibold',
                   isCompact
-                    ? 'h-7.5 rounded-lg px-2.5 text-xs'
-                    : 'h-8 rounded-xl px-3 text-xs',
+                    ? 'h-7 rounded-lg px-2 text-xs'
+                    : 'h-7.5 rounded-xl px-2.5 text-xs',
                 )}
               >
                 {stopping ? (
@@ -935,25 +855,24 @@ export default function SyncRunProgress({
                   handleDismiss();
                 }}
                 className={cn(
-                  'text-muted-foreground hover:text-foreground hover:bg-muted/60 font-semibold',
+                  'text-muted-foreground hover:text-foreground hover:bg-muted/60 font-medium',
                   isCompact
-                    ? 'h-7.5 rounded-lg px-2.5 text-xs'
-                    : 'h-8 rounded-xl px-3 text-xs',
+                    ? 'h-7 rounded-lg px-2 text-xs'
+                    : 'h-7.5 rounded-xl px-2.5 text-xs',
                 )}
               >
                 Close
               </Button>
             ) : null}
 
+            {/* Collapsible Trigger Chevron */}
             <CollapsibleTrigger asChild>
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 size="icon-sm"
                 aria-label={isOpen ? 'Collapse' : 'Expand'}
-                className={cn(
-                  'bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground rounded-full transition-colors',
-                )}
+                className="text-muted-foreground hover:text-foreground hover:bg-muted/60 size-7.5 rounded-lg transition-colors"
               >
                 <ChevronDown
                   className={cn(
@@ -970,18 +889,18 @@ export default function SyncRunProgress({
         <CollapsibleContent>
           <div
             className={cn(
-              'border-border space-y-3.5',
-              isCompact ? 'p-3' : 'px-3 pb-4 sm:px-4',
+              'bg-muted/40 border-t border-border/70 space-y-3',
+              isCompact ? 'p-2.5 sm:p-3' : 'p-3.5 sm:p-4',
             )}
           >
-            {/* Stat Cards Grid (Responsive Wrap) */}
+            {/* Stat Cards Grid */}
             <SyncStats
               values={[processed, created, updated, skipped, failed]}
               compact={isCompact}
             />
 
             {/* Footer Metadata */}
-            <footer className="border-border/60 pt-3">
+            <footer className="border-t border-border/50 pt-2.5">
               <SyncRunMeta
                 state={current.state}
                 startedAt={startedAt}

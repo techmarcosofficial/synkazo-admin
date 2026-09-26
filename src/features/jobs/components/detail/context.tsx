@@ -17,8 +17,10 @@ export interface JobDetailContextValue {
   runLogs: ExtSyncRun[];
   jobFieldMappings: ConsolidatedMapping[];
   hasConnection: boolean;
+  isProductionReady?: boolean;
   pipelineRequired: boolean;
   pipelineConfigured: boolean;
+
   activeTab: JobDetailTabId;
   patchJob: (patch: Partial<ExtJob>) => void;
   refetch: () => void;

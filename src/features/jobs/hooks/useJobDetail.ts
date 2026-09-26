@@ -4,6 +4,7 @@ import { connectionsApi } from '@/api/connections';
 import { jobsApi } from '@/api/jobs';
 import { projectsApi } from '@/api/projects';
 import { syncLogsApi } from '@/api/syncLogs';
+import { isEnvironmentFullyConnected } from '@/features/projects/lib/projectConnections';
 import type {
   FieldMapping,
   Job,
@@ -12,6 +13,7 @@ import type {
   SyncRun,
   UpdatePolicy,
 } from '@/types';
+
 
 export type ScheduleState =
   | 'active'
@@ -188,6 +190,7 @@ export interface JobDetailData {
   runLogs: ExtSyncRun[];
   jobFieldMappings: ConsolidatedMapping[];
   hasConnection: boolean;
+  isProductionReady?: boolean;
   pipelineRequired: boolean;
   pipelineConfigured: boolean;
 }
@@ -237,6 +240,14 @@ export function useJobDetailQuery(
         runLogs: (runLogsRes as { data?: ExtSyncRun[] }).data || [],
         jobFieldMappings: (mappingsRes as ConsolidatedMapping[]) || [],
         hasConnection: (connectionsRes || []).length > 0,
+        isProductionReady: isEnvironmentFullyConnected(
+          (connectionsRes as Array<{
+            status?: string;
+            connectionType?: string;
+            environment?: string;
+          }>) || [],
+          'production',
+        ),
         pipelineRequired: pipeReq || !!extJob?.destPipelineId,
         pipelineConfigured: !pipeReq || psAny?.['configured'] === true,
       };

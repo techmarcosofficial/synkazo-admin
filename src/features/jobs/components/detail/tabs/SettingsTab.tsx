@@ -1,5 +1,4 @@
 import {
-  CalendarClock,
   RotateCcw,
   Settings2,
   type LucideIcon,
@@ -12,8 +11,6 @@ import {
   JobDangerZoneCard,
   JobGeneralCard,
   JobRetryCard,
-  JobScheduleSettings,
-  JobScheduleSettingsHeader,
   JobSkipUpdateCard,
   JobSyncDirectionCard,
 } from '../settings';
@@ -30,7 +27,7 @@ import {
 } from '@/components/ui/select';
 import { showToast } from '@/lib/toast';
 
-type JobSettingsSectionId = 'general' | 'schedule' | 'execution-recovery';
+type JobSettingsSectionId = 'general' | 'advanced';
 
 interface JobSettingsSection {
   id: JobSettingsSectionId;
@@ -43,18 +40,12 @@ const SECTIONS: JobSettingsSection[] = [
   {
     id: 'general',
     label: 'General',
-    description: 'Job identity, objects, sync direction, and behavior.',
+    description: 'Job identity, objects, sync direction, and danger zone.',
     icon: Settings2,
   },
   {
-    id: 'schedule',
-    label: 'Schedule',
-    description: 'Control when this job runs automatically.',
-    icon: CalendarClock,
-  },
-  {
-    id: 'execution-recovery',
-    label: 'Execution & Recovery',
+    id: 'advanced',
+    label: 'Advanced',
     description: 'Retry behavior, matched records, and saved progress.',
     icon: RotateCcw,
   },
@@ -128,10 +119,14 @@ export default function SettingsTab() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { projectId, job, project, patchJob } = useJobDetailContext();
   const requestedSection = searchParams.get('section');
+  const normalizedSection =
+    requestedSection === 'execution-recovery'
+      ? 'advanced'
+      : requestedSection;
   const activeSectionId: JobSettingsSectionId = SECTIONS.some(
-    (section) => section.id === requestedSection,
+    (section) => section.id === normalizedSection,
   )
-    ? (requestedSection as JobSettingsSectionId)
+    ? (normalizedSection as JobSettingsSectionId)
     : 'general';
   const activeSection = SECTIONS.find(
     (section) => section.id === activeSectionId,
@@ -174,13 +169,14 @@ export default function SettingsTab() {
             onUpdated={patchJob}
           />
         </div>
-        <div className="pt-6">
+        <div className="py-6">
           <JobSyncDirectionCard />
+        </div>
+        <div className="pt-6">
+          <JobDangerZoneCard onDelete={handleDelete} />
         </div>
       </div>
     );
-  } else if (activeSectionId === 'schedule') {
-    sectionBody = <JobScheduleSettings />;
   } else {
     sectionBody = (
       <div className="divide-border divide-y">
@@ -198,7 +194,7 @@ export default function SettingsTab() {
           <CheckpointInformation />
         </div>
         {showDataformaCustomerCursor && (
-          <div className="py-6">
+          <div className="pt-6">
             <DataformaCustomerCursorCard
               projectId={projectId}
               job={job}
@@ -206,9 +202,6 @@ export default function SettingsTab() {
             />
           </div>
         )}
-        <div className="pt-6">
-          <JobDangerZoneCard onDelete={handleDelete} />
-        </div>
       </div>
     );
   }
@@ -293,21 +286,15 @@ export default function SettingsTab() {
         aria-labelledby="job-settings-section-title"
       >
         <CardHeader className="gap-0 px-4 py-3">
-          {activeSectionId === 'schedule' ? (
-            <JobScheduleSettingsHeader />
-          ) : (
-            <>
-              <h2
-                id="job-settings-section-title"
-                className="font-heading text-lg font-semibold tracking-tight"
-              >
-                {activeSection.label}
-              </h2>
-              <p className="text-muted-foreground mt-0.5 text-xs">
-                {activeSection.description}
-              </p>
-            </>
-          )}
+          <h2
+            id="job-settings-section-title"
+            className="font-heading text-lg font-semibold tracking-tight"
+          >
+            {activeSection.label}
+          </h2>
+          <p className="text-muted-foreground mt-0.5 text-xs">
+            {activeSection.description}
+          </p>
         </CardHeader>
         <CardContent className="px-3.5 pt-2.5 pb-3.5 sm:px-4 sm:pb-4">
           {sectionBody}

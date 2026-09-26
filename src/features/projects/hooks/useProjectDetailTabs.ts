@@ -31,6 +31,7 @@ interface UseProjectDetailTabsInput {
 export interface ProjectDetailTabChangeOptions {
   replace?: boolean;
   section?: ProjectSettingsSectionId;
+  env?: string;
 }
 
 // Tab is the URL's source of truth (`?tab=...`) so it's bookmarkable/shareable
@@ -70,6 +71,11 @@ export function useProjectDetailTabs(input: UseProjectDetailTabsInput) {
     }
     next.set('tab', id);
     next.delete('section');
+    if (options?.env) {
+      next.set('env', options.env);
+    } else {
+      next.delete('env');
+    }
     setSearchParams(next, { replace: options?.replace });
   };
 

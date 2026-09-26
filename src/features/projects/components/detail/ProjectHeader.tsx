@@ -92,7 +92,20 @@ export default function ProjectHeader() {
           <StatusBadge status={project.syncMode} size="lg" />
         )}
         {projectActiveEnv && (
-          <StatusBadge status={projectActiveEnv} size="sm" />
+          <StatusBadge
+            status={projectActiveEnv}
+            label={
+              projectActiveEnv === 'sandbox'
+                ? 'Sandbox (Test Mode)'
+                : 'Production (Live)'
+            }
+            title={
+              projectActiveEnv === 'sandbox'
+                ? 'Operating in Sandbox — Live customer data is not affected'
+                : 'Live Production Sync active'
+            }
+            size="sm"
+          />
         )}
         <HeaderPrimaryActionButton />
       </div>

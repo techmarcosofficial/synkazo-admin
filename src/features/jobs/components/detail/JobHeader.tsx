@@ -112,7 +112,20 @@ export default function JobHeader() {
       <div className="ml-auto flex flex-wrap items-center justify-end gap-2.5">
         <StatusBadge status={twoWay ? 'two_way' : 'one_way'} size="lg" />
         {activeEnvironment && (
-          <StatusBadge status={activeEnvironment} size="sm" />
+          <StatusBadge
+            status={activeEnvironment}
+            label={
+              activeEnvironment === 'sandbox'
+                ? 'Sandbox (Test Mode)'
+                : 'Production (Live)'
+            }
+            title={
+              activeEnvironment === 'sandbox'
+                ? 'Operating in Sandbox — Live customer data is not affected'
+                : 'Live Production Sync active'
+            }
+            size="sm"
+          />
         )}
         {operationalStatus && (
           <StatusBadge status={operationalStatus} size="sm" />

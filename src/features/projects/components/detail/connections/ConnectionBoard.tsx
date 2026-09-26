@@ -206,6 +206,16 @@ export default function ConnectionBoard({
             <CardTitle className="font-semibold">Connections</CardTitle>
             <StatusBadge
               status={activeEnv === 'production' ? 'production' : 'sandbox'}
+              label={
+                activeEnv === 'production'
+                  ? 'Production (Live)'
+                  : 'Sandbox (Test Mode)'
+              }
+              title={
+                activeEnv === 'production'
+                  ? 'Live Production Sync active'
+                  : 'Operating in Sandbox — Live customer data is not affected'
+              }
               size="sm"
             />
           </div>

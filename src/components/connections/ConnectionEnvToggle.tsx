@@ -30,6 +30,7 @@ interface ConnectionEnvDropdownProps {
   projectActiveEnv?: string | null;
   envHasAnyConnected: (env: string) => boolean;
   envFullyConnected: (env: string) => boolean;
+  label?: string;
 }
 
 export default function ConnectionEnvDropdown({
@@ -38,6 +39,7 @@ export default function ConnectionEnvDropdown({
   projectActiveEnv,
   envHasAnyConnected,
   envFullyConnected,
+  label = 'Configure connection on',
 }: ConnectionEnvDropdownProps) {
   const active =
     ENVIRONMENTS.find((e) => e.id === activeEnv) ?? ENVIRONMENTS[0];
@@ -47,7 +49,7 @@ export default function ConnectionEnvDropdown({
 
   return (
     <div className="flex items-center gap-2.5 rounded-3xl border p-0.5 pr-1 pl-3">
-      <p className="text-muted-foreground text-sm">Configure connection on</p>
+      {label && <p className="text-muted-foreground text-sm">{label}</p>}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="secondary" size="sm" className="gap-2">

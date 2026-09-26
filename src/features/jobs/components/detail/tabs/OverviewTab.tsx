@@ -39,6 +39,7 @@ import {
 } from '@/features/projects/lib/syncJobSummary';
 import { BROWSER_TIMEZONE } from '@/lib/timezones';
 import { usePriorityQueueQuery } from '@/queries/usePriorityQueue';
+import type { Project, ProjectEnvironment } from '@/types';
 
 function SyncSummaryCard({
   icon: Icon,
@@ -119,6 +120,9 @@ export default function OverviewTab() {
       job.scheduleState === 'retry_pending' ||
       job.scheduleState === 'resume_pending');
   const effectiveTimezone = BROWSER_TIMEZONE;
+  const activeEnvironment =
+    (project as (Project & { activeEnvironment?: ProjectEnvironment }) | null)
+      ?.activeEnvironment ?? project?.active_environment;
   const nextRunAt = priorityModeActive
     ? projectQueue?.nextStartAt
     : job.nextRunAt;
@@ -297,7 +301,7 @@ export default function OverviewTab() {
         stopping={stopping}
       />
     ) : null;
-  const progress = renderProgress('default', true);
+  const progress = renderProgress('default', false);
 
   return (
     <div className="space-y-5">
@@ -376,6 +380,7 @@ export default function OverviewTab() {
           projectId={projectId}
           jobId={job.id}
           job={job}
+          environment={activeEnvironment}
           hasBaseline={Boolean(
             job.lastSyncedAt ||
               runLogs.some(

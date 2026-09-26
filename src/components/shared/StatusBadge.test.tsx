@@ -21,4 +21,20 @@ describe('StatusBadge', () => {
     render(<StatusBadge status="unknown-status" />);
     expect(screen.getByText('unknown-status')).toBeInTheDocument();
   });
+
+  it('renders custom label and title when provided', () => {
+    render(
+      <StatusBadge
+        status="sandbox"
+        label="Sandbox (Test Mode)"
+        title="Operating in Sandbox — Live customer data is not affected"
+      />,
+    );
+    const badge = screen.getByText('Sandbox (Test Mode)');
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveAttribute(
+      'title',
+      'Operating in Sandbox — Live customer data is not affected',
+    );
+  });
 });

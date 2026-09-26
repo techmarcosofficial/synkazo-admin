@@ -30,6 +30,10 @@ export default function ProjectCard({ project, jobCount }: ProjectCardProps) {
     : project.updatedAt
       ? `Updated ${relativeTime(project.updatedAt)}`
       : 'Not synced yet';
+
+  const activeEnv = project.activeEnvironment ?? project.active_environment;
+  const isSandbox = activeEnv === 'sandbox';
+
   return (
     <Card
       size="sm"
@@ -43,7 +47,26 @@ export default function ProjectCard({ project, jobCount }: ProjectCardProps) {
             syncMode={project.syncMode}
             size="2xl"
           />
-          <StatusBadge status={project.status} size="sm" />
+          <div className="flex flex-wrap items-center justify-end gap-1.5">
+            <StatusBadge status={project.status} size="sm" />
+            {activeEnv && (
+              <Link
+                to={`/projects/${project.id}?tab=settings&section=environments`}
+                className="focus-visible:ring-ring inline-flex rounded-full transition-opacity hover:opacity-85 focus-visible:ring-2 focus-visible:outline-none"
+                title={
+                  isSandbox
+                    ? 'Operating in Sandbox (Test Mode) — Click to open Environment Settings'
+                    : 'Operating in Production (Live) — Click to open Environment Settings'
+                }
+              >
+                <StatusBadge
+                  status={activeEnv}
+                  label={isSandbox ? 'Sandbox' : 'Production'}
+                  size="sm"
+                />
+              </Link>
+            )}
+          </div>
         </div>
 
         <div className="space-y-1">

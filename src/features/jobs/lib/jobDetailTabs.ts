@@ -2,6 +2,7 @@ export type JobDetailTabId =
   | 'overview'
   | 'field-mapping'
   | 'pipeline'
+  | 'schedule'
   | 'run-history'
   | 'conflicts'
   | 'webhook-events'
@@ -29,7 +30,8 @@ export const TAB_DEFS: JobDetailTabDef[] = [
     label: 'Pipeline',
     visible: ({ pipelineRequired }) => pipelineRequired,
   },
-  { id: 'run-history', label: 'Run History' },
+  { id: 'schedule', label: 'Schedule' },
+  { id: 'run-history', label: 'Sync History' },
   { id: 'conflicts', label: 'Conflicts', visible: ({ isTwoWay }) => isTwoWay },
   {
     id: 'webhook-events',

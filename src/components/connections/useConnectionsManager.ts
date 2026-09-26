@@ -41,7 +41,15 @@ export function useConnectionsManager({
     if (searchParams.get('env')) return;
     setActiveEnv(projectActiveEnv);
     envInitializedRef.current = true;
-  }, [projectActiveEnv]);
+  }, [projectActiveEnv, searchParams]);
+
+  useEffect(() => {
+    const envParam = searchParams.get('env');
+    if (envParam === 'production' || envParam === 'sandbox') {
+      setActiveEnv(envParam);
+    }
+  }, [searchParams]);
+
 
   const onChangeRef = useRef(onConnectionsChange);
   onChangeRef.current = onConnectionsChange;

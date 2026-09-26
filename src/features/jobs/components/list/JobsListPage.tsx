@@ -56,7 +56,7 @@ import { cn } from '@/lib/utils';
 import { queryKeys } from '@/queries/queryKeys';
 import { useJobsQuery } from '@/queries/useJobs';
 import { useProjectsQuery } from '@/queries/useProjects';
-import type { Job, JobStatus } from '@/types';
+import type { Job, JobStatus, Project, ProjectEnvironment } from '@/types';
 
 interface JobWithMeta extends Job {
   projectName?: string;
@@ -565,6 +565,15 @@ export default function JobsListPage() {
           job={confirm.job}
           projectId={confirm.job.projectId}
           jobId={confirm.job.id}
+          environment={
+            (
+              projects.find((p) => p.id === confirm.job.projectId) as
+                | (Project & { activeEnvironment?: ProjectEnvironment })
+                | undefined
+            )?.activeEnvironment ??
+            projects.find((p) => p.id === confirm.job.projectId)
+              ?.active_environment
+          }
           mode="runNow"
           pipelineRequired={!!pipelineIssues[confirm.job.id]}
           pipelineConfigured={!pipelineIssues[confirm.job.id]}
