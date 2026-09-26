@@ -121,8 +121,8 @@ export function getJobLifecycle(
     return {
       statusKey: 'running',
       scheduleText: defaultSchedule,
-      actionLabel: 'View',
-      actionVariant: 'ghost',
+      actionLabel: 'View Details',
+      actionVariant: 'outline',
       targetUrl: `/projects/${projectId}/jobs/${job.id}`,
       isActionable: false,
     };
@@ -132,8 +132,8 @@ export function getJobLifecycle(
     return {
       statusKey: 'inactive',
       scheduleText: 'Paused',
-      actionLabel: 'View',
-      actionVariant: 'ghost',
+      actionLabel: 'View Details',
+      actionVariant: 'outline',
       targetUrl: `/projects/${projectId}/jobs/${job.id}`,
       isActionable: false,
     };
@@ -142,8 +142,8 @@ export function getJobLifecycle(
   return {
     statusKey: job.status || 'active',
     scheduleText: defaultSchedule,
-    actionLabel: 'View',
-    actionVariant: 'ghost',
+    actionLabel: 'View Details',
+    actionVariant: 'outline',
     targetUrl: `/projects/${projectId}/jobs/${job.id}`,
     isActionable: false,
   };
@@ -160,8 +160,16 @@ function metricCellClass(index: number): string {
 
 
 
-function SyncJobCard({ job, projectId }: { job: JobExt; projectId: string }) {
-  const [open, setOpen] = useState(false);
+function SyncJobCard({
+  job,
+  projectId,
+  defaultOpen = false,
+}: {
+  job: JobExt;
+  projectId: string;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
   const detailQuery = useJobDetailQuery(projectId, job.id, open);
   const runs = detailQuery.data?.runLogs ?? [];
   const summary = deriveSyncJobSummary(job, runs);
@@ -273,7 +281,16 @@ function SyncJobCard({ job, projectId }: { job: JobExt; projectId: string }) {
               <DirectionIcon className="size-4.5" aria-hidden="true" />
             </div>
             <div className="min-w-0">
-              <div className="truncate text-sm font-semibold">{job.name}</div>
+              <Link
+                to={lifecycle.targetUrl}
+                state={{
+                  jobBackTo: `/projects/${projectId}?tab=sync-rules`,
+                  jobBackLabel: 'Back to Sync Jobs',
+                }}
+                className="hover:text-primary hover:underline block truncate text-sm font-semibold text-foreground transition-colors"
+              >
+                {job.name}
+              </Link>
               <p className="text-muted-foreground mt-1 flex items-center gap-1 truncate text-xs">
                 <span className="truncate">
                   {formatEntityLabel(job.sourceObject)}
@@ -304,7 +321,11 @@ function SyncJobCard({ job, projectId }: { job: JobExt; projectId: string }) {
                 lifecycle.actionVariant === 'default' &&
                   'font-medium shadow-xs',
                 lifecycle.actionVariant === 'outline' &&
+                  lifecycle.isActionable &&
                   'font-medium border-primary/30 text-primary hover:bg-primary/5',
+                lifecycle.actionVariant === 'outline' &&
+                  !lifecycle.isActionable &&
+                  'font-medium border-border/80 text-foreground hover:bg-muted/50',
               )}
             >
               <Link
@@ -511,9 +532,21 @@ export default function SyncRulesTab() {
               }}
             />
           ) : (
-            jobs.map((job) => (
-              <SyncJobCard key={job.id} job={job} projectId={project.id} />
-            ))
+            jobs.map((job) => {
+              const isNeedsMapping =
+                job.status === 'draft' ||
+                !job.fieldMappings ||
+                job.fieldMappings.length === 0;
+              const shouldDefaultOpen = jobs.length === 1 || isNeedsMapping;
+              return (
+                <SyncJobCard
+                  key={job.id}
+                  job={job}
+                  projectId={project.id}
+                  defaultOpen={shouldDefaultOpen}
+                />
+              );
+            })
           )}
         </CardContent>
       </Card>

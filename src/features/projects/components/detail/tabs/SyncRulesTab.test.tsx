@@ -128,8 +128,8 @@ describe('getJobLifecycle', () => {
     const lifecycle = getJobLifecycle(job, null, 'proj-1');
 
     expect(lifecycle.statusKey).toBe('running');
-    expect(lifecycle.actionLabel).toBe('View');
-    expect(lifecycle.actionVariant).toBe('ghost');
+    expect(lifecycle.actionLabel).toBe('View Details');
+    expect(lifecycle.actionVariant).toBe('outline');
   });
 
   it('identifies error status with Review Error CTA', () => {
@@ -154,7 +154,7 @@ describe('getJobLifecycle', () => {
     expect(lifecycle.actionVariant).toBe('outline');
   });
 
-  it('identifies active and healthy synced jobs with standard View CTA', () => {
+  it('identifies active and healthy synced jobs with standard View Details CTA', () => {
     const job: JobExt = {
       id: 'job-4',
       projectId: 'proj-1',
@@ -172,8 +172,8 @@ describe('getJobLifecycle', () => {
     const lifecycle = getJobLifecycle(job, null, 'proj-1');
 
     expect(lifecycle.statusKey).toBe('active');
-    expect(lifecycle.actionLabel).toBe('View');
-    expect(lifecycle.actionVariant).toBe('ghost');
+    expect(lifecycle.actionLabel).toBe('View Details');
+    expect(lifecycle.actionVariant).toBe('outline');
     expect(lifecycle.isActionable).toBe(false);
   });
 });
@@ -310,10 +310,15 @@ describe('SyncRulesTab UI', () => {
       </MemoryRouter>,
     );
 
-    const expandBtn = screen.getByRole('button', { name: /expand customers → contacts/i });
-    fireEvent.click(expandBtn);
+    // Unmapped / single jobs are open by default with collapse toggle available
+    expect(screen.getByRole('button', { name: /collapse customers → contacts/i })).toBeInTheDocument();
 
-    // Configuration snapshot items
+    // Clickable job title link to enter job directly
+    const titleLink = screen.getByRole('link', { name: 'Customers → Contacts' });
+    expect(titleLink).toBeInTheDocument();
+    expect(titleLink).toHaveAttribute('href', '/projects/proj-1/jobs/job-unmapped?tab=field-mapping');
+
+    // Configuration snapshot items visible by default
     expect(screen.getByText('Field mappings')).toBeInTheDocument();
     expect(screen.getByText('Direction')).toBeInTheDocument();
     expect(screen.getByText('Schedule')).toBeInTheDocument();
@@ -324,9 +329,9 @@ describe('SyncRulesTab UI', () => {
       screen.getByText(/Field mapping is required before synchronization can run/i),
     ).toBeInTheDocument();
 
-    // Ensure there is only ONE Configure Mapping action (the link button in header)
-    const configureLinks = screen.getAllByRole('link', { name: /configure mapping/i });
-    expect(configureLinks).toHaveLength(1);
+    // Ensure Configure Mapping link button exists
+    const configureBtn = screen.getByRole('link', { name: /configure mapping/i });
+    expect(configureBtn).toBeInTheDocument();
   });
 
   it('renders Create Sync Flow as outline when a job has incomplete configuration', () => {
