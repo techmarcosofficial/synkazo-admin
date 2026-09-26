@@ -1,9 +1,10 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import SyncRulesTab, { getJobLifecycle } from './SyncRulesTab';
 import { useProjectDetailContext } from '../context';
+import { useJobDetailQuery } from '@/features/jobs/hooks';
 import type { JobExt } from '@/features/projects/hooks';
 
 vi.mock('../context', () => ({
@@ -222,5 +223,109 @@ describe('SyncRulesTab UI', () => {
       'href',
       '/projects/proj-1/jobs/job-unmapped?tab=field-mapping',
     );
+  });
+
+  it('does not render warning/amber border on unmapped job cards', () => {
+    vi.mocked(useProjectDetailContext).mockReturnValue({
+      project: { id: 'proj-1', name: 'My Project' },
+      jobs: [
+        {
+          id: 'job-unmapped',
+          projectId: 'proj-1',
+          name: 'Customers → Contacts',
+          sourceObject: 'customers',
+          destObject: 'contacts',
+          status: 'idle',
+          fieldMappings: [],
+          isEnabled: false,
+          lastSyncedAt: null,
+          syncDirection: 'one_way',
+        } as unknown as JobExt,
+      ],
+      connections: [],
+      hasBothConnections: true,
+      refetch: vi.fn(),
+    } as any);
+
+    const { container } = render(
+      <MemoryRouter>
+        <SyncRulesTab />
+      </MemoryRouter>,
+    );
+
+    // Verify no warning border class
+    expect(container.querySelector('.border-warning\\/35')).toBeNull();
+    expect(container.querySelector('.bg-warning\\/\\[0\\.03\\]')).toBeNull();
+  });
+
+  it('renders configuration snapshot tiles and guidance message when expanded on an unmapped job', () => {
+    vi.mocked(useProjectDetailContext).mockReturnValue({
+      project: { id: 'proj-1', name: 'My Project' },
+      jobs: [
+        {
+          id: 'job-unmapped',
+          projectId: 'proj-1',
+          name: 'Customers → Contacts',
+          sourceObject: 'customers',
+          destObject: 'contacts',
+          status: 'idle',
+          fieldMappings: [],
+          isEnabled: false,
+          lastSyncedAt: null,
+          syncDirection: 'one_way',
+        } as unknown as JobExt,
+      ],
+      connections: [],
+      hasBothConnections: true,
+      refetch: vi.fn(),
+    } as any);
+
+    vi.mocked(useJobDetailQuery).mockReturnValue({
+      data: {
+        job: {
+          id: 'job-unmapped',
+          name: 'Customers → Contacts',
+          sourceObject: 'customers',
+          destObject: 'contacts',
+          status: 'idle',
+          syncDirection: 'one_way',
+          recordsSynced: 0,
+          lastSyncedAt: null,
+          isEnabled: false,
+        } as any,
+        project: null,
+        runLogs: [],
+        jobFieldMappings: [],
+        hasConnection: true,
+        pipelineRequired: false,
+        pipelineConfigured: true,
+      },
+      isLoading: false,
+      isError: false,
+    } as any);
+
+    render(
+      <MemoryRouter>
+        <SyncRulesTab />
+      </MemoryRouter>,
+    );
+
+    const expandBtn = screen.getByRole('button', { name: /expand customers → contacts/i });
+    fireEvent.click(expandBtn);
+
+    // Configuration snapshot items
+    expect(screen.getByText('Field mappings')).toBeInTheDocument();
+    expect(screen.getByText('Direction')).toBeInTheDocument();
+    expect(screen.getByText('Schedule')).toBeInTheDocument();
+    expect(screen.getByText('Last sync')).toBeInTheDocument();
+
+    // Guidance note without duplicate button
+    expect(
+      screen.getByText(/Field mapping is required before synchronization can run/i),
+    ).toBeInTheDocument();
+
+    // Ensure there is only ONE Configure Mapping action (the link button in header)
+    const configureLinks = screen.getAllByRole('link', { name: /configure mapping/i });
+    expect(configureLinks).toHaveLength(1);
   });
 });

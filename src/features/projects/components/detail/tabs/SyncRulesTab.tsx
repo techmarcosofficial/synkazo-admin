@@ -8,6 +8,7 @@ import {
   ChevronDown,
   Clock,
   Database,
+  Info,
   Lock,
   Plus,
   Timer,
@@ -38,10 +39,6 @@ import { CreateJobDialog } from '@/features/jobs/components/create';
 import { useJobDetailQuery, type JobDetailData } from '@/features/jobs/hooks';
 import { ActionTooltip } from '@/features/journey';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
-import SetupJourneyCard, {
-  type SetupJourneyStep,
-} from '@/features/onboarding/components/SetupJourneyCard';
-import { selectJobOnboardingState } from '@/features/onboarding';
 import type { JobExt } from '@/features/projects/hooks';
 import {
   deriveSyncJobSummary,
@@ -161,94 +158,7 @@ function metricCellClass(index: number): string {
   );
 }
 
-function CollapsibleJobSetup({
-  detail,
-  projectId,
-}: {
-  detail: JobDetailData;
-  projectId: string;
-}) {
-  const navigate = useNavigate();
-  const { job } = detail;
-  const state = selectJobOnboardingState({
-    mappings: detail.jobFieldMappings,
-    pipelineRequired: detail.pipelineRequired,
-    pipelineConfigured: detail.pipelineConfigured,
-    runLogs: detail.runLogs,
-    lastSyncedAt: job.lastSyncedAt,
-  });
-  const stepStatus = (
-    complete: boolean,
-    stage: typeof state.stage,
-  ): SetupJourneyStep['status'] =>
-    complete ? 'complete' : state.stage === stage ? 'current' : 'upcoming';
-  const steps: SetupJourneyStep[] = [
-    {
-      title: 'Mapping',
-      description: 'Match source fields to destination fields.',
-      status: stepStatus(state.mappingReady, 'field_mapping'),
-    },
-    {
-      title: 'Configure',
-      description: detail.pipelineRequired
-        ? 'Finish the required pipeline setup.'
-        : 'Required sync settings are ready.',
-      status: stepStatus(state.configurationReady, 'configure'),
-    },
-    {
-      title: 'Test & Review',
-      description: 'Run once and review the result.',
-      status: stepStatus(state.testComplete, 'test'),
-    },
-    {
-      title: 'Automate (optional)',
-      description: 'Add a schedule when you are ready.',
-      status: 'upcoming',
-      optional: true,
-    },
-  ];
-  const targetTab =
-    state.stage === 'field_mapping'
-      ? 'field-mapping'
-      : state.stage === 'configure'
-        ? 'pipeline'
-        : 'overview';
-  const content =
-    state.stage === 'field_mapping'
-      ? {
-          title: 'Map this sync job',
-          description:
-            'Choose how records and fields should match before running the job.',
-        }
-      : state.stage === 'configure'
-        ? {
-            title: 'Finish the required configuration',
-            description:
-              'Complete the destination settings this job needs before testing.',
-          }
-        : {
-            title: 'Test and review this sync job',
-            description:
-              'The required setup is ready. Run the job once and review the result.',
-          };
 
-  return (
-    <SetupJourneyCard
-      eyebrow="Job setup"
-      title={content.title}
-      description={content.description}
-      steps={steps}
-      onContinue={() =>
-        navigate(`/projects/${projectId}/jobs/${job.id}?tab=${targetTab}`, {
-          state: {
-            jobBackTo: `/projects/${projectId}?tab=sync-rules`,
-            jobBackLabel: 'Back to Sync Jobs',
-          },
-        })
-      }
-    />
-  );
-}
 
 function SyncJobCard({ job, projectId }: { job: JobExt; projectId: string }) {
   const [open, setOpen] = useState(false);
@@ -289,6 +199,63 @@ function SyncJobCard({ job, projectId }: { job: JobExt; projectId: string }) {
     },
   ];
 
+  const mappedCount =
+    detailQuery.data?.jobFieldMappings?.length ??
+    job.fieldMappings?.length ??
+    0;
+
+  const configItems = [
+    {
+      label: 'Field mappings',
+      value: mappedCount > 0 ? `${mappedCount} mapped` : 'Not mapped',
+      description: mappedCount > 0 ? 'Fields matched' : 'Mapping required',
+      icon: Database,
+    },
+    {
+      label: 'Direction',
+      value: twoWay ? 'Two-way' : 'One-way',
+      description: `${formatEntityLabel(job.sourceObject)} ${twoWay ? '⇄' : '→'} ${formatEntityLabel(job.destObject)}`,
+      icon: DirectionIcon,
+    },
+    {
+      label: 'Schedule',
+      value: formatSchedule(job),
+      description: job.isEnabled ? 'Automation enabled' : 'Trigger on demand',
+      icon: Clock,
+    },
+    {
+      label: 'Last sync',
+      value: formatLastSync(summary.lastSyncAt),
+      description: isNeedsMapping
+        ? 'Setup required'
+        : lifecycle.statusKey === 'ready_to_test'
+          ? 'Test pending'
+          : 'Most recent run',
+      icon: CalendarClock,
+    },
+  ];
+
+  let guidanceMessage: React.ReactNode = null;
+  if (isNeedsMapping) {
+    guidanceMessage = (
+      <>
+        Field mapping is required before synchronization can run. Click{' '}
+        <span className="font-semibold text-foreground">Configure Mapping</span>{' '}
+        above to begin.
+      </>
+    );
+  } else if (lifecycle.statusKey === 'ready_to_test') {
+    guidanceMessage = (
+      <>
+        Configuration is ready. Click{' '}
+        <span className="font-semibold text-foreground">
+          Test &amp; Activate
+        </span>{' '}
+        above to run your first test sync.
+      </>
+    );
+  }
+
   const handleRowClick = (event: React.MouseEvent<HTMLDivElement>) => {
     if ((event.target as HTMLElement).closest('a, button')) return;
     setOpen((current) => !current);
@@ -296,25 +263,13 @@ function SyncJobCard({ job, projectId }: { job: JobExt; projectId: string }) {
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <Card
-        className={cn(
-          'gap-0 rounded-4xl border py-0 transition-colors',
-          isNeedsMapping && 'border-warning/35 bg-warning/[0.03]',
-        )}
-      >
+      <Card className="gap-0 rounded-4xl border py-0 transition-colors">
         <div
           className="hover:bg-muted/30 flex cursor-pointer flex-col gap-4 px-4 py-4 transition-colors sm:px-5 lg:flex-row lg:items-center"
           onClick={handleRowClick}
         >
           <div className="flex min-w-0 flex-1 items-center gap-3.5">
-            <div
-              className={cn(
-                'flex size-10 shrink-0 items-center justify-center rounded-xl transition-colors',
-                isNeedsMapping
-                  ? 'bg-warning/15 text-warning'
-                  : 'bg-muted text-muted-foreground',
-              )}
-            >
+            <div className="bg-muted text-muted-foreground flex size-10 shrink-0 items-center justify-center rounded-xl transition-colors">
               <DirectionIcon className="size-4.5" aria-hidden="true" />
             </div>
             <div className="min-w-0">
@@ -381,7 +336,7 @@ function SyncJobCard({ job, projectId }: { job: JobExt; projectId: string }) {
         </div>
 
         <CollapsibleContent>
-          <div className="bg-muted space-y-3 border-t py-2 px-1.5">
+          <div className="bg-muted space-y-2 border-t py-2 px-1.5">
             {detailQuery.isLoading ? (
               <div className="grid grid-cols-2 md:grid-cols-4">
                 {Array.from({ length: 4 }).map((_, index) => (
@@ -399,10 +354,37 @@ function SyncJobCard({ job, projectId }: { job: JobExt; projectId: string }) {
                 Job setup details are temporarily unavailable.
               </p>
             ) : !hasAnyRun ? (
-              <CollapsibleJobSetup
-                detail={detailQuery.data}
-                projectId={projectId}
-              />
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-4">
+                  {configItems.map((item, index) => (
+                    <div key={item.label} className={metricCellClass(index)}>
+                      <span className="bg-card text-card-foreground flex size-10 shrink-0 items-center justify-center rounded-xl">
+                        <item.icon className="size-4.5" aria-hidden="true" />
+                      </span>
+                      <div className="min-w-0">
+                        <div className="truncate text-lg font-bold tracking-tight">
+                          {item.value}
+                        </div>
+                        <div className="text-muted-foreground truncate text-xs font-medium">
+                          {item.label}
+                        </div>
+                        <div className="text-muted-foreground truncate text-[11px]">
+                          {item.description}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {guidanceMessage && (
+                  <div className="border-border/50 text-muted-foreground flex items-center gap-2 border-t px-4 py-2 text-xs">
+                    <Info
+                      className="text-muted-foreground size-3.5 shrink-0"
+                      aria-hidden="true"
+                    />
+                    <span>{guidanceMessage}</span>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-4">
                 {metrics.map((metric, index) => (
