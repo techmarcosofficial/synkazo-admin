@@ -328,4 +328,70 @@ describe('SyncRulesTab UI', () => {
     const configureLinks = screen.getAllByRole('link', { name: /configure mapping/i });
     expect(configureLinks).toHaveLength(1);
   });
+
+  it('renders Create Sync Flow as outline when a job has incomplete configuration', () => {
+    vi.mocked(useProjectDetailContext).mockReturnValue({
+      project: { id: 'proj-1', name: 'My Project' },
+      jobs: [
+        {
+          id: 'job-unmapped',
+          projectId: 'proj-1',
+          name: 'Customers → Contacts',
+          sourceObject: 'customers',
+          destObject: 'contacts',
+          status: 'idle',
+          fieldMappings: [],
+          isEnabled: false,
+          lastSyncedAt: null,
+          syncDirection: 'one_way',
+        } as unknown as JobExt,
+      ],
+      connections: [],
+      hasBothConnections: true,
+      refetch: vi.fn(),
+    } as any);
+
+    render(
+      <MemoryRouter>
+        <SyncRulesTab />
+      </MemoryRouter>,
+    );
+
+    const createBtn = screen.getByRole('button', { name: /create sync flow/i });
+    expect(createBtn).toHaveAttribute('data-variant', 'outline');
+  });
+
+  it('renders Create Sync Flow as primary default when all jobs are configured', () => {
+    vi.mocked(useProjectDetailContext).mockReturnValue({
+      project: { id: 'proj-1', name: 'My Project' },
+      jobs: [
+        {
+          id: 'job-mapped',
+          projectId: 'proj-1',
+          name: 'Customers → Contacts',
+          sourceObject: 'customers',
+          destObject: 'contacts',
+          status: 'active',
+          fieldMappings: [
+            { id: 'm-1', jobId: 'job-mapped', sourceField: 'email', destField: 'email', direction: 'forward_only' },
+          ],
+          isEnabled: true,
+          lastSyncedAt: '2026-09-26T10:00:00Z',
+          syncDirection: 'one_way',
+        } as unknown as JobExt,
+      ],
+      connections: [],
+      hasBothConnections: true,
+      refetch: vi.fn(),
+    } as any);
+
+    render(
+      <MemoryRouter>
+        <SyncRulesTab />
+      </MemoryRouter>,
+    );
+
+    const createBtn = screen.getByRole('button', { name: /create sync flow/i });
+    expect(createBtn).toHaveAttribute('data-variant', 'default');
+  });
 });

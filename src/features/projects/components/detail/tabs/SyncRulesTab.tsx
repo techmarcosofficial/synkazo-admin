@@ -443,6 +443,13 @@ export default function SyncRulesTab() {
     setShowCreateJob(true);
   };
 
+  const hasIncompleteJobs = jobs.some(
+    (job) =>
+      job.status === 'draft' ||
+      !job.fieldMappings ||
+      job.fieldMappings.length === 0,
+  );
+
   return (
     <div className="space-y-6">
       {upgradeDialog}
@@ -473,6 +480,7 @@ export default function SyncRulesTab() {
             disabled={isBlockedByRole || isBlockedByPlan}
           >
             <Button
+              variant={hasIncompleteJobs ? 'outline' : 'default'}
               className="shrink-0 self-start sm:self-auto"
               disabled={isBlockedByRole}
               onClick={startCreateJob}
