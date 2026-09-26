@@ -2,7 +2,6 @@ import {
   CalendarClock,
   Clock,
   Database,
-  Info,
   Play,
   RotateCcw,
   Timer,
@@ -53,24 +52,22 @@ function SyncSummaryCard({
   description: string;
 }) {
   return (
-    <Card size="sm" className="min-w-0 gap-0 rounded-3xl py-0 shadow-none">
-      <CardContent className="space-y-2.5 p-4">
-        <span className="bg-muted text-muted-foreground flex size-9 items-center justify-center rounded-3xl">
-          <Icon className="size-4" aria-hidden="true" />
-        </span>
-        <div className="min-w-0">
-          <p className="text-lg leading-tight font-bold tracking-tight">
-            {value}
-          </p>
-          <p className="text-muted-foreground mt-0.5 text-xs font-medium">
-            {label}
-          </p>
-          <p className="text-muted-foreground mt-0.5 text-[11px]">
-            {description}
-          </p>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="bg-muted/50 min-w-0 space-y-2 rounded-2xl p-3.5">
+      <span className="bg-card text-muted-foreground flex size-8 items-center justify-center rounded-xl">
+        <Icon className="size-3.5" aria-hidden="true" />
+      </span>
+      <div className="min-w-0">
+        <p className="text-base leading-tight font-bold tracking-tight">
+          {value}
+        </p>
+        <p className="text-muted-foreground mt-0.5 text-xs font-medium">
+          {label}
+        </p>
+        <p className="text-muted-foreground mt-0.5 text-[11px]">
+          {description}
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -305,17 +302,15 @@ export default function OverviewTab() {
 
   return (
     <div className="space-y-5">
-      {!manualDialogOpen && progress}
-
       <Card size="sm" className="min-w-0 rounded-4xl">
         <CardHeader>
           <div className="space-y-0.5">
             <CardTitle className="text-base font-semibold">
-              Job performance
+              Sync overview
             </CardTitle>
             <CardDescription className="text-xs leading-tight">
-              See how this job is doing and sync fresh data whenever you need
-              to.
+              Monitor sync activity and trigger fresh data syncs whenever you
+              need to.
             </CardDescription>
           </div>
           <CardAction className="flex flex-wrap items-center gap-2">
@@ -354,7 +349,11 @@ export default function OverviewTab() {
             </Button>
           </CardAction>
         </CardHeader>
+
         <CardContent className="space-y-4">
+          {/* Sync progress — appears right after header on sync */}
+          {!manualDialogOpen && progress}
+
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             {summaryCards.map((card) => (
               <SyncSummaryCard key={card.label} {...card} />
