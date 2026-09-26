@@ -13,19 +13,65 @@ export function selectContextualSetupAction(input: {
 }
 
 export type ProjectOnboardingStage =
-  'connect_platforms' | 'create_first_job' | 'complete';
+  | 'connect_platforms'
+  | 'create_first_job'
+  | 'configure_job'
+  | 'complete';
+
+export interface ProjectOnboardingStageJob {
+  status?: string;
+  syncEnabled?: boolean;
+  isEnabled?: boolean;
+  lastSyncedAt?: string | null;
+  recordsSynced?: number;
+  cronExpression?: string | null;
+  intervalMinutes?: number | null;
+  scheduleTimes?: string[] | null;
+}
 
 export function selectProjectOnboardingStage(input: {
   hasBothConnections: boolean;
   hasJobs: boolean;
+  jobs?: ProjectOnboardingStageJob[];
 }): ProjectOnboardingStage {
-  // A job can only be created after connections were ready. Its existence is
-  // therefore the durable, data-backed completion signal for this project;
-  // a later connection outage should be handled operationally, not restart
-  // first-time onboarding.
+  if (!input.hasBothConnections) {
+    const hasPastSyncedJob =
+      input.jobs?.some(
+        (j) =>
+          Boolean(j.lastSyncedAt) ||
+          (j.recordsSynced != null && j.recordsSynced > 0),
+      ) ?? false;
+
+    if (hasPastSyncedJob || (!input.jobs && input.hasJobs)) {
+      return 'complete';
+    }
+
+    return 'connect_platforms';
+  }
+
+  if (input.jobs && input.jobs.length > 0) {
+    const hasActiveOrCompletedJob = input.jobs.some((j) => {
+      if (j.status === 'draft') return false;
+      const hasSynced =
+        Boolean(j.lastSyncedAt) ||
+        (j.recordsSynced != null && j.recordsSynced > 0);
+      const isConfiguredAndActive =
+        (j.status === 'active' || j.syncEnabled || j.isEnabled) &&
+        (Boolean(j.cronExpression) ||
+          Boolean(j.intervalMinutes) ||
+          Boolean(j.scheduleTimes?.length) ||
+          j.syncEnabled ||
+          j.isEnabled);
+      return hasSynced || isConfiguredAndActive;
+    });
+
+    if (hasActiveOrCompletedJob) return 'complete';
+    return 'configure_job';
+  }
+
+  // Backward-compatible fallback when jobs list is not provided
   if (input.hasJobs) return 'complete';
-  if (input.hasBothConnections) return 'create_first_job';
-  return 'connect_platforms';
+  return 'create_first_job';
 }
 
 export type JobOnboardingStage =

@@ -137,15 +137,6 @@ describe('useConnectionsManager', () => {
       result.current.openConnect(slotConn);
     });
 
-    expect(result.current.showMethodModal).toBe(true);
-    expect(result.current.activeConn?.platformId).toBe('hubspot');
-
-    // Switch to manual setup
-    act(() => {
-      result.current.handleManual();
-    });
-
-    expect(result.current.showMethodModal).toBe(false);
     expect(result.current.showManualModal).toBe(true);
     expect(result.current.activeConn?.platformId).toBe('hubspot');
 
@@ -154,7 +145,6 @@ describe('useConnectionsManager', () => {
       result.current.resetModals();
     });
 
-    expect(result.current.showMethodModal).toBe(false);
     expect(result.current.showManualModal).toBe(false);
     expect(result.current.activeConn).toBeNull();
   });

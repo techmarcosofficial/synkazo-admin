@@ -6,6 +6,7 @@ import { CRED_SCHEMAS } from './platformMeta';
 import { connectionsApi } from '@/api/connections';
 import FormDialog from '@/components/form/FormDialog';
 import { PlatformIcon } from '@/components/platform';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -20,7 +21,15 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from '../ui/popover';
-import { AlertCircle, CheckCircle2, CircleHelp, ExternalLink } from 'lucide-react';
+import {
+  AlertCircle,
+  AlertTriangle,
+  ArrowLeft,
+  CheckCircle2,
+  CircleHelp,
+  ExternalLink,
+  KeyRound,
+} from 'lucide-react';
 
 interface ConnectionPayload {
   platformId?: string;
@@ -38,23 +47,33 @@ interface CredentialsModalProps {
     environment?: string;
     providerMetadata?: { installSource?: 'marketplace' | 'manual' };
   };
+  syncMode?: 'one_way' | 'two_way' | null;
+  onOAuth?: () => void;
   onSaved: () => void;
   onClose: () => void;
+  willCompleteBoth?: boolean;
 }
 
-type ModalPhase = 'form' | 'verifying' | 'success';
+type ModalPhase = 'method' | 'form' | 'verifying' | 'success';
 
 export default function CredentialsModal({
   projectId,
   conn,
+  syncMode = null,
+  onOAuth,
   onSaved,
   onClose,
+  willCompleteBoth = false,
 }: CredentialsModalProps) {
   const platformId = conn.platformId ?? 'servicetitan';
   const schema = CRED_SCHEMAS[platformId] ?? CRED_SCHEMAS.servicetitan;
   const isEdit = !!conn?.id;
+  const supportsOAuth = platformId === 'hubspot' && !!onOAuth;
+  const manualDisabled = platformId === 'hubspot' && syncMode === 'two_way';
+  const manualEnabled = !manualDisabled;
 
-  const [phase, setPhase] = useState<ModalPhase>('form');
+  const initialPhase: ModalPhase = !isEdit && supportsOAuth ? 'method' : 'form';
+  const [phase, setPhase] = useState<ModalPhase>(initialPhase);
   const [form, setForm] = useState<Record<string, string>>(
     Object.fromEntries(schema.fields.map((f) => [f.key, ''])),
   );
@@ -263,28 +282,48 @@ export default function CredentialsModal({
       onOpenChange={(open) => !open && handleClose()}
       title={
         phase === 'success'
-          ? `${schema.title} Connected`
+          ? willCompleteBoth
+            ? `${schema.title} Connected · Project Active!`
+            : `${schema.title} Connected`
           : phase === 'verifying'
             ? `Verifying ${schema.title} Credentials`
-            : isEdit
-              ? `Edit ${schema.title} Connection`
-              : `Connect ${schema.title}`
+            : phase === 'method'
+              ? `Connect ${schema.title}`
+              : isEdit
+                ? `Edit ${schema.title} Connection`
+                : `Connect ${schema.title}`
       }
       description={
         phase === 'success'
-          ? 'Credentials verified and active'
+          ? willCompleteBoth
+            ? 'Both platforms are connected and verified. Your project is active and ready for sync flows.'
+            : 'Credentials verified and active'
           : phase === 'verifying'
             ? 'Testing connection with API'
-            : isEdit
-              ? 'Update your API credentials'
-              : 'Enter your API credentials'
+            : phase === 'method'
+              ? 'Choose how to authenticate'
+              : isEdit
+                ? 'Update your API credentials'
+                : 'Enter your API credentials'
       }
       size="sm"
       footer={(requestClose) => {
+        if (phase === 'method') {
+          return (
+            <Button
+              variant="outline"
+              onClick={requestClose}
+              className="w-full"
+            >
+              Cancel
+            </Button>
+          );
+        }
+
         if (phase === 'success') {
           return (
             <Button onClick={handleDone} className="w-full">
-              Done
+              {willCompleteBoth ? 'Continue to Sync Flows →' : 'Done'}
             </Button>
           );
         }
@@ -322,6 +361,104 @@ export default function CredentialsModal({
         );
       }}
     >
+      {/* Phase 0: Method Selection State */}
+      {phase === 'method' && (
+        <div className="space-y-3">
+          {manualDisabled && (
+            <Alert className="mb-1">
+              <AlertTriangle className="size-4" />
+              <AlertDescription>
+                This project is set to Two Way sync, which relies on HubSpot
+                webhooks to catch changes in real time — HubSpot has no way to
+                manage webhook subscriptions for a Private App (manual) token,
+                only for an OAuth connection. Use &ldquo;Login with HubSpot&rdquo; below to
+                connect.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={manualEnabled ? () => setPhase('form') : undefined}
+              disabled={!manualEnabled}
+              className={cn(
+                'flex flex-col items-start gap-3 rounded-2xl border p-4 text-left transition-all',
+                manualEnabled
+                  ? 'hover:border-primary/50 hover:bg-muted/60 bg-muted/30 cursor-pointer active:scale-[0.99]'
+                  : 'bg-muted/10 cursor-not-allowed opacity-40',
+              )}
+            >
+              <div
+                className={cn(
+                  'flex size-9 items-center justify-center rounded-xl',
+                  manualEnabled
+                    ? 'bg-primary/10 text-primary'
+                    : 'bg-muted text-muted-foreground',
+                )}
+              >
+                <KeyRound className="size-4" />
+              </div>
+              <div>
+                <div
+                  className={cn(
+                    'mb-0.5 text-sm font-semibold',
+                    !manualEnabled && 'text-muted-foreground',
+                  )}
+                >
+                  Manual Setup
+                </div>
+                <div className="text-muted-foreground text-xs leading-relaxed">
+                  {manualEnabled
+                    ? 'Enter API credentials'
+                    : 'Not available for two-way sync'}
+                </div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={supportsOAuth ? onOAuth : undefined}
+              disabled={!supportsOAuth}
+              className={cn(
+                'flex flex-col items-start gap-3 rounded-2xl border p-4 text-left transition-all',
+                supportsOAuth
+                  ? 'hover:border-hubspot/50 hover:bg-muted/60 bg-muted/30 cursor-pointer active:scale-[0.99]'
+                  : 'bg-muted/10 cursor-not-allowed opacity-40',
+              )}
+            >
+              <div
+                className={cn(
+                  'flex size-9 items-center justify-center rounded-xl',
+                  supportsOAuth
+                    ? 'bg-hubspot/15 text-hubspot'
+                    : 'bg-muted text-muted-foreground',
+                )}
+              >
+                <KeyRound className="size-4" />
+              </div>
+              <div>
+                <div
+                  className={cn(
+                    'mb-0.5 text-sm font-semibold',
+                    !supportsOAuth && 'text-muted-foreground',
+                  )}
+                >
+                  {platformId === 'hubspot' ? 'Login with HubSpot' : 'OAuth'}
+                </div>
+                <div className="text-muted-foreground text-xs leading-relaxed">
+                  {supportsOAuth
+                    ? 'Continue with HubSpot account'
+                    : platformId === 'hubspot'
+                      ? 'Not available — use Manual Setup'
+                      : 'Not applicable'}
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
+
       {previewLoading && (
         <div className="text-muted-foreground flex items-center gap-2 text-xs">
           <Spinner className="size-3" /> Loading saved details…
@@ -360,15 +497,23 @@ export default function CredentialsModal({
           </div>
           <div className="space-y-1 max-w-sm">
             <h3 className="text-foreground text-base font-bold">
-              {schema.title} Connected Successfully!
+              {willCompleteBoth
+                ? `${schema.title} Connected · Project Active!`
+                : `${schema.title} Connected Successfully!`}
             </h3>
             <p className="text-muted-foreground text-xs leading-relaxed">
-              Thank you! Your {schema.title} credentials have been verified and saved. Synkazo is ready to synchronize records with this platform.
+              {willCompleteBoth
+                ? 'Both platforms are connected and verified! Your project is now active and ready for sync flows.'
+                : `Thank you! Your ${schema.title} credentials have been verified and saved. Synkazo is ready to synchronize records with this platform.`}
             </p>
           </div>
           <div className="bg-muted/60 border-border/60 flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs text-muted-foreground">
             <span className="size-2 rounded-full bg-success inline-block" />
-            <span>Status: Verified & Live</span>
+            <span>
+              {willCompleteBoth
+                ? 'Project Status: Active & Ready'
+                : 'Status: Verified & Live'}
+            </span>
           </div>
         </div>
       )}
@@ -376,6 +521,21 @@ export default function CredentialsModal({
       {/* Phase 3: Form State (default or when error occurs) */}
       {phase === 'form' && (
         <>
+          {!isEdit && supportsOAuth && (
+            <div className="mb-3">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setPhase('method')}
+                className="text-muted-foreground hover:text-foreground -ml-2 h-7 gap-1.5 px-2 text-xs"
+              >
+                <ArrowLeft className="size-3.5" />
+                Back to authentication methods
+              </Button>
+            </div>
+          )}
+
           {verifyError && (
             <div
               role="alert"

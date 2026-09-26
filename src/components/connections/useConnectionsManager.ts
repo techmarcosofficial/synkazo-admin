@@ -158,7 +158,8 @@ export function useConnectionsManager({
 
   const openConnect = (conn: ExtConnection) => {
     setActiveConn(conn);
-    setShowMethodModal(true);
+    setShowManualModal(true);
+    setShowMethodModal(false);
   };
 
   const handleManual = () => {

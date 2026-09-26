@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 
 import {
@@ -17,6 +17,9 @@ import StickyDetailHeader from '@/components/shared/StickyDetailHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs } from '@/components/ui/tabs';
+import { projectsApi } from '@/api/projects';
+import type { ProjectStatus } from '@/types';
+import { toast } from 'sonner';
 import {
   useProjectDetailCacheHelpers,
   useProjectDetailQuery,
@@ -81,6 +84,109 @@ export default function ProjectDetailPage() {
   });
 
   useProjectDetailLiveSync(projectId, refetch);
+
+  // Automated self-healing project status management:
+  // 1. Promotes from 'draft' to 'active' when both platforms are verified during onboarding.
+  // 2. Restores from 'error' to their previous state ('active' or 'draft') when broken connections are fixed and re-verified.
+  // 3. Demotes from 'active' to 'error' when an active project's connection fails or is disconnected.
+  const isUpdatingStatusRef = useRef(false);
+
+  useEffect(() => {
+    if (
+      loading ||
+      !detailQuery.data ||
+      !project ||
+      isUpdatingStatusRef.current
+    ) {
+      return;
+    }
+
+    const prevStatusKey = `synkazo:proj-prev-status:${projectId}`;
+
+    if (hasBothConnections) {
+      if (project.status === 'draft') {
+        isUpdatingStatusRef.current = true;
+        projectsApi
+          .updateProject(projectId, { status: 'active' as ProjectStatus })
+          .then(() => {
+            patchProject({ status: 'active' as ProjectStatus });
+            try {
+              sessionStorage.removeItem(prevStatusKey);
+            } catch {}
+            toast.success(
+              'Both platforms connected! Project is now active and ready for sync flows.',
+            );
+          })
+          .catch(() => {})
+          .finally(() => {
+            isUpdatingStatusRef.current = false;
+          });
+      } else if (project.status === 'error') {
+        isUpdatingStatusRef.current = true;
+        let targetStatus: ProjectStatus = 'active';
+        try {
+          const stored = sessionStorage.getItem(prevStatusKey);
+          if (stored === 'draft') {
+            targetStatus = 'draft';
+          } else {
+            targetStatus = 'active';
+          }
+        } catch {
+          targetStatus = 'active';
+        }
+
+        projectsApi
+          .updateProject(projectId, { status: targetStatus })
+          .then(() => {
+            patchProject({ status: targetStatus });
+            try {
+              sessionStorage.removeItem(prevStatusKey);
+            } catch {}
+            if (targetStatus === 'active') {
+              toast.success(
+                'Connections restored! Project is active and ready for sync flows.',
+              );
+            } else {
+              toast.success(
+                'Connections restored! Project returned to draft status.',
+              );
+            }
+          })
+          .catch(() => {})
+          .finally(() => {
+            isUpdatingStatusRef.current = false;
+          });
+      }
+    } else {
+      // Connections are broken or missing on an active project
+      if (project.status === 'active') {
+        try {
+          sessionStorage.setItem(prevStatusKey, 'active');
+        } catch {}
+        isUpdatingStatusRef.current = true;
+        projectsApi
+          .updateProject(projectId, { status: 'error' as ProjectStatus })
+          .then(() => {
+            patchProject({ status: 'error' as ProjectStatus });
+            toast.error(
+              'Connection issue detected — Project status set to Error.',
+            );
+          })
+          .catch(() => {})
+          .finally(() => {
+            isUpdatingStatusRef.current = false;
+          });
+      }
+    }
+  }, [
+    hasBothConnections,
+    project?.status,
+    projectId,
+    patchProject,
+    loading,
+    detailQuery.data,
+    jobs.length,
+  ]);
 
   if (loading) {
     return (

@@ -1110,6 +1110,7 @@ export const CreateJobForm = forwardRef<
           }
           projectId={projectId}
           compact={compactLayout || detailsOnly}
+          existingJobs={projectJobsQuery.data ?? []}
         />
       )}
 

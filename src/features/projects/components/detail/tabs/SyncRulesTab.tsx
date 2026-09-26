@@ -67,10 +67,89 @@ function formatSuccessRate(value: number | null): string {
   return `${value.toFixed(value % 1 === 0 ? 0 : 1)}%`;
 }
 
-function jobStatus(job: JobExt): string {
-  if (job.isRunning) return 'running';
-  if (!job.isEnabled) return 'inactive';
-  return job.status || 'active';
+export interface JobLifecycle {
+  statusKey: string;
+  scheduleText: string;
+  actionLabel: string;
+  actionVariant: 'default' | 'outline' | 'ghost';
+  targetUrl: string;
+  isActionable: boolean;
+}
+
+export function getJobLifecycle(
+  job: JobExt,
+  detail?: JobDetailData | null,
+  projectId?: string,
+): JobLifecycle {
+  const mappings = detail?.jobFieldMappings ?? job.fieldMappings ?? [];
+  const mappingCount = mappings.length;
+  const isDraftOrUnmapped = job.status === 'draft' || mappingCount === 0;
+  const twoWay = job.syncDirection === 'two_way';
+  const defaultSchedule = twoWay ? 'Automatic sync' : formatSchedule(job);
+
+  if (isDraftOrUnmapped) {
+    return {
+      statusKey: 'needs_mapping',
+      scheduleText: 'Setup required',
+      actionLabel: 'Configure Mapping',
+      actionVariant: 'default',
+      targetUrl: `/projects/${projectId}/jobs/${job.id}?tab=field-mapping`,
+      isActionable: true,
+    };
+  }
+
+  if (!job.lastSyncedAt && !job.isEnabled) {
+    return {
+      statusKey: 'ready_to_test',
+      scheduleText: 'Test pending',
+      actionLabel: 'Test & Activate',
+      actionVariant: 'outline',
+      targetUrl: `/projects/${projectId}/jobs/${job.id}`,
+      isActionable: true,
+    };
+  }
+
+  if (job.status === 'error') {
+    return {
+      statusKey: 'error',
+      scheduleText: 'Error detected',
+      actionLabel: 'Review Error',
+      actionVariant: 'outline',
+      targetUrl: `/projects/${projectId}/jobs/${job.id}`,
+      isActionable: true,
+    };
+  }
+
+  if (job.isRunning) {
+    return {
+      statusKey: 'running',
+      scheduleText: defaultSchedule,
+      actionLabel: 'View',
+      actionVariant: 'ghost',
+      targetUrl: `/projects/${projectId}/jobs/${job.id}`,
+      isActionable: false,
+    };
+  }
+
+  if (!job.isEnabled) {
+    return {
+      statusKey: 'inactive',
+      scheduleText: 'Paused',
+      actionLabel: 'View',
+      actionVariant: 'ghost',
+      targetUrl: `/projects/${projectId}/jobs/${job.id}`,
+      isActionable: false,
+    };
+  }
+
+  return {
+    statusKey: job.status || 'active',
+    scheduleText: defaultSchedule,
+    actionLabel: 'View',
+    actionVariant: 'ghost',
+    targetUrl: `/projects/${projectId}/jobs/${job.id}`,
+    isActionable: false,
+  };
 }
 
 function metricCellClass(index: number): string {
@@ -133,7 +212,7 @@ function CollapsibleJobSetup({
       ? 'field-mapping'
       : state.stage === 'configure'
         ? 'pipeline'
-        : 'schedule';
+        : 'overview';
   const content =
     state.stage === 'field_mapping'
       ? {
@@ -179,7 +258,9 @@ function SyncJobCard({ job, projectId }: { job: JobExt; projectId: string }) {
   const hasAnyRun = hasAnySyncRun(job, runs);
   const twoWay = job.syncDirection === 'two_way';
   const DirectionIcon = twoWay ? ArrowLeftRight : ArrowRight;
-  const schedule = twoWay ? 'Automatic sync' : formatSchedule(job);
+
+  const lifecycle = getJobLifecycle(job, detailQuery.data, projectId);
+  const isNeedsMapping = lifecycle.statusKey === 'needs_mapping';
 
   const metrics = [
     {
@@ -215,13 +296,25 @@ function SyncJobCard({ job, projectId }: { job: JobExt; projectId: string }) {
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <Card className="gap-0 rounded-4xl border py-0">
+      <Card
+        className={cn(
+          'gap-0 rounded-4xl border py-0 transition-colors',
+          isNeedsMapping && 'border-warning/35 bg-warning/[0.03]',
+        )}
+      >
         <div
           className="hover:bg-muted/30 flex cursor-pointer flex-col gap-4 px-4 py-4 transition-colors sm:px-5 lg:flex-row lg:items-center"
           onClick={handleRowClick}
         >
           <div className="flex min-w-0 flex-1 items-center gap-3.5">
-            <div className="bg-muted text-muted-foreground flex size-10 shrink-0 items-center justify-center rounded-xl">
+            <div
+              className={cn(
+                'flex size-10 shrink-0 items-center justify-center rounded-xl transition-colors',
+                isNeedsMapping
+                  ? 'bg-warning/15 text-warning'
+                  : 'bg-muted text-muted-foreground',
+              )}
+            >
               <DirectionIcon className="size-4.5" aria-hidden="true" />
             </div>
             <div className="min-w-0">
@@ -241,22 +334,32 @@ function SyncJobCard({ job, projectId }: { job: JobExt; projectId: string }) {
           <div className="flex flex-wrap items-center gap-3 sm:justify-end lg:flex-nowrap">
             <span className="text-muted-foreground flex items-center gap-1.5 text-xs whitespace-nowrap">
               <Clock className="size-3.5" aria-hidden="true" />
-              {schedule}
+              {lifecycle.scheduleText}
             </span>
-            <StatusBadge status={jobStatus(job)} size="sm" />
+            <StatusBadge status={lifecycle.statusKey} size="sm" />
             <Separator
               orientation="vertical"
               className="h-6 data-vertical:self-center"
             />
-            <Button asChild variant="ghost" size="sm">
+            <Button
+              asChild
+              variant={lifecycle.actionVariant}
+              size="sm"
+              className={cn(
+                lifecycle.actionVariant === 'default' &&
+                  'font-medium shadow-xs',
+                lifecycle.actionVariant === 'outline' &&
+                  'font-medium border-primary/30 text-primary hover:bg-primary/5',
+              )}
+            >
               <Link
-                to={`/projects/${projectId}/jobs/${job.id}`}
+                to={lifecycle.targetUrl}
                 state={{
                   jobBackTo: `/projects/${projectId}?tab=sync-rules`,
                   jobBackLabel: 'Back to Sync Jobs',
                 }}
               >
-                View
+                {lifecycle.actionLabel}
                 <ArrowRight data-icon="inline-end" />
               </Link>
             </Button>

@@ -265,4 +265,185 @@ describe('CredentialsModal In-Modal Verification', () => {
     expect(onCloseMock).toHaveBeenCalled();
     expect(onSavedMock).toHaveBeenCalled();
   });
+
+  it('displays project active celebration and Continue to Sync Flows CTA when willCompleteBoth is true', async () => {
+    vi.mocked(connectionsApi.createConnection).mockResolvedValue({
+      id: 'conn-hubspot-complete',
+      projectId: 'proj-1',
+      platformId: 'hubspot',
+      connectionType: 'destination',
+      status: 'connected',
+    } as any);
+
+    vi.mocked(connectionsApi.testConnection).mockResolvedValue({
+      success: true,
+      message: 'HubSpot connected and verified',
+    });
+
+    render(
+      <CredentialsModal
+        projectId="proj-1"
+        conn={{ platformId: 'hubspot', connectionType: 'destination', environment: 'sandbox' }}
+        willCompleteBoth={true}
+        onClose={onCloseMock}
+        onSaved={onSavedMock}
+      />,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText('Enter your HubSpot access token'), {
+      target: { value: 'pat-eu1-12345678-abcd' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /verify credentials/i }));
+
+    expect(
+      (await screen.findAllByText('HubSpot Connected · Project Active!')).length,
+    ).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getByText('Both platforms are connected and verified. Your project is active and ready for sync flows.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Project Status: Active & Ready')).toBeInTheDocument();
+
+    const continueBtn = screen.getByRole('button', { name: /continue to sync flows/i });
+    expect(continueBtn).toBeInTheDocument();
+    fireEvent.click(continueBtn);
+
+    expect(onCloseMock).toHaveBeenCalled();
+    expect(onSavedMock).toHaveBeenCalled();
+  });
+
+  it('renders method selection view for new OAuth-capable platform and transitions to form on Manual Setup', async () => {
+    const onOAuthMock = vi.fn();
+
+    render(
+      <CredentialsModal
+        projectId="proj-1"
+        conn={{ platformId: 'hubspot', connectionType: 'destination', environment: 'sandbox' }}
+        onOAuth={onOAuthMock}
+        onClose={onCloseMock}
+        onSaved={onSavedMock}
+      />,
+    );
+
+    // Initial view should be method selection
+    expect(screen.getByText('Choose how to authenticate')).toBeInTheDocument();
+    expect(screen.getByText('Manual Setup')).toBeInTheDocument();
+    expect(screen.getByText('Login with HubSpot')).toBeInTheDocument();
+
+    // Clicking "Manual Setup" replaces content in-place with the form
+    fireEvent.click(screen.getByText('Manual Setup'));
+
+    expect(screen.getByText('Enter your API credentials')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Enter your HubSpot access token')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /back to authentication methods/i })).toBeInTheDocument();
+  });
+
+  it('preserves entered form inputs when returning to method selection via Back button', async () => {
+    const onOAuthMock = vi.fn();
+
+    render(
+      <CredentialsModal
+        projectId="proj-1"
+        conn={{ platformId: 'hubspot', connectionType: 'destination', environment: 'sandbox' }}
+        onOAuth={onOAuthMock}
+        onClose={onCloseMock}
+        onSaved={onSavedMock}
+      />,
+    );
+
+    // Go to manual form
+    fireEvent.click(screen.getByText('Manual Setup'));
+
+    // Enter a token
+    const tokenInput = screen.getByPlaceholderText('Enter your HubSpot access token');
+    fireEvent.change(tokenInput, { target: { value: 'pat-preserved-value-123' } });
+    expect(tokenInput).toHaveValue('pat-preserved-value-123');
+
+    // Click "Back to authentication methods"
+    fireEvent.click(screen.getByRole('button', { name: /back to authentication methods/i }));
+
+    // We are back at method selection
+    expect(screen.getByText('Choose how to authenticate')).toBeInTheDocument();
+
+    // Return to Manual Setup
+    fireEvent.click(screen.getByText('Manual Setup'));
+
+    // The previously entered token should still be there!
+    const restoredInput = screen.getByPlaceholderText('Enter your HubSpot access token');
+    expect(restoredInput).toHaveValue('pat-preserved-value-123');
+  });
+
+  it('triggers onOAuth callback when clicking Login with HubSpot', async () => {
+    const onOAuthMock = vi.fn();
+
+    render(
+      <CredentialsModal
+        projectId="proj-1"
+        conn={{ platformId: 'hubspot', connectionType: 'destination', environment: 'sandbox' }}
+        onOAuth={onOAuthMock}
+        onClose={onCloseMock}
+        onSaved={onSavedMock}
+      />,
+    );
+
+    const oauthBtn = screen.getByRole('button', { name: /login with hubspot/i });
+    fireEvent.click(oauthBtn);
+
+    expect(onOAuthMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows warning and disables Manual Setup when syncMode is two_way for HubSpot', async () => {
+    const onOAuthMock = vi.fn();
+
+    render(
+      <CredentialsModal
+        projectId="proj-1"
+        conn={{ platformId: 'hubspot', connectionType: 'destination', environment: 'sandbox' }}
+        syncMode="two_way"
+        onOAuth={onOAuthMock}
+        onClose={onCloseMock}
+        onSaved={onSavedMock}
+      />,
+    );
+
+    // Warning alert is present
+    expect(
+      screen.getByText(/this project is set to two way sync/i),
+    ).toBeInTheDocument();
+
+    // Manual setup button is disabled
+    const manualBtn = screen.getByRole('button', { name: /manual setup/i });
+    expect(manualBtn).toBeDisabled();
+  });
+
+  it('directly opens form view for existing connection edit, bypassing method selection', async () => {
+    const onOAuthMock = vi.fn();
+
+    render(
+      <CredentialsModal
+        projectId="proj-1"
+        conn={{
+          id: 'conn-existing-1',
+          platformId: 'hubspot',
+          connectionType: 'destination',
+          environment: 'sandbox',
+        }}
+        onOAuth={onOAuthMock}
+        onClose={onCloseMock}
+        onSaved={onSavedMock}
+      />,
+    );
+
+    // Starts directly in edit form
+    expect(screen.getByText('Edit HubSpot Connection')).toBeInTheDocument();
+    expect(screen.getByText('Update your API credentials')).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText('Leave blank to keep existing token'),
+    ).toBeInTheDocument();
+    // Back button should NOT be present on edit mode
+    expect(
+      screen.queryByRole('button', { name: /back to authentication methods/i }),
+    ).not.toBeInTheDocument();
+  });
 });
+

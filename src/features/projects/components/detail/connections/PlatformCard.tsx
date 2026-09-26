@@ -263,14 +263,14 @@ export default function PlatformCard({
         </div>
 
         {isError && (
-          <div className="bg-destructive/10 text-destructive flex items-center gap-2 rounded-2xl border border-destructive/20 px-3 py-1.5 text-xs">
+          <div className="bg-destructive/10 text-destructive flex items-center gap-2 rounded-2xl px-3 py-1.5 text-xs">
             <AlertCircle className="size-3.5 shrink-0" />
             <span>Connection verification failed or credentials expired. Update credentials to restore sync.</span>
           </div>
         )}
 
         {testResult && (
-          <div className="bg-muted text-muted-foreground flex items-center gap-2 rounded-2xl border px-3 py-2 text-xs">
+          <div className="bg-muted text-muted-foreground flex items-center gap-2 rounded-2xl px-3 py-2 text-xs">
             {testResult.ok ? (
               <Check className="text-success size-3.5" />
             ) : (

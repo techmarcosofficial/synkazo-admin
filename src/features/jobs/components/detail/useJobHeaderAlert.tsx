@@ -37,6 +37,7 @@ export function useJobHeaderAlert(): ResolvedJobHeaderAlert | undefined {
     handleToggle,
     handleTabChange,
     refetch,
+    activeTab,
   } = useJobDetailContext();
 
   const [activatingProject, setActivatingProject] = useState(false);
@@ -76,7 +77,7 @@ export function useJobHeaderAlert(): ResolvedJobHeaderAlert | undefined {
     }
   };
 
-  if (!isProjectActive) {
+  if (!isProjectActive && activeTab !== 'field-mapping') {
     candidates.push({
       key: 'project-inactive',
       variant: 'warning',

@@ -68,6 +68,7 @@ export interface Job {
   excludeConditionLogic?: 'AND' | 'OR';
   /** When true, a matched record is left completely untouched, never updated. */
   skipUpdateOnMatch?: boolean;
+  fieldMappings?: FieldMapping[];
 }
 
 export interface DataCheckupResult {

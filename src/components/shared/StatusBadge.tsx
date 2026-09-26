@@ -93,6 +93,16 @@ const STATUS_CONFIG: Record<
     label: 'Draft',
     description: 'Not ready for syncing',
   },
+  needs_mapping: {
+    tone: 'warning',
+    label: 'Needs Mapping',
+    description: 'Field mapping required before syncing',
+  },
+  ready_to_test: {
+    tone: 'info',
+    label: 'Ready to Test',
+    description: 'Initial test run pending',
+  },
   paused: {
     tone: 'paused',
     label: 'Paused',

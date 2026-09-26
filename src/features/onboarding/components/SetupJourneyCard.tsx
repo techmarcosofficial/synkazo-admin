@@ -21,6 +21,10 @@ interface SetupJourneyCardProps {
   steps: SetupJourneyStep[];
   actionLabel?: string;
   onContinue?: () => void;
+  secondaryAction?: {
+    label: string;
+    onClick: () => void;
+  };
 }
 
 export default function SetupJourneyCard({
@@ -30,6 +34,7 @@ export default function SetupJourneyCard({
   steps,
   actionLabel = 'Continue setup',
   onContinue,
+  secondaryAction,
 }: SetupJourneyCardProps) {
   const requiredSteps = steps.filter((step) => !step.optional);
   const completedCount = requiredSteps.filter(
@@ -151,17 +156,29 @@ export default function SetupJourneyCard({
             </ol>
 
             {/* Zone 3 — Progress counter + action, inline */}
-            {onContinue && actionLabel && (
-              <div className="flex shrink-0 items-center gap-2 sm:flex-col sm:items-end">
-                <span className="text-muted-foreground text-[10px] font-medium whitespace-nowrap">
-                  {completedCount}/{requiredSteps.length} complete
-                </span>
-                <Button size="sm" className="h-7 text-xs" onClick={onContinue}>
-                  {actionLabel}
-                  <ArrowRight data-icon="inline-end" aria-hidden="true" />
-                </Button>
-              </div>
-            )}
+            <div className="flex shrink-0 items-center gap-2 sm:flex-col sm:items-end">
+              <span className="text-muted-foreground text-[10px] font-medium whitespace-nowrap">
+                {completedCount}/{requiredSteps.length} complete
+              </span>
+              {onContinue && actionLabel && (
+                <div className="flex items-center gap-1.5">
+                  {secondaryAction && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                      onClick={secondaryAction.onClick}
+                    >
+                      {secondaryAction.label}
+                    </Button>
+                  )}
+                  <Button size="sm" className="h-7 text-xs" onClick={onContinue}>
+                    {actionLabel}
+                    <ArrowRight data-icon="inline-end" aria-hidden="true" />
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         ) : (
           /* ── Full-width layout (> 2 steps — Job Setup, unchanged) ───── */
@@ -185,12 +202,24 @@ export default function SetupJourneyCard({
                 <span className="text-muted-foreground text-[10px] font-medium whitespace-nowrap">
                   {completedCount}/{requiredSteps.length} complete
                 </span>
-                {onContinue && actionLabel && (
-                  <Button size="sm" className="h-8" onClick={onContinue}>
-                    {actionLabel}
-                    <ArrowRight data-icon="inline-end" aria-hidden="true" />
-                  </Button>
-                )}
+                <div className="flex items-center gap-2">
+                  {secondaryAction && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 text-xs text-muted-foreground hover:text-foreground"
+                      onClick={secondaryAction.onClick}
+                    >
+                      {secondaryAction.label}
+                    </Button>
+                  )}
+                  {onContinue && actionLabel && (
+                    <Button size="sm" className="h-8" onClick={onContinue}>
+                      {actionLabel}
+                      <ArrowRight data-icon="inline-end" aria-hidden="true" />
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
 

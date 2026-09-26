@@ -1,27 +1,38 @@
-import { ArrowRight, Clock } from 'lucide-react';
-import { useState } from 'react';
-
 import { useProjectDetailContext } from '../context';
 import ProjectKeyMetrics from '../overview/ProjectKeyMetrics';
 import ProjectRecentActivity from '../overview/ProjectRecentActivity';
 import ProjectUpcomingEvents from '../overview/ProjectUpcomingEvents';
 
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { DraftResumptionBanner } from '@/features/journey';
+import { selectProjectOnboardingStage } from '@/features/onboarding';
 import { getProjectOverviewMetrics } from '@/features/projects/lib/projectOverview';
 
 export default function OverviewTab() {
-  const { project, jobs, logs, handleTabChange, onCreateSyncRule } =
-    useProjectDetailContext();
+  const {
+    project,
+    jobs,
+    logs,
+    hasBothConnections,
+    handleTabChange,
+    onCreateSyncRule,
+  } = useProjectDetailContext();
+
   const metrics = getProjectOverviewMetrics(project, jobs);
+  const isGraduated =
+    selectProjectOnboardingStage({
+      hasBothConnections,
+      hasJobs: jobs.length > 0,
+      jobs,
+    }) === 'complete';
 
   return (
     <div className="space-y-6">
-      <DraftResumptionBanner
-        projectId={project.id}
-        onResume={onCreateSyncRule}
-      />
+      {isGraduated && (
+        <DraftResumptionBanner
+          projectId={project.id}
+          onResume={onCreateSyncRule}
+        />
+      )}
 
       <ProjectKeyMetrics
         totalRecordsSynced={metrics.totalRecordsSynced}

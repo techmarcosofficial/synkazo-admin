@@ -40,6 +40,17 @@ const PRESET_RECIPES: SyncRecipe[] = [
     badge: 'Most Popular',
   },
   {
+    id: 'st-hb-customers-companies',
+    title: 'Customers → Companies',
+    description: 'Sync commercial accounts and business clients into HubSpot CRM companies.',
+    sourcePlatform: 'servicetitan',
+    destPlatform: 'hubspot',
+    sourceObject: 'customers',
+    destObject: 'companies',
+    name: 'Customers → Companies',
+    badge: 'Most Popular',
+  },
+  {
     id: 'st-hb-jobs-deals',
     title: 'Jobs → Deals',
     description: 'Sync booked, active, and completed jobs into HubSpot sales pipeline deals.',
@@ -68,6 +79,17 @@ const PRESET_RECIPES: SyncRecipe[] = [
     sourceObject: 'contacts',
     destObject: 'customers',
     name: 'Contacts → Customers',
+    badge: 'Two-Way Sync',
+  },
+  {
+    id: 'hb-st-companies-customers',
+    title: 'Companies → Customers',
+    description: 'Sync CRM company accounts into ServiceTitan customer records.',
+    sourcePlatform: 'hubspot',
+    destPlatform: 'servicetitan',
+    sourceObject: 'companies',
+    destObject: 'customers',
+    name: 'Companies → Customers',
     badge: 'Two-Way Sync',
   },
 ];
@@ -107,6 +129,7 @@ export default function JobDetailsStep({
   projectId,
   projectSyncMode = null,
   compact = false,
+  existingJobs = [],
 }: {
   config: JobConfig;
   setConfig: Dispatch<SetStateAction<JobConfig>>;
@@ -124,12 +147,26 @@ export default function JobDetailsStep({
   projectSyncMode?: 'one_way' | 'two_way' | null;
   /** Uses tighter spacing and concise copy in the standalone create dialog. */
   compact?: boolean;
+  existingJobs?: Array<{
+    sourceObject?: string;
+    destObject?: string;
+    status?: string;
+  }>;
 }) {
-  const relevantRecipes = PRESET_RECIPES.filter(
-    (r) =>
-      r.sourcePlatform === config.sourcePlatform &&
-      r.destPlatform === config.destPlatform,
-  );
+  const relevantRecipes = PRESET_RECIPES.filter((r) => {
+    if (
+      r.sourcePlatform !== config.sourcePlatform ||
+      r.destPlatform !== config.destPlatform
+    ) {
+      return false;
+    }
+    const alreadyExists = existingJobs.some(
+      (job) =>
+        job.sourceObject?.toLowerCase() === r.sourceObject.toLowerCase() &&
+        job.destObject?.toLowerCase() === r.destObject.toLowerCase(),
+    );
+    return !alreadyExists;
+  });
 
   const sourceGating = customObjectGating(
     config.sourcePlatform,
@@ -168,17 +205,17 @@ export default function JobDetailsStep({
     <div className={cn(compact ? 'space-y-4' : 'space-y-6')}>
       {/* Recommended Recipes */}
       {relevantRecipes.length > 0 && (
-        <div className={cn('rounded-3xl border bg-muted/20 p-4 space-y-3', compact && 'p-3')}>
-          <div className="flex items-center justify-between">
-            <span className="flex items-center gap-1.5 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-              <Sparkles className="size-3.5 text-primary" />
+        <div className="rounded-2xl border bg-muted/20 p-2.5 space-y-2">
+          <div className="flex items-center justify-between px-0.5">
+            <span className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+              <Sparkles className="size-3 text-primary" />
               Recommended Sync Recipes (1-Click)
             </span>
-            <span className="text-[11px] text-muted-foreground">
+            <span className="text-[10px] text-muted-foreground">
               Select to auto-fill records & name
             </span>
           </div>
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
             {relevantRecipes.map((recipe) => {
               const isSelected =
                 config.sourceObject === recipe.sourceObject &&
@@ -202,33 +239,28 @@ export default function JobDetailsStep({
                     }));
                   }}
                   className={cn(
-                    'group relative flex flex-col justify-between rounded-2xl border p-3 text-left transition-all',
+                    'group flex items-center justify-between gap-2 rounded-xl border px-2.5 py-1.5 text-left transition-all',
                     isSelected
-                      ? 'border-primary bg-primary/5 ring-1 ring-primary shadow-xs'
-                      : 'border-border/70 bg-card hover:border-primary/50 hover:bg-muted/40',
+                      ? 'border-primary bg-primary/10 ring-1 ring-primary shadow-xs'
+                      : 'border-border/70 bg-card hover:border-primary/40 hover:bg-muted/30',
                   )}
                 >
-                  <div>
-                    <div className="mb-1 flex items-center justify-between gap-1.5">
-                      <span className="text-sm font-semibold transition-colors group-hover:text-primary">
-                        {recipe.title}
-                      </span>
-                      {recipe.badge && (
-                        <Badge
-                          variant="secondary"
-                          className="border-primary/20 bg-primary/10 text-primary px-1.5 py-0 text-[10px]"
-                        >
-                          {recipe.badge}
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-                      {recipe.description}
-                    </p>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors truncate">
+                      {recipe.title}
+                    </span>
+                    {recipe.badge && (
+                      <Badge
+                        variant="secondary"
+                        className="border-primary/20 bg-primary/10 text-primary px-1 py-0 text-[9px] shrink-0 font-medium leading-4"
+                      >
+                        {recipe.badge}
+                      </Badge>
+                    )}
                   </div>
-                  <div className="mt-2.5 flex items-center gap-1 text-[11px] font-medium text-primary">
-                    {isSelected ? '✓ Selected recipe' : 'Apply recipe →'}
-                  </div>
+                  <span className="shrink-0 text-[10px] font-medium text-primary flex items-center gap-1">
+                    {isSelected ? '✓ Selected' : 'Apply →'}
+                  </span>
                 </button>
               );
             })}

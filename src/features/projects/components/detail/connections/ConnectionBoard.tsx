@@ -4,7 +4,6 @@ import PlatformCard from './PlatformCard';
 import SourcePlatformPicker from './SourcePlatformPicker';
 
 import ConnectionEnvDropdown from '@/components/connections/ConnectionEnvToggle';
-import ConnectMethodModal from '@/components/connections/ConnectMethodModal';
 import CredentialsModal from '@/components/connections/CredentialsModal';
 import { useConnectionsManager } from '@/components/connections/useConnectionsManager';
 import StatusBadge from '@/components/shared/StatusBadge';
@@ -33,6 +32,7 @@ interface ConnectionBoardProps {
   reloadKey?: number;
   /** Used only when a parent flow has already fixed the credential environment. */
   hideEnvironmentToggle?: boolean;
+  onSaved?: () => void;
   className?: string;
 }
 
@@ -134,6 +134,7 @@ export default function ConnectionBoard({
   projectActiveEnv = null,
   reloadKey = 0,
   hideEnvironmentToggle = false,
+  onSaved,
   className,
 }: ConnectionBoardProps) {
   const {
@@ -184,6 +185,19 @@ export default function ConnectionBoard({
       ? 'destination'
       : null;
 
+  let boardDescription =
+    'Connect the source first, then the destination to enable data sync.';
+  if (sourceComplete && destinationComplete) {
+    boardDescription =
+      'Both platforms are connected and verified. Your project is active and ready for sync flows.';
+  } else if (sourceComplete) {
+    boardDescription =
+      'Source connected. Connect your destination to enable data sync.';
+  } else if (destinationComplete) {
+    boardDescription =
+      'Destination connected. Connect your source to enable data sync.';
+  }
+
   return (
     <>
       <Card size="sm" className="w-full">
@@ -196,7 +210,7 @@ export default function ConnectionBoard({
             />
           </div>
           <CardDescription>
-            Connect the source first, then the destination to enable data sync.
+            {boardDescription}
           </CardDescription>
           {!hideEnvironmentToggle && (
             <CardAction>
@@ -261,26 +275,23 @@ export default function ConnectionBoard({
         </ConnectionStep>
       </div>
 
-      {showMethodModal && activeConn && (
-        <ConnectMethodModal
-          platform={activeConn.platformId}
-          onManual={handleManual}
-          onOAuth={
-            activeConn.platformId === 'hubspot' ? handleOAuth : undefined
-          }
-          manualDisabled={
-            activeConn.platformId === 'hubspot' && syncMode === 'two_way'
-          }
-          onClose={resetModals}
-        />
-      )}
-
       {showManualModal && activeConn && (
         <CredentialsModal
           projectId={projectId}
           conn={activeConn}
-          onSaved={handleSaved}
+          syncMode={syncMode}
+          onOAuth={
+            activeConn.platformId === 'hubspot' ? handleOAuth : undefined
+          }
+          onSaved={() => {
+            handleSaved();
+            onSaved?.();
+          }}
           onClose={resetModals}
+          willCompleteBoth={
+            (activeConn.connectionType === 'source' && destinationComplete) ||
+            (activeConn.connectionType === 'destination' && sourceComplete)
+          }
         />
       )}
     </>

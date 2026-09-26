@@ -67,11 +67,39 @@ describe('selectProjectOnboardingStage', () => {
     ).toBe('create_first_job');
   });
 
-  it('completes per-project onboarding after the first job exists', () => {
+  it('completes per-project onboarding after the first job exists (backwards compatible)', () => {
     expect(
       selectProjectOnboardingStage({
         hasBothConnections: true,
         hasJobs: true,
+      }),
+    ).toBe('complete');
+  });
+
+  it('keeps setup in configure_job when existing jobs are drafts or unactivated', () => {
+    expect(
+      selectProjectOnboardingStage({
+        hasBothConnections: true,
+        hasJobs: true,
+        jobs: [{ status: 'draft' }],
+      }),
+    ).toBe('configure_job');
+  });
+
+  it('completes onboarding when a job has synced records or active schedule', () => {
+    expect(
+      selectProjectOnboardingStage({
+        hasBothConnections: true,
+        hasJobs: true,
+        jobs: [{ status: 'active', syncEnabled: true }],
+      }),
+    ).toBe('complete');
+
+    expect(
+      selectProjectOnboardingStage({
+        hasBothConnections: true,
+        hasJobs: true,
+        jobs: [{ status: 'idle', lastSyncedAt: '2026-09-26T12:00:00Z' }],
       }),
     ).toBe('complete');
   });
@@ -83,6 +111,32 @@ describe('selectProjectOnboardingStage', () => {
         hasJobs: true,
       }),
     ).toBe('complete');
+
+    expect(
+      selectProjectOnboardingStage({
+        hasBothConnections: false,
+        hasJobs: true,
+        jobs: [{ status: 'active', lastSyncedAt: '2026-09-26T12:00:00Z' }],
+      }),
+    ).toBe('complete');
+  });
+
+  it('keeps stage in connect_platforms when connections become invalid during onboarding before any sync', () => {
+    expect(
+      selectProjectOnboardingStage({
+        hasBothConnections: false,
+        hasJobs: true,
+        jobs: [{ status: 'draft' }],
+      }),
+    ).toBe('connect_platforms');
+
+    expect(
+      selectProjectOnboardingStage({
+        hasBothConnections: false,
+        hasJobs: true,
+        jobs: [{ status: 'active', isEnabled: false, lastSyncedAt: null, recordsSynced: 0 }],
+      }),
+    ).toBe('connect_platforms');
   });
 });
 

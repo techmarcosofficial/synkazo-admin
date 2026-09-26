@@ -9,6 +9,14 @@ describe('StatusBadge', () => {
     expect(screen.getByText('Active')).toBeInTheDocument();
   });
 
+  it('renders configured labels for job onboarding statuses', () => {
+    const { rerender } = render(<StatusBadge status="needs_mapping" />);
+    expect(screen.getByText('Needs Mapping')).toBeInTheDocument();
+
+    rerender(<StatusBadge status="ready_to_test" />);
+    expect(screen.getByText('Ready to Test')).toBeInTheDocument();
+  });
+
   it('falls back to the raw status string for an unknown status', () => {
     render(<StatusBadge status="unknown-status" />);
     expect(screen.getByText('unknown-status')).toBeInTheDocument();
