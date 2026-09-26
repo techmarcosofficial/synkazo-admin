@@ -111,7 +111,7 @@ describe('ProjectOnboardingJourney', () => {
     expect(screen.getByRole('heading', { level: 2, name: 'Your connections are ready!' })).toBeInTheDocument();
   });
 
-  it('does not hide the journey card when a job exists but is still in draft', () => {
+  it('shows project setup complete with Go to Sync Flows button when a job exists', () => {
     vi.mocked(useProjectDetailContext).mockReturnValue({
       projectId: 'proj-1',
       jobs: [{ id: 'job-1', status: 'draft', name: 'Draft Job' }],
@@ -129,11 +129,19 @@ describe('ProjectOnboardingJourney', () => {
     );
 
     expect(
-      screen.getByText('Complete sync flow configuration'),
+      screen.getByText('Project setup complete'),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: /continue setup/i }),
+      screen.getByText(
+        'Both platforms are connected and your first sync flow has been created. Go to the Sync Flows tab to configure field mappings, settings, and schedules.',
+      ),
     ).toBeInTheDocument();
+    const goToFlowsBtn = screen.getByRole('button', {
+      name: /go to sync flows/i,
+    });
+    expect(goToFlowsBtn).toBeInTheDocument();
+    fireEvent.click(goToFlowsBtn);
+    expect(mockHandleTabChange).toHaveBeenCalledWith('sync-rules');
   });
 
   it('hides completely on mount when project is already graduated', () => {
@@ -210,8 +218,8 @@ describe('ProjectOnboardingJourney', () => {
     expect(screen.getByText('Action needed')).toBeInTheDocument();
     expect(screen.queryByText('Complete')).not.toBeInTheDocument();
 
-    // Step 2: Configure Sync Flow - upcoming
-    expect(screen.getByText('Configure Sync Flow')).toBeInTheDocument();
+    // Step 2: First Sync Flow Created - upcoming
+    expect(screen.getByText('First Sync Flow Created')).toBeInTheDocument();
 
     // Counter: 0/2 complete
     expect(screen.getByText('0/2 complete')).toBeInTheDocument();

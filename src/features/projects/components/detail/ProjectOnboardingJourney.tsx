@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 import { useProjectDetailContext } from './context';
 
@@ -23,8 +22,6 @@ export default function ProjectOnboardingJourney() {
     handleTabChange,
     onCreateSyncRule,
   } = useProjectDetailContext();
-
-  const navigate = useNavigate();
 
   const [draftState, setDraftState] = useState<DraftSyncJob | null>(() =>
     getDraftSyncJob(projectId),
@@ -84,24 +81,25 @@ export default function ProjectOnboardingJourney() {
     : 'Connect the source and destination for this project.';
 
   // Step 2 details
-  let step2Title = hasJobs ? 'Configure Sync Flow' : 'Create First Sync Flow';
+  let step2Title = hasJobs
+    ? jobs.length === 1
+      ? 'First Sync Flow Created'
+      : 'Sync Flows Created'
+    : 'Create First Sync Flow';
   let step2Desc = hasJobs
-    ? 'Complete field mapping and schedule activation.'
+    ? jobs.length === 1
+      ? '1 sync flow created.'
+      : `${jobs.length} sync flows created.`
     : 'Choose what data should move between your platforms.';
   let step2Status: SetupJourneyStep['status'] = 'upcoming';
 
   if (!hasBothConnections) {
     step2Status = 'upcoming';
-  } else if (stage === 'complete') {
+  } else if (hasJobs || stage === 'complete' || stage === 'configure_job') {
     step2Status = 'complete';
-    step2Desc = 'Sync flow created and configured.';
   } else if (hasDraft) {
     step2Status = 'current';
     step2Desc = `Draft in progress (${draftStepLabel})`;
-  } else if (stage === 'configure_job') {
-    step2Status = 'current';
-    step2Title = 'Configure Sync Flow';
-    step2Desc = 'Complete field mapping and schedule activation.';
   } else {
     step2Status = 'current';
   }
@@ -122,18 +120,7 @@ export default function ProjectOnboardingJourney() {
           ? undefined
           : hasDraft || stage === 'create_first_job'
             ? onCreateSyncRule
-            : stage === 'configure_job'
-              ? () => {
-                  const targetJob = jobs[0];
-                  if (targetJob) {
-                    navigate(
-                      `/projects/${projectId}/jobs/${targetJob.id}?tab=field-mapping`,
-                    );
-                  } else {
-                    handleTabChange('sync-rules');
-                  }
-                }
-              : undefined,
+            : () => handleTabChange('sync-rules'),
     },
   ];
 
@@ -155,15 +142,26 @@ export default function ProjectOnboardingJourney() {
     );
   }
 
-  if (stage === 'complete') {
+  if (stage === 'complete' || stage === 'configure_job') {
+    const jobCount = jobs.length;
     return (
       <SetupJourneyCard
-        eyebrow="Project setup complete"
-        title="Your project is ready"
-        description="Both platforms are connected and your first sync flow has been configured."
+        eyebrow="Project setup"
+        title="Project setup complete"
+        description={
+          jobCount === 1
+            ? 'Both platforms are connected and your first sync flow has been created. Go to the Sync Flows tab to configure field mappings, settings, and schedules.'
+            : `Both platforms are connected and ${jobCount} sync flows have been created. Go to the Sync Flows tab to configure or manage them.`
+        }
         steps={steps}
-        actionLabel="Go to project overview"
-        onContinue={() => handleTabChange('overview')}
+        actionLabel={
+          activeTab === 'sync-rules' ? undefined : 'Go to Sync Flows'
+        }
+        onContinue={
+          activeTab === 'sync-rules'
+            ? undefined
+            : () => handleTabChange('sync-rules')
+        }
       />
     );
   }
@@ -182,47 +180,6 @@ export default function ProjectOnboardingJourney() {
           label: 'Discard',
           onClick: handleDiscardDraft,
         }}
-      />
-    );
-  }
-
-  if (stage === 'configure_job') {
-    const targetJob = jobs[0];
-    const isDraftJob = targetJob?.status === 'draft';
-    return (
-      <SetupJourneyCard
-        eyebrow="Project setup"
-        title={
-          isDraftJob
-            ? 'Complete sync flow configuration'
-            : 'Activate your sync flow'
-        }
-        description={
-          isDraftJob
-            ? 'Field mapping and configuration for your sync flow are not finished yet.'
-            : 'Your sync flow is created. Turn on scheduling or run a test to start synchronizing records.'
-        }
-        steps={steps}
-        actionLabel={
-          activeTab === 'sync-rules'
-            ? undefined
-            : isDraftJob
-              ? 'Continue Setup'
-              : 'Activate Flow'
-        }
-        onContinue={
-          activeTab === 'sync-rules'
-            ? undefined
-            : () => {
-                if (targetJob) {
-                  navigate(
-                    `/projects/${projectId}/jobs/${targetJob.id}?tab=field-mapping`,
-                  );
-                } else {
-                  handleTabChange('sync-rules');
-                }
-              }
-        }
       />
     );
   }
