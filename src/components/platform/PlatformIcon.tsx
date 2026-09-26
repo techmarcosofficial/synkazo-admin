@@ -226,7 +226,7 @@ export function PlatformIcon({
     return (
       <span
         className={cn(
-          'inline-flex items-center rounded-lg border font-medium',
+          'inline-flex items-center rounded-3xl font-medium',
           config.gap,
           config.text,
           config.px,
@@ -237,7 +237,7 @@ export function PlatformIcon({
       >
         <div
           className={cn(
-            'inline-flex shrink-0 items-center justify-center overflow-hidden rounded-lg',
+            'inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full',
             getPlatformLogoTileClass(platformId),
             iconSizeClass,
           )}

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import PlatformCard from './PlatformCard';
 import SourcePlatformPicker from './SourcePlatformPicker';
@@ -8,6 +8,7 @@ import ConnectMethodModal from '@/components/connections/ConnectMethodModal';
 import CredentialsModal from '@/components/connections/CredentialsModal';
 import { useConnectionsManager } from '@/components/connections/useConnectionsManager';
 import StatusBadge from '@/components/shared/StatusBadge';
+import { BorderBeam } from '@/components/ui/border-beam';
 import {
   Card,
   CardAction,
@@ -43,6 +44,7 @@ interface ConnectionStepProps {
   hasConnection: boolean;
   nextRequired: boolean;
   last?: boolean;
+  isTesting?: boolean;
   children: ReactNode;
 }
 
@@ -54,6 +56,7 @@ function ConnectionStep({
   hasConnection,
   nextRequired,
   last = false,
+  isTesting = false,
   children,
 }: ConnectionStepProps) {
   const status = complete
@@ -97,11 +100,14 @@ function ConnectionStep({
 
       <Card
         data-connection-state={complete ? 'connected' : 'pending'}
+        data-testing={isTesting ? 'true' : undefined}
         className={cn(
-          'gap-0 border-2! py-0',
-          complete ? 'border-primary/20!' : 'border-dashed!',
+          'relative gap-0 border py-0 overflow-hidden transition-all duration-300',
+          complete ? 'border-primary/20' : 'border-dashed',
+          isTesting && 'border-primary/30 shadow-lg shadow-primary/5',
         )}
       >
+        {isTesting && <BorderBeam />}
         <div className="flex flex-col justify-between gap-2 px-4 py-3 sm:flex-row sm:items-center">
           <div className="min-w-0">
             <h3 className="font-heading text-sm font-semibold">{title}</h3>
@@ -109,7 +115,7 @@ function ConnectionStep({
               {description}
             </p>
           </div>
-          <StatusBadge status={status} size="sm" />
+          <StatusBadge status={isTesting ? 'in_progress' : status} size="sm" />
         </div>
 
         <Separator />
@@ -156,6 +162,9 @@ export default function ConnectionBoard({
     reloadKey,
     projectActiveEnv,
   });
+
+  const [testingSource, setTestingSource] = useState(false);
+  const [testingDest, setTestingDest] = useState(false);
 
   if (loading) {
     return (
@@ -210,6 +219,7 @@ export default function ConnectionBoard({
           complete={sourceComplete}
           hasConnection={Boolean(sourceConn)}
           nextRequired={nextRequired === 'source'}
+          isTesting={testingSource}
         >
           {sourcePlatformId ? (
             <PlatformCard
@@ -217,6 +227,7 @@ export default function ConnectionBoard({
               onConnect={openConnect}
               onUpdated={handleRowUpdated}
               nextRequired={nextRequired === 'source'}
+              onTestingChange={setTestingSource}
             />
           ) : (
             <SourcePlatformPicker projectId={projectId} />
@@ -230,6 +241,7 @@ export default function ConnectionBoard({
           complete={destinationComplete}
           hasConnection={Boolean(destConn)}
           nextRequired={nextRequired === 'destination'}
+          isTesting={testingDest}
           last
         >
           {destPlatformId ? (
@@ -239,6 +251,7 @@ export default function ConnectionBoard({
               onUpdated={handleRowUpdated}
               nextRequired={nextRequired === 'destination'}
               connectDisabled={!sourceComplete && !destConn}
+              onTestingChange={setTestingDest}
             />
           ) : (
             <div className="text-muted-foreground px-4 py-3 text-sm">

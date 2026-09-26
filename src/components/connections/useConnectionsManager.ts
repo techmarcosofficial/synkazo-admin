@@ -46,19 +46,23 @@ export function useConnectionsManager({
   const onChangeRef = useRef(onConnectionsChange);
   onChangeRef.current = onConnectionsChange;
 
+  const initialLoadDoneRef = useRef(false);
+
   const loadConnections = useCallback(
     async (silent = false) => {
       if (!projectId) return;
-      if (!silent) setLoading(true);
+      const shouldShowLoading = !silent && !initialLoadDoneRef.current;
+      if (shouldShowLoading) setLoading(true);
       try {
         const conns = await connectionsApi.listProjectConnections(projectId);
         const list = (Array.isArray(conns) ? conns : []) as ExtConnection[];
         setConnections(list);
         onChangeRef.current?.(list);
+        initialLoadDoneRef.current = true;
       } catch {
         if (!silent) toast.error('Failed to load connections');
       } finally {
-        if (!silent) setLoading(false);
+        if (shouldShowLoading) setLoading(false);
       }
     },
     [projectId],
@@ -69,8 +73,8 @@ export function useConnectionsManager({
   }, [loadConnections]);
 
   useEffect(() => {
-    if (reloadKey > 0) loadConnections();
-  }, [reloadKey]);
+    if (reloadKey > 0) loadConnections(true);
+  }, [reloadKey, loadConnections]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -124,7 +128,8 @@ export function useConnectionsManager({
       setSearchParams(next, { replace: true });
     } else if (connected === 'hubspot') {
       toast.success('HubSpot connected via OAuth');
-      loadConnections();
+      resetModals();
+      loadConnections(true);
       const next = new URLSearchParams(searchParams);
       next.delete('connected');
       next.delete('env');
@@ -137,6 +142,7 @@ export function useConnectionsManager({
       } else {
         toast.error(`HubSpot OAuth failed: ${oauthError}`);
       }
+      resetModals();
       const next = new URLSearchParams(searchParams);
       next.delete('hubspot_error');
       next.delete('env');
@@ -160,7 +166,8 @@ export function useConnectionsManager({
     setShowManualModal(true);
   };
   const handleSaved = () => {
-    loadConnections();
+    resetModals();
+    loadConnections(true);
   };
 
   const handleOAuth = async () => {
@@ -171,6 +178,7 @@ export function useConnectionsManager({
         activeConn.connectionType as 'source' | 'destination',
         (activeConn.environment ?? activeEnv) as 'production' | 'sandbox',
       );
+      resetModals();
       window.location.href = redirectUrl;
     } catch {
       toast.error('Failed to start HubSpot OAuth');
@@ -179,7 +187,7 @@ export function useConnectionsManager({
 
   const handleRowUpdated = (updated: ExtConnection | null) => {
     if (updated === null) {
-      loadConnections();
+      loadConnections(true);
     } else {
       const next = connections.map((c) =>
         c.id === updated.id ? { ...c, ...updated } : c,

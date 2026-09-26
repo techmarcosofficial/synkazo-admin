@@ -1,0 +1,268 @@
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import CredentialsModal from './CredentialsModal';
+import { connectionsApi } from '@/api/connections';
+
+vi.mock('@/api/connections', () => ({
+  connectionsApi: {
+    getCredentialsPreview: vi.fn().mockResolvedValue({}),
+    createConnection: vi.fn(),
+    updateConnection: vi.fn(),
+    testConnection: vi.fn(),
+  },
+}));
+
+vi.mock('sonner', () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
+afterEach(cleanup);
+
+describe('CredentialsModal In-Modal Verification', () => {
+  const onCloseMock = vi.fn();
+  const onSavedMock = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('keeps modal open and displays inline error when credential verification fails', async () => {
+    vi.mocked(connectionsApi.createConnection).mockResolvedValue({
+      id: 'conn-new-1',
+      projectId: 'proj-1',
+      platformId: 'servicetitan',
+      status: 'disconnected',
+    } as any);
+
+    vi.mocked(connectionsApi.testConnection).mockResolvedValue({
+      success: false,
+      message: 'Invalid client key for ServiceTitan API',
+    });
+
+    render(
+      <CredentialsModal
+        projectId="proj-1"
+        conn={{ platformId: 'servicetitan', connectionType: 'source', environment: 'production' }}
+        onClose={onCloseMock}
+        onSaved={onSavedMock}
+      />,
+    );
+
+    // Fill in required fields for ServiceTitan
+    fireEvent.change(screen.getByPlaceholderText('Enter your client ID'), {
+      target: { value: 'bad-client-id' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('Enter your client secret'), {
+      target: { value: 'bad-secret' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('Enter your application key'), {
+      target: { value: 'bad-key' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('e.g. 1234567'), {
+      target: { value: '12345' },
+    });
+
+    // Click verify
+    fireEvent.click(screen.getByRole('button', { name: /verify credentials/i }));
+
+    // Verify modal does NOT close
+    await waitFor(() => {
+      expect(connectionsApi.testConnection).toHaveBeenCalledWith('proj-1', 'conn-new-1');
+    });
+
+    // Error is displayed inline inside the modal
+    expect(await screen.findByText('Verification Failed')).toBeInTheDocument();
+    expect(
+      screen.getByText('Invalid client key for ServiceTitan API'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Check Client ID value')).toBeInTheDocument();
+
+    // Problematic input has destructive ring and border highlight
+    const clientIdInput = screen.getByPlaceholderText('Enter your client ID');
+    expect(clientIdInput).toHaveAttribute('aria-invalid', 'true');
+    expect(clientIdInput.className).toMatch(/border-destructive/);
+    expect(clientIdInput.className).toMatch(/ring-destructive/);
+
+    // Modal was NOT closed
+    expect(onCloseMock).not.toHaveBeenCalled();
+
+    // Verify other fields are NOT marked as invalid
+    const secretInput = screen.getByPlaceholderText('Enter your client secret');
+    expect(secretInput).toHaveAttribute('aria-invalid', 'false');
+    expect(screen.queryByText('Check Client Secret value')).not.toBeInTheDocument();
+
+    // Submit button shows Retry Verification
+    expect(
+      screen.getByRole('button', { name: /retry verification/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('marks ONLY client ID red when error is invalid_client, leaving other fields clean', async () => {
+    vi.mocked(connectionsApi.createConnection).mockResolvedValue({
+      id: 'conn-st-err',
+      projectId: 'proj-1',
+      platformId: 'servicetitan',
+      status: 'disconnected',
+    } as any);
+
+    vi.mocked(connectionsApi.testConnection).mockResolvedValue({
+      success: false,
+      message: 'ServiceTitan auth error: invalid_client',
+    });
+
+    render(
+      <CredentialsModal
+        projectId="proj-1"
+        conn={{ platformId: 'servicetitan', connectionType: 'source', environment: 'production' }}
+        onClose={onCloseMock}
+        onSaved={onSavedMock}
+      />,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText('Enter your client ID'), {
+      target: { value: 'cid.por9yv0fepoe9548yhorgog8q1' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('Enter your client secret'), {
+      target: { value: 'secret-val-123' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('Enter your application key'), {
+      target: { value: 'ak1.gnsaqrz29jw3k6473bhibpugf' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('e.g. 1234567'), {
+      target: { value: '1293100835' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /verify credentials/i }));
+
+    expect(await screen.findByText('Verification Failed')).toBeInTheDocument();
+    expect(screen.getByText('ServiceTitan auth error: invalid_client')).toBeInTheDocument();
+
+    // ONLY Client ID should be marked
+    expect(screen.getByText('Check Client ID value')).toBeInTheDocument();
+    const clientIdInput = screen.getByPlaceholderText('Enter your client ID');
+    expect(clientIdInput).toHaveAttribute('aria-invalid', 'true');
+
+    // App Key, Client Secret, and Tenant ID MUST NOT be marked
+    expect(screen.queryByText('Check App Key value')).not.toBeInTheDocument();
+    expect(screen.queryByText('Check Client Secret value')).not.toBeInTheDocument();
+    expect(screen.queryByText('Check Tenant ID value')).not.toBeInTheDocument();
+
+    const appKeyInput = screen.getByPlaceholderText('Enter your application key');
+    expect(appKeyInput).toHaveAttribute('aria-invalid', 'false');
+
+    const secretInput = screen.getByPlaceholderText('Enter your client secret');
+    expect(secretInput).toHaveAttribute('aria-invalid', 'false');
+
+    const tenantInput = screen.getByPlaceholderText('e.g. 1234567');
+    expect(tenantInput).toHaveAttribute('aria-invalid', 'false');
+  });
+
+  it('shows success screen on verification, and closes when user clicks Done', async () => {
+    vi.mocked(connectionsApi.createConnection).mockResolvedValue({
+      id: 'conn-ok-1',
+      projectId: 'proj-1',
+      platformId: 'servicetitan',
+      status: 'connected',
+    } as any);
+
+    vi.mocked(connectionsApi.testConnection).mockResolvedValue({
+      success: true,
+      message: 'Connection verified',
+    });
+
+    render(
+      <CredentialsModal
+        projectId="proj-1"
+        conn={{ platformId: 'servicetitan', connectionType: 'source', environment: 'production' }}
+        onClose={onCloseMock}
+        onSaved={onSavedMock}
+      />,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText('Enter your client ID'), {
+      target: { value: 'valid-client-id' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('Enter your client secret'), {
+      target: { value: 'valid-secret' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('Enter your application key'), {
+      target: { value: 'valid-key' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('e.g. 1234567'), {
+      target: { value: '12345' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /verify credentials/i }));
+
+    // Success screen should be presented with confirmation and Done button
+    expect(
+      await screen.findByText('ServiceTitan Connected Successfully!'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Status: Verified & Live')).toBeInTheDocument();
+
+    // Modal has NOT closed prematurely
+    expect(onCloseMock).not.toHaveBeenCalled();
+    expect(onSavedMock).not.toHaveBeenCalled();
+
+    // User clicks Done button
+    const doneBtn = screen.getByRole('button', { name: /^done$/i });
+    fireEvent.click(doneBtn);
+
+    // Modal now closes and notifies parent
+    expect(onCloseMock).toHaveBeenCalled();
+    expect(onSavedMock).toHaveBeenCalled();
+  });
+
+  it('verifies HubSpot destination credentials successfully and closes on Done', async () => {
+    vi.mocked(connectionsApi.createConnection).mockResolvedValue({
+      id: 'conn-hubspot-1',
+      projectId: 'proj-1',
+      platformId: 'hubspot',
+      connectionType: 'destination',
+      status: 'connected',
+    } as any);
+
+    vi.mocked(connectionsApi.testConnection).mockResolvedValue({
+      success: true,
+      message: 'HubSpot connected and verified',
+    });
+
+    render(
+      <CredentialsModal
+        projectId="proj-1"
+        conn={{ platformId: 'hubspot', connectionType: 'destination', environment: 'sandbox' }}
+        onClose={onCloseMock}
+        onSaved={onSavedMock}
+      />,
+    );
+
+    // Fill in HubSpot private app token
+    fireEvent.change(screen.getByPlaceholderText('Enter your HubSpot access token'), {
+      target: { value: 'pat-eu1-12345678-abcd' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /verify credentials/i }));
+
+    // Success screen should be displayed specifically for HubSpot
+    expect(
+      await screen.findByText('HubSpot Connected Successfully!'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Status: Verified & Live')).toBeInTheDocument();
+
+    // Modal has not closed prematurely
+    expect(onCloseMock).not.toHaveBeenCalled();
+    expect(onSavedMock).not.toHaveBeenCalled();
+
+    // User clicks Done button
+    const doneBtn = screen.getByRole('button', { name: /^done$/i });
+    fireEvent.click(doneBtn);
+
+    // Modal closes cleanly and triggers onSaved
+    expect(onCloseMock).toHaveBeenCalled();
+    expect(onSavedMock).toHaveBeenCalled();
+  });
+});

@@ -5,10 +5,12 @@ import { CRED_SCHEMAS } from './platformMeta';
 
 import { connectionsApi } from '@/api/connections';
 import FormDialog from '@/components/form/FormDialog';
+import { PlatformIcon } from '@/components/platform';
 import { Button } from '@/components/ui/button';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
+import { cn } from '@/lib/utils';
 import type { Connection } from '@/types';
 import {
   Popover,
@@ -18,7 +20,7 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from '../ui/popover';
-import { CircleHelp, ExternalLink } from 'lucide-react';
+import { AlertCircle, CheckCircle2, CircleHelp, ExternalLink } from 'lucide-react';
 
 interface ConnectionPayload {
   platformId?: string;
@@ -40,6 +42,8 @@ interface CredentialsModalProps {
   onClose: () => void;
 }
 
+type ModalPhase = 'form' | 'verifying' | 'success';
+
 export default function CredentialsModal({
   projectId,
   conn,
@@ -50,12 +54,15 @@ export default function CredentialsModal({
   const schema = CRED_SCHEMAS[platformId] ?? CRED_SCHEMAS.servicetitan;
   const isEdit = !!conn?.id;
 
+  const [phase, setPhase] = useState<ModalPhase>('form');
   const [form, setForm] = useState<Record<string, string>>(
     Object.fromEntries(schema.fields.map((f) => [f.key, ''])),
   );
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [loading, setLoading] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(isEdit);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+  const [currentConnId, setCurrentConnId] = useState<string | undefined>(conn?.id);
 
   useEffect(() => {
     if (!isEdit) return;
@@ -69,6 +76,7 @@ export default function CredentialsModal({
   const setField = (key: string, val: string) => {
     setForm((f) => ({ ...f, [key]: val }));
     setErrors((e) => ({ ...e, [key]: undefined }));
+    setVerifyError(null);
   };
 
   const validate = () => {
@@ -81,9 +89,102 @@ export default function CredentialsModal({
     return Object.keys(next).length === 0;
   };
 
+  const getFieldErrorMessage = (fieldKey: string) => {
+    if (errors[fieldKey]) return errors[fieldKey];
+    if (!verifyError) return undefined;
+    const lower = verifyError.toLowerCase();
+
+    // Specific field matches
+    const hasClientId =
+      lower.includes('client id') ||
+      lower.includes('client key') ||
+      lower.includes('client_id') ||
+      lower.includes('client_key') ||
+      lower.includes('invalid_client') ||
+      lower.includes('invalid client') ||
+      lower.includes('unauthorized_client') ||
+      lower.includes('unknown client');
+
+    const hasClientSecret =
+      lower.includes('client secret') ||
+      lower.includes('client_secret') ||
+      lower.includes('invalid_secret') ||
+      lower.includes('invalid secret') ||
+      /\bsecret\b/.test(lower);
+
+    const hasAppKey =
+      lower.includes('app key') ||
+      lower.includes('app_key') ||
+      lower.includes('application key') ||
+      lower.includes('st-app-key') ||
+      lower.includes('st_app_key') ||
+      lower.includes('st-app');
+
+    const hasTenantId =
+      lower.includes('tenant') ||
+      lower.includes('tenant id') ||
+      lower.includes('tenant_id') ||
+      lower.includes('tenantid');
+
+    const hasToken =
+      lower.includes('token') ||
+      lower.includes('pat') ||
+      lower.includes('private app') ||
+      lower.includes('private_app');
+
+    const hasPortalId =
+      lower.includes('portal') ||
+      lower.includes('portal id') ||
+      lower.includes('portal_id') ||
+      lower.includes('hub id') ||
+      lower.includes('hub_id') ||
+      lower.includes('account id');
+
+    const hasApiKey =
+      lower.includes('api key') ||
+      lower.includes('api_key') ||
+      lower.includes('df-auth');
+
+    const hasCompanyServiceCode =
+      lower.includes('service code') ||
+      lower.includes('servicecode') ||
+      lower.includes('company code') ||
+      lower.includes('df-servicecode');
+
+    if (fieldKey === 'clientId' && hasClientId) {
+      return 'Check Client ID value';
+    }
+    if (fieldKey === 'clientSecret' && hasClientSecret) {
+      return 'Check Client Secret value';
+    }
+    if (fieldKey === 'appKey' && hasAppKey) {
+      return 'Check Application Key value';
+    }
+    if (fieldKey === 'tenantId' && hasTenantId) {
+      return 'Check Tenant ID value';
+    }
+    if (fieldKey === 'privateAppToken' && hasToken) {
+      return 'Check Private App Token value';
+    }
+    if (fieldKey === 'portalId' && hasPortalId) {
+      return 'Check Portal ID value';
+    }
+    if (fieldKey === 'apiKey' && hasApiKey) {
+      return 'Check API Key value';
+    }
+    if (fieldKey === 'companyServiceCode' && hasCompanyServiceCode) {
+      return 'Check Company Service Code value';
+    }
+
+    return undefined;
+  };
+
   const handleVerify = async () => {
     if (!validate()) return;
     setLoading(true);
+    setVerifyError(null);
+    setPhase('verifying');
+
     try {
       const credentials: Record<string, string> = {};
       schema.fields.forEach((f) => {
@@ -98,48 +199,60 @@ export default function CredentialsModal({
         status: 'disconnected',
       };
 
-      let saved: Connection;
-      if (conn?.id) {
-        saved = await connectionsApi.updateConnection(
+      let connId = currentConnId;
+      if (connId) {
+        await connectionsApi.updateConnection(
           projectId,
-          conn.id,
+          connId,
           payload as Partial<Connection>,
         );
       } else {
-        saved = await connectionsApi.createConnection(projectId, {
+        const saved = await connectionsApi.createConnection(projectId, {
           ...payload,
           platformId,
           connectionType: conn?.connectionType ?? schema.connectionType,
           environment: conn?.environment ?? schema.environment,
         } as Partial<Connection>);
+        connId = saved?.id;
+        if (connId) {
+          setCurrentConnId(connId);
+        }
       }
 
-      const connId = saved?.id ?? conn?.id;
       const result = await connectionsApi.testConnection(projectId, connId!);
-
-      onClose();
-      onSaved?.();
 
       if (result?.success) {
         toast.success(`${schema.title} credentials verified`);
+        setPhase('success');
       } else {
-        toast.error(`${schema.title} credentials Failed`, {
-          description:
-            result?.message ??
-            'Invalid credentials — please check the values and try again.',
-        });
+        const errorMsg =
+          result?.message ||
+          'Invalid credentials — please check the values and try again.';
+        setVerifyError(errorMsg);
+        setPhase('form');
       }
     } catch (err) {
-      onClose();
       const e = err as { response?: { data?: { message?: string } } };
-      toast.error(`${schema.title} credentials Failed`, {
-        description:
-          e?.response?.data?.message ??
-          'Failed to save credentials. Please try again.',
-      });
+      const errorMsg =
+        e?.response?.data?.message ||
+        'Failed to save credentials. Please check your values and try again.';
+      setVerifyError(errorMsg);
+      setPhase('form');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleClose = () => {
+    onClose();
+    if (phase === 'success') {
+      onSaved?.();
+    }
+  };
+
+  const handleDone = () => {
+    onClose();
+    onSaved?.();
   };
 
   const fieldsDisabled = loading || previewLoading;
@@ -147,34 +260,67 @@ export default function CredentialsModal({
   return (
     <FormDialog
       open
-      onOpenChange={(open) => !open && onClose()}
+      onOpenChange={(open) => !open && handleClose()}
       title={
-        isEdit ? `Edit ${schema.title} Connection` : `Connect ${schema.title}`
+        phase === 'success'
+          ? `${schema.title} Connected`
+          : phase === 'verifying'
+            ? `Verifying ${schema.title} Credentials`
+            : isEdit
+              ? `Edit ${schema.title} Connection`
+              : `Connect ${schema.title}`
       }
       description={
-        isEdit ? 'Update your API credentials' : 'Enter your API credentials'
+        phase === 'success'
+          ? 'Credentials verified and active'
+          : phase === 'verifying'
+            ? 'Testing connection with API'
+            : isEdit
+              ? 'Update your API credentials'
+              : 'Enter your API credentials'
       }
       size="sm"
-      footer={(requestClose) => (
-        <>
-          <Button
-            variant="outline"
-            onClick={requestClose}
-            disabled={loading}
-            className="flex-1"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleVerify}
-            disabled={fieldsDisabled}
-            className="flex-1"
-          >
-            {loading ? <Spinner /> : null}
-            {loading ? 'Verifying…' : 'Verify Credentials'}
-          </Button>
-        </>
-      )}
+      footer={(requestClose) => {
+        if (phase === 'success') {
+          return (
+            <Button onClick={handleDone} className="w-full">
+              Done
+            </Button>
+          );
+        }
+
+        if (phase === 'verifying') {
+          return (
+            <Button
+              variant="outline"
+              onClick={requestClose}
+              className="w-full"
+            >
+              Cancel
+            </Button>
+          );
+        }
+
+        return (
+          <>
+            <Button
+              variant="outline"
+              onClick={requestClose}
+              disabled={loading}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleVerify}
+              disabled={fieldsDisabled}
+              className="flex-1"
+            >
+              {verifyError ? 'Retry Verification' : 'Verify Credentials'}
+            </Button>
+          </>
+        );
+      }}
     >
       {previewLoading && (
         <div className="text-muted-foreground flex items-center gap-2 text-xs">
@@ -182,49 +328,120 @@ export default function CredentialsModal({
         </div>
       )}
 
-      <FieldGroup>
-        {schema.fields.map((f) => {
-          const isMarketplacePrivateAppToken =
-            conn?.providerMetadata?.installSource === 'marketplace' &&
-            f.key === 'privateAppToken';
-          if (isMarketplacePrivateAppToken) return null;
-          return (
-            <Field key={f.key} data-invalid={!!errors[f.key]}>
-              <FieldLabel htmlFor={f.key}>
-                {f.label}{' '}
-                <KnowMore
-                  label={f.label}
-                  helpText={f.helpText}
-                  helpUrl={f.helpUrl}
-                />{' '}
-              </FieldLabel>
-              <Input
-                id={f.key}
-                type={f.type}
-                value={form[f.key] || ''}
-                onChange={(e) => setField(f.key, e.target.value)}
-                placeholder={
-                  isEdit && f.editPlaceholder
-                    ? f.editPlaceholder
-                    : f.placeholder
-                }
-                disabled={fieldsDisabled}
-                aria-invalid={!!errors[f.key]}
-              />
-              {errors[f.key] && (
-                <p className="text-destructive text-xs">{errors[f.key]}</p>
-              )}
-            </Field>
-          );
-        })}
-      </FieldGroup>
+      {/* Phase 1: Verifying Progress State */}
+      {phase === 'verifying' && (
+        <div className="flex flex-col items-center justify-center py-8 text-center space-y-4">
+          <div className="relative flex size-14 items-center justify-center">
+            <div className="bg-primary/10 absolute inset-0 animate-ping rounded-full opacity-75" />
+            <div className="bg-muted border-border flex size-12 items-center justify-center rounded-2xl border shadow-xs">
+              <PlatformIcon platformId={platformId} size="lg" />
+            </div>
+          </div>
+          <div className="space-y-1 max-w-xs">
+            <h3 className="text-foreground text-sm font-semibold">
+              Validating Credentials
+            </h3>
+            <p className="text-muted-foreground text-xs leading-relaxed">
+              Connecting to {schema.title} API and verifying permissions…
+            </p>
+          </div>
+          <div className="text-muted-foreground flex items-center gap-2 text-xs">
+            <Spinner className="size-3.5" />
+            <span>Verifying with server…</span>
+          </div>
+        </div>
+      )}
 
-      {schema.note && (
-        <p className="text-muted-foreground text-xs mt-1">{schema.note}</p>
+      {/* Phase 2: Success Confirmation State */}
+      {phase === 'success' && (
+        <div className="flex flex-col items-center justify-center py-6 text-center space-y-3.5">
+          <div className="bg-success/15 text-success flex size-12 items-center justify-center rounded-2xl">
+            <CheckCircle2 className="size-6" />
+          </div>
+          <div className="space-y-1 max-w-sm">
+            <h3 className="text-foreground text-base font-bold">
+              {schema.title} Connected Successfully!
+            </h3>
+            <p className="text-muted-foreground text-xs leading-relaxed">
+              Thank you! Your {schema.title} credentials have been verified and saved. Synkazo is ready to synchronize records with this platform.
+            </p>
+          </div>
+          <div className="bg-muted/60 border-border/60 flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs text-muted-foreground">
+            <span className="size-2 rounded-full bg-success inline-block" />
+            <span>Status: Verified & Live</span>
+          </div>
+        </div>
+      )}
+
+      {/* Phase 3: Form State (default or when error occurs) */}
+      {phase === 'form' && (
+        <>
+          {verifyError && (
+            <div
+              role="alert"
+              className="bg-destructive/10 text-destructive flex items-start gap-2.5 rounded-2xl border border-destructive/20 p-3 text-xs mb-4"
+            >
+              <AlertCircle className="size-4 shrink-0 mt-0.5" />
+              <div className="space-y-0.5 min-w-0">
+                <p className="font-semibold">Verification Failed</p>
+                <p className="text-destructive/90 break-words">{verifyError}</p>
+              </div>
+            </div>
+          )}
+
+          <FieldGroup>
+            {schema.fields.map((f) => {
+              const isMarketplacePrivateAppToken =
+                conn?.providerMetadata?.installSource === 'marketplace' &&
+                f.key === 'privateAppToken';
+              if (isMarketplacePrivateAppToken) return null;
+
+              const fieldError = getFieldErrorMessage(f.key);
+
+              return (
+                <Field key={f.key} data-invalid={!!fieldError}>
+                  <FieldLabel htmlFor={f.key}>
+                    {f.label}{' '}
+                    <KnowMore
+                      label={f.label}
+                      helpText={f.helpText}
+                      helpUrl={f.helpUrl}
+                    />{' '}
+                  </FieldLabel>
+                  <Input
+                    id={f.key}
+                    type={f.type}
+                    value={form[f.key] || ''}
+                    onChange={(e) => setField(f.key, e.target.value)}
+                    placeholder={
+                      isEdit && f.editPlaceholder
+                        ? f.editPlaceholder
+                        : f.placeholder
+                    }
+                    disabled={fieldsDisabled}
+                    aria-invalid={!!fieldError}
+                    className={cn(
+                      fieldError &&
+                        'border-destructive ring-0.5 ring-[0.5px] ring-destructive aria-invalid:border-destructive aria-invalid:ring-0.5 aria-invalid:ring-[0.5px] aria-invalid:ring-destructive',
+                    )}
+                  />
+                  {fieldError && (
+                    <p className="text-destructive text-xs">{fieldError}</p>
+                  )}
+                </Field>
+              );
+            })}
+          </FieldGroup>
+
+          {schema.note && (
+            <p className="text-muted-foreground text-xs mt-3">{schema.note}</p>
+          )}
+        </>
       )}
     </FormDialog>
   );
 }
+
 interface KnowMoreProps {
   label: string;
   helpText?: string;
