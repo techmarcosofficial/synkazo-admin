@@ -51,6 +51,12 @@ export interface JobDetailContextValue {
   handleCancelQueue: () => Promise<void>;
   handleRetryQueue: () => Promise<void>;
   handleToggle: () => Promise<void>;
+
+  // Guidance and dialog orchestration
+  highlightStatusGuide: boolean;
+  triggerInactiveGuide: () => void;
+  manualDialogOpen: boolean;
+  setManualDialogOpen: (open: boolean) => void;
 }
 
 const JobDetailContext = createContext<JobDetailContextValue | null>(null);

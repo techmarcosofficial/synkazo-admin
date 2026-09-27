@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 
 import type { JobDetailContextValue } from './context';
@@ -76,6 +77,33 @@ export default function JobDetailPage() {
     isTwoWay: job?.syncDirection === 'two_way',
   });
 
+  const [highlightStatusGuide, setHighlightStatusGuide] = useState(false);
+  const [manualDialogOpen, setManualDialogOpen] = useState(false);
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const triggerInactiveGuide = useCallback(() => {
+    if (highlightTimerRef.current) {
+      clearTimeout(highlightTimerRef.current);
+    }
+    setHighlightStatusGuide(true);
+    const target =
+      document.getElementById('job-contextual-alert') ||
+      document.getElementById('job-status-dropdown');
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    highlightTimerRef.current = setTimeout(() => {
+      setHighlightStatusGuide(false);
+      highlightTimerRef.current = null;
+    }, 2800);
+  }, []);
+
+  useEffect(() => () => {
+    if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+  }, []);
+
   if (loading) {
     return (
       <div className="animate-fade-in-up space-y-6">
@@ -130,6 +158,10 @@ export default function JobDetailPage() {
     patchJob,
     refetch,
     handleTabChange,
+    highlightStatusGuide,
+    triggerInactiveGuide,
+    manualDialogOpen,
+    setManualDialogOpen,
     ...runState,
   };
 
