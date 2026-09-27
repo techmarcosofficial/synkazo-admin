@@ -124,9 +124,10 @@
   --popover-foreground:
     #101322;
 
-  /* Primary — brand orange matching Synkazo identity across light and dark modes */
+  /* Primary — rich black in light mode; brand orange is reserved for focused
+     accents and the dark-mode primary. */
   --primary:
-    #F85508;
+    #14151b;
   --primary-foreground:
     #ffffff;
 
