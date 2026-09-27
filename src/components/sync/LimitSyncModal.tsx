@@ -49,6 +49,7 @@ interface LimitSyncModalProps {
   /** Uses the parent section heading and moves technical fields behind disclosure. */
   compact?: boolean;
   disabled?: boolean;
+  onFooterChange?: (footer: ReactNode) => void;
 }
 
 // DialogTitle requires Radix Dialog context — swap for a plain equivalent when embedded.
@@ -119,6 +120,7 @@ export default function LimitSyncModal({
   embedded = false,
   compact = false,
   disabled = false,
+  onFooterChange,
 }: LimitSyncModalProps) {
   const pipelineBlocked = pipelineRequired && !pipelineConfigured;
   const [step, setStep] = useState('config');
@@ -366,6 +368,32 @@ export default function LimitSyncModal({
     onClose();
   };
 
+  const footerNode = (
+    <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end w-full">
+      <Button
+        onClick={handleStart}
+        disabled={pipelineBlocked || disabled}
+      >
+        <Play /> {!job?.lastSyncedAt ? 'Run Test (Safe Preview)' : 'Start Sync'}
+      </Button>
+    </div>
+  );
+
+  useEffect(() => {
+    if (onFooterChange && step === 'config') {
+      onFooterChange(footerNode);
+    }
+  }, [
+    step,
+    safeLimit,
+    safeStart,
+    safeBatch,
+    pipelineBlocked,
+    disabled,
+    job?.lastSyncedAt,
+    onFooterChange,
+  ]);
+
   return (
     <>
       <Frame embedded={embedded} onClose={onClose}>
@@ -607,7 +635,7 @@ export default function LimitSyncModal({
             </div>
 
             {!compact && !embedded ? (
-              <DialogFooter className="shrink-0 border-t px-6 py-4">
+              <DialogFooter className="shrink-0 border-t bg-muted/20 px-6 py-4">
                 <Button variant="outline" onClick={onClose} className="flex-1">
                   Cancel
                 </Button>
@@ -619,7 +647,7 @@ export default function LimitSyncModal({
                   <Play /> {!job?.lastSyncedAt ? 'Run Test (Safe Preview)' : 'Start Sync'}
                 </Button>
               </DialogFooter>
-            ) : (
+            ) : !onFooterChange ? (
               <div className="border-t border-border/60 -mx-6 -mb-6 mt-6 px-6 py-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end bg-muted/20">
                 <Button
                   onClick={handleStart}
@@ -628,7 +656,7 @@ export default function LimitSyncModal({
                   <Play /> {!job?.lastSyncedAt ? 'Run Test (Safe Preview)' : 'Start Sync'}
                 </Button>
               </div>
-            )}
+            ) : null}
           </>
         )}
 

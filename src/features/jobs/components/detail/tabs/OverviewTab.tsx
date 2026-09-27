@@ -395,16 +395,22 @@ export default function OverviewTab() {
             handleTabChange('pipeline');
           }}
           onClose={() => setManualDialogOpen(false)}
-          onRunNow={() => void handleRunNow()}
-          onLimitSyncStarted={() => void beginTracking()}
+          onRunNow={() => {
+            setManualDialogOpen(false);
+            void handleRunNow();
+          }}
+          onLimitSyncStarted={() => {
+            setManualDialogOpen(false);
+            void beginTracking();
+          }}
           onLimitSyncDone={() => {
             setManualDialogOpen(false);
             void refetch();
           }}
-          onSyncAll={(range) => void handleSyncAll(undefined, range)}
-          runProgress={
-            summaryRunning ? renderProgress('compact', false) : undefined
-          }
+          onSyncAll={(range) => {
+            setManualDialogOpen(false);
+            void handleSyncAll(undefined, range);
+          }}
         />
       )}
 

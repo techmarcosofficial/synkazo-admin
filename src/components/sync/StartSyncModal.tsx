@@ -1,4 +1,4 @@
-import { ShieldCheck, XIcon } from 'lucide-react';
+import { XIcon } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
 import { ChoiceCardItem } from '@/components/form/ChoiceCard';
@@ -7,11 +7,11 @@ import LimitSyncModal from '@/components/sync/LimitSyncModal';
 import RunConfirmModal from '@/components/sync/RunConfirmModal';
 import SyncAllTab from '@/components/sync/SyncAllTab';
 import { Button } from '@/components/ui/button';
-import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -33,8 +33,6 @@ interface StartSyncModalProps {
   onLimitSyncStarted?: () => void;
   onLimitSyncDone: () => void;
   onSyncAll: (range: { startDate?: string; endDate?: string }) => void;
-  /** Live status rendered directly above the all-records action row. */
-  runProgress?: ReactNode;
   disabled?: boolean;
   /** Renders the same run workflow directly inside a parent surface. */
   embedded?: boolean;
@@ -54,29 +52,17 @@ function ManualSyncContent({
   onLimitSyncStarted,
   onLimitSyncDone,
   onSyncAll,
-  runProgress,
   disabled = false,
   embedded = false,
-}: StartSyncModalProps) {
+  onFooterChange,
+}: StartSyncModalProps & { onFooterChange?: (footer: ReactNode) => void }) {
   const [runType, setRunType] = useState<'all' | 'limited'>(
     !hasBaseline ? 'limited' : 'all',
   );
   const [showIncrementalRun, setShowIncrementalRun] = useState(false);
-  const isSandbox = environment === 'sandbox';
 
   return (
     <div className="space-y-4">
-      {isSandbox && (
-        <div className="flex items-center gap-2.5 rounded-2xl bg-muted/50 border border-border/60 px-3.5 py-2.5 text-xs text-muted-foreground">
-          <ShieldCheck className="size-4 text-warning shrink-0" />
-          <span>
-            <strong className="text-foreground">Operating in Sandbox:</strong>{' '}
-            This run tests data movement using your sandbox connections. No live
-            production records will be modified.
-          </span>
-        </div>
-      )}
-
       <p className="text-sm font-medium">What records do you want to sync?</p>
 
       <RadioGroup
@@ -120,9 +106,8 @@ function ManualSyncContent({
               pipelineConfigured={pipelineConfigured}
               onGoToPipeline={onGoToPipeline}
               disabled={disabled}
-            >
-              {runProgress}
-            </SyncAllTab>
+              onFooterChange={onFooterChange}
+            />
           </div>
         ) : (
           <LimitSyncModal
@@ -138,6 +123,7 @@ function ManualSyncContent({
             pipelineConfigured={pipelineConfigured}
             onGoToPipeline={onGoToPipeline}
             disabled={disabled}
+            onFooterChange={onFooterChange}
           />
         )}
       </div>
@@ -164,9 +150,23 @@ function ManualSyncContent({
 }
 
 export default function StartSyncModal(props: StartSyncModalProps) {
-  if (props.embedded) return <ManualSyncContent {...props} />;
-
+  const [footerContent, setFooterContent] = useState<ReactNode>(null);
   const isSandbox = props.environment === 'sandbox';
+
+  if (props.embedded) {
+    return (
+      <div className="flex flex-col flex-1 min-h-0">
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <ManualSyncContent {...props} onFooterChange={setFooterContent} />
+        </div>
+        {footerContent && (
+          <div className="shrink-0 border-t border-border/60 bg-muted/20 px-6 py-4 mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            {footerContent}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <Dialog open onOpenChange={(open) => !open && props.onClose()}>
@@ -212,8 +212,14 @@ export default function StartSyncModal(props: StartSyncModalProps) {
         </DialogHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
-          <ManualSyncContent {...props} />
+          <ManualSyncContent {...props} onFooterChange={setFooterContent} />
         </div>
+
+        {footerContent && (
+          <DialogFooter className="shrink-0 border-t bg-muted/20 px-6 py-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            {footerContent}
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );

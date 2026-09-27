@@ -7,7 +7,7 @@ import {
   RotateCcw,
   Search,
 } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 import { jobsApi } from '@/api/jobs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -72,6 +72,7 @@ interface SyncAllTabProps {
   pipelineConfigured?: boolean;
   onGoToPipeline?: () => void;
   disabled?: boolean;
+  onFooterChange?: (footer: ReactNode) => void;
 }
 
 export default function SyncAllTab({
@@ -84,6 +85,7 @@ export default function SyncAllTab({
   pipelineConfigured = true,
   onGoToPipeline,
   disabled = false,
+  onFooterChange,
 }: SyncAllTabProps) {
   const pipelineBlocked = pipelineRequired && !pipelineConfigured;
   const isTwoWay = job?.syncDirection === 'two_way';
@@ -146,6 +148,40 @@ export default function SyncAllTab({
     }
   };
 
+  const footerNode = (
+    <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end w-full">
+      <Button variant="outline" onClick={handleCheck} disabled={checking}>
+        {checking ? <Spinner /> : <Search />}
+        {checking ? 'Checking…' : 'Check records'}
+      </Button>
+      <Button
+        onClick={() =>
+          onConfirm({
+            startDate: startDateTime?.toISOString(),
+            endDate: endDateTime?.toISOString(),
+          })
+        }
+        disabled={pipelineBlocked || disabled}
+      >
+        <RotateCcw /> Run sync now
+      </Button>
+    </div>
+  );
+
+  useEffect(() => {
+    if (onFooterChange && !isTwoWay) {
+      onFooterChange(footerNode);
+    }
+  }, [
+    checking,
+    startDateTime,
+    endDateTime,
+    pipelineBlocked,
+    disabled,
+    isTwoWay,
+    onFooterChange,
+  ]);
+
   if (isTwoWay) {
     return (
       <div className="space-y-4">
@@ -198,46 +234,48 @@ export default function SyncAllTab({
         </Alert>
       )}
 
-      {hasInterruptedRange ? (
-        <>
-          <Alert className="bg-warning/10 border-warning/20">
-            <RotateCcw className="text-warning" />
-            <AlertDescription className="space-y-1">
-              <p>
-                A previous Sync All ran from{' '}
-                <strong className="text-foreground">
-                  {fmtDate(job.syncAllRangeStart)}
-                </strong>{' '}
-                to{' '}
-                <strong className="text-foreground">
-                  {fmtDate(job.syncAllRangeEnd)}
-                </strong>{' '}
-                and stopped
-                {job.syncAllProgressDate && (
-                  <>
-                    {' '}
-                    at{' '}
-                    <strong className="text-foreground">
-                      {fmtDate(job.syncAllProgressDate)}
-                    </strong>
-                  </>
-                )}
-                .
-              </p>
-              <p>Starting below resumes it instead of starting over.</p>
-            </AlertDescription>
-          </Alert>
-          <Button
-            onClick={() => onConfirm({})}
-            disabled={pipelineBlocked || disabled}
-            className="w-full sm:w-auto"
-          >
-            <RotateCcw /> Resume Full Sync
-          </Button>
-        </>
-      ) : (
-        <>
-          <FieldGroup className="gap-4">
+      {hasInterruptedRange && (
+        <Alert className="bg-warning/10 border-warning/20">
+          <RotateCcw className="text-warning" />
+          <AlertDescription className="space-y-1.5 text-xs sm:text-sm">
+            <p>
+              A previous Sync All ran from{' '}
+              <strong className="text-foreground">
+                {fmtDate(job?.syncAllRangeStart)}
+              </strong>{' '}
+              to{' '}
+              <strong className="text-foreground">
+                {fmtDate(job?.syncAllRangeEnd)}
+              </strong>{' '}
+              and stopped
+              {job?.syncAllProgressDate && (
+                <>
+                  {' '}
+                  at{' '}
+                  <strong className="text-foreground">
+                    {fmtDate(job.syncAllProgressDate)}
+                  </strong>
+                </>
+              )}
+              .
+            </p>
+            <p className="text-muted-foreground">
+              You can{' '}
+              <button
+                type="button"
+                onClick={() => onConfirm({})}
+                disabled={pipelineBlocked || disabled}
+                className="text-primary font-semibold underline underline-offset-2 hover:opacity-80 inline cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                resume previous sync
+              </button>{' '}
+              from where it stopped, or configure a date range below to start a new sync.
+            </p>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <FieldGroup className="gap-4">
             <div className="grid gap-4 md:grid-cols-2">
               <Field>
                 <FieldLabel>Start Date</FieldLabel>
@@ -385,25 +423,25 @@ export default function SyncAllTab({
             </>
           )}
 
-          <div className="border-t border-border/60 -mx-6 -mb-6 mt-6 px-6 py-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end bg-muted/20">
-            <Button variant="outline" onClick={handleCheck} disabled={checking}>
-              {checking ? <Spinner /> : <Search />}
-              {checking ? 'Checking…' : 'Check records'}
-            </Button>
-            <Button
-              onClick={() =>
-                onConfirm({
-                  startDate: startDateTime?.toISOString(),
-                  endDate: endDateTime?.toISOString(),
-                })
-              }
-              disabled={pipelineBlocked || disabled}
-            >
-              <RotateCcw /> Run sync now
-            </Button>
-          </div>
-        </>
-      )}
+          {!onFooterChange && (
+            <div className="border-t border-border/60 -mx-6 -mb-6 mt-6 px-6 py-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end bg-muted/20">
+              <Button variant="outline" onClick={handleCheck} disabled={checking}>
+                {checking ? <Spinner /> : <Search />}
+                {checking ? 'Checking…' : 'Check records'}
+              </Button>
+              <Button
+                onClick={() =>
+                  onConfirm({
+                    startDate: startDateTime?.toISOString(),
+                    endDate: endDateTime?.toISOString(),
+                  })
+                }
+                disabled={pipelineBlocked || disabled}
+              >
+                <RotateCcw /> Run sync now
+              </Button>
+            </div>
+          )}
     </div>
   );
 }

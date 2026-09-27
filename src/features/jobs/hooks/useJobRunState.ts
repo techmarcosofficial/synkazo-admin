@@ -188,10 +188,13 @@ export function useJobRunState({
       // job.checkpointPage without a separate control. Only reuse the job's persisted range
       // when actually resuming (syncAllPage set) — otherwise a fresh trigger with no explicit
       // range must not silently inherit a stale range left over from a completed prior run.
-      const isResume = job?.syncAllPage != null;
+      const isResume =
+        job?.syncAllPage != null &&
+        range?.startDate === undefined &&
+        range?.endDate === undefined;
       const resp = (await jobsApi.runJob(projectId, jobId, {
         full: true,
-        startPage: job?.syncAllPage ?? undefined,
+        startPage: isResume ? (job?.syncAllPage ?? undefined) : undefined,
         startDate:
           range?.startDate ??
           (isResume ? (job?.syncAllRangeStart ?? undefined) : undefined),
