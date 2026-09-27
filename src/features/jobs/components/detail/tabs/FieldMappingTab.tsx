@@ -41,6 +41,7 @@ import {
   consolidateMappings,
   type ConsolidatedMapping,
 } from '@/features/jobs/hooks';
+import { useFieldMappingDraftStore } from '@/features/jobs/store/useFieldMappingDraftStore';
 import {
   fmtObject,
   toCanvasField,
@@ -230,6 +231,11 @@ export const mergeDefaultConfiguration = (
 
 export default function FieldMappingTab() {
   const { projectId, job, refetch, patchJob } = useJobDetailContext();
+  const getDraft = useFieldMappingDraftStore((state) => state.getDraft);
+  const saveDraft = useFieldMappingDraftStore((state) => state.saveDraft);
+  const clearTabDraft = useFieldMappingDraftStore(
+    (state) => state.clearTabDraft,
+  );
   const { state: sidebarState } = useSidebar();
   const workspaceRef = useRef<HTMLDivElement>(null);
   const [activeWorkspaceTab, setActiveWorkspaceTab] =
@@ -330,71 +336,85 @@ export default function FieldMappingTab() {
   useEffect(() => {
     const conditions = cloneConditions(job.excludeConditions ?? []);
     const logic = job.excludeConditionLogic ?? 'AND';
-    setExcludeConditions(conditions);
-    setExcludeConditionLogic(logic);
     savedConditionsRef.current = {
       conditions: cloneConditions(conditions),
       logic,
     };
-    setConditionsDirty(false);
+
+    const draft = getDraft(job.id);
+    if (draft?.conditionsDirty && draft.excludeConditions) {
+      setExcludeConditions(cloneConditions(draft.excludeConditions));
+      setExcludeConditionLogic(draft.excludeConditionLogic ?? logic);
+      setConditionsDirty(true);
+    } else {
+      setExcludeConditions(conditions);
+      setExcludeConditionLogic(logic);
+      setConditionsDirty(false);
+    }
     setConditionsError(null);
-  }, [job.id]);
+  }, [job.id, job.excludeConditions, job.excludeConditionLogic, getDraft]);
 
   useEffect(() => {
     jobsApi
       .listFieldMappings(projectId, job.id)
       .then((rows) => {
         const consolidated = consolidateMappings(rows);
-        setFieldMappings(consolidated);
-        setDefaultMappings(cloneMappings(consolidated));
         savedMappingsRef.current = cloneMappings(consolidated);
         persistedSourceFieldsRef.current = new Set(
           consolidated.map((m) => m.sourceField),
         );
-        // Nothing existed to protect — treat as fresh setup from the start.
-        if (consolidated.length === 0) setMappingMode('fresh-setup');
+
+        const draft = getDraft(job.id);
+        const hasMappingDraft = Boolean(
+          draft?.mappingDirty && draft.fieldMappings,
+        );
+        const hasDefaultsDraft = Boolean(
+          draft?.defaultsDirty && draft.defaultMappings,
+        );
+
+        if (hasMappingDraft && hasDefaultsDraft) {
+          setFieldMappings(cloneMappings(draft!.fieldMappings!));
+          setDefaultMappings(cloneMappings(draft!.defaultMappings!));
+          setMappingDirty(true);
+          setDefaultsDirty(true);
+          if (draft!.mappingMode) setMappingMode(draft!.mappingMode);
+        } else if (hasMappingDraft) {
+          const draftMappings = cloneMappings(draft!.fieldMappings!);
+          setFieldMappings(draftMappings);
+          setDefaultMappings(
+            mergeDefaultConfiguration(
+              draftMappings,
+              cloneMappings(consolidated),
+            ),
+          );
+          setMappingDirty(true);
+          if (draft!.mappingMode) setMappingMode(draft!.mappingMode);
+        } else if (hasDefaultsDraft) {
+          const draftDefaults = cloneMappings(draft!.defaultMappings!);
+          setDefaultMappings(draftDefaults);
+          setFieldMappings(
+            mergeDefaultConfiguration(
+              cloneMappings(consolidated),
+              draftDefaults,
+            ),
+          );
+          setDefaultsDirty(true);
+        } else {
+          setFieldMappings(consolidated);
+          setDefaultMappings(cloneMappings(consolidated));
+          setMappingDirty(false);
+          setDefaultsDirty(false);
+          // Nothing existed to protect — treat as fresh setup from the start.
+          if (consolidated.length === 0) setMappingMode('fresh-setup');
+        }
       })
       .catch(() => {})
       .finally(() => setLoadingMappings(false));
-  }, [job.id, projectId]);
+  }, [job.id, projectId, getDraft]);
 
   useEffect(() => {
     loadFields(false);
   }, [loadFields]);
-
-  useEffect(() => {
-    const hasUnsavedChanges = mappingDirty || defaultsDirty || conditionsDirty;
-    if (!hasUnsavedChanges) return;
-    const preventUnload = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-    };
-    const confirmInAppNavigation = (event: MouseEvent) => {
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-      const navigationTarget = target.closest('a[href], [role="tab"]');
-      if (
-        !navigationTarget ||
-        workspaceRef.current?.contains(navigationTarget)
-      ) {
-        return;
-      }
-      if (
-        window.confirm(
-          'You have unsaved changes in Field Mapping. Leave this page without saving them?',
-        )
-      ) {
-        return;
-      }
-      event.preventDefault();
-      event.stopImmediatePropagation();
-    };
-    window.addEventListener('beforeunload', preventUnload);
-    document.addEventListener('click', confirmInAppNavigation, true);
-    return () => {
-      window.removeEventListener('beforeunload', preventUnload);
-      document.removeEventListener('click', confirmInAppNavigation, true);
-    };
-  }, [mappingDirty, defaultsDirty, conditionsDirty]);
 
   const isActive = job.isEnabled;
 
@@ -403,14 +423,24 @@ export default function FieldMappingTab() {
     // Keep the defaults tab on the same current structure. Auto Mapping and
     // manual mapping edits otherwise leave it holding the previous snapshot,
     // so its first policy change can be saved as a constant-only payload.
-    setDefaultMappings((currentDefaults) =>
-      mergeDefaultConfiguration(newMappings, currentDefaults),
+    const updatedDefaults = mergeDefaultConfiguration(
+      newMappings,
+      defaultMappings,
     );
+    setDefaultMappings(updatedDefaults);
     setMappingDirty(true);
     setSaved(false);
     // Cleared everything (via "Clear all" or deleting the last row one by one) —
     // whatever gets mapped next (Auto Map or manual Add Mapping) is a fresh setup.
+    const nextMode = newMappings.length === 0 ? 'fresh-setup' : mappingMode;
     if (newMappings.length === 0) setMappingMode('fresh-setup');
+
+    saveDraft(job.id, {
+      fieldMappings: newMappings,
+      defaultMappings: updatedDefaults,
+      mappingDirty: true,
+      mappingMode: nextMode,
+    });
   };
 
   const handleDefaultsChange = (newMappings: ConsolidatedMapping[]) => {
@@ -418,11 +448,19 @@ export default function FieldMappingTab() {
     // Default policies are metadata on the current mapping draft, not a
     // separate structure. Reflect them in the mapping tab without marking a
     // structural mapping edit dirty.
-    setFieldMappings((currentMappings) =>
-      mergeDefaultConfiguration(currentMappings, newMappings),
+    const updatedMappings = mergeDefaultConfiguration(
+      fieldMappings,
+      newMappings,
     );
+    setFieldMappings(updatedMappings);
     setDefaultsDirty(true);
     setSaved(false);
+
+    saveDraft(job.id, {
+      fieldMappings: updatedMappings,
+      defaultMappings: newMappings,
+      defaultsDirty: true,
+    });
   };
 
   // Takes the mapping set to persist explicitly, rather than reading `fieldMappings`
@@ -549,6 +587,12 @@ export default function FieldMappingTab() {
     setExcludeConditionLogic(logic);
     setConditionsDirty(true);
     setConditionsError(null);
+
+    saveDraft(job.id, {
+      excludeConditions: conditions,
+      excludeConditionLogic: logic,
+      conditionsDirty: true,
+    });
   };
 
   const handlePreviewConditions = async () => {
@@ -647,6 +691,7 @@ export default function FieldMappingTab() {
         if (!didSave) return;
         setFieldMappings(cloneMappings(payload));
         setMappingDirty(false);
+        clearTabDraft(job.id, 'field-mapping');
         if (!defaultsDirty) setDefaultMappings(cloneMappings(payload));
         return;
       }
@@ -665,10 +710,14 @@ export default function FieldMappingTab() {
         setDefaultMappings(cloneMappings(payload));
         setMappingDirty(false);
         setDefaultsDirty(false);
+        clearTabDraft(job.id, 'default-mapping');
         return;
       }
 
-      await persistExcludeConditions();
+      const didSaveConditions = await persistExcludeConditions();
+      if (didSaveConditions) {
+        clearTabDraft(job.id, 'skip-record');
+      }
     } finally {
       setSaving(false);
     }
@@ -683,16 +732,22 @@ export default function FieldMappingTab() {
       );
       setMappingMode(mappings.length > 0 ? 'edit' : 'fresh-setup');
       setMappingDirty(false);
+      clearTabDraft(job.id, 'field-mapping');
+      toast.info('Field mappings reset to saved configuration.');
     } else if (activeWorkspaceTab === 'default-mapping') {
       setDefaultMappings(cloneMappings(savedMappingsRef.current));
       setDefaultsDirty(false);
       setShowDefaultsValidation(false);
+      clearTabDraft(job.id, 'default-mapping');
+      toast.info('Default mappings reset to saved configuration.');
     } else {
       const savedConditions = savedConditionsRef.current;
       setExcludeConditions(cloneConditions(savedConditions.conditions));
       setExcludeConditionLogic(savedConditions.logic);
       setConditionsDirty(false);
       setConditionsError(null);
+      clearTabDraft(job.id, 'skip-record');
+      toast.info('Skip conditions reset to saved configuration.');
     }
     setSaved(false);
   };
@@ -763,7 +818,7 @@ export default function FieldMappingTab() {
             className="gap-0"
           >
             <div className="flex flex-col gap-3 border-b px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
-              <div className="overflow-x-auto">
+              <div className="flex items-center gap-3 overflow-x-auto">
                 <TabsList>
                   <TabsTrigger value="field-mapping">
                     Field Mappings
@@ -784,6 +839,12 @@ export default function FieldMappingTab() {
                     )}
                   </TabsTrigger>
                 </TabsList>
+                {anyDirty && (
+                  <span className="text-muted-foreground hidden items-center gap-1.5 text-xs sm:inline-flex">
+                    <span className="bg-warning size-1.5 rounded-full animate-pulse" />
+                    Draft saved locally
+                  </span>
+                )}
               </div>
 
               <div
@@ -1011,10 +1072,10 @@ export default function FieldMappingTab() {
             <div className="flex min-w-0 flex-1 items-start gap-2.5">
               <span className="bg-warning mt-1.5 size-2 shrink-0 rounded-full" />
               <div>
-                <p className="text-sm font-semibold">Unsaved changes</p>
+                <p className="text-sm font-semibold">Unsaved draft</p>
                 <p className="text-muted-foreground text-xs">
-                  Save or discard the changes in this tab before leaving the
-                  page.
+                  Your changes are auto-saved locally. Save to apply them to
+                  your sync job, or discard to restore saved state.
                 </p>
               </div>
             </div>
