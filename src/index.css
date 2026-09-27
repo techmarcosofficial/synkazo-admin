@@ -107,9 +107,9 @@
   --spacing: 0.26rem;
   /* Base — Synkazo theme source of truth: Synkazo/Synkazo.dc.html (light --bg/--text) */
   --background:
-    #f5f6f9;
+    #f6f7fa;
   --foreground:
-    #14151b;
+    #101322;
 
   --footer: #0b0c11;
   --footer-foreground:#ffffff;
@@ -117,38 +117,37 @@
   --card:
     #ffffff;
   --card-foreground:
-    #14151b;
+    #101322;
 
   --popover:
     #ffffff;
   --popover-foreground:
-    #14151b;
+    #101322;
 
-  /* Primary — rich black in light mode; brand orange is reserved for focused
-     accents and the dark-mode primary. */
+  /* Primary — brand orange matching Synkazo identity across light and dark modes */
   --primary:
-    #14151b;
+    #F85508;
   --primary-foreground:
     #ffffff;
 
   /* Secondary surfaces */
   --secondary:
-    #f1f2f6;
+    #f0f1f5;
   --secondary-foreground:
-    #14151b;
+    #101322;
 
   /* Muted */
   --muted:
-    #f1f2f6;
+    #f0f1f5;
   --muted-foreground:
-    #565c6b;
+    #5a6072;
 
   /* Accent — kept as a neutral hover surface (same as muted), not the vivid
      brand orange, so existing hover/selected states stay subtle. */
   --accent:
-    #f1f2f6;
+    #f0f1f5;
   --accent-foreground:
-    #14151b;
+    #101322;
 
   /* States */
   --destructive:
@@ -165,10 +164,10 @@
 
   /* Borders */
   --border:
-    #e5e7ee;
+    #e2e4ec;
   --f-border: #262a37;
   --input:
-    #e5e7ee;
+    #e2e4ec;
   --ring:
     rgba(248, 85, 8, 0.35);
 
@@ -227,19 +226,19 @@
 .dark {
   /* Base — Synkazo theme source of truth: Synkazo/Synkazo.dc.html ([data-theme="dark"] --bg/--text) */
   --background:
-    #0b0c11;
+    #090a0f;
   --foreground:
     #eceef4;
   --card:
-    #14161f;
+    #12141d;
   --card-foreground:
     #eceef4;
 
-  --footer: #0b0c11;
+  --footer: #090a0f;
   --footer-foreground:#ffffff;
 
   --popover:
-    #14161f;
+    #12141d;
   --popover-foreground:
     #eceef4;
 
@@ -249,19 +248,19 @@
     #ffffff;
 
   --secondary:
-    #1a1d28;
+    #181a24;
   --secondary-foreground:
     #eceef4;
 
   --muted:
-    #1a1d28;
+    #181a24;
   --muted-foreground:
-    #99a0b2;
+    #939ab0;
 
   /* Accent — kept as a neutral hover surface (same as muted), not the vivid
      brand orange, so existing hover/selected states stay subtle. */
   --accent:
-    #1a1d28;
+    #181a24;
   --accent-foreground:
     #eceef4;
 
@@ -277,11 +276,11 @@
   --paused: #a78bfa;
 
   --border:
-    #262a37;
-  --f-border:#262a37;
+    #242838;
+  --f-border:#242838;
 
   --input:
-    #262a37;
+    #242838;
   --ring:
     rgba(248, 85, 8, 0.45);
 

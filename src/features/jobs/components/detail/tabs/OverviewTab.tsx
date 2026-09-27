@@ -63,7 +63,7 @@ function SyncSummaryCard({
         <p className="text-muted-foreground mt-0.5 text-xs font-medium">
           {label}
         </p>
-        <p className="text-muted-foreground/80 mt-0.5 text-[11px] leading-tight">
+        <p className="text-muted-foreground/80 mt-0.5 text-[11px] font-normal leading-tight">
           {description}
         </p>
       </div>
@@ -290,10 +290,10 @@ export default function OverviewTab() {
       <Card size="sm" className="min-w-0 rounded-4xl">
         <CardHeader>
           <div className="space-y-0.5">
-            <CardTitle className="text-base font-semibold">
+            <CardTitle>
               Sync overview
             </CardTitle>
-            <CardDescription className="text-xs leading-tight">
+            <CardDescription>
               Monitor sync activity and trigger fresh data syncs whenever you
               need to.
             </CardDescription>

@@ -55,11 +55,11 @@ export default function SetupJourneyCard({
 
             {/* Zone 1 — Intro */}
             <div className="min-w-0 sm:w-[26%] sm:shrink-0">
-              <div className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+              <div className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
                 {eyebrow}
               </div>
               <h2 className="text-foreground text-sm font-semibold tracking-tight">{title}</h2>
-              <p className="text-muted-foreground mt-0.5 text-xs leading-normal">
+              <p className="text-muted-foreground mt-0.5 text-xs font-normal leading-normal">
                 {description}
               </p>
             </div>
@@ -186,14 +186,14 @@ export default function SetupJourneyCard({
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                  <div className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+                  <div className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
                     {eyebrow}
                   </div>
                   <h2 className="text-foreground text-sm font-semibold tracking-tight">
                     {title}
                   </h2>
                 </div>
-                <p className="text-muted-foreground mt-0.5 max-w-3xl text-xs leading-normal">
+                <p className="text-muted-foreground mt-0.5 max-w-3xl text-xs font-normal leading-normal">
                   {description}
                 </p>
               </div>
