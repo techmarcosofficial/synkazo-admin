@@ -49,7 +49,7 @@ export default function ConnectionEnvDropdown({
 
   return (
     <div className="flex items-center gap-2.5 rounded-3xl border p-0.5 pr-1 pl-3">
-      {label && <p className="text-muted-foreground text-sm">{label}</p>}
+      {label && <p className="text-muted-foreground text-sm font-medium">{label}</p>}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="secondary" size="sm" className="gap-2">

@@ -64,7 +64,7 @@ function ConnectionItem({
   connection: ConnectionExt | undefined;
 }) {
   return (
-    <div className="bg-card flex h-[54px] items-center justify-between gap-3 rounded-2xl border px-3 py-1.5 shadow-2xs">
+    <div className="bg-card flex h-auto min-h-20 items-center justify-between gap-3 rounded-2xl border px-3 py-1.5">
       <div className="flex min-w-0 flex-1 flex-col justify-center">
         <p className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
           {label}
