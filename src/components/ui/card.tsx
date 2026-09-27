@@ -27,7 +27,10 @@ function Card({
         data-size={size}
         data-layout-surface={resolvedSurface}
         className={cn(
-          'group/card bg-card text-card-foreground border-border flex flex-col gap-(--card-spacing) overflow-hidden rounded-4xl border py-(--card-spacing) text-sm shadow-none [--card-spacing:--spacing(6)] has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(4)] *:[img:first-child]:rounded-t-4xl *:[img:last-child]:rounded-b-4xl',
+          'group/card text-card-foreground flex flex-col gap-(--card-spacing) overflow-hidden border py-(--card-spacing) text-sm shadow-none [--card-spacing:--spacing(6)] has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(4)]',
+          resolvedSurface === 'inner'
+            ? 'bg-secondary/40 border-border/70 rounded-3xl *:[img:first-child]:rounded-t-3xl *:[img:last-child]:rounded-b-3xl'
+            : 'bg-card border-border rounded-4xl *:[img:first-child]:rounded-t-4xl *:[img:last-child]:rounded-b-4xl',
           className,
         )}
         {...props}
@@ -55,7 +58,7 @@ function CardTitle({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="card-title"
-      className={cn('font-heading text-base font-medium', className)}
+      className={cn('font-heading text-base font-semibold tracking-tight', className)}
       {...props}
     />
   );
@@ -65,7 +68,7 @@ function CardDescription({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="card-description"
-      className={cn('text-muted-foreground text-sm', className)}
+      className={cn('text-muted-foreground text-sm leading-normal', className)}
       {...props}
     />
   );

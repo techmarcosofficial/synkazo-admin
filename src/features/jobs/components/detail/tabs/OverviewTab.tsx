@@ -52,18 +52,18 @@ function SyncSummaryCard({
   description: string;
 }) {
   return (
-    <div className="bg-muted/50 min-w-0 space-y-2 rounded-2xl p-3.5">
-      <span className="bg-card text-muted-foreground flex size-8 items-center justify-center rounded-xl">
+    <div className="bg-secondary/40 border-border/60 min-w-0 space-y-2 rounded-2xl border p-4 transition-colors">
+      <span className="bg-background text-muted-foreground border-border/40 flex size-8 items-center justify-center rounded-xl border">
         <Icon className="size-3.5" aria-hidden="true" />
       </span>
       <div className="min-w-0">
-        <p className="text-base leading-tight font-bold tracking-tight">
+        <p className="text-base font-bold leading-tight tracking-tight tabular-nums text-foreground">
           {value}
         </p>
         <p className="text-muted-foreground mt-0.5 text-xs font-medium">
           {label}
         </p>
-        <p className="text-muted-foreground mt-0.5 text-[11px]">
+        <p className="text-muted-foreground/80 mt-0.5 text-[11px] leading-tight">
           {description}
         </p>
       </div>
@@ -163,10 +163,10 @@ export default function OverviewTab() {
   });
   const summaryCards = [
     {
-      label: 'Records synced',
-      value: (job.recordsSynced ?? 0).toLocaleString(),
-      description: 'Total synced records',
-      icon: Database,
+      label: 'Next run',
+      value: nextRunCard.value,
+      description: nextRunCard.description,
+      icon: Play,
     },
     {
       label: 'Schedule at',
@@ -183,22 +183,6 @@ export default function OverviewTab() {
       value: formatDurationMs(performance.averageDurationMs),
       description: 'Based on recent runs',
       icon: Timer,
-    },
-    {
-      label: 'Last sync',
-      value: performance.lastSyncAt
-        ? formatScheduledAt(performance.lastSyncAt, effectiveTimezone)
-        : 'Never',
-      description: performance.lastSyncAt
-        ? 'Most recent completed run'
-        : 'No completed runs',
-      icon: Clock,
-    },
-    {
-      label: 'Next run',
-      value: nextRunCard.value,
-      description: nextRunCard.description,
-      icon: Play,
     },
   ];
   const canActivate =
@@ -355,7 +339,7 @@ export default function OverviewTab() {
           {/* Sync progress — appears right after header on sync */}
           {!manualDialogOpen && progress}
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <div className="grid gap-3 sm:grid-cols-3">
             {summaryCards.map((card) => (
               <SyncSummaryCard key={card.label} {...card} />
             ))}

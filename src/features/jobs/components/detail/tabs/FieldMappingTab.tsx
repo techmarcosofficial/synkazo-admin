@@ -1004,7 +1004,7 @@ export default function FieldMappingTab() {
 
             <TabsContent value="default-mapping" className="p-5">
               {showDefaultsValidation && unresolvedDefaultCount > 0 && (
-                <div className="bg-destructive/10 text-destructive mb-4 flex items-start gap-2 rounded-4xl px-3 py-2 text-xs">
+                <div className="bg-destructive/10 text-destructive mb-4 flex items-start gap-2 rounded-2xl px-3 py-2 text-xs">
                   <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
                   {unresolvedDefaultCount} required field
                   {unresolvedDefaultCount === 1 ? '' : 's'} need attention.
@@ -1035,7 +1035,7 @@ export default function FieldMappingTab() {
             <TabsContent value="skip-record" className="space-y-3 p-5">
               {displayedConditionsError && (
                 <div
-                  className="bg-destructive/10 text-destructive border-destructive/30 flex items-start gap-2 rounded-4xl border px-3 py-2 text-xs"
+                  className="bg-destructive/10 text-destructive border-destructive/30 flex items-start gap-2 rounded-2xl border px-3 py-2 text-xs"
                   role="alert"
                 >
                   <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />

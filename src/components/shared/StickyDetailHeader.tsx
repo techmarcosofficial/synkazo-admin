@@ -103,7 +103,7 @@ export default function StickyDetailHeader({
         <Button
           asChild
           variant="secondary"
-          className="bg-border h-(--detail-back-row-height) rounded-t-3xl rounded-b-none pb-(--detail-header-overlap)"
+          className="bg-secondary text-secondary-foreground hover:bg-secondary/80 border-t border-x border-border/70 h-(--detail-back-row-height) rounded-t-3xl rounded-b-none pb-(--detail-header-overlap)"
         >
           <Link to={backTo}>
             <ChevronLeft aria-hidden="true" data-icon="inline-start" />

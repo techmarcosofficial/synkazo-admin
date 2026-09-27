@@ -639,13 +639,14 @@ export default function SyncRunProgress({
 
   return (
     <Card
+      surface="inner"
       size="sm"
       role="region"
       aria-live={terminal ? 'off' : 'polite'}
       aria-label={current.title}
       data-variant={variant}
       className={cn(
-        'border-border/70 bg-card gap-0 overflow-hidden py-0 shadow-none transition-colors',
+        'border-border/70 gap-0 overflow-hidden py-0 shadow-none transition-colors',
         isCompact ? 'rounded-2xl' : 'rounded-3xl',
         className,
       )}

@@ -55,11 +55,11 @@ export default function SetupJourneyCard({
 
             {/* Zone 1 — Intro */}
             <div className="min-w-0 sm:w-[26%] sm:shrink-0">
-              <div className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
+              <div className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
                 {eyebrow}
               </div>
-              <h2 className="text-xs font-semibold tracking-tight">{title}</h2>
-              <p className="text-muted-foreground mt-0.5 text-[11px] leading-4">
+              <h2 className="text-foreground text-sm font-semibold tracking-tight">{title}</h2>
+              <p className="text-muted-foreground mt-0.5 text-xs leading-normal">
                 {description}
               </p>
             </div>
@@ -95,7 +95,7 @@ export default function SetupJourneyCard({
                       disabled={!canSelect}
                       onClick={step.onSelect}
                       className={cn(
-                        'flex w-full flex-col gap-1 rounded-2xl border px-2.5 py-2 text-left transition-colors',
+                        'flex w-full flex-col gap-1 rounded-2xl border px-3 py-2 text-left transition-colors',
                         isComplete &&
                           'border-success/30 bg-success/5 hover:bg-success/10',
                         isCurrent &&
@@ -125,7 +125,7 @@ export default function SetupJourneyCard({
                         </span>
                         <span
                           className={cn(
-                            'min-w-0 flex-1 truncate text-[11px] font-semibold',
+                            'min-w-0 flex-1 truncate text-xs font-semibold',
                             isComplete || isCurrent
                               ? 'text-foreground'
                               : 'text-muted-foreground',
@@ -135,7 +135,7 @@ export default function SetupJourneyCard({
                         </span>
                         <span
                           className={cn(
-                            'shrink-0 text-[9px] font-semibold leading-3 whitespace-nowrap',
+                            'shrink-0 text-xs font-medium whitespace-nowrap',
                             isComplete && 'text-success',
                             isCurrent && 'text-primary',
                             isUpcoming && 'text-muted-foreground',
@@ -146,7 +146,7 @@ export default function SetupJourneyCard({
                       </span>
 
                       {/* Description — indented to align with title */}
-                      <span className="text-muted-foreground pl-7 text-[11px] leading-4">
+                      <span className="text-muted-foreground pl-7 text-xs leading-normal">
                         {step.description}
                       </span>
                     </button>
@@ -157,7 +157,7 @@ export default function SetupJourneyCard({
 
             {/* Zone 3 — Progress counter + action, inline */}
             <div className="flex shrink-0 items-center gap-2 sm:flex-col sm:items-end">
-              <span className="text-muted-foreground text-[10px] font-medium whitespace-nowrap">
+              <span className="text-muted-foreground text-xs font-medium whitespace-nowrap">
                 {completedCount}/{requiredSteps.length} complete
               </span>
               {onContinue && actionLabel && (
@@ -186,20 +186,20 @@ export default function SetupJourneyCard({
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                  <div className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
+                  <div className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
                     {eyebrow}
                   </div>
-                  <h2 className="text-sm font-semibold tracking-tight">
+                  <h2 className="text-foreground text-sm font-semibold tracking-tight">
                     {title}
                   </h2>
                 </div>
-                <p className="text-muted-foreground mt-0.5 max-w-3xl text-[11px] leading-4">
+                <p className="text-muted-foreground mt-0.5 max-w-3xl text-xs leading-normal">
                   {description}
                 </p>
               </div>
 
               <div className="flex shrink-0 items-center gap-3">
-                <span className="text-muted-foreground text-[10px] font-medium whitespace-nowrap">
+                <span className="text-muted-foreground text-xs font-medium whitespace-nowrap">
                   {completedCount}/{requiredSteps.length} complete
                 </span>
                 <div className="flex items-center gap-2">
@@ -258,7 +258,7 @@ export default function SetupJourneyCard({
                         disabled={!canSelect}
                         onClick={step.onSelect}
                         className={cn(
-                          'relative flex h-full min-h-14 w-full items-center gap-2.5 rounded-3xl border px-3 py-2.5 text-left transition-colors',
+                          'relative flex h-full min-h-14 w-full items-center gap-2.5 rounded-3xl border px-3.5 py-2.5 text-left transition-colors',
                           isComplete &&
                             'border-success/30 bg-success/5 hover:bg-success/10',
                           isCurrent &&
@@ -270,7 +270,7 @@ export default function SetupJourneyCard({
                       >
                         <span
                           className={cn(
-                            'flex size-7 shrink-0 items-center justify-center rounded-full border text-[11px] font-bold',
+                            'flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-bold',
                             isComplete && 'border-success bg-success text-white',
                             isCurrent &&
                               'border-primary bg-primary text-primary-foreground',
@@ -284,7 +284,7 @@ export default function SetupJourneyCard({
                             index + 1
                           )}
                         </span>
-                        <span className="min-w-0 flex-1 text-[11px] leading-4">
+                        <span className="min-w-0 flex-1 text-xs leading-normal">
                           <span
                             className={cn(
                               'text-xs',
@@ -301,7 +301,7 @@ export default function SetupJourneyCard({
                         </span>
                         <span
                           className={cn(
-                            'shrink-0 text-[9px] font-semibold leading-3 whitespace-nowrap',
+                            'shrink-0 text-xs font-medium whitespace-nowrap',
                             isComplete && 'text-success',
                             isCurrent && 'text-primary',
                             isUpcoming && 'text-muted-foreground',

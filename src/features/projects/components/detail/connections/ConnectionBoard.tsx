@@ -102,11 +102,12 @@ function ConnectionStep({
       </div>
 
       <Card
+        surface="inner"
         data-connection-state={complete ? 'connected' : 'pending'}
         data-testing={isTesting ? 'true' : undefined}
         className={cn(
           'relative gap-0 border py-0 overflow-hidden transition-all duration-300',
-          complete ? 'border-primary/20' : 'border-dashed',
+          complete ? 'border-primary/20' : 'border-dashed border-border/80',
           isTesting && 'border-primary/30 shadow-lg shadow-primary/5',
         )}
       >

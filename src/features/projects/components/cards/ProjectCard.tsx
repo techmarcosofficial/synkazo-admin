@@ -82,16 +82,16 @@ export default function ProjectCard({ project, jobCount }: ProjectCardProps) {
             </p>
           )}
         </div>
-        <dl className="bg-muted/50 mt-auto grid grid-cols-2 gap-3 rounded-3xl p-3">
+        <dl className="bg-secondary/40 border-border/60 mt-auto grid grid-cols-2 gap-3 rounded-2xl border p-3.5">
           <div>
-            <dt className="text-muted-foreground text-xs">Records synced</dt>
-            <dd className="mt-1 text-lg font-semibold">
+            <dt className="text-muted-foreground text-xs font-medium">Records synced</dt>
+            <dd className="text-foreground mt-1 text-lg font-bold tracking-tight tabular-nums">
               {formatCompact(project.totalRecordsSynced ?? 0)}
             </dd>
           </div>
           <div>
-            <dt className="text-muted-foreground text-xs">Sync jobs</dt>
-            <dd className="mt-1 text-lg font-semibold">{jobCount}</dd>
+            <dt className="text-muted-foreground text-xs font-medium">Sync jobs</dt>
+            <dd className="text-foreground mt-1 text-lg font-bold tracking-tight tabular-nums">{jobCount}</dd>
           </div>
         </dl>
       </CardContent>
