@@ -136,19 +136,19 @@ export default function ActivityTab() {
     return (
       <Card className="gap-0 overflow-hidden">
         {renderHeader()}
-        <CardContent className="space-y-3 p-4 sm:p-5">
-          {Array.from({ length: 4 }).map((_, index) => (
+        <CardContent className="space-y-2 p-3 sm:p-4">
+          {Array.from({ length: 5 }).map((_, index) => (
             <div
               key={index}
-              className="flex min-h-[100px] flex-col justify-between gap-3 rounded-3xl border p-4 sm:p-5"
+              className="flex items-center justify-between gap-3 rounded-2xl border p-3 sm:px-4 sm:py-3"
             >
               <div className="flex items-center gap-3">
-                <Skeleton className="h-6 w-20 rounded-full" />
-                <Skeleton className="h-5 w-48 rounded-lg" />
+                <Skeleton className="h-5 w-18 rounded-full" />
+                <Skeleton className="h-4 w-40 rounded-lg" />
               </div>
-              <div className="flex items-center justify-between gap-3">
-                <Skeleton className="h-4 w-32 rounded-md" />
-                <Skeleton className="h-8 w-28 rounded-xl" />
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-4 w-20 rounded-md" />
+                <Skeleton className="h-7 w-20 rounded-xl" />
               </div>
             </div>
           ))}
@@ -161,7 +161,7 @@ export default function ActivityTab() {
     return (
       <Card className="gap-0 overflow-hidden">
         {renderHeader()}
-        <CardContent className="p-6">
+        <CardContent className="p-5">
           <ErrorState onRetry={() => query.refetch()} />
         </CardContent>
       </Card>
@@ -172,7 +172,7 @@ export default function ActivityTab() {
     return (
       <Card className="gap-0 overflow-hidden">
         {renderHeader()}
-        <CardContent className="p-6">
+        <CardContent className="p-5">
           <div className="rounded-3xl border">
             <EmptyState
               icon={Database}
@@ -189,7 +189,7 @@ export default function ActivityTab() {
     <Card className="gap-0 overflow-hidden">
       {renderHeader()}
 
-      <CardContent className="space-y-3 p-4 sm:p-5">
+      <CardContent className="space-y-2 p-3 sm:p-4">
         {logs.map((log) => {
           const matchedJob = jobs.find((j) => j.id === log.jobId);
           const jobName = log.metadata?.jobName ?? matchedJob?.name ?? 'Sync run';
@@ -215,19 +215,19 @@ export default function ActivityTab() {
             <div
               key={log.id}
               className={cn(
-                'group relative flex min-h-[100px] flex-col justify-between gap-4 rounded-3xl border bg-card p-4 transition-all duration-200 hover:border-border hover:shadow-xs sm:flex-row sm:items-center sm:p-5',
+                'group relative flex flex-col justify-between gap-3 rounded-2xl border bg-card p-3 transition-all duration-200 hover:border-border/80 hover:bg-muted/15 sm:flex-row sm:items-center sm:px-4 sm:py-2.5',
                 isFailed && 'border-destructive/25 bg-destructive/[0.02]',
               )}
             >
               {/* Left Column: Status, Platforms & Entity flow */}
-              <div className="flex min-w-0 flex-1 items-start gap-3.5">
-                <div className="mt-0.5 shrink-0">
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <div className="shrink-0">
                   <StatusBadge status={status} size="sm" />
                 </div>
 
-                <div className="min-w-0 flex-1 space-y-1.5">
+                <div className="min-w-0 flex-1 space-y-0.5">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="truncate text-base font-semibold tracking-tight text-foreground">
+                    <p className="truncate text-sm font-semibold tracking-tight text-foreground">
                       {entity}
                     </p>
                     {sourcePlatformId && destPlatformId && (
@@ -241,9 +241,9 @@ export default function ActivityTab() {
                     )}
                   </div>
 
-                  <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                  <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
                     {jobName && jobName !== entity && (
-                      <span className="font-medium text-foreground/80 max-w-48 truncate">
+                      <span className="font-medium text-foreground/80 max-w-44 truncate">
                         {jobName}
                       </span>
                     )}
@@ -253,13 +253,13 @@ export default function ActivityTab() {
                     {runType && (
                       <Badge
                         variant="secondary"
-                        className="h-5 px-2 text-[11px] font-medium"
+                        className="h-4.5 px-1.5 text-[10px] font-medium"
                       >
                         {runType}
                       </Badge>
                     )}
                     <span aria-hidden="true">·</span>
-                    <span className="inline-flex items-center gap-1 tabular-nums">
+                    <span className="inline-flex items-center gap-1 tabular-nums text-[11px]">
                       <Clock className="size-3 text-muted-foreground" />
                       {hasValidDate
                         ? format(completedAt, 'MMM d, yyyy · h:mm a')
@@ -277,9 +277,9 @@ export default function ActivityTab() {
               </div>
 
               {/* Middle Column: Operational Metrics */}
-              <div className="flex shrink-0 flex-wrap items-center gap-4 sm:flex-col sm:items-end sm:gap-1.5">
+              <div className="flex shrink-0 flex-wrap items-center gap-3 sm:flex-col sm:items-end sm:gap-0.5">
                 <div className="flex items-baseline gap-1 text-left sm:text-right">
-                  <span className="text-base font-bold tabular-nums text-foreground">
+                  <span className="text-sm font-bold tabular-nums text-foreground">
                     {(log.recordsProcessed ?? 0).toLocaleString()}
                   </span>
                   <span className="text-xs text-muted-foreground font-normal">
@@ -291,28 +291,28 @@ export default function ActivityTab() {
                   {failedRecords > 0 && (
                     <Badge
                       variant="secondary"
-                      className="bg-destructive/10 text-destructive border-destructive/20 h-5 px-2 text-[11px] font-semibold"
+                      className="bg-destructive/10 text-destructive border-destructive/20 h-4.5 px-1.5 text-[10px] font-semibold"
                     >
                       {failedRecords.toLocaleString()} failed
                     </Badge>
                   )}
-                  <span className="text-muted-foreground inline-flex items-center gap-1 tabular-nums">
-                    <Timer className="size-3.5" />
+                  <span className="text-muted-foreground inline-flex items-center gap-1 tabular-nums text-[11px]">
+                    <Timer className="size-3" />
                     {formatDuration(log.durationMs)}
                   </span>
                 </div>
               </div>
 
               {/* Right Column: Direct Navigation & Action flow */}
-              <div className="flex shrink-0 items-center justify-end gap-2 border-t pt-2 sm:border-t-0 sm:pt-0">
+              <div className="flex shrink-0 items-center justify-end gap-1.5 border-t pt-2 sm:border-t-0 sm:pt-0">
                 {linkHref ? (
                   <>
                     {failedRecords > 0 && (
                       <Button
                         variant="ghost"
-                        size="sm"
+                        size="xs"
                         asChild
-                        className="h-8 gap-1 rounded-xl bg-destructive/10 text-xs font-medium text-destructive hover:bg-destructive/20"
+                        className="h-7 gap-1 rounded-lg bg-destructive/10 px-2 text-[11px] font-medium text-destructive hover:bg-destructive/20"
                       >
                         <Link
                           to={linkHref}
@@ -328,9 +328,9 @@ export default function ActivityTab() {
                     )}
                     <Button
                       variant="outline"
-                      size="sm"
+                      size="xs"
                       asChild
-                      className="h-8 gap-1.5 rounded-xl text-xs font-medium hover:border-primary/40 hover:bg-primary/5 hover:text-primary transition-colors"
+                      className="h-7 gap-1 rounded-lg px-2.5 text-xs font-medium hover:border-primary/40 hover:bg-primary/5 hover:text-primary transition-colors"
                     >
                       <Link
                         to={linkHref}
@@ -340,7 +340,7 @@ export default function ActivityTab() {
                         }}
                       >
                         <span>Run details</span>
-                        <ArrowUpRight className="size-3.5 opacity-70" />
+                        <ArrowUpRight className="size-3 opacity-70" />
                       </Link>
                     </Button>
                   </>
@@ -353,7 +353,7 @@ export default function ActivityTab() {
         })}
       </CardContent>
 
-      <CardFooter className="border-t p-4 sm:p-5">
+      <CardFooter className="border-t p-3 sm:px-4 sm:py-3">
         <PaginationBar
           page={page}
           totalPages={totalPages}
