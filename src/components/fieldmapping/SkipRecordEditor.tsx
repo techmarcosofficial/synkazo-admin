@@ -57,7 +57,7 @@ export default function SkipRecordEditor({
       </div>
 
       <div className="divide-border divide-y">
-        <div className="p-4">
+        <div className="min-w-0">
           <ExcludeConditionsEditor
             sourceFields={sourceFields}
             conditions={sourceConditions}
@@ -74,7 +74,7 @@ export default function SkipRecordEditor({
           />
         </div>
 
-        <div className="p-4">
+        <div className="min-w-0">
           <DestinationSkipConditionsEditor
             sourceFields={sourceFields}
             destinationFields={destinationFields}

@@ -89,6 +89,11 @@ function normalizeMappings(
 }
 
 /** A constant mapping — one side deliberately empty (see the FieldMapping entity). */
+export const supportsCrossObjectProperties = (platformId: string) =>
+  platformId === 'servicetitan' ||
+  platformId === 'dataforma' ||
+  platformId === 'texada';
+
 const isConstant = (m: { sourceField: string; destField: string }) =>
   !m.sourceField || !m.destField;
 
@@ -851,13 +856,11 @@ export default function FieldMappingTab() {
                       <span className="bg-warning size-1.5 rounded-full" />
                     )}
                   </TabsTrigger>
-                  {srcPlatform !== 'texada' &&
-                    (srcPlatform === 'servicetitan' ||
-                      srcPlatform === 'dataforma') && (
-                      <TabsTrigger value="cross-object">
-                        Cross-Object Properties
-                      </TabsTrigger>
-                    )}
+                  {supportsCrossObjectProperties(srcPlatform) && (
+                    <TabsTrigger value="cross-object">
+                      Cross-Object Properties
+                    </TabsTrigger>
+                  )}
                 </TabsList>
               </div>
 

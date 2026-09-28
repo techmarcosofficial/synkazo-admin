@@ -2,7 +2,9 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import AssociationRuleFormDialog from './AssociationRuleFormDialog';
+import AssociationRuleFormDialog, {
+  sourceFieldOptionLabel,
+} from './AssociationRuleFormDialog';
 
 import { associationsApi } from '@/api/associations';
 import type { AssociationRule } from '@/api/associations';
@@ -126,6 +128,50 @@ describe('AssociationRuleFormDialog', () => {
     ).toBeInTheDocument();
   });
 
+  it('saves the original generated source key after showing its friendly label', async () => {
+    getObjectFields.mockResolvedValue([
+      {
+        field: '__cross_object__:uuid-123',
+        label: 'Technician Email',
+        isArray: false,
+      },
+    ]);
+    vi.mocked(associationsApi.getOwnerFields).mockResolvedValue([
+      { field: 'email', label: 'Email', isArray: false },
+    ]);
+    vi.mocked(associationsApi.createRule).mockResolvedValue(rule);
+    const user = userEvent.setup();
+    render(
+      <AssociationRuleFormDialog
+        mode="create"
+        projectId="project-1"
+        onSuccess={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+    await screen.findByText('Source record');
+    await user.click(screen.getAllByRole('combobox')[0]);
+    await user.click(screen.getByRole('option', { name: /Customer/i }));
+    await user.click((await screen.findAllByRole('combobox'))[1]);
+    await user.click(screen.getByRole('option', { name: 'Technician Email' }));
+    await user.click(screen.getAllByRole('combobox')[2]);
+    await user.click(
+      screen.getByRole('option', { name: 'Record Owner (HubSpot)' }),
+    );
+    await user.click((await screen.findAllByRole('combobox'))[3]);
+    await user.click(screen.getByRole('option', { name: 'Email' }));
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    await user.click(screen.getByRole('button', { name: 'Create Rule' }));
+    await waitFor(() =>
+      expect(associationsApi.createRule).toHaveBeenCalledWith(
+        'project-1',
+        expect.objectContaining({
+          sourceMatchField: '__cross_object__:uuid-123',
+        }),
+      ),
+    );
+  });
+
   it('loads owner fields and saves their API identifier without an association type', async () => {
     getObjectFields.mockResolvedValue([
       { field: 'ownerName', label: 'Owner name', isArray: false },
@@ -195,5 +241,28 @@ describe('AssociationRuleFormDialog', () => {
     expect(
       document.querySelector('[data-slot="sheet-content"]'),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe('association source option labels', () => {
+  it('preserves ordinary labels and hides generated keys when metadata has no label', () => {
+    expect(
+      sourceFieldOptionLabel(
+        { field: 'email', label: 'Email', isArray: false },
+        0,
+      ),
+    ).toBe('Email');
+    expect(
+      sourceFieldOptionLabel(
+        { field: '__combine__:one', label: '__combine__:one', isArray: false },
+        1,
+      ),
+    ).toBe('Combined property 2');
+    expect(
+      sourceFieldOptionLabel(
+        { field: '__cross_object__:uuid-123', isArray: false },
+        2,
+      ),
+    ).toBe('Imported property 3');
   });
 });

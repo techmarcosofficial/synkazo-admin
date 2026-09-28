@@ -235,7 +235,11 @@ export default function ExcludeConditionsEditor({
                   onChange(conditions, value as 'AND' | 'OR')
                 }
               >
-                <SelectTrigger size="sm" className="w-24">
+                <SelectTrigger
+                  size="sm"
+                  className="w-24"
+                  aria-label="Combine source conditions with"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -477,7 +481,7 @@ export default function ExcludeConditionsEditor({
           })}
 
           {conditions.length === 0 && (
-            <div className="border-t px-4 py-10 text-center">
+            <div className="border-t px-4 py-4 text-center">
               <p className="text-sm font-medium">No skip conditions</p>
               <p className="text-muted-foreground mt-1 text-xs">
                 Every source record is currently eligible to sync.
@@ -488,7 +492,7 @@ export default function ExcludeConditionsEditor({
           {normalizedSearch &&
             visibleConditions.length === 0 &&
             conditions.length > 0 && (
-              <div className="border-t px-4 py-10 text-center">
+              <div className="border-t px-4 py-4 text-center">
                 <p className="text-sm font-medium">No matching conditions</p>
                 <p className="text-muted-foreground mt-1 text-xs">
                   Try a different search term.

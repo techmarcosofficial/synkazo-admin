@@ -75,6 +75,20 @@ interface FormErrors {
 const STEPS = ['Match records', 'Rule details'];
 const OWNER_OBJECT = 'record_owner';
 
+/** Keep generated field keys as option values, never as visible labels. */
+export function sourceFieldOptionLabel(
+  field: ObjectField,
+  index: number,
+): string {
+  const label = field.label?.trim();
+  if (label && label !== field.field) return label;
+  if (field.field.startsWith('__combine__:'))
+    return `Combined property ${index + 1}`;
+  if (field.field.startsWith('__cross_object__:'))
+    return `Imported property ${index + 1}`;
+  return label || field.field;
+}
+
 function HelpTooltip({
   label,
   children,
@@ -534,9 +548,9 @@ export default function AssociationRuleFormDialog({
                                   <SelectValue placeholder="Select field…" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {sourceFields.map((f) => (
+                                  {sourceFields.map((f, index) => (
                                     <SelectItem key={f.field} value={f.field}>
-                                      {f.label || f.field}
+                                      {sourceFieldOptionLabel(f, index)}
                                       {f.isArray ? ' [ ]' : ''}
                                     </SelectItem>
                                   ))}

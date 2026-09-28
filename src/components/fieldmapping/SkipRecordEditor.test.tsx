@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import SkipRecordEditor from './SkipRecordEditor';
@@ -55,5 +55,38 @@ describe('SkipRecordEditor', () => {
         name: 'Destination condition 1 operator',
       }),
     ).toBeInTheDocument();
+  });
+});
+
+describe('Skip Record actions', () => {
+  it('keeps compact empty states and both add actions available', () => {
+    const onSourceChange = vi.fn();
+    const onDestinationChange = vi.fn();
+    render(
+      <SkipRecordEditor
+        layout="grid"
+        sourceFields={[{ key: 'email', label: 'Email', type: 'email' }]}
+        destinationFields={[{ key: 'email', label: 'Email', type: 'email' }]}
+        sourceConditions={[]}
+        sourceConditionLogic="AND"
+        destinationConditions={[]}
+        onSourceChange={onSourceChange}
+        onDestinationChange={onDestinationChange}
+        onPreviewSource={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('No skip conditions')).toBeInTheDocument();
+    expect(
+      screen.getByText('No destination-aware skip conditions.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Preview matches' }),
+    ).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Add condition' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Add destination condition' }),
+    );
+    expect(onSourceChange).toHaveBeenCalled();
+    expect(onDestinationChange).toHaveBeenCalled();
   });
 });

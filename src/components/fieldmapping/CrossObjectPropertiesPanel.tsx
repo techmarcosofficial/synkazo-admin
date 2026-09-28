@@ -80,7 +80,13 @@ export default function CrossObjectPropertiesPanel({
     (object) => object.objectType === relatedObject,
   );
   const add = async () => {
-    if (!relatedObject || !lookupField || !importedProperty) return;
+    if (
+      !relatedObject ||
+      !lookupField ||
+      !importedProperty ||
+      (relatedObject === 'customer-contacts' && lookupField !== 'InfluencerId')
+    )
+      return;
     setBusy(true);
     try {
       const created = await jobsApi.createCrossObjectProperty(
@@ -188,7 +194,12 @@ export default function CrossObjectPropertiesPanel({
               </SelectTrigger>
               <SelectContent>
                 {sourceFields
-                  .filter((field) => !field.key.startsWith('__cross_object__:'))
+                  .filter(
+                    (field) =>
+                      !field.key.startsWith('__cross_object__:') &&
+                      (relatedObject !== 'customer-contacts' ||
+                        field.key === 'InfluencerId'),
+                  )
                   .map((field) => (
                     <SelectItem key={field.key} value={field.key}>
                       {field.label ?? field.key}
@@ -242,7 +253,9 @@ export default function CrossObjectPropertiesPanel({
               busy ||
               !selectedObject?.lookupModes.includes(lookupMode) ||
               !lookupField ||
-              !importedProperty
+              (relatedObject === 'customer-contacts' &&
+                lookupField !== 'InfluencerId') ||
+              !relatedFields.some((field) => field.key === importedProperty)
             }
           >
             {busy ? <Spinner /> : <Plus />} Add property
