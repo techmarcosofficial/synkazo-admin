@@ -2716,7 +2716,11 @@ export default function FieldMappingCanvas({
                                                 )?.label ?? component.value,
                                             )
                                             .join(' + ') ?? m.sourceField)
-                                        : m.sourceField}
+                                        : m.sourceField.startsWith(
+                                              '__cross_object__:',
+                                            )
+                                          ? 'Imported Property'
+                                          : m.sourceField}
                                     </div>
                                   </>
                                 )}
