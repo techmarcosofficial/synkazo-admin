@@ -120,4 +120,31 @@ export const superAdminOperationsApi = {
         `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs/${jobId}/runs/${bullJobId}`,
       )
       .then(d),
+
+  // GAP-011 — cancel a queued run (SA-611 cross-project + cross-job
+  // guard enforced server-side; the admin surface just delegates).
+  cancelRun: (
+    organisationId: string,
+    projectId: string,
+    jobId: string,
+    bullJobId: string,
+  ): Promise<{ bullJobId: string; cancelled: true }> =>
+    apiClient
+      .post<{ data: { bullJobId: string; cancelled: true } }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs/${jobId}/runs/${bullJobId}/cancel`,
+      )
+      .then(d),
+
+  // GAP-012 — retry a failed run for the selected organisation.
+  retryRun: (
+    organisationId: string,
+    projectId: string,
+    jobId: string,
+    bullJobId: string,
+  ): Promise<{ bullJobId: string; retried: true }> =>
+    apiClient
+      .post<{ data: { bullJobId: string; retried: true } }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs/${jobId}/runs/${bullJobId}/retry`,
+      )
+      .then(d),
 };

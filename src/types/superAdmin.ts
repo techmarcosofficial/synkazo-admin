@@ -216,11 +216,14 @@ export interface SuperAdminPage<T> {
 // carry a bypass — the API derives `platform_override` from the caller's
 // identity, never from a request field.
 
+// GAP-001 — mirrors the API's allowlisted DTO (name / description /
+// logoUrl / settings). Status transitions go through the dedicated
+// lifecycle route so `status` and `reason` are deliberately absent.
 export interface SuperAdminUpdateOrganisationDto {
   name?: string;
-  description?: string | null;
-  status?: OrgStatus;
-  reason?: string;
+  description?: string;
+  logoUrl?: string;
+  settings?: Record<string, unknown>;
 }
 
 export interface ProvisionOrganisationDto {
@@ -276,12 +279,21 @@ export interface ClearPaymentHoldDto {
 
 export interface LifecycleTransitionResponse {
   status: 'active' | 'suspended' | 'archived';
-  cascade: {
-    pausedJobs?: number;
-    queuedRemoved?: number;
-    heldJobs?: number;
-    resumedJobs?: number;
-  };
+  cascade: LifecycleCascade;
+}
+
+// GAP-046 / SA-411 — every axis populated by the SA lifecycle service.
+// Optional fields are omitted from responses that don't apply (holdWork
+// doesn't touch users, imposePaymentHold doesn't touch queues, etc.).
+export interface LifecycleCascade {
+  pausedJobs?: number;
+  queuedRemoved?: number;
+  heldJobs?: number;
+  resumedJobs?: number;
+  usersAffected?: number;
+  billingTreatment?: 'preserved' | 'canceled' | 'suspended' | 'none';
+  queuesAffected?: string[];
+  associationRulesAffected?: number;
 }
 
 export interface HoldWorkResponse {
@@ -391,4 +403,13 @@ export interface PlatformOverviewResponse {
     summary: string;
     createdAt: string;
   }>;
+  // GAP-043 / SA-302 — per-section error surface. Populated only when
+  // at least one aggregate query on the API's Promise.allSettled path
+  // rejected. Absent on a fully-successful load.
+  errors?: {
+    organisations?: string;
+    subscriptions?: string;
+    queue?: string;
+    recentAlerts?: string;
+  };
 }

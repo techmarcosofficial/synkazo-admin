@@ -53,7 +53,9 @@ function ManualSyncContent({
   disabled = false,
   embedded = false,
 }: StartSyncModalProps) {
-  const [runType, setRunType] = useState<'all' | 'limited'>('all');
+  const [runType, setRunType] = useState<'all' | 'limited'>(
+    !hasBaseline ? 'limited' : 'all',
+  );
   const [showIncrementalRun, setShowIncrementalRun] = useState(false);
 
   return (
@@ -66,17 +68,25 @@ function ManualSyncContent({
         className="grid gap-2 sm:grid-cols-2"
       >
         <ChoiceCardItem
-          value="all"
-          id="manual-run-all"
-          title="All records"
-          description="Sync all available records"
-          disabled={disabled}
-        />
-        <ChoiceCardItem
           value="limited"
           id="manual-run-limited"
           title="Limited run"
-          description="Sync a controlled number of records"
+          description={
+            !hasBaseline
+              ? 'Recommended for first test run'
+              : 'Sync a controlled number of records'
+          }
+          disabled={disabled}
+        />
+        <ChoiceCardItem
+          value="all"
+          id="manual-run-all"
+          title="All records"
+          description={
+            !hasBaseline
+              ? 'Initial sync: import all historical records'
+              : 'Sync all available records'
+          }
           disabled={disabled}
         />
       </RadioGroup>

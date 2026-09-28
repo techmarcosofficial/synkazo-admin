@@ -69,10 +69,40 @@ export default function OrganisationLifecycleActions({
       { targetStatus, confirmName: organisation.name, reason },
       {
         onSuccess: (data) => {
-          const paused = data.cascade.pausedJobs ?? 0;
-          showToast.success(
-            `Organisation ${data.status}. ${paused > 0 ? `${paused} job${paused === 1 ? '' : 's'} paused.` : ''}`,
-          );
+          // GAP-046 / SA-411 — summarise every non-zero axis of the
+          // cascade so the operator sees a concrete list of what changed
+          // instead of a vague "done" toast. Skips zero/absent axes so
+          // the message stays scannable.
+          const parts: string[] = [];
+          const { cascade } = data;
+          if (cascade.pausedJobs) {
+            parts.push(
+              `${cascade.pausedJobs} job${cascade.pausedJobs === 1 ? '' : 's'} paused`,
+            );
+          }
+          if (cascade.queuedRemoved) {
+            parts.push(
+              `${cascade.queuedRemoved} queued run${cascade.queuedRemoved === 1 ? '' : 's'} removed`,
+            );
+          }
+          if (cascade.usersAffected) {
+            parts.push(
+              `${cascade.usersAffected} tenant user${cascade.usersAffected === 1 ? '' : 's'} affected`,
+            );
+          }
+          if (cascade.associationRulesAffected) {
+            parts.push(
+              `${cascade.associationRulesAffected} association rule${cascade.associationRulesAffected === 1 ? '' : 's'} paused`,
+            );
+          }
+          if (cascade.queuesAffected && cascade.queuesAffected.length > 0) {
+            parts.push(`queues: ${cascade.queuesAffected.join(', ')}`);
+          }
+          if (cascade.billingTreatment && cascade.billingTreatment !== 'preserved') {
+            parts.push(`billing: ${cascade.billingTreatment}`);
+          }
+          const detail = parts.length > 0 ? ` — ${parts.join(', ')}.` : '';
+          showToast.success(`Organisation ${data.status}.${detail}`);
           closeDialog();
         },
       },

@@ -149,24 +149,26 @@ export function useJobHeaderAlert(): ResolvedJobHeaderAlert | undefined {
   if (canActivate && !isActive) {
     candidates.push({
       key: 'ready-to-activate',
-      variant: 'success',
-      icon: Check,
-      title: onboardingComplete
-        ? 'Setup complete — activate to start scheduled syncing'
-        : 'Ready to activate — run the job once to test it first',
+      variant: 'warning',
+      icon: AlertTriangle,
+      title: 'Job is Inactive — Activation required for data movement',
       description: (
         <>
-          This project is fully configured.{' '}
+          This job is fully configured, but currently{' '}
+          <strong className="text-foreground">Inactive</strong>. Synkazo
+          requires an Active status before any sync can move data. When Inactive,
+          all manual runs, automated schedules, and priority queue cycles are
+          frozen.{' '}
           <Button
             variant="link"
             size="xs"
-            className="text-success h-auto p-0"
+            className="text-foreground h-auto p-0 font-semibold underline"
             onClick={handleToggle}
             disabled={toggling}
           >
-            {toggling ? 'Activating…' : 'Activate'}
+            {toggling ? 'Activating…' : 'Activate Job'}
           </Button>{' '}
-          to enable synchronization.
+          to enable synchronization, or toggle the Status dropdown in the header.
         </>
       ),
     });

@@ -22,6 +22,9 @@ export default function JobOnboardingJourney() {
     pipelineConfigured,
     activeTab,
     handleTabChange,
+    setManualDialogOpen,
+    handleToggle,
+    toggling,
   } = useJobDetailContext();
   const state = selectJobOnboardingState({
     mappings: jobFieldMappings,
@@ -105,9 +108,12 @@ export default function JobOnboardingJourney() {
               'Choose the destination pipeline required before testing.',
           }
         : {
-            title: 'Test and review your sync job',
-            description:
-              'Run the job once and review the result before automating it.',
+            title: job.isEnabled
+              ? 'Test and review your sync job'
+              : 'Activate and test your sync job',
+            description: job.isEnabled
+              ? 'Run the job once and review the result before automating it.'
+              : 'Activate this job to enable data movement, then run your first test sync.',
           };
 
   const targetTab =
@@ -130,22 +136,30 @@ export default function JobOnboardingJourney() {
     previousPage: previousTab,
   });
 
+  let actionLabel: string | undefined;
+  let onContinue: (() => void) | undefined;
+
+  if (state.stage === 'test' && activeTab === 'overview') {
+    if (!job.isEnabled) {
+      actionLabel = toggling ? 'Activating…' : 'Activate Job';
+      onContinue = () => void handleToggle();
+    } else {
+      actionLabel = 'Run Test Sync';
+      onContinue = () => setManualDialogOpen(true);
+    }
+  } else if (action !== 'none') {
+    actionLabel = action === 'next' ? 'Next' : 'Continue setup';
+    onContinue = () => handleTabChange(targetTab);
+  }
+
   return (
     <SetupJourneyCard
       eyebrow="Job setup"
       title={content.title}
       description={content.description}
       steps={steps}
-      actionLabel={
-        action === 'none'
-          ? undefined
-          : action === 'next'
-            ? 'Next'
-            : 'Continue setup'
-      }
-      onContinue={
-        action === 'none' ? undefined : () => handleTabChange(targetTab)
-      }
+      actionLabel={actionLabel}
+      onContinue={onContinue}
     />
   );
 }

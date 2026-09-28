@@ -61,6 +61,27 @@ export function useRetryInvoiceMutation(organisationId: string) {
   });
 }
 
+// SA-702 / GAP-051 — assign a plan to the selected organisation. Hits
+// the SA-canonical PATCH /billing/plan route (not the legacy
+// /billing/admin alias). On success, invalidates every query keyed
+// under this org so overview / billing / detail all re-fetch with the
+// new plan info.
+export function useAssignPlanMutation(organisationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (planId: string) =>
+      superAdminBillingApi.assignPlan(organisationId, planId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['superAdmin', organisationId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.superAdmin.platform.overview,
+      });
+    },
+  });
+}
+
 // ── Failed-payments queue (SA-705) ────────────────────────────────────
 
 export function useSuperAdminFailedPaymentsQuery(
@@ -479,6 +500,64 @@ export function useSuperAdminRunStatusQuery(
       const state = query.state.data?.state;
       if (state && TERMINAL_BULL_STATES.has(state)) return false;
       return refetchIntervalMs;
+    },
+  });
+}
+
+// GAP-011 — cancel a queued Bull run. Invalidates the run-status query
+// so the poller shows the resulting 404 (uniform response for cancelled/
+// cross-org/unknown so SA-SEC-001 stays preserved).
+export function useSuperAdminCancelRunMutation(
+  organisationId: string,
+  projectId: string,
+  jobId: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (bullJobId: string) =>
+      superAdminOperationsApi.cancelRun(
+        organisationId,
+        projectId,
+        jobId,
+        bullJobId,
+      ),
+    onSuccess: (_data, bullJobId) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.superAdmin.operations.runStatus(
+          organisationId,
+          projectId,
+          jobId,
+          bullJobId,
+        ),
+      });
+    },
+  });
+}
+
+// GAP-012 — retry a failed run. Same invalidation as cancel.
+export function useSuperAdminRetryRunMutation(
+  organisationId: string,
+  projectId: string,
+  jobId: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (bullJobId: string) =>
+      superAdminOperationsApi.retryRun(
+        organisationId,
+        projectId,
+        jobId,
+        bullJobId,
+      ),
+    onSuccess: (_data, bullJobId) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.superAdmin.operations.runStatus(
+          organisationId,
+          projectId,
+          jobId,
+          bullJobId,
+        ),
+      });
     },
   });
 }

@@ -7,10 +7,12 @@ import {
   Database,
   FolderOpen,
   Package,
+  Pencil,
   ShieldCheck,
   User,
   Users,
 } from 'lucide-react';
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import EmptyState from '@/components/shared/EmptyState';
@@ -20,10 +22,13 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
+import { showToast } from '@/lib/toast';
+import EditOrganisationMetadataDialog from '@/pages/superadmin/organisations/EditOrganisationMetadataDialog';
 import OrganisationLifecycleActions from '@/pages/superadmin/lifecycle/OrganisationLifecycleActions';
 import {
   useSuperAdminActivityQuery,
   useSuperAdminOrganisationQuery,
+  useUpdateSuperAdminOrganisationMutation,
 } from '@/queries/useSuperAdmin';
 
 // SA-405 / SA-406 Phase 4 organisation detail view. Read-only for now;
@@ -72,6 +77,11 @@ export default function OrganisationDetailPage() {
     page: 1,
     limit: 5,
   });
+  const updateMutation = useUpdateSuperAdminOrganisationMutation(
+    organisationId ?? '',
+  );
+  const [editOpen, setEditOpen] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   if (!organisationId) {
     return (
@@ -132,9 +142,58 @@ export default function OrganisationDetailPage() {
               ) : null}
             </div>
           </div>
-          <OrganisationLifecycleActions organisation={org} />
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setEditError(null);
+                setEditOpen(true);
+              }}
+            >
+              <Pencil className="size-4" aria-hidden />
+              Edit metadata
+            </Button>
+            <OrganisationLifecycleActions organisation={org} />
+          </div>
         </div>
       </div>
+
+      <EditOrganisationMetadataDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        isSubmitting={updateMutation.isPending}
+        errorMessage={editError}
+        initial={{
+          name: org.name,
+          description: org.description ?? null,
+          logoUrl: org.logoUrl ?? null,
+          defaultCurrency:
+            typeof org.settings?.defaultCurrency === 'string'
+              ? (org.settings.defaultCurrency as string)
+              : null,
+        }}
+        onSubmit={async (dto) => {
+          setEditError(null);
+          if (Object.keys(dto).length === 0) {
+            // No changes — just close without a server round-trip.
+            setEditOpen(false);
+            return;
+          }
+          try {
+            await updateMutation.mutateAsync(dto);
+            showToast.success('Organisation metadata updated.');
+            setEditOpen(false);
+          } catch (err) {
+            const e = err as {
+              response?: { data?: { message?: string } };
+            };
+            setEditError(
+              e?.response?.data?.message ?? 'The update failed. Try again.',
+            );
+          }
+        }}
+      />
 
       {org.status === 'suspended' ? (
         <Alert variant="destructive">
