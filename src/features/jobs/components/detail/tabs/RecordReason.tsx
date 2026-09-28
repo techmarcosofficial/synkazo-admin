@@ -36,6 +36,7 @@ const REASON_SUMMARIES: Record<string, string> = {
   manually_excluded: 'Manually excluded',
   matched_no_update: 'Matched record left unchanged',
   record_level_conflict: 'Record-level conflict',
+  destination_condition: 'Matched a destination skip rule',
   api_error: 'API error',
   rate_limited: 'Rate limit reached',
   transform_error: 'Transformation failed',

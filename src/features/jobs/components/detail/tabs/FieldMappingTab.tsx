@@ -16,12 +16,8 @@ import { connectionsApi } from '@/api/connections';
 import { jobsApi } from '@/api/jobs';
 import type { CrossObjectProperty } from '@/api/jobs';
 import CrossObjectPropertiesPanel from '@/components/fieldmapping/CrossObjectPropertiesPanel';
-import ExcludeConditionsEditor, {
-  validateExcludeConditions,
-} from '@/components/fieldmapping/ExcludeConditionsEditor';
-import DestinationSkipConditionsEditor, {
-  validateDestinationSkipConditions,
-} from '@/components/fieldmapping/DestinationSkipConditionsEditor';
+import { validateExcludeConditions } from '@/components/fieldmapping/ExcludeConditionsEditor';
+import { validateDestinationSkipConditions } from '@/components/fieldmapping/DestinationSkipConditionsEditor';
 import { isValidDefaultValue } from '@/components/fieldmapping/EmptyValuePolicy';
 import FieldMappingCanvas, {
   type FieldDef as CanvasFieldDef,
@@ -29,6 +25,7 @@ import FieldMappingCanvas, {
 } from '@/components/fieldmapping/FieldMappingCanvas';
 import RequiredFieldDefaults from '@/components/fieldmapping/RequiredFieldDefaults';
 import { Button } from '@/components/ui/button';
+import SkipRecordEditor from '@/components/fieldmapping/SkipRecordEditor';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   InputGroup,
@@ -1029,28 +1026,23 @@ export default function FieldMappingTab() {
                   {displayedConditionsError}
                 </div>
               )}
-              <ExcludeConditionsEditor
-                sourceFields={
-                  effectiveSourceFields as unknown as CanvasFieldDef[]
-                }
-                conditions={excludeConditions}
-                conditionLogic={excludeConditionLogic}
-                onChange={handleExcludeConditionsChange}
-                searchQuery={conditionSearch}
-                addRequestSignal={conditionAddRequest}
-                showAddButton
-                isDirty={conditionsDirty}
-                onPreview={handlePreviewConditions}
-                previewing={previewingConditions}
-                layout="grid"
-              />
-              <DestinationSkipConditionsEditor
+              <SkipRecordEditor
                 sourceFields={
                   effectiveSourceFields as unknown as CanvasFieldDef[]
                 }
                 destinationFields={destFields as unknown as CanvasFieldDef[]}
-                conditions={destinationSkipConditions}
-                onChange={handleDestinationConditionsChange}
+                sourceConditions={excludeConditions}
+                sourceConditionLogic={excludeConditionLogic}
+                destinationConditions={destinationSkipConditions}
+                onSourceChange={handleExcludeConditionsChange}
+                onDestinationChange={handleDestinationConditionsChange}
+                searchQuery={conditionSearch}
+                addRequestSignal={conditionAddRequest}
+                showSourceAddButton
+                isDirty={conditionsDirty}
+                onPreviewSource={handlePreviewConditions}
+                previewingSource={previewingConditions}
+                layout="grid"
               />
             </TabsContent>
             <TabsContent value="cross-object" className="p-5">

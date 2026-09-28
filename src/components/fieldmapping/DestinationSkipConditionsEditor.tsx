@@ -17,6 +17,7 @@ interface Props {
   destinationFields: FieldDef[];
   conditions: DestinationSkipCondition[];
   onChange: (conditions: DestinationSkipCondition[]) => void;
+  embedded?: boolean;
 }
 
 const EMPTY: DestinationSkipCondition = {
@@ -45,6 +46,7 @@ export default function DestinationSkipConditionsEditor({
   destinationFields,
   conditions,
   onChange,
+  embedded = false,
 }: Props) {
   const update = (index: number, patch: Partial<DestinationSkipCondition>) =>
     onChange(
@@ -56,10 +58,18 @@ export default function DestinationSkipConditionsEditor({
     );
 
   return (
-    <section className="space-y-3 rounded-4xl border p-4">
+    <section
+      className={embedded ? 'space-y-3' : 'space-y-3 rounded-4xl border p-4'}
+      aria-labelledby="destination-conditions-heading"
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold">Destination conditions</h3>
+          <h3
+            id="destination-conditions-heading"
+            className="text-sm font-semibold"
+          >
+            Destination conditions
+          </h3>
           <p className="text-muted-foreground mt-1 text-xs">
             Applied only after an existing destination record is found. Matching
             any row skips the whole update.
@@ -90,7 +100,11 @@ export default function DestinationSkipConditionsEditor({
                 value={condition.sourceField}
                 onValueChange={(sourceField) => update(index, { sourceField })}
               >
-                <SelectTrigger size="sm" className="w-full">
+                <SelectTrigger
+                  size="sm"
+                  className="w-full"
+                  aria-label={`Destination condition ${index + 1} source field`}
+                >
                   <SelectValue placeholder="Source field" />
                 </SelectTrigger>
                 <SelectContent>
@@ -109,7 +123,11 @@ export default function DestinationSkipConditionsEditor({
                   })
                 }
               >
-                <SelectTrigger size="sm" className="w-full">
+                <SelectTrigger
+                  size="sm"
+                  className="w-full"
+                  aria-label={`Destination condition ${index + 1} operator`}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -127,7 +145,11 @@ export default function DestinationSkipConditionsEditor({
                   update(index, { destinationField })
                 }
               >
-                <SelectTrigger size="sm" className="w-full">
+                <SelectTrigger
+                  size="sm"
+                  className="w-full"
+                  aria-label={`Destination condition ${index + 1} destination field`}
+                >
                   <SelectValue placeholder="Destination field" />
                 </SelectTrigger>
                 <SelectContent>

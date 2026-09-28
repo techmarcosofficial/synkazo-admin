@@ -1,7 +1,6 @@
 import { AlertCircleIcon, RefreshCw, X } from 'lucide-react';
 
-import ExcludeConditionsEditor from '@/components/fieldmapping/ExcludeConditionsEditor';
-import DestinationSkipConditionsEditor from '@/components/fieldmapping/DestinationSkipConditionsEditor';
+import SkipRecordEditor from '@/components/fieldmapping/SkipRecordEditor';
 import FieldMappingCanvas, {
   type FieldDef as CanvasFieldDef,
   type MappingRow as CanvasMappingRow,
@@ -198,29 +197,15 @@ export default function FieldMappingStep({
         </div>
       )}
 
-      <Card>
-        <CardContent>
-          <h3 className="mb-1 font-semibold">Skip Records</h3>
-          <p className="text-muted-foreground mb-4 text-xs">
-            Exclude source records from this job entirely — e.g. skip employee
-            accounts, test records, or anything matching a specific value.
-          </p>
-          <ExcludeConditionsEditor
-            sourceFields={sourceFields as unknown as CanvasFieldDef[]}
-            conditions={excludeConditions}
-            conditionLogic={excludeConditionLogic}
-            onChange={onExcludeConditionsChange}
-          />
-          <div className="mt-4">
-            <DestinationSkipConditionsEditor
-              sourceFields={sourceFields as unknown as CanvasFieldDef[]}
-              destinationFields={destFields as unknown as CanvasFieldDef[]}
-              conditions={destinationSkipConditions}
-              onChange={onDestinationSkipConditionsChange}
-            />
-          </div>
-        </CardContent>
-      </Card>
+      <SkipRecordEditor
+        sourceFields={sourceFields as unknown as CanvasFieldDef[]}
+        destinationFields={destFields as unknown as CanvasFieldDef[]}
+        sourceConditions={excludeConditions}
+        sourceConditionLogic={excludeConditionLogic}
+        destinationConditions={destinationSkipConditions}
+        onSourceChange={onExcludeConditionsChange}
+        onDestinationChange={onDestinationSkipConditionsChange}
+      />
 
       <Card>
         <CardContent>

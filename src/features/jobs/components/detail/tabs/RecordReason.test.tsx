@@ -203,4 +203,51 @@ describe('RecordReason', () => {
       expect(screen.queryByRole('tooltip')).not.toBeInTheDocument(),
     );
   });
+  it('shows the matched source condition and actual value for a skipped record', async () => {
+    renderReason({
+      id: 'record-source-condition',
+      action: 'skipped',
+      sourceRecordId: 'contact-1',
+      skipReason: 'filter_excluded',
+      skipReasonDetail:
+        'Source skip conditions matched (logic=OR; matched 1 of 2): email is empty (actual=<empty>)',
+    });
+
+    const trigger = screen.getByRole('button', {
+      name: /view skipped reason details/i,
+    });
+    expect(trigger).toHaveTextContent('Skipped: Matched a skip rule');
+    fireEvent.focus(trigger);
+
+    const tooltip = await screen.findByRole('tooltip');
+    expect(tooltip).toHaveTextContent('logic=OR');
+    expect(tooltip).toHaveTextContent('email is empty');
+    expect(tooltip).toHaveTextContent('actual=<empty>');
+  });
+
+  it('shows source, mapped, and destination values for a destination skip', async () => {
+    renderReason({
+      id: 'record-destination-condition',
+      action: 'skipped',
+      sourceRecordId: 'contact-2',
+      destRecordId: 'hubspot-2',
+      skipReason: 'destination_condition',
+      skipReasonDetail:
+        'Destination skip conditions matched (logic=ANY; matched 1): email → email is different from destination (source=Incoming@Example.com; mapped=incoming@example.com; destination=current@example.com)',
+    });
+
+    const trigger = screen.getByRole('button', {
+      name: /view skipped reason details/i,
+    });
+    expect(trigger).toHaveTextContent(
+      'Skipped: Matched a destination skip rule',
+    );
+    fireEvent.focus(trigger);
+
+    const tooltip = await screen.findByRole('tooltip');
+    expect(tooltip).toHaveTextContent('source=Incoming@Example.com');
+    expect(tooltip).toHaveTextContent('mapped=incoming@example.com');
+    expect(tooltip).toHaveTextContent('destination=current@example.com');
+    expect(tooltip).not.toHaveTextContent('Failed');
+  });
 });
