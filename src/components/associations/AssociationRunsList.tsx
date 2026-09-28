@@ -289,7 +289,10 @@ function RecordDetails({
                                 {record.sourceId}
                               </TableCell>
                               <TableCell className="font-mono text-xs">
-                                {record.targetHsId || record.targetId || '—'}
+                                {run.associationRule?.targetObject ===
+                                'record_owner'
+                                  ? `${record.targetMatchValue} → ${record.targetId || 'Owner unresolved'}`
+                                  : record.targetHsId || record.targetId || '—'}
                               </TableCell>
                               <TableCell className="font-mono text-xs">
                                 {record.sourceHsId || '—'}

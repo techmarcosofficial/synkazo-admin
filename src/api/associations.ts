@@ -204,14 +204,35 @@ export const associationsApi = {
   ): Promise<AssociationRunResult> =>
     apiClient.post(`${base(projectId)}/rules/${ruleId}/retry-failed`).then(d),
 
-  getProjectObjects: (projectId: string): Promise<string[]> =>
+  getProjectObjects: (
+    projectId: string,
+  ): Promise<Array<{ sourceObject: string; hsObjectType: string }>> =>
     apiClient.get(`${base(projectId)}/objects`).then(d),
 
   getObjectFields: (
     projectId: string,
     sourceObject: string,
   ): Promise<string[]> =>
-    apiClient.get(`${base(projectId)}/objects/${sourceObject}/fields`).then(d),
+    apiClient
+      .get(
+        `${base(projectId)}/objects/${encodeURIComponent(sourceObject)}/fields`,
+      )
+      .then(d),
+
+  getAssociationFields: (
+    projectId: string,
+    sourceObject: string,
+  ): Promise<Array<{ field: string; label: string; isArray: boolean }>> =>
+    apiClient
+      .get(
+        `${base(projectId)}/objects/${encodeURIComponent(sourceObject)}/fields`,
+      )
+      .then(d),
+
+  getOwnerFields: (
+    projectId: string,
+  ): Promise<Array<{ field: string; label: string; isArray: boolean }>> =>
+    apiClient.get(`${base(projectId)}/owner-fields`).then(d),
 
   getAssociationTypes: (
     projectId: string,

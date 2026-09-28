@@ -5,26 +5,15 @@ import { PlanFeatureGate } from '@/components/shared/PlanGate';
 import { useEntitlements } from '@/queries/useEntitlements';
 
 export default function AssociationsTab() {
-  const { projectId, connections } = useProjectDetailContext();
+  const { projectId } = useProjectDetailContext();
   const { associationRules } = useEntitlements();
-  const ownerSourcePlatform = connections.some(
-    (connection) => connection.platformId === 'servicetitan',
-  )
-    ? 'servicetitan'
-    : connections.some((connection) => connection.platformId === 'dataforma')
-      ? 'dataforma'
-      : null;
   return (
     <PlanFeatureGate
       allowed={associationRules}
       title="Association rules aren't on your plan"
       description="Association rules link related records across platforms — for example attaching a synced job to its customer. Upgrade to configure them."
     >
-      <AssociationRulesList
-        projectId={projectId}
-        showCompanyOwnerSection={ownerSourcePlatform !== null}
-        ownerSourcePlatform={ownerSourcePlatform}
-      />
+      <AssociationRulesList projectId={projectId} />
     </PlanFeatureGate>
   );
 }
