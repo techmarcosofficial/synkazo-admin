@@ -96,7 +96,7 @@ import {
   type MatchableField,
 } from '@/lib/fieldMatching';
 import { suggestCastRule, type Rule } from '@/lib/ruleEngine';
-import type { CombineConfig } from '@/lib/combineFields';
+import { combineMappingName, type CombineConfig } from '@/lib/combineFields';
 import { cn } from '@/lib/utils';
 import { useEntitlements } from '@/queries/useEntitlements';
 
@@ -1071,10 +1071,29 @@ export default function FieldMappingCanvas({
   const totalRef = Math.max(requiredDest.length, pairCount, 1);
   const progress = Math.min(100, Math.round((readyCount / totalRef) * 100));
 
+  const combineNames = new Map<string, string>();
+  const usedCombineNames: string[] = mappings
+    .filter((mapping) => mapping.transformType === 'combine')
+    .map((mapping) =>
+      (
+        mapping.transformConfig as unknown as CombineConfig | null
+      )?.name?.trim(),
+    )
+    .filter((name): name is string => Boolean(name));
+  for (const mapping of mappings) {
+    if (mapping.transformType !== 'combine') continue;
+    const config = mapping.transformConfig as unknown as CombineConfig | null;
+    if (!config?.components) continue;
+    const name = combineMappingName(config, sourceFields, usedCombineNames);
+    combineNames.set(mapping.sourceField, name);
+    if (!config.name?.trim()) usedCombineNames.push(name);
+  }
+
   const filtered = mapSearch
     ? pairRows.filter((m) => {
         const sl = (
           sourceFields.find((f) => f.key === m.sourceField)?.label ??
+          combineNames.get(m.sourceField) ??
           m.sourceField
         ).toLowerCase();
         const dests = Array.isArray(m.destField) ? m.destField : [m.destField];
@@ -2387,6 +2406,13 @@ export default function FieldMappingCanvas({
                 : null
             }
             onApply={(destinationField, config) => {
+              const otherNames = [...combineNames.entries()]
+                .filter(([source]) => source !== editingCombineSource)
+                .map(([, name]) => name);
+              const namedConfig = {
+                ...config,
+                name: combineMappingName(config, sourceFields, otherNames),
+              };
               if (editingCombineSource) {
                 onMappingsChange(
                   mappings.map((mapping) =>
@@ -2394,7 +2420,7 @@ export default function FieldMappingCanvas({
                       ? {
                           ...mapping,
                           destField: destinationField,
-                          transformConfig: config as unknown as Record<
+                          transformConfig: namedConfig as unknown as Record<
                             string,
                             unknown
                           >,
@@ -2415,7 +2441,10 @@ export default function FieldMappingCanvas({
                   sourceField: `__combine__:${id}`,
                   destField: destinationField,
                   transformType: 'combine',
-                  transformConfig: config as unknown as Record<string, unknown>,
+                  transformConfig: namedConfig as unknown as Record<
+                    string,
+                    unknown
+                  >,
                   direction: 'forward_only',
                 },
               ]);
@@ -2648,7 +2677,8 @@ export default function FieldMappingCanvas({
                                     <div className="flex min-w-0 items-center gap-2">
                                       <span className="truncate text-sm font-semibold">
                                         {m.transformType === 'combine'
-                                          ? 'Combined fields'
+                                          ? (combineNames.get(m.sourceField) ??
+                                            'Combined fields')
                                           : (sf?.label ?? m.sourceField)}
                                         {sourceRequiredActive &&
                                           sf?.required && (
@@ -2657,6 +2687,14 @@ export default function FieldMappingCanvas({
                                             </span>
                                           )}
                                       </span>
+                                      {m.transformType === 'combine' && (
+                                        <Badge
+                                          variant="secondary"
+                                          className="shrink-0 text-[10px]"
+                                        >
+                                          Combined
+                                        </Badge>
+                                      )}
                                       <TypeChip type={sf?.type} />
                                     </div>
                                     <div className="text-muted-foreground truncate font-mono text-[10px]">

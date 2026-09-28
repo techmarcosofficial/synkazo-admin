@@ -10,9 +10,34 @@ export type CombineSeparator =
 export type CombineComponent = { type: 'field' | 'text'; value: string };
 export interface CombineConfig {
   type: 'combine';
+  name?: string;
   separator: CombineSeparator;
   customSeparator?: string;
   components: CombineComponent[];
+}
+
+export function combineMappingName(
+  config: CombineConfig,
+  fields: readonly { key: string; label?: string }[],
+  existingNames: readonly string[] = [],
+): string {
+  const customName = config.name?.trim();
+  if (customName) return customName;
+  const sourceNames = config.components
+    .filter((part) => part.type === 'field' && part.value)
+    .map(
+      (part) =>
+        fields.find((field) => field.key === part.value)?.label || part.value,
+    );
+  const base = sourceNames.length
+    ? sourceNames.join(' + ')
+    : 'Combined field 1';
+  const used = new Set(existingNames.map((name) => name.toLocaleLowerCase()));
+  if (!used.has(base.toLocaleLowerCase())) return base;
+  let suffix = 2;
+  const prefix = sourceNames.length ? base : 'Combined field';
+  while (used.has(`${prefix} ${suffix}`.toLocaleLowerCase())) suffix++;
+  return `${prefix} ${suffix}`;
 }
 
 const separators: Record<Exclude<CombineSeparator, 'custom'>, string> = {
