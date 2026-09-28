@@ -1,6 +1,7 @@
 import { format, formatDistanceToNow } from 'date-fns';
 import {
   ArrowLeft,
+  ArrowRightLeft,
   CreditCard,
   Database,
   ExternalLink,
@@ -18,6 +19,7 @@ import PaginationBar from '@/components/shared/PaginationBar';
 import SkeletonList from '@/components/shared/skeletons/SkeletonList';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -26,8 +28,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import AssignPlanDialog from '@/pages/superadmin/billing/AssignPlanDialog';
 import SubscriptionActions from '@/pages/superadmin/billing/SubscriptionActions';
+import { showToast } from '@/lib/toast';
+import { useAdminPlansQuery } from '@/queries/useBilling';
 import {
+  useAssignPlanMutation,
   useSuperAdminBillingOverviewQuery,
   useSuperAdminInvoicesQuery,
   useSuperAdminOrganisationQuery,
@@ -217,6 +223,12 @@ export default function OrganisationBillingPage() {
     page,
     pageSize,
   );
+  // GAP-051 — plans catalog for the assign-plan dialog. Loaded lazily
+  // (only when the operator actually opens the dialog) via `enabled`.
+  const [assignPlanOpen, setAssignPlanOpen] = useState(false);
+  const [assignPlanError, setAssignPlanError] = useState<string | null>(null);
+  const plansQuery = useAdminPlansQuery();
+  const assignPlanMutation = useAssignPlanMutation(organisationId ?? '');
 
   if (!organisationId) {
     return (
@@ -247,14 +259,55 @@ export default function OrganisationBillingPage() {
             description={orgQuery.data?.name ?? organisationId}
           />
           {orgQuery.data && overviewQuery.data ? (
-            <SubscriptionActions
-              organisation={orgQuery.data}
-              subscriptionStatus={overviewQuery.data.plan.subscriptionStatus}
-              cancelAtPeriodEnd={overviewQuery.data.plan.cancelAtPeriodEnd}
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setAssignPlanError(null);
+                  setAssignPlanOpen(true);
+                }}
+              >
+                <ArrowRightLeft className="size-4" aria-hidden />
+                Assign plan
+              </Button>
+              <SubscriptionActions
+                organisation={orgQuery.data}
+                subscriptionStatus={overviewQuery.data.plan.subscriptionStatus}
+                cancelAtPeriodEnd={overviewQuery.data.plan.cancelAtPeriodEnd}
+              />
+            </div>
           ) : null}
         </div>
       </div>
+
+      {overviewQuery.data ? (
+        <AssignPlanDialog
+          open={assignPlanOpen}
+          onOpenChange={setAssignPlanOpen}
+          plans={plansQuery.data ?? []}
+          currentPlanId={overviewQuery.data.plan.planId}
+          currentPlanName={overviewQuery.data.plan.planName}
+          isSubmitting={assignPlanMutation.isPending}
+          errorMessage={assignPlanError}
+          onSubmit={async (planId, _reason) => {
+            setAssignPlanError(null);
+            try {
+              await assignPlanMutation.mutateAsync(planId);
+              showToast.success('Plan assigned.');
+              setAssignPlanOpen(false);
+            } catch (err) {
+              const e = err as {
+                response?: { data?: { message?: string } };
+              };
+              setAssignPlanError(
+                e?.response?.data?.message ??
+                  'The plan assignment failed. Try again.',
+              );
+            }
+          }}
+        />
+      ) : null}
 
       {overviewQuery.isLoading ? (
         <SkeletonList count={3} />

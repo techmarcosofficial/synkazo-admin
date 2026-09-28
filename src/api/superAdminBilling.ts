@@ -67,4 +67,21 @@ export const superAdminBillingApi = {
         dto,
       )
       .then(d),
+
+  // SA-702 / GAP-051 — assign a plan to a selected organisation via the
+  // SA-canonical `/billing/plan` route (rather than the legacy
+  // /billing/admin/organisations/:id/plan alias). Server writes an
+  // audit row and returns the new plan status; response type is kept
+  // loose because upstream shape may include Stripe metadata this
+  // client never renders (SA-707).
+  assignPlan: (
+    organisationId: string,
+    planId: string,
+  ): Promise<{ planId: string; planName?: string }> =>
+    apiClient
+      .patch<{ data: { planId: string; planName?: string } }>(
+        `/super-admin/organisations/${organisationId}/billing/plan`,
+        { planId },
+      )
+      .then(d),
 };

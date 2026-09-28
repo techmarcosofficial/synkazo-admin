@@ -61,6 +61,27 @@ export function useRetryInvoiceMutation(organisationId: string) {
   });
 }
 
+// SA-702 / GAP-051 — assign a plan to the selected organisation. Hits
+// the SA-canonical PATCH /billing/plan route (not the legacy
+// /billing/admin alias). On success, invalidates every query keyed
+// under this org so overview / billing / detail all re-fetch with the
+// new plan info.
+export function useAssignPlanMutation(organisationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (planId: string) =>
+      superAdminBillingApi.assignPlan(organisationId, planId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['superAdmin', organisationId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.superAdmin.platform.overview,
+      });
+    },
+  });
+}
+
 // ── Failed-payments queue (SA-705) ────────────────────────────────────
 
 export function useSuperAdminFailedPaymentsQuery(
