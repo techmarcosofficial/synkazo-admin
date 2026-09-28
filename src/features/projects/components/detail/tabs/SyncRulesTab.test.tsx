@@ -258,7 +258,7 @@ describe('SyncRulesTab UI', () => {
     expect(container.querySelector('.bg-warning\\/\\[0\\.03\\]')).toBeNull();
   });
 
-  it('renders configuration snapshot tiles and guidance message when expanded on an unmapped job', () => {
+  it('shows concise setup tiles and preserves the footer guidance', () => {
     vi.mocked(useProjectDetailContext).mockReturnValue({
       project: { id: 'proj-1', name: 'My Project' },
       jobs: [
@@ -318,20 +318,21 @@ describe('SyncRulesTab UI', () => {
     expect(titleLink).toBeInTheDocument();
     expect(titleLink).toHaveAttribute('href', '/projects/proj-1/jobs/job-unmapped?tab=field-mapping');
 
-    // Configuration snapshot items visible by default
-    expect(screen.getByText('Field mappings')).toBeInTheDocument();
-    expect(screen.getByText('Direction')).toBeInTheDocument();
-    expect(screen.getByText('Schedule')).toBeInTheDocument();
-    expect(screen.getByText('Last sync')).toBeInTheDocument();
+    expect(screen.getByText('Next step')).toBeInTheDocument();
+    expect(screen.getByText('Match fields')).toBeInTheDocument();
+    expect(screen.getByText('Why it matters')).toBeInTheDocument();
+    expect(screen.getByText('Avoid duplicates')).toBeInTheDocument();
+    expect(screen.queryByText('No schedule')).not.toBeInTheDocument();
+    expect(screen.queryByText('Never')).not.toBeInTheDocument();
 
-    // Guidance note without duplicate button
     expect(
       screen.getByText(/Field mapping is required before synchronization can run/i),
     ).toBeInTheDocument();
 
     // Ensure Configure Mapping link button exists
-    const configureBtn = screen.getByRole('link', { name: /configure mapping/i });
-    expect(configureBtn).toBeInTheDocument();
+    expect(
+      screen.getAllByRole('link', { name: /configure mapping/i }),
+    ).toHaveLength(1);
   });
 
   it('renders Create Sync Flow as outline when a job has incomplete configuration', () => {

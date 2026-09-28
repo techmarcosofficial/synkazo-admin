@@ -1,4 +1,10 @@
-import type { Connection, Job, Project, SyncRun } from '@/types';
+import type {
+  Connection,
+  Job,
+  Project,
+  ProjectEnvironment,
+  SyncRun,
+} from '@/types';
 import {
   getAllDraftSyncJobProjectIds,
   getDraftSyncJob,
@@ -35,8 +41,8 @@ export function hasBothConnections(connections: Connection[]): boolean {
  * Determines whether an organization has permanently graduated from introductory onboarding
  * into active operational mode.
  *
- * NOTE: Test runs (triggeredBy === 'limit_sync' or recordLimit > 0) do NOT graduate the account;
- * only full production sync executions or jobs with actual recorded sync timestamps graduate.
+ * A successful run graduates the organization in either environment, including
+ * limited runs. Job counters preserve that signal after older run logs are paged out.
  */
 export function isOrganizationGraduated(
   jobs: Job[],
@@ -44,14 +50,16 @@ export function isOrganizationGraduated(
 ): boolean {
   if (jobs.length === 0) return false;
   return (
-    jobs.some((j) => Boolean(j.lastSyncedAt)) ||
-    runs.some(
-      (r) =>
-        (r.status === 'success' || r.status === 'completed') &&
-        r.triggeredBy !== 'limit_sync' &&
-        !r.recordLimit,
-    )
+    jobs.some((j) => Boolean(j.lastSyncedAt) || (j.recordsSynced ?? 0) > 0) ||
+    runs.some((r) => r.status === 'success' || r.status === 'completed')
   );
+}
+
+function isSandboxProject(project: Project): boolean {
+  const activeEnvironment =
+    (project as Project & { activeEnvironment?: ProjectEnvironment })
+      .activeEnvironment ?? project.active_environment;
+  return activeEnvironment === 'sandbox';
 }
 
 export interface ActiveDraftResolution {
@@ -199,6 +207,7 @@ export function resolveNextAction(
     (context.targetProjectId
       ? context.projects.find((p) => p.id === context.targetProjectId)
       : null) ?? context.projects[0];
+  const isSandbox = isSandboxProject(targetProject);
 
   const projectConns = context.connections.filter(
     (c) => c.projectId === targetProject.id,
@@ -340,10 +349,11 @@ export function resolveNextAction(
   if (hasRunningRun) {
     return {
       state: 'S12_TEST_RUNNING',
-      title: 'Sample test in progress',
-      description:
-        'Synkazo is currently testing data transfer with sample records.',
-      actionLabel: 'View Test Progress',
+      title: isSandbox ? 'Sample test in progress' : 'Limited sync in progress',
+      description: isSandbox
+        ? 'Synkazo is syncing a limited number of records in Sandbox for review.'
+        : 'Synkazo is syncing a limited number of records in Production.',
+      actionLabel: isSandbox ? 'View Test Progress' : 'View Sync Progress',
       actionUrl: `/projects/${targetProject.id}/jobs/${targetJob.id}?tab=overview`,
       actionType: 'navigate',
       isBlocked: false,
@@ -353,10 +363,12 @@ export function resolveNextAction(
   if (hasFailedRun) {
     return {
       state: 'S13_TEST_FAILED',
-      title: 'Sample test needs review',
+      title: isSandbox
+        ? 'Sample test needs review'
+        : 'Limited sync needs review',
       description:
         latestRun?.errorMessage ||
-        'The sample test encountered an issue. Review the diagnostic details to resolve and retry.',
+        `The ${isSandbox ? 'sample test' : 'limited sync'} encountered an issue. Review the diagnostic details to resolve and retry.`,
       actionLabel: 'Review Diagnostics & Retry',
       actionUrl: `/projects/${targetProject.id}/jobs/${targetJob.id}?tab=overview`,
       actionType: 'navigate',
@@ -367,10 +379,11 @@ export function resolveNextAction(
   if (!hasSuccessfulRun) {
     return {
       state: 'S11_READY_FOR_TEST',
-      title: 'Run a safe 5-record sample test',
-      description:
-        'Preview real records before automating to ensure data accuracy without risking bulk changes.',
-      actionLabel: 'Run 5-Record Safe Test',
+      title: isSandbox ? 'Run a 5-record Sandbox test' : 'Run a limited sync',
+      description: isSandbox
+        ? 'Sync a small sample to your Sandbox destination and review the results before automating.'
+        : 'Sync a controlled number of records to your Production destination and review the results before automating.',
+      actionLabel: isSandbox ? 'Run 5-Record Test' : 'Run Limited Sync',
       actionUrl: `/projects/${targetProject.id}/jobs/${targetJob.id}?tab=overview`,
       actionType: 'trigger',
       triggerKey: 'run_sample_test',
@@ -392,8 +405,7 @@ export function resolveNextAction(
     return {
       state: 'S14_TEST_PASSED_UNSCHEDULED',
       title: 'Turn on automatic sync schedule',
-      description:
-        'Your sample test completed successfully! Choose how often Synkazo should sync new data.',
+      description: `Your ${isSandbox ? 'sample test' : 'limited sync'} completed successfully! Choose how often Synkazo should sync new data.`,
       actionLabel: 'Set Sync Schedule',
       actionUrl: `/projects/${targetProject.id}/jobs/${targetJob.id}?tab=settings&section=schedule`,
       actionType: 'navigate',
@@ -449,13 +461,14 @@ export function computeJourneyProgressSteps(
       },
       {
         id: 'test_and_activate',
-        title: 'Test & Activate',
-        description: 'Run safe preview and automate schedule.',
+        title: 'Run & Activate',
+        description: 'Run a limited sync and automate the schedule.',
         status: 'upcoming',
       },
     ];
   }
 
+  const isSandbox = isSandboxProject(targetProject);
   const projectConns = context.connections.filter(
     (c) => c.projectId === targetProject.id,
   );
@@ -472,6 +485,7 @@ export function computeJourneyProgressSteps(
     : [];
   const testComplete =
     Boolean(targetJob?.lastSyncedAt) ||
+    (targetJob?.recordsSynced ?? 0) > 0 ||
     jobRuns.some((r) => r.status === 'success' || r.status === 'completed');
 
   const scheduleActive = Boolean(
@@ -499,8 +513,10 @@ export function computeJourneyProgressSteps(
     },
     {
       id: 'test_preview',
-      title: 'Test & Review',
-      description: 'Run a safe 5-record preview before automating.',
+      title: isSandbox ? 'Test & Review' : 'Run & Review',
+      description: isSandbox
+        ? 'Sync a small sample in Sandbox and review the result.'
+        : 'Run a limited sync in Production and review the result.',
       status: testComplete ? 'complete' : jobExists ? 'current' : 'upcoming',
       url: targetJob
         ? `/projects/${targetProject.id}/jobs/${targetJob.id}?tab=overview`

@@ -22,6 +22,7 @@ const mockProject: Project = {
   sourcePlatformId: 'servicetitan',
   destPlatformId: 'hubspot',
   status: 'active',
+  active_environment: 'production',
 };
 
 const renderWithRouter = (ui: React.ReactElement) => {
@@ -35,7 +36,7 @@ describe('ActiveProjectPipelineCard', () => {
 
   afterEach(cleanup);
 
-  it('renders project header, status, and safety callout without redundant overview button', () => {
+  it('renders project header, status, and production write warning without redundant overview button', () => {
     renderWithRouter(
       <ActiveProjectPipelineCard
         project={mockProject}
@@ -47,7 +48,7 @@ describe('ActiveProjectPipelineCard', () => {
     expect(screen.getByText('Acme HVAC Integration')).toBeInTheDocument();
     expect(screen.getByText('Active')).toBeInTheDocument();
     expect(
-      screen.getByText(/production records remain untouched until sample test results are reviewed/i),
+      screen.getByText(/limited runs write to production/i),
     ).toBeInTheDocument();
 
     // Verify Project Overview button is NOT present
@@ -150,7 +151,7 @@ describe('ActiveProjectPipelineCard', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/projects/p1?tab=sync-rules');
   });
 
-  it('enables Step 4 and navigates to test when sync flows exist', () => {
+  it('enables Step 4 and navigates to a limited run when sync flows exist', () => {
     const connections: Connection[] = [
       {
         id: 'c1',
@@ -190,13 +191,13 @@ describe('ActiveProjectPipelineCard', () => {
 
     const step4Card = screen.getByTestId('step-sample-test');
     expect(step4Card).not.toBeDisabled();
-    expect(screen.getByText('Test Now')).toBeInTheDocument();
+    expect(screen.getByText('Run Now')).toBeInTheDocument();
 
     fireEvent.click(step4Card);
     expect(mockNavigate).toHaveBeenCalledWith('/projects/p1?tab=sync-rules');
   });
 
-  it('shows verified state when sample tests have synced records', () => {
+  it('shows a completed run when a job has synced records', () => {
     const connections: Connection[] = [
       {
         id: 'c1',
@@ -235,6 +236,20 @@ describe('ActiveProjectPipelineCard', () => {
       />,
     );
 
-    expect(screen.getByText('Verified with 5 records')).toBeInTheDocument();
+    expect(screen.getByText('Sync run completed')).toBeInTheDocument();
+  });
+
+  it('uses test and review wording only for a Sandbox project', () => {
+    renderWithRouter(
+      <ActiveProjectPipelineCard
+        project={{ ...mockProject, active_environment: 'sandbox' }}
+        connections={[]}
+        jobs={[]}
+      />,
+    );
+
+    expect(screen.getByText('Test & Review')).toBeInTheDocument();
+    expect(screen.getByText(/limited runs write to sandbox only/i)).toBeInTheDocument();
+    expect(screen.queryByText(/limited runs write to production/i)).not.toBeInTheDocument();
   });
 });

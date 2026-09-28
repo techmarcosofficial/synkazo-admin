@@ -125,7 +125,7 @@ describe('journeySelectors', () => {
       expect(isOrganizationGraduated(jobs, [])).toBe(true);
     });
 
-    it('returns true when at least one full production run is marked completed or success', () => {
+    it('returns true when at least one run is marked completed or success', () => {
       const jobs: Job[] = [
         {
           id: 'j1',
@@ -147,7 +147,7 @@ describe('journeySelectors', () => {
       expect(isOrganizationGraduated(jobs, runs)).toBe(true);
     });
 
-    it('returns false when the only successful run was a sample test run (triggeredBy limit_sync)', () => {
+    it('graduates after a successful limited test run', () => {
       const jobs: Job[] = [
         {
           id: 'j1',
@@ -167,10 +167,10 @@ describe('journeySelectors', () => {
           triggeredBy: 'limit_sync',
         },
       ];
-      expect(isOrganizationGraduated(jobs, runs)).toBe(false);
+      expect(isOrganizationGraduated(jobs, runs)).toBe(true);
     });
 
-    it('returns false when the run had a recordLimit applied (sample testing)', () => {
+    it('graduates when a successful run has a record limit', () => {
       const jobs: Job[] = [
         {
           id: 'j1',
@@ -190,10 +190,10 @@ describe('journeySelectors', () => {
           recordLimit: 5,
         },
       ];
-      expect(isOrganizationGraduated(jobs, runs)).toBe(false);
+      expect(isOrganizationGraduated(jobs, runs)).toBe(true);
     });
 
-    it('returns true when a full production run finishes with success', () => {
+    it('returns true when an unrestricted run finishes with success', () => {
       const jobs: Job[] = [
         {
           id: 'j1',
@@ -215,6 +215,22 @@ describe('journeySelectors', () => {
         },
       ];
       expect(isOrganizationGraduated(jobs, runs)).toBe(true);
+    });
+
+    it('keeps the operational dashboard after an older limited run leaves recent history', () => {
+      const jobs: Job[] = [
+        {
+          id: 'j1',
+          projectId: 'p1',
+          name: 'Job 1',
+          sourceObject: 'Customer',
+          destObject: 'Contact',
+          status: 'active',
+          lastSyncedAt: null,
+          recordsSynced: 5,
+        },
+      ];
+      expect(isOrganizationGraduated(jobs, [])).toBe(true);
     });
   });
 

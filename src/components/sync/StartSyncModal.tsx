@@ -56,6 +56,7 @@ function ManualSyncContent({
   embedded = false,
   onFooterChange,
 }: StartSyncModalProps & { onFooterChange?: (footer: ReactNode) => void }) {
+  const isSandbox = environment === 'sandbox';
   const [runType, setRunType] = useState<'all' | 'limited'>(
     !hasBaseline ? 'limited' : 'all',
   );
@@ -75,7 +76,7 @@ function ManualSyncContent({
           id="manual-run-limited"
           title="Limited run"
           description={
-            !hasBaseline
+            !hasBaseline && isSandbox
               ? 'Recommended for first test run'
               : 'Sync a controlled number of records'
           }
@@ -113,6 +114,7 @@ function ManualSyncContent({
           <LimitSyncModal
             embedded
             compact
+            environment={environment}
             projectId={projectId}
             jobId={jobId}
             job={job}

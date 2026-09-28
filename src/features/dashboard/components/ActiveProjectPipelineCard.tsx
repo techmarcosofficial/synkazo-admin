@@ -14,7 +14,7 @@ import { PlatformPair } from '@/components/platform';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import type { Connection, Job, Project } from '@/types';
+import type { Connection, Job, Project, ProjectEnvironment } from '@/types';
 
 export interface ActiveProjectPipelineCardProps {
   project: Project;
@@ -36,6 +36,10 @@ export default function ActiveProjectPipelineCard({
   className,
 }: ActiveProjectPipelineCardProps) {
   const navigate = useNavigate();
+  const activeEnvironment = (
+    project as Project & { activeEnvironment?: ProjectEnvironment }
+  ).activeEnvironment ?? project.active_environment;
+  const isSandbox = activeEnvironment === 'sandbox';
 
   const isMultipleProjects = totalProjects > 1;
 
@@ -270,10 +274,10 @@ export default function ActiveProjectPipelineCard({
             </div>
           </button>
 
-          {/* Step 4: Safe Sample Test (Clickable card) */}
+          {/* Step 4: Limited run (Clickable card) */}
           <button
             type="button"
-            aria-label="Run safe sample test"
+            aria-label={isSandbox ? 'Review Sandbox test run' : 'Run limited sync'}
             data-testid="step-sample-test"
             disabled={step4State === 'pending' || !canManage}
             onClick={() => navigate(`/projects/${project.id}?tab=sync-rules`)}
@@ -304,13 +308,15 @@ export default function ActiveProjectPipelineCard({
                 )}
               </div>
               <h3 className="text-foreground text-sm font-semibold transition-colors">
-                Sample Test
+                {isSandbox ? 'Test & Review' : 'Limited Run'}
               </h3>
               <p className="text-muted-foreground text-xs">
                 {step4State === 'completed'
-                  ? 'Verified with 5 records'
+                  ? 'Sync run completed'
                   : step4State === 'in_progress'
-                    ? 'Isolated 5-record preview'
+                    ? isSandbox
+                      ? 'Review a 5-record Sandbox run'
+                      : 'Run a controlled subset'
                     : 'Requires sync flows'}
               </p>
             </div>
@@ -328,7 +334,9 @@ export default function ActiveProjectPipelineCard({
                 {step4State === 'completed'
                   ? 'Verified'
                   : step4State === 'in_progress'
-                    ? 'Test Now'
+                    ? isSandbox
+                      ? 'Test Now'
+                      : 'Run Now'
                     : 'Locked'}
               </span>
               {step4State !== 'pending' && (
@@ -342,7 +350,9 @@ export default function ActiveProjectPipelineCard({
         <div className="border-border/60 flex items-center gap-2 border-t pt-3 text-[11.5px] text-muted-foreground">
           <ShieldCheck className="text-muted-foreground size-3.5 shrink-0" />
           <span>
-            Production records remain untouched until sample test results are reviewed and approved.
+            {isSandbox
+              ? 'Limited runs write to Sandbox only. Production records remain untouched.'
+              : 'Limited runs write to Production. Review your settings before starting.'}
           </span>
         </div>
       </div>

@@ -34,6 +34,10 @@ export default function JobOnboardingJourney() {
     lastSyncedAt: job.lastSyncedAt,
   });
   const completeOnMount = useRef(state.stage === 'complete');
+  const activeEnvironment =
+    (project as (Project & { activeEnvironment?: ProjectEnvironment }) | null)
+      ?.activeEnvironment ?? project?.active_environment;
+  const isSandbox = activeEnvironment === 'sandbox';
 
   if (state.stage === 'complete' && completeOnMount.current) {
     return null;
@@ -65,16 +69,18 @@ export default function JobOnboardingJourney() {
       ? [
           {
             title: 'Configure Pipeline',
-            description: 'Choose the destination pipeline required by this job.',
+            description:
+              'Choose the destination pipeline required by this job.',
             status: stepStatus(state.configurationReady, 'configure'),
             onSelect: () => handleTabChange('pipeline'),
           },
         ]
       : []),
     {
-      title: 'Test & Review',
-      description:
-        'Run the job once and review the result before automating it.',
+      title: isSandbox ? 'Test & Review' : 'Run & Review',
+      description: isSandbox
+        ? 'Run a limited sync in Sandbox and review the result before automating it.'
+        : 'Run a limited sync and review the result before automating it.',
       status: stepStatus(state.testComplete, 'test'),
       onSelect: () => {
         if (!isJobActive) {
@@ -92,11 +98,6 @@ export default function JobOnboardingJourney() {
       onSelect: () => handleTabChange('schedule'),
     },
   ];
-
-  const activeEnvironment =
-    (project as (Project & { activeEnvironment?: ProjectEnvironment }) | null)
-      ?.activeEnvironment ?? project?.active_environment;
-  const isSandbox = activeEnvironment === 'sandbox';
 
   if (state.stage === 'complete') {
     if (isSandbox) {
@@ -141,7 +142,7 @@ export default function JobOnboardingJourney() {
       <SetupJourneyCard
         eyebrow="Job setup complete"
         title="Your sync job is ready"
-        description={`“${job.name}” has valid mapping and configuration, and its first test completed successfully.`}
+        description={`“${job.name}” has valid mapping and configuration, and its first run completed successfully.`}
         steps={steps}
         actionLabel="Go to project overview"
         onContinue={() => navigate(`/projects/${projectId}?tab=overview`)}
@@ -162,20 +163,23 @@ export default function JobOnboardingJourney() {
             eyebrow: 'Job setup',
             title: 'Finish the required sync configuration',
             description:
-              'Choose the destination pipeline required before testing.',
+              'Choose the destination pipeline required before running this job.',
           }
         : isJobActive
           ? {
               eyebrow: 'Job active',
-              title: 'Job is active — Ready for test sync',
-              description:
-                'This job is now active. Run your first test sync to verify records move cleanly between platforms.',
+              title: isSandbox
+                ? 'Job is active — Ready for test sync'
+                : 'Job is active — Ready for limited sync',
+              description: isSandbox
+                ? 'This job is now active. Run a limited sync in Sandbox to verify records move cleanly between platforms.'
+                : 'This job is now active. Run a limited sync to review how records move between platforms.',
             }
           : {
               eyebrow: 'Job setup',
               title: 'Activate your sync job',
               description:
-                'Field mapping is complete. Activate this job to enable synchronization and test data transfer.',
+                'Field mapping is complete. Activate this job to enable synchronization and review data transfer.',
             };
 
   let actionLabel: string | undefined;
@@ -186,7 +190,7 @@ export default function JobOnboardingJourney() {
       actionLabel = toggling ? 'Activating…' : 'Activate Job';
       onContinue = () => void handleToggle();
     } else {
-      actionLabel = 'Run Test Sync';
+      actionLabel = isSandbox ? 'Run Test Sync' : 'Run Limited Sync';
       onContinue = handleOpenTestSync;
     }
   } else if (state.stage === 'field_mapping') {

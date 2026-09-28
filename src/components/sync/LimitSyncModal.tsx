@@ -29,7 +29,12 @@ import { Spinner } from '@/components/ui/spinner';
 import { sseClient } from '@/lib/sseClient';
 import { mergeSyncProgress } from '@/lib/mergeSyncProgress';
 import { cn } from '@/lib/utils';
-import type { Job, SyncProgressEvent, SyncRun } from '@/types';
+import type {
+  Job,
+  ProjectEnvironment,
+  SyncProgressEvent,
+  SyncRun,
+} from '@/types';
 
 const MAX_POLL_COUNT = 180;
 const STUCK_THRESHOLD = 30;
@@ -38,6 +43,7 @@ interface LimitSyncModalProps {
   projectId: string;
   jobId: string;
   job?: Job;
+  environment?: ProjectEnvironment;
   onStarted?: () => void;
   onDone?: () => void;
   onClose: () => void;
@@ -111,6 +117,7 @@ export default function LimitSyncModal({
   projectId,
   jobId,
   job,
+  environment,
   onStarted,
   onDone,
   onClose,
@@ -122,6 +129,15 @@ export default function LimitSyncModal({
   disabled = false,
   onFooterChange,
 }: LimitSyncModalProps) {
+  const isSandbox = environment === 'sandbox';
+  const isSandboxTest = isSandbox && !job?.lastSyncedAt;
+  const runButtonLabel = isSandboxTest ? 'Run Test Sync' : 'Start Limited Sync';
+  const destinationLabel =
+    environment === 'sandbox'
+      ? 'the Sandbox destination'
+      : environment === 'production'
+        ? 'the Production destination'
+        : 'the destination';
   const pipelineBlocked = pipelineRequired && !pipelineConfigured;
   const [step, setStep] = useState('config');
 
@@ -374,7 +390,7 @@ export default function LimitSyncModal({
         onClick={handleStart}
         disabled={pipelineBlocked || disabled}
       >
-        <Play /> {!job?.lastSyncedAt ? 'Run Test (Safe Preview)' : 'Start Sync'}
+        <Play /> {runButtonLabel}
       </Button>
     </div>
   );
@@ -390,7 +406,7 @@ export default function LimitSyncModal({
     safeBatch,
     pipelineBlocked,
     disabled,
-    job?.lastSyncedAt,
+    runButtonLabel,
     onFooterChange,
   ]);
 
@@ -407,7 +423,11 @@ export default function LimitSyncModal({
                       <Sliders className="text-primary size-4" />
                     </div>
                     <div>
-                      <div>Sample Test & Limited Run</div>
+                      <div>
+                        {isSandbox
+                          ? 'Sandbox Test & Limited Run'
+                          : 'Limited Run'}
+                      </div>
                       <p className="text-muted-foreground flex items-center gap-1 text-xs font-normal">
                         {job?.sourceObject} <ArrowRight className="size-3" />{' '}
                         {job?.destObject}
@@ -455,21 +475,21 @@ export default function LimitSyncModal({
                 <Info className="text-primary" />
                 <AlertDescription className="space-y-0.5 [&_p:not(:last-child)]:mb-0">
                   <p className="text-foreground font-semibold">
-                    {!job?.lastSyncedAt
-                      ? 'Safe Confidence Testing (Recommended)'
+                    {isSandboxTest
+                      ? 'Sandbox Testing (Recommended)'
                       : 'About Limited Runs'}
                   </p>
                   <p>
-                    {!job?.lastSyncedAt
-                      ? 'Safely test your mappings and transformation rules on 5 sample records before activating scheduled automation. This does not advance your production baseline.'
-                      : "Process a controlled subset using this job's existing sync rules. This does not update the last synced timestamp."}
+                    {isSandboxTest
+                      ? 'Run a small sample through your mappings. This writes or updates records in the Sandbox destination and does not advance the sync bookmark.'
+                      : `Process a controlled subset using this job's existing sync rules. This writes or updates records in ${destinationLabel} and does not advance the sync bookmark.`}
                   </p>
                 </AlertDescription>
               </Alert>
 
               <div className="space-y-1.5">
-                <p className="text-xs font-medium text-foreground">
-                  Quick Test Presets
+                <p className="text-foreground text-xs font-medium">
+                  Quick Record Limits
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <Button
@@ -482,7 +502,9 @@ export default function LimitSyncModal({
                     }}
                     className="h-7 text-xs"
                   >
-                    5 Records (Recommended Test)
+                    {isSandboxTest
+                      ? '5 Records (Recommended Test)'
+                      : '5 Records'}
                   </Button>
                   <Button
                     type="button"
@@ -586,7 +608,7 @@ export default function LimitSyncModal({
               <Card className="bg-muted/30 border-muted py-0">
                 <CardContent className="space-y-3 p-4">
                   <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                    Preview
+                    Run summary
                   </p>
                   <div className="grid grid-cols-2 gap-x-6 gap-y-2">
                     <div className="flex items-center gap-2">
@@ -644,7 +666,7 @@ export default function LimitSyncModal({
                   disabled={pipelineBlocked || disabled}
                   className="flex-1"
                 >
-                  <Play /> {!job?.lastSyncedAt ? 'Run Test (Safe Preview)' : 'Start Sync'}
+                  <Play /> {runButtonLabel}
                 </Button>
               </DialogFooter>
             ) : !onFooterChange ? (
@@ -653,7 +675,7 @@ export default function LimitSyncModal({
                   onClick={handleStart}
                   disabled={pipelineBlocked || disabled}
                 >
-                  <Play /> {!job?.lastSyncedAt ? 'Run Test (Safe Preview)' : 'Start Sync'}
+                  <Play /> {runButtonLabel}
                 </Button>
               </div>
             ) : null}

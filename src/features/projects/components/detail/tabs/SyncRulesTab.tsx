@@ -207,41 +207,50 @@ function SyncJobCard({
     },
   ];
 
-  const mappedCount =
-    detailQuery.data?.jobFieldMappings?.length ??
-    job.fieldMappings?.length ??
-    0;
-
-  const configItems = [
-    {
-      label: 'Field mappings',
-      value: mappedCount > 0 ? `${mappedCount} mapped` : 'Not mapped',
-      description: mappedCount > 0 ? 'Fields matched' : 'Mapping required',
-      icon: Database,
-    },
-    {
-      label: 'Direction',
-      value: twoWay ? 'Two-way' : 'One-way',
-      description: `${formatEntityLabel(job.sourceObject)} ${twoWay ? '⇄' : '→'} ${formatEntityLabel(job.destObject)}`,
-      icon: DirectionIcon,
-    },
-    {
-      label: 'Schedule',
-      value: formatSchedule(job),
-      description: job.isEnabled ? 'Automation enabled' : 'Trigger on demand',
-      icon: Clock,
-    },
-    {
-      label: 'Last sync',
-      value: formatLastSync(summary.lastSyncAt),
-      description: isNeedsMapping
-        ? 'Setup required'
-        : lifecycle.statusKey === 'ready_to_test'
-          ? 'Test pending'
-          : 'Most recent run',
-      icon: CalendarClock,
-    },
-  ];
+  const configItems = isNeedsMapping
+    ? {
+        next: {
+          label: 'Next step',
+          value: 'Match fields',
+          description: 'Choose what data moves',
+          icon: Database,
+        },
+        reason: {
+          label: 'Why it matters',
+          value: 'Avoid duplicates',
+          description: 'Choose an identifier',
+          icon: CheckCircle2,
+        },
+      }
+    : detailQuery.data?.pipelineRequired && !detailQuery.data.pipelineConfigured
+      ? {
+          next: {
+            label: 'Next step',
+            value: 'Choose pipeline',
+            description: 'Required for this flow',
+            icon: ArrowRight,
+          },
+          reason: {
+            label: 'Why it matters',
+            value: 'Route records',
+            description: 'Send data to the right place',
+            icon: Database,
+          },
+        }
+      : {
+          next: {
+            label: 'Next step',
+            value: 'Review first run',
+            description: 'Open flow details',
+            icon: ArrowRight,
+          },
+          reason: {
+            label: 'Why it matters',
+            value: 'Confirm results',
+            description: 'Check data before automation',
+            icon: CheckCircle2,
+          },
+        };
 
   let guidanceMessage: React.ReactNode = null;
   if (isNeedsMapping) {
@@ -252,6 +261,9 @@ function SyncJobCard({
         above to begin.
       </>
     );
+  } else if (detailQuery.data?.pipelineRequired && !detailQuery.data.pipelineConfigured) {
+    guidanceMessage =
+      'Choose the required destination pipeline in the job details before the first run.';
   } else if (lifecycle.statusKey === 'ready_to_test') {
     guidanceMessage = (
       <>
@@ -376,20 +388,20 @@ function SyncJobCard({
               </p>
             ) : !hasAnyRun ? (
               <>
-                <div className="grid grid-cols-2 md:grid-cols-4">
-                  {configItems.map((item, index) => (
+                <div className="grid grid-cols-2">
+                  {[configItems.next, configItems.reason].map((item, index) => (
                     <div key={item.label} className={metricCellClass(index)}>
                       <span className="bg-card text-card-foreground flex size-10 shrink-0 items-center justify-center rounded-xl">
                         <item.icon className="size-4.5" aria-hidden="true" />
                       </span>
                       <div className="min-w-0">
-                        <div className="truncate text-lg font-bold tracking-tight">
+                        <div className="text-foreground text-sm font-bold leading-tight sm:text-lg">
                           {item.value}
                         </div>
-                        <div className="text-muted-foreground truncate text-xs font-medium">
+                        <div className="text-muted-foreground text-xs font-medium">
                           {item.label}
                         </div>
-                        <div className="text-muted-foreground truncate text-[11px]">
+                        <div className="text-muted-foreground text-[11px] leading-tight">
                           {item.description}
                         </div>
                       </div>
