@@ -1,5 +1,5 @@
 import { formatDistanceToNow } from 'date-fns';
-import { ArrowLeft, FolderOpen, Play } from 'lucide-react';
+import { ArrowLeft, Database, FolderOpen, Link2, Play } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
@@ -234,6 +234,24 @@ export default function OrganisationProjectDetailPage() {
             {project.sourcePlatformId} → {project.destPlatformId}
           </Badge>
           <Badge variant="outline">{project.schedulerMode}</Badge>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button asChild size="sm" variant="outline">
+            <Link
+              to={`/super-admin/organisations/${organisationId}/projects/${projectId}/associations`}
+            >
+              <Link2 className="size-3.5" aria-hidden />
+              Association rules
+            </Link>
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <Link
+              to={`/super-admin/organisations/${organisationId}/projects/${projectId}/migration`}
+            >
+              <Database className="size-3.5" aria-hidden />
+              Environment migration
+            </Link>
+          </Button>
         </div>
       </div>
 
