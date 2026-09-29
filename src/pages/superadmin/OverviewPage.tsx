@@ -185,6 +185,69 @@ function SectionErrorBanner({ label, error }: { label: string; error: string }) 
   );
 }
 
+// GAP-023 / CAP-091 — process-local health snapshot. Renders four
+// compact metrics side-by-side; anything null (e.g. Redis ping failed)
+// falls back to "—" without a special-case cell.
+function SystemHealthCard({
+  health,
+}: {
+  health: PlatformOverviewResponse['systemHealth'];
+}) {
+  const formatUptime = (seconds: number) => {
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ${minutes % 60}m`;
+    return `${Math.floor(hours / 24)}d ${hours % 24}h`;
+  };
+
+  const memoryPct =
+    health.memoryHeapTotalMb > 0
+      ? Math.round((health.memoryHeapUsedMb / health.memoryHeapTotalMb) * 100)
+      : null;
+
+  return (
+    <div className="bg-card rounded-lg border">
+      <div className="border-b px-4 py-3 text-sm font-medium">
+        System health
+      </div>
+      <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-4">
+        <div>
+          <div className="text-muted-foreground text-xs">Process uptime</div>
+          <div className="text-lg font-semibold">
+            {formatUptime(health.processUptimeSeconds)}
+          </div>
+        </div>
+        <div>
+          <div className="text-muted-foreground text-xs">Heap used</div>
+          <div className="text-lg font-semibold">
+            {health.memoryHeapUsedMb} MB
+            {memoryPct != null ? (
+              <span className="text-muted-foreground ml-1 text-xs font-normal">
+                ({memoryPct}% of {health.memoryHeapTotalMb} MB)
+              </span>
+            ) : null}
+          </div>
+        </div>
+        <div>
+          <div className="text-muted-foreground text-xs">Redis PING</div>
+          <div className="text-lg font-semibold">
+            {health.redisPingMs != null ? `${health.redisPingMs} ms` : '—'}
+          </div>
+        </div>
+        <div>
+          <div className="text-muted-foreground text-xs">Snapshot</div>
+          <div className="text-lg font-semibold">In-process</div>
+          <div className="text-muted-foreground mt-0.5 text-[10px]">
+            Refreshes with the overview.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function OverviewPage() {
   const query = useSuperAdminPlatformOverviewQuery();
 
@@ -331,6 +394,14 @@ export default function OverviewPage() {
           />
         </div>
       </div>
+
+      {errors?.systemHealth ? (
+        <SectionErrorBanner
+          label="System health unavailable"
+          error={errors.systemHealth}
+        />
+      ) : null}
+      <SystemHealthCard health={data.systemHealth} />
 
       {errors?.recentAlerts ? (
         <SectionErrorBanner
