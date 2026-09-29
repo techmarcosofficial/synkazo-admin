@@ -480,7 +480,7 @@ export default function FieldMappingTab() {
     }
     if (!pairs.some((m) => m.isMatchField)) {
       toast.error(
-        'At least one Match Field is required — toggle the switch on a mapping to set it.',
+        'At least one Identifier is required — toggle the switch on a mapping to set it.',
       );
       return false;
     }
@@ -928,15 +928,15 @@ export default function FieldMappingTab() {
                           How should we identify matching records?
                         </p>
                         <span className="text-muted-foreground bg-background rounded-full border px-2 py-0.5 text-[10px] font-medium">
-                          Identifier / Match Field
+                          Unique Identifier
                         </span>
                       </div>
                       <p className="text-muted-foreground text-xs leading-relaxed">
                         Toggle the switch on at least one mapped field (like{' '}
                         <strong className="text-foreground">Email</strong> or{' '}
                         <strong className="text-foreground">Record ID</strong>)
-                        to identify matching records. Synkazo uses this to
-                        update existing records instead of creating duplicates.
+                        to set it as a unique identifier. Synkazo uses this to
+                        identify matching records and update them instead of creating duplicates.
                       </p>
                     </div>
                   </div>

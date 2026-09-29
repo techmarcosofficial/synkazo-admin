@@ -100,7 +100,9 @@ describe('ActiveProjectPipelineCard', () => {
     expect(screen.getByText('Action Required')).toBeInTheDocument();
 
     fireEvent.click(step2Card);
-    expect(mockNavigate).toHaveBeenCalledWith('/projects/p1?tab=connections');
+    expect(mockNavigate).toHaveBeenCalledWith('/projects/p1?tab=connections', {
+      state: { from: '/dashboard', fromLabel: 'Back to Dashboard' },
+    });
   });
 
   it('disables Step 3 when connections are incomplete', () => {
@@ -148,7 +150,9 @@ describe('ActiveProjectPipelineCard', () => {
     expect(screen.getByText('Configure')).toBeInTheDocument();
 
     fireEvent.click(step3Card);
-    expect(mockNavigate).toHaveBeenCalledWith('/projects/p1?tab=sync-rules');
+    expect(mockNavigate).toHaveBeenCalledWith('/projects/p1?tab=sync-rules', {
+      state: { from: '/dashboard', fromLabel: 'Back to Dashboard' },
+    });
   });
 
   it('enables Step 4 and navigates to a limited run when sync flows exist', () => {
@@ -194,7 +198,9 @@ describe('ActiveProjectPipelineCard', () => {
     expect(screen.getByText('Run Now')).toBeInTheDocument();
 
     fireEvent.click(step4Card);
-    expect(mockNavigate).toHaveBeenCalledWith('/projects/p1?tab=sync-rules');
+    expect(mockNavigate).toHaveBeenCalledWith('/projects/p1?tab=sync-rules', {
+      state: { from: '/dashboard', fromLabel: 'Back to Dashboard' },
+    });
   });
 
   it('shows a completed run when a job has synced records', () => {

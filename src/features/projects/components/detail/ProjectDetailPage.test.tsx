@@ -1,4 +1,4 @@
-import { cleanup, render, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -251,6 +251,61 @@ describe('ProjectDetailPage - Self-Healing Status Management', () => {
         status: 'draft',
       });
       expect(mockPatchProject).toHaveBeenCalledWith({ status: 'draft' });
+    });
+  });
+
+  describe('Context-Aware Back Navigation', () => {
+    it('renders "Back to Dashboard" when navigated from dashboard', () => {
+      vi.mocked(useProjectDetailQuery).mockReturnValue({
+        isLoading: false,
+        data: {
+          project: { id: 'proj-123', name: 'Test Proj', status: 'draft' },
+          jobs: [],
+          connections: [],
+          logs: [],
+        },
+        error: null,
+        refetch: vi.fn(),
+      } as any);
+
+      render(
+        <MemoryRouter
+          initialEntries={[
+            {
+              pathname: '/projects/proj-123',
+              state: { from: '/dashboard' },
+            },
+          ]}
+        >
+          <Routes>
+            <Route path="/projects/:id" element={<ProjectDetailPage />} />
+          </Routes>
+        </MemoryRouter>,
+      );
+
+      const backLinks = screen.getAllByRole('link', { name: /back to dashboard/i });
+      expect(backLinks.length).toBeGreaterThan(0);
+      expect(backLinks[0]).toHaveAttribute('href', '/dashboard');
+    });
+
+    it('defaults to "Back to Projects" when no navigation state is present', () => {
+      vi.mocked(useProjectDetailQuery).mockReturnValue({
+        isLoading: false,
+        data: {
+          project: { id: 'proj-123', name: 'Test Proj', status: 'draft' },
+          jobs: [],
+          connections: [],
+          logs: [],
+        },
+        error: null,
+        refetch: vi.fn(),
+      } as any);
+
+      renderPage();
+
+      const backLinks = screen.getAllByRole('link', { name: /back to projects/i });
+      expect(backLinks.length).toBeGreaterThan(0);
+      expect(backLinks[0]).toHaveAttribute('href', '/projects');
     });
   });
 });

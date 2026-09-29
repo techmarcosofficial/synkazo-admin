@@ -20,6 +20,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { useJobDetailContext } from '../context';
@@ -604,19 +605,40 @@ function RunLogRow({
   jobId,
   recordSearch,
   onRefresh,
+  initiallyExpanded = false,
 }: {
   run: ExtSyncRun;
   projectId: string;
   jobId: string;
   recordSearch?: string;
   onRefresh?: () => void | Promise<void>;
+  initiallyExpanded?: boolean;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(initiallyExpanded);
   const [pages, setPages] = useState<SyncPageLog[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [detailError, setDetailError] = useState(false);
   const [stoppingRun, setStoppingRun] = useState(false);
   const [showTriage, setShowTriage] = useState(false);
+
+  useEffect(() => {
+    if (initiallyExpanded && pages.length === 0) {
+      setExpanded(true);
+      setLoadingDetails(true);
+      setDetailError(false);
+      syncLogsApi
+        .listPages(projectId, jobId, run.id)
+        .then((pagesData) => {
+          setPages(pagesData || []);
+        })
+        .catch(() => {
+          setDetailError(true);
+        })
+        .finally(() => {
+          setLoadingDetails(false);
+        });
+    }
+  }, [initiallyExpanded, pages.length, projectId, jobId, run.id]);
 
   const displayStatus = getRunStatus(run);
   const recordsSynced = (run.createdCount ?? 0) + (run.updatedCount ?? 0);
@@ -672,6 +694,7 @@ function RunLogRow({
   return (
     <>
       <Collapsible
+        id={`run-row-${run.id}`}
         open={expanded}
         onOpenChange={handleOpenChange}
         className="bg-card overflow-hidden rounded-4xl border"
@@ -1002,6 +1025,9 @@ export default function RunHistoryTab() {
   } = useJobDetailContext();
   const jobId = job.id;
 
+  const [searchParams] = useSearchParams();
+  const targetRunId = searchParams.get('runId');
+
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [status, setStatus] = useState(ALL_FILTER_VALUE);
@@ -1071,6 +1097,17 @@ export default function RunHistoryTab() {
   const runLogs = runLogsQuery.data?.data ?? [];
   const total = runLogsQuery.data?.total ?? runLogs.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  useEffect(() => {
+    if (!targetRunId || runLogsQuery.isLoading) return;
+    const timer = setTimeout(() => {
+      const el = document.getElementById(`run-row-${targetRunId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [targetRunId, runLogsQuery.isLoading, runLogs]);
 
   const summaryRun =
     activeRunLog?.status === 'running' || activeRunLog?.id
@@ -1280,6 +1317,7 @@ export default function RunHistoryTab() {
                   jobId={jobId}
                   recordSearch={search}
                   onRefresh={handleRefresh}
+                  initiallyExpanded={run.id === targetRunId}
                 />
               ))}
             </ListStack>

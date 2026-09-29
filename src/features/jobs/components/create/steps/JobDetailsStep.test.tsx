@@ -61,7 +61,7 @@ describe('JobDetailsStep Recipes', () => {
     projectId: 'proj-1',
   };
 
-  it('renders recommended recipes in a compact 1-row format with popular badges', () => {
+  it('renders only two recommended recipes at a time with descriptions and badges', () => {
     render(
       <TooltipProvider>
         <JobDetailsStep {...defaultProps} />
@@ -69,13 +69,19 @@ describe('JobDetailsStep Recipes', () => {
     );
 
     expect(screen.getByText('Recommended Sync Recipes (1-Click)')).toBeInTheDocument();
+    // Only first 2 suggestions should be visible
     expect(screen.getByText('Customers → Contacts')).toBeInTheDocument();
+    expect(
+      screen.getByText(/Sync homeowner and commercial client profiles/i),
+    ).toBeInTheDocument();
     expect(screen.getByText('Customers → Companies')).toBeInTheDocument();
-    expect(screen.getByText('Jobs → Deals')).toBeInTheDocument();
-    expect(screen.getByText('Invoices → Deals')).toBeInTheDocument();
+    expect(
+      screen.getByText(/Sync commercial accounts and business clients/i),
+    ).toBeInTheDocument();
 
-    const popularBadges = screen.getAllByText('Most Popular');
-    expect(popularBadges.length).toBeGreaterThanOrEqual(2);
+    // 3rd and 4th should NOT be shown yet
+    expect(screen.queryByText('Jobs → Deals')).not.toBeInTheDocument();
+    expect(screen.queryByText('Invoices → Deals')).not.toBeInTheDocument();
   });
 
   it('auto-fills config when clicking a recipe', () => {
@@ -93,25 +99,24 @@ describe('JobDetailsStep Recipes', () => {
     expect(setConfig).toHaveBeenCalled();
   });
 
-  it('filters out recipe combinations that have already been created as existing jobs', () => {
+  it('filters out recipe combinations that have already been created and reveals next available suggestions', () => {
     render(
       <TooltipProvider>
         <JobDetailsStep
           {...defaultProps}
           existingJobs={[
             { sourceObject: 'customers', destObject: 'contacts' },
-            { sourceObject: 'jobs', destObject: 'deals' },
           ]}
         />
       </TooltipProvider>,
     );
 
-    // Created combinations should NOT be shown
+    // Created combination should NOT be shown
     expect(screen.queryByText('Customers → Contacts')).not.toBeInTheDocument();
-    expect(screen.queryByText('Jobs → Deals')).not.toBeInTheDocument();
 
-    // Remaining combinations should still be suggested
+    // Next 2 available suggestions should now be shown
     expect(screen.getByText('Customers → Companies')).toBeInTheDocument();
-    expect(screen.getByText('Invoices → Deals')).toBeInTheDocument();
+    expect(screen.getByText('Jobs → Deals')).toBeInTheDocument();
+    expect(screen.queryByText('Invoices → Deals')).not.toBeInTheDocument();
   });
 });

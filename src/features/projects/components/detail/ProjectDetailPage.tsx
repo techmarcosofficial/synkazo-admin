@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useLocation, useParams, useSearchParams } from 'react-router-dom';
 
 import {
   ProjectDetailProvider,
@@ -33,6 +33,18 @@ import { hasBothConnections as computeHasBothConnections } from '@/features/proj
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const locationState = location.state as { from?: string; fromLabel?: string } | null;
+  const fromParam = searchParams.get('from');
+  const fromPath = locationState?.from || fromParam;
+  const isFromDashboard = Boolean(
+    fromPath && (fromPath === '/dashboard' || fromPath.startsWith('/dashboard')),
+  );
+  const backTo = fromPath || '/projects';
+  const backLabel =
+    locationState?.fromLabel ||
+    (isFromDashboard ? 'Back to Dashboard' : 'Back to Projects');
+
   const projectId = id!;
 
   const detailQuery = useProjectDetailQuery(projectId);
@@ -221,7 +233,7 @@ export default function ProjectDetailPage() {
   if (!project) {
     return (
       <div className="space-y-4">
-        <BackLink label="Back to Projects" to="/projects" />
+        <BackLink label={backLabel} to={backTo} />
         <ErrorState onRetry={() => detailQuery.refetch()} />
       </div>
     );
@@ -264,8 +276,8 @@ export default function ProjectDetailPage() {
         className="gap-0"
       >
         <StickyDetailHeader
-          backLabel="Back to Projects"
-          backTo="/projects"
+          backLabel={backLabel}
+          backTo={backTo}
           header={
             <Card className="gap-0 space-y-3 overflow-hidden py-0">
               <ProjectHeader />

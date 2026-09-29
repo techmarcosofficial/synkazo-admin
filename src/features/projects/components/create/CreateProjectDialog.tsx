@@ -1,7 +1,7 @@
 // features/projects/components/CreateProjectDialog.tsx
 
 import { useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import type { CreateProjectFormRef, CreateProjectSelection } from '../../types';
 
@@ -21,6 +21,7 @@ import { useCreateProjectStore } from '@/features/projects/store';
 
 export default function CreateProjectDialog() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const formRef = useRef<CreateProjectFormRef>(null);
   const [selection, setSelection] = useState<CreateProjectSelection>({
@@ -52,7 +53,15 @@ export default function CreateProjectDialog() {
             onSelectionChange={setSelection}
             onSuccess={(project) => {
               close();
-              navigate(`/projects/${project.id}?tab=connections`);
+              const isFromDashboard = location.pathname.includes('/dashboard');
+              navigate(`/projects/${project.id}?tab=connections`, {
+                state: {
+                  from: location.pathname,
+                  fromLabel: isFromDashboard
+                    ? 'Back to Dashboard'
+                    : 'Back to Projects',
+                },
+              });
             }}
           />
         </div>

@@ -1919,11 +1919,11 @@ export default function FieldMappingCanvas({
             <div className="flex flex-wrap items-center gap-2">
               <div
                 className="flex shrink-0 items-center gap-1.5"
-                title="Fields used to find an existing destination record"
+                title="Fields used to uniquely identify records and match them between platforms"
               >
                 <KeyRound className="text-primary size-3.5" />
                 <h3 id="matched-by-heading" className="text-xs font-semibold">
-                  Matched by
+                  Identifier
                 </h3>
               </div>
 
@@ -1931,7 +1931,7 @@ export default function FieldMappingCanvas({
                 <div
                   className="bg-muted flex shrink-0 items-center rounded-xl p-0.5"
                   role="group"
-                  aria-label="Match key behavior"
+                  aria-label="Identifier key behavior"
                 >
                   <button
                     type="button"
@@ -1942,7 +1942,7 @@ export default function FieldMappingCanvas({
                         : 'text-muted-foreground hover:text-foreground',
                     )}
                     onClick={() => setMatchMode('and')}
-                    title="All selected keys must match"
+                    title="All selected identifier keys must match"
                   >
                     AND
                   </button>
@@ -1955,7 +1955,7 @@ export default function FieldMappingCanvas({
                         : 'text-muted-foreground hover:text-foreground',
                     )}
                     onClick={() => setMatchMode('or')}
-                    title="Try keys in priority order; first match wins"
+                    title="Try identifier keys in priority order; first match wins"
                   >
                     OR
                   </button>
@@ -1980,7 +1980,7 @@ export default function FieldMappingCanvas({
                 >
                   <SelectValue
                     placeholder={
-                      activeMatches.length === 0 ? 'Choose key' : '+ Add key'
+                      activeMatches.length === 0 ? 'Choose identifier' : '+ Add identifier'
                     }
                   />
                 </SelectTrigger>
@@ -1989,7 +1989,7 @@ export default function FieldMappingCanvas({
                     <div className="text-muted-foreground px-2.5 py-1.5 text-xs">
                       {matchOptions.length === 0
                         ? 'No fields mapped yet'
-                        : 'All mapped fields already added'}
+                        : 'All mapped fields already added as identifiers'}
                     </div>
                   ) : (
                     addableMatchOptions.map(({ sourceField, destKey }) => {
@@ -2150,14 +2150,14 @@ export default function FieldMappingCanvas({
             >
               <div
                 className="flex shrink-0 items-center gap-1.5"
-                title="Fields used to find an existing destination record"
+                title="Fields used to uniquely identify records and match them between platforms"
               >
                 <KeyRound className="text-primary size-3.5" />
                 <h3
                   id="matched-by-heading"
                   className="text-xs font-semibold whitespace-nowrap"
                 >
-                  Matched by
+                  Identifier
                 </h3>
               </div>
 
@@ -2165,7 +2165,7 @@ export default function FieldMappingCanvas({
                 <div
                   className="bg-muted h-7 flex shrink-0 items-center rounded-xl p-0.5"
                   role="group"
-                  aria-label="Match key behavior"
+                  aria-label="Identifier key behavior"
                 >
                   <button
                     type="button"
@@ -2176,7 +2176,7 @@ export default function FieldMappingCanvas({
                         : 'text-muted-foreground hover:text-foreground',
                     )}
                     onClick={() => setMatchMode('and')}
-                    title="All selected keys must match"
+                    title="All selected identifier keys must match"
                   >
                     AND
                   </button>
@@ -2189,7 +2189,7 @@ export default function FieldMappingCanvas({
                         : 'text-muted-foreground hover:text-foreground',
                     )}
                     onClick={() => setMatchMode('or')}
-                    title="Try keys in priority order; first match wins"
+                    title="Try identifier keys in priority order; first match wins"
                   >
                     OR
                   </button>
@@ -2284,7 +2284,7 @@ export default function FieldMappingCanvas({
                 </DragDropContext>
               ) : (
                 <span className="text-muted-foreground shrink-0 text-xs italic">
-                  No keys selected
+                  No identifiers selected
                 </span>
               )}
 
@@ -2303,7 +2303,7 @@ export default function FieldMappingCanvas({
                 <SelectTrigger size="sm" className="h-7 w-36 shrink-0">
                   <SelectValue
                     placeholder={
-                      activeMatches.length === 0 ? 'Choose key' : '+ Add key'
+                      activeMatches.length === 0 ? 'Choose identifier' : '+ Add identifier'
                     }
                   />
                 </SelectTrigger>
@@ -2312,7 +2312,7 @@ export default function FieldMappingCanvas({
                     <div className="text-muted-foreground px-2.5 py-1.5 text-xs">
                       {matchOptions.length === 0
                         ? 'No fields mapped yet'
-                        : 'All mapped fields already added'}
+                        : 'All mapped fields already added as identifiers'}
                     </div>
                   ) : (
                     addableMatchOptions.map(({ sourceField, destKey }) => {
@@ -2581,7 +2581,7 @@ export default function FieldMappingCanvas({
                       {showDirectionToggle && (
                         <TableHead className="w-40">Direction</TableHead>
                       )}
-                      <TableHead className="w-20">Match</TableHead>
+                      <TableHead className="w-24">Identifier</TableHead>
                       <TableHead className="w-[9.5rem]">
                         Update Policy
                       </TableHead>
@@ -2700,8 +2700,7 @@ export default function FieldMappingCanvas({
                                 </span>
                                 {isMatch && (
                                   <Badge className="bg-primary/10 text-primary shrink-0 gap-1 whitespace-nowrap">
-                                    <KeyRound className="size-2.5" /> Match
-                                    field
+                                    <KeyRound className="size-2.5" /> Identifier
                                     {matchMode === 'or' &&
                                       m.matchOrder != null &&
                                       ` · ${m.matchOrder}`}
@@ -2860,16 +2859,16 @@ export default function FieldMappingCanvas({
                                         }
                                         aria-label={
                                           isMatch
-                                            ? 'Remove as match field'
-                                            : 'Set as match field'
+                                            ? 'Remove as identifier'
+                                            : 'Set as identifier'
                                         }
                                       />
                                     </label>
                                   </TooltipTrigger>
                                   <TooltipContent side="bottom">
                                     {isMatch
-                                      ? 'This field is used to find existing records. Click to unset.'
-                                      : 'Use this field to find existing records to update.'}
+                                      ? 'This field is used as a unique identifier to match existing records. Click to unset.'
+                                      : 'Use this field as a unique identifier to match existing records.'}
                                   </TooltipContent>
                                 </Tooltip>
                               </TableCell>

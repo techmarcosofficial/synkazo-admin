@@ -132,14 +132,14 @@ export function useJobHeaderAlert(): ResolvedJobHeaderAlert | undefined {
           )}
           {jobFieldMappings.length > 0 && !hasMatchField && (
             <li>
-              Mark at least one field as a{' '}
+              Mark at least one field as an{' '}
               <button
                 onClick={() => handleTabChange('field-mapping')}
                 className="hover:text-foreground underline transition-colors"
               >
-                Match Field
+                Identifier
               </button>{' '}
-              — required to match existing HubSpot records
+              — required to match existing records
             </li>
           )}
         </ul>

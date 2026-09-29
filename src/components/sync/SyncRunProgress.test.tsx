@@ -250,4 +250,49 @@ describe('SyncRunProgress', () => {
     fireEvent.click(historyLink);
     expect(onViewHistory).toHaveBeenCalledOnce();
   });
+
+  it('renders View Run action in header on completed runs and calls onViewRun with runId', () => {
+    const onViewRun = vi.fn();
+    render(
+      <SyncRunProgress
+        status="completed"
+        runId="run-abc-123"
+        totalRecords={50}
+        processedRecords={50}
+        defaultOpen={true}
+        onViewRun={onViewRun}
+      />,
+    );
+
+    const viewRunButtons = screen.getAllByRole('button', { name: 'View Run' });
+    expect(viewRunButtons.length).toBeGreaterThan(0);
+    fireEvent.click(viewRunButtons[0]);
+    expect(onViewRun).toHaveBeenCalledWith('run-abc-123');
+  });
+
+  it('shows a compact one-line completed state with View Run action when collapsed', () => {
+    const onViewRun = vi.fn();
+    render(
+      <SyncRunProgress
+        status="completed"
+        runId="run-456"
+        totalRecords={100}
+        processedRecords={100}
+        createdCount={80}
+        updatedCount={20}
+        defaultOpen={false}
+        onViewRun={onViewRun}
+      />,
+    );
+
+    // Collapsed bar is visible
+    expect(
+      screen.getByText(/100 records processed · 80 created, 20 updated/),
+    ).toBeInTheDocument();
+
+    const viewRunButtons = screen.getAllByRole('button', { name: 'View Run' });
+    expect(viewRunButtons.length).toBeGreaterThanOrEqual(1);
+    fireEvent.click(viewRunButtons[viewRunButtons.length - 1]);
+    expect(onViewRun).toHaveBeenCalledWith('run-456');
+  });
 });

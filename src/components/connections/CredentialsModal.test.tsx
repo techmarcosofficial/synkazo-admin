@@ -67,7 +67,7 @@ describe('CredentialsModal In-Modal Verification', () => {
     });
 
     // Click verify
-    fireEvent.click(screen.getByRole('button', { name: /verify credentials/i }));
+    fireEvent.click(screen.getByRole('button', { name: /test connection/i }));
 
     // Verify modal does NOT close
     await waitFor(() => {
@@ -95,9 +95,9 @@ describe('CredentialsModal In-Modal Verification', () => {
     expect(secretInput).toHaveAttribute('aria-invalid', 'false');
     expect(screen.queryByText('Check Client Secret value')).not.toBeInTheDocument();
 
-    // Submit button shows Retry Verification
+    // Submit button shows Retry Test Connection
     expect(
-      screen.getByRole('button', { name: /retry verification/i }),
+      screen.getByRole('button', { name: /retry test connection/i }),
     ).toBeInTheDocument();
   });
 
@@ -136,7 +136,7 @@ describe('CredentialsModal In-Modal Verification', () => {
       target: { value: '1293100835' },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /verify credentials/i }));
+    fireEvent.click(screen.getByRole('button', { name: /test connection/i }));
 
     expect(await screen.findByText('Verification Failed')).toBeInTheDocument();
     expect(screen.getByText('ServiceTitan auth error: invalid_client')).toBeInTheDocument();
@@ -196,28 +196,25 @@ describe('CredentialsModal In-Modal Verification', () => {
       target: { value: '12345' },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /verify credentials/i }));
+    fireEvent.click(screen.getByRole('button', { name: /test connection/i }));
 
-    // Success screen should be presented with confirmation and Done button
-    expect(
-      await screen.findByText('ServiceTitan Connected Successfully!'),
-    ).toBeInTheDocument();
-    expect(screen.getByText('Status: Verified & Live')).toBeInTheDocument();
+    // On 1st connection, popup is suppressed; button shows Connected and Close is available
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /connected/i })).toBeInTheDocument();
+    });
 
     // Modal has NOT closed prematurely
     expect(onCloseMock).not.toHaveBeenCalled();
-    expect(onSavedMock).not.toHaveBeenCalled();
-
-    // User clicks Done button
-    const doneBtn = screen.getByRole('button', { name: /^done$/i });
-    fireEvent.click(doneBtn);
-
-    // Modal now closes and notifies parent
-    expect(onCloseMock).toHaveBeenCalled();
     expect(onSavedMock).toHaveBeenCalled();
+
+    // User closes modal manually
+    const closeBtn = screen.getAllByRole('button', { name: /close/i })[0];
+    fireEvent.click(closeBtn);
+
+    expect(onCloseMock).toHaveBeenCalled();
   });
 
-  it('verifies HubSpot destination credentials successfully and closes on Done', async () => {
+  it('verifies HubSpot destination credentials successfully on first connection', async () => {
     vi.mocked(connectionsApi.createConnection).mockResolvedValue({
       id: 'conn-hubspot-1',
       projectId: 'proj-1',
@@ -245,28 +242,24 @@ describe('CredentialsModal In-Modal Verification', () => {
       target: { value: 'pat-eu1-12345678-abcd' },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /verify credentials/i }));
+    fireEvent.click(screen.getByRole('button', { name: /test connection/i }));
 
-    // Success screen should be displayed specifically for HubSpot
-    expect(
-      await screen.findByText('HubSpot Connected Successfully!'),
-    ).toBeInTheDocument();
-    expect(screen.getByText('Status: Verified & Live')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /connected/i })).toBeInTheDocument();
+    });
 
     // Modal has not closed prematurely
     expect(onCloseMock).not.toHaveBeenCalled();
-    expect(onSavedMock).not.toHaveBeenCalled();
-
-    // User clicks Done button
-    const doneBtn = screen.getByRole('button', { name: /^done$/i });
-    fireEvent.click(doneBtn);
-
-    // Modal closes cleanly and triggers onSaved
-    expect(onCloseMock).toHaveBeenCalled();
     expect(onSavedMock).toHaveBeenCalled();
+
+    // User closes manually
+    const closeBtn = screen.getAllByRole('button', { name: /close/i })[0];
+    fireEvent.click(closeBtn);
+
+    expect(onCloseMock).toHaveBeenCalled();
   });
 
-  it('displays project active celebration and Continue to Sync Flows CTA when willCompleteBoth is true', async () => {
+  it('displays project active celebration and Continue CTA when willCompleteBoth is true', async () => {
     vi.mocked(connectionsApi.createConnection).mockResolvedValue({
       id: 'conn-hubspot-complete',
       projectId: 'proj-1',
@@ -294,17 +287,16 @@ describe('CredentialsModal In-Modal Verification', () => {
       target: { value: 'pat-eu1-12345678-abcd' },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /verify credentials/i }));
+    fireEvent.click(screen.getByRole('button', { name: /test connection/i }));
 
     expect(
-      (await screen.findAllByText('HubSpot Connected · Project Active!')).length,
+      (await screen.findAllByText(/HubSpot Connected · Connections Ready!/i)).length,
     ).toBeGreaterThanOrEqual(1);
     expect(
       screen.getByText('Both platforms are connected and verified. Your project is active and ready for sync flows.'),
     ).toBeInTheDocument();
-    expect(screen.getByText('Project Status: Active & Ready')).toBeInTheDocument();
 
-    const continueBtn = screen.getByRole('button', { name: /continue to sync flows/i });
+    const continueBtn = screen.getByRole('button', { name: /^continue$/i });
     expect(continueBtn).toBeInTheDocument();
     fireEvent.click(continueBtn);
 

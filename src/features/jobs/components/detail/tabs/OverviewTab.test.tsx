@@ -167,4 +167,20 @@ describe('OverviewTab sync prerequisite guidance', () => {
 
     expect(screen.getByText('Run queued')).toBeInTheDocument();
   });
+
+  it('renders Total records synced and Last run KPI cards with fallback and active values', () => {
+    mockContext = buildContext({
+      job: {
+        ...buildContext().job,
+        recordsSynced: 1250,
+        lastSyncedAt: new Date(Date.now() - 3600 * 1000).toISOString(),
+      },
+    });
+    render(<OverviewTab />);
+
+    expect(screen.getByText('Total records synced')).toBeInTheDocument();
+    expect(screen.getByText('1,250')).toBeInTheDocument();
+    expect(screen.getByText('Last run')).toBeInTheDocument();
+    expect(screen.getByText(/ago/)).toBeInTheDocument();
+  });
 });

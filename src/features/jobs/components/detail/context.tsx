@@ -26,7 +26,10 @@ export interface JobDetailContextValue {
   refetch: () => void;
   handleTabChange: (
     id: JobDetailTabId,
-    options?: { replace?: boolean },
+    options?: {
+      replace?: boolean;
+      searchParams?: Record<string, string | undefined | null>;
+    },
   ) => void;
 
   // Run/schedule state — see useJobRunState.

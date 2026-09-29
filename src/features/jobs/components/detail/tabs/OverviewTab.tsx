@@ -2,6 +2,7 @@ import {
   CalendarClock,
   Clock,
   Database,
+  History,
   Play,
   RotateCcw,
   Timer,
@@ -9,6 +10,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { formatDistanceToNow } from 'date-fns';
 
 import { useJobDetailContext } from '../context';
 
@@ -163,6 +165,24 @@ export default function OverviewTab() {
   });
   const summaryCards = [
     {
+      label: 'Total records synced',
+      value: (job.recordsSynced ?? 0).toLocaleString(),
+      description: 'Across all executions',
+      icon: Database,
+    },
+    {
+      label: 'Last run',
+      value: performance.lastSyncAt
+        ? formatDistanceToNow(new Date(performance.lastSyncAt), {
+            addSuffix: true,
+          })
+        : 'Never',
+      description: performance.lastSyncAt
+        ? 'Previous sync execution'
+        : 'No runs recorded yet',
+      icon: History,
+    },
+    {
       label: 'Next run',
       value: nextRunCard.value,
       description: nextRunCard.description,
@@ -279,11 +299,21 @@ export default function OverviewTab() {
         destinationLabel={summaryRun?.destObject ?? job.destObject}
         errorMessage={summaryRun?.errorMessage}
         onStop={summaryRunning ? () => void handleStop() : undefined}
-        onViewHistory={() => handleTabChange('run-history')}
+        onViewHistory={() =>
+          handleTabChange('run-history', {
+            searchParams: summaryRun?.id ? { runId: summaryRun.id } : undefined,
+          })
+        }
+        onViewRun={(targetRunId) => {
+          const runIdToView = targetRunId || summaryRun?.id;
+          handleTabChange('run-history', {
+            searchParams: runIdToView ? { runId: runIdToView } : undefined,
+          });
+        }}
         stopping={stopping}
       />
     ) : null;
-  const progress = renderProgress('default', false);
+  const progress = renderProgress('default', Boolean(summaryRunning || activeRunLog));
 
   return (
     <div className="space-y-5">
@@ -339,7 +369,7 @@ export default function OverviewTab() {
           {/* Sync progress — appears right after header on sync */}
           {!manualDialogOpen && progress}
 
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             {summaryCards.map((card) => (
               <SyncSummaryCard key={card.label} {...card} />
             ))}

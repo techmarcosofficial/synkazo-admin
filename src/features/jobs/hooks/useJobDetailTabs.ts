@@ -52,10 +52,22 @@ export function useJobDetailTabs(ctx: JobDetailTabContext) {
 
   const handleTabChange = (
     id: JobDetailTabId,
-    options?: { replace?: boolean },
+    options?: {
+      replace?: boolean;
+      searchParams?: Record<string, string | undefined | null>;
+    },
   ) => {
     const next = new URLSearchParams(searchParams);
     next.set('tab', id);
+    if (options?.searchParams) {
+      Object.entries(options.searchParams).forEach(([k, v]) => {
+        if (v === undefined || v === null || v === '') {
+          next.delete(k);
+        } else {
+          next.set(k, v);
+        }
+      });
+    }
     setSearchParams(next, { replace: options?.replace });
   };
 

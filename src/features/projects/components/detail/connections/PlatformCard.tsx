@@ -18,6 +18,7 @@ import DisconnectImpactBody from '@/components/connections/DisconnectImpactBody'
 import { PLATFORM_META } from '@/components/connections/platformMeta';
 import type { ExtConnection } from '@/components/connections/types';
 import { useConnectionTestAndDisconnect } from '@/components/connections/useConnectionTestAndDisconnect';
+import { SynkazoMark } from '@/components/branding/SynkazoMark';
 import { PlatformIcon } from '@/components/platform';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -38,6 +39,8 @@ interface PlatformCardProps {
   nextRequired?: boolean;
   connectDisabled?: boolean;
   onTestingChange?: (testing: boolean) => void;
+  isExternalTesting?: boolean;
+  testingStepLabel?: string;
 }
 
 export default function PlatformCard({
@@ -47,6 +50,8 @@ export default function PlatformCard({
   nextRequired = false,
   connectDisabled = false,
   onTestingChange,
+  isExternalTesting = false,
+  testingStepLabel,
 }: PlatformCardProps) {
   const meta = PLATFORM_META[conn.platformId] ?? { label: conn.platformId };
   const envLabel = conn.environment === 'sandbox' ? 'Sandbox' : 'Production';
@@ -85,14 +90,39 @@ export default function PlatformCard({
                 {meta.label}
               </p>
               <p className="text-muted-foreground truncate text-xs">
-                {envLabel}
-                {!isSlot && conn.accountName ? ` · ${conn.accountName}` : ''}
-                {isError ? ' · Action Required' : ''}
+                {isExternalTesting ? (
+                  <span className="text-primary font-medium inline-flex items-center gap-1.5">
+                    <SynkazoMark
+                      variant="glyph-on-primary"
+                      className="size-3 animate-spin text-primary shrink-0"
+                    />
+                    {testingStepLabel ?? 'Validating credentials…'}
+                  </span>
+                ) : (
+                  <>
+                    {envLabel}
+                    {!isSlot && conn.accountName ? ` · ${conn.accountName}` : ''}
+                    {isError ? ' · Action Required' : ''}
+                  </>
+                )}
               </p>
             </div>
           </div>
 
-          {isSlot ? (
+          {isExternalTesting ? (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled
+              className="w-full md:ml-auto md:w-auto border-primary/30 text-primary bg-primary/5 gap-2 cursor-wait"
+            >
+              <SynkazoMark
+                variant="glyph-on-primary"
+                className="size-3.5 animate-spin text-primary shrink-0"
+              />
+              <span>{testingStepLabel ?? 'Testing…'}</span>
+            </Button>
+          ) : isSlot ? (
             <ActionTooltip
               tooltip={
                 !canManage

@@ -56,6 +56,7 @@ export interface SyncRunProgressProps {
   onStop?: () => void;
   onDismiss?: () => void;
   onViewHistory?: () => void;
+  onViewRun?: (runId?: string | null) => void;
   stopping?: boolean;
   variant?: 'default' | 'compact';
   defaultOpen?: boolean;
@@ -490,6 +491,7 @@ export default function SyncRunProgress({
   onStop,
   onDismiss,
   onViewHistory,
+  onViewRun,
   stopping = false,
   variant = 'default',
   defaultOpen = false,
@@ -712,17 +714,33 @@ export default function SyncRunProgress({
                       {stopping ? 'Stopping…' : 'Stop sync'}
                     </Button>
                   ) : terminal ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDismiss();
-                      }}
-                      className="text-muted-foreground hover:text-foreground hover:bg-muted/60 font-medium h-6.5 rounded-lg px-2 text-[11px]"
-                    >
-                      Close
-                    </Button>
+                    <>
+                      {(onViewRun || onViewHistory) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onViewRun) onViewRun(runId);
+                            else onViewHistory?.();
+                          }}
+                          className="text-primary border-primary/30 hover:bg-primary/10 font-semibold h-6.5 rounded-lg px-2 text-[11px]"
+                        >
+                          View Run
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDismiss();
+                        }}
+                        className="text-muted-foreground hover:text-foreground hover:bg-muted/60 font-medium h-6.5 rounded-lg px-2 text-[11px]"
+                      >
+                        Close
+                      </Button>
+                    </>
                   ) : null}
 
                   <CollapsibleTrigger asChild>
@@ -987,17 +1005,33 @@ export default function SyncRunProgress({
                     {stopping ? 'Stopping…' : 'Stop sync'}
                   </Button>
                 ) : terminal ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDismiss();
-                    }}
-                    className="text-muted-foreground hover:text-foreground hover:bg-muted/60 font-medium h-7.5 rounded-xl px-2.5 text-xs"
-                  >
-                    Close
-                  </Button>
+                  <>
+                    {(onViewRun || onViewHistory) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onViewRun) onViewRun(runId);
+                          else onViewHistory?.();
+                        }}
+                        className="text-primary border-primary/30 hover:bg-primary/10 font-semibold h-7.5 rounded-xl px-2.5 text-xs"
+                      >
+                        View Run
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDismiss();
+                      }}
+                      className="text-muted-foreground hover:text-foreground hover:bg-muted/60 font-medium h-7.5 rounded-xl px-2.5 text-xs"
+                    >
+                      Close
+                    </Button>
+                  </>
                 ) : null}
 
                 {/* Collapsible Trigger Chevron */}
@@ -1021,6 +1055,58 @@ export default function SyncRunProgress({
             </>
           )}
         </div>
+
+        {!isOpen && terminal && (
+          <div
+            data-slot="sync-summary-collapsed-bar"
+            className={cn(
+              'bg-muted/40 border-t border-border/60 flex items-center justify-between gap-3 text-xs transition-colors',
+              isCompact ? 'px-3 py-1.5' : 'px-4 py-2',
+            )}
+          >
+            <div className="flex items-center gap-2 text-muted-foreground min-w-0">
+              {current.state === 'failed' ? (
+                <XCircle
+                  className="size-3.5 shrink-0 text-destructive"
+                  aria-hidden="true"
+                />
+              ) : current.state === 'stopped' ? (
+                <CircleStop
+                  className="size-3.5 shrink-0 text-warning"
+                  aria-hidden="true"
+                />
+              ) : failed > 0 ? (
+                <TriangleAlert
+                  className="size-3.5 shrink-0 text-warning"
+                  aria-hidden="true"
+                />
+              ) : (
+                <CheckCircle2
+                  className="size-3.5 shrink-0 text-success"
+                  aria-hidden="true"
+                />
+              )}
+              <span className="truncate">
+                {processed.toLocaleString()} records processed · {created.toLocaleString()} created, {updated.toLocaleString()} updated{failed > 0 ? `, ${failed.toLocaleString()} failed` : ''}
+              </span>
+            </div>
+            {(onViewRun || onViewHistory) && (
+              <Button
+                variant="link"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onViewRun) onViewRun(runId);
+                  else onViewHistory?.();
+                }}
+                className="h-auto p-0 text-xs font-semibold text-primary hover:underline shrink-0 inline-flex items-center gap-1"
+              >
+                View Run
+                <ArrowRight className="size-3" aria-hidden="true" />
+              </Button>
+            )}
+          </div>
+        )}
 
         {/* Collapsible Content Area */}
         <CollapsibleContent>
@@ -1052,7 +1138,7 @@ export default function SyncRunProgress({
               />
 
               {/* Edge Case Guidance Banner & Sync History Navigation */}
-              {terminal && onViewHistory && (
+              {terminal && (onViewRun || onViewHistory) && (
                 <div className="border-t border-border/50 pt-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
                   <div className="flex items-center gap-2 text-muted-foreground min-w-0">
                     {current.state === 'failed' ? (
@@ -1092,7 +1178,8 @@ export default function SyncRunProgress({
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onViewHistory();
+                      if (onViewRun) onViewRun(runId);
+                      else onViewHistory?.();
                     }}
                     className="h-auto p-0 text-xs font-medium text-primary hover:underline shrink-0 self-start sm:self-auto inline-flex items-center gap-1"
                   >

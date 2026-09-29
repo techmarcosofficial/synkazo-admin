@@ -1,13 +1,18 @@
+import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
 import PlatformCard from './PlatformCard';
 import SourcePlatformPicker from './SourcePlatformPicker';
 
+import { connectionsApi } from '@/api/connections';
 import ConnectionEnvDropdown from '@/components/connections/ConnectionEnvToggle';
 import CredentialsModal from '@/components/connections/CredentialsModal';
+import { CRED_SCHEMAS } from '@/components/connections/platformMeta';
+import type { ExtConnection } from '@/components/connections/types';
 import { useConnectionsManager } from '@/components/connections/useConnectionsManager';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { BorderBeam } from '@/components/ui/border-beam';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardAction,
@@ -33,6 +38,7 @@ interface ConnectionBoardProps {
   /** Used only when a parent flow has already fixed the credential environment. */
   hideEnvironmentToggle?: boolean;
   onSaved?: () => void;
+  onContinue?: () => void;
   className?: string;
 }
 
@@ -147,6 +153,7 @@ export default function ConnectionBoard({
   reloadKey = 0,
   hideEnvironmentToggle = false,
   onSaved,
+  onContinue,
   className,
 }: ConnectionBoardProps) {
   const {
@@ -178,6 +185,110 @@ export default function ConnectionBoard({
 
   const [testingSource, setTestingSource] = useState(false);
   const [testingDest, setTestingDest] = useState(false);
+  const [inFlightVerify, setInFlightVerify] = useState<{
+    conn: ExtConnection;
+    step: 'testing' | 'validating';
+    formValues: Record<string, string>;
+  } | null>(null);
+  const [preservedFormValues, setPreservedFormValues] = useState<
+    Record<string, string> | undefined
+  >(undefined);
+  const [initialError, setInitialError] = useState<string | null>(null);
+
+  const handleVerifyModal = async ({
+    credentials,
+    formValues,
+  }: {
+    credentials: Record<string, string>;
+    formValues: Record<string, string>;
+    isEdit: boolean;
+  }) => {
+    if (!activeConn) return { success: false, message: 'No active connection' };
+
+    const targetConn = activeConn;
+    setInFlightVerify({
+      conn: targetConn,
+      step: 'testing',
+      formValues,
+    });
+    setPreservedFormValues(formValues);
+    setInitialError(null);
+
+    const schema = CRED_SCHEMAS[targetConn.platformId] ?? CRED_SCHEMAS.servicetitan;
+
+    try {
+      const payload: Record<string, unknown> = {
+        credentials,
+        status: 'disconnected',
+      };
+
+      let connId = targetConn.id;
+      if (connId) {
+        await connectionsApi.updateConnection(
+          projectId,
+          connId,
+          payload as Partial<Connection>,
+        );
+      } else {
+        const saved = await connectionsApi.createConnection(projectId, {
+          ...payload,
+          platformId: targetConn.platformId,
+          connectionType: targetConn.connectionType ?? schema.connectionType,
+          environment: targetConn.environment ?? schema.environment,
+        } as Partial<Connection>);
+        connId = saved?.id;
+      }
+
+      setInFlightVerify((prev) =>
+        prev ? { ...prev, step: 'validating' } : null,
+      );
+
+      const result = await connectionsApi.testConnection(projectId, connId!);
+
+      if (result?.success) {
+        setInFlightVerify(null);
+        setInitialError(null);
+        setPreservedFormValues(undefined);
+        await handleSaved();
+        onSaved?.();
+        return { success: true };
+      } else {
+        const errorMsg =
+          result?.message ||
+          'Invalid credentials — please check the values and try again.';
+        setInFlightVerify(null);
+        setInitialError(errorMsg);
+
+        // If the user closed the modal while testing was running, automatically reopen it:
+        if (!showManualModal) {
+          openConnect(targetConn);
+        }
+
+        return { success: false, message: errorMsg };
+      }
+    } catch (err) {
+      const e = err as { response?: { data?: { message?: string } } };
+      const errorMsg =
+        e?.response?.data?.message ||
+        'Failed to save credentials. Please check your values and try again.';
+      setInFlightVerify(null);
+      setInitialError(errorMsg);
+
+      if (!showManualModal) {
+        openConnect(targetConn);
+      }
+
+      return { success: false, message: errorMsg };
+    }
+  };
+
+  const handleModalClose = () => {
+    resetModals();
+    if (!inFlightVerify) {
+      setInitialError(null);
+      setPreservedFormValues(undefined);
+    }
+  };
 
   if (loading) {
     return (
@@ -212,7 +323,7 @@ export default function ConnectionBoard({
 
   return (
     <>
-      <Card size="sm" className="w-full">
+      <Card className={cn('w-full', className)}>
         <CardHeader className="gap-1">
           <div className="flex items-center gap-2">
             <CardTitle className="font-semibold">Connections</CardTitle>
@@ -246,58 +357,101 @@ export default function ConnectionBoard({
             </CardAction>
           )}
         </CardHeader>
-      </Card>
-      <div className={cn('space-y-5', className)}>
-        <ConnectionStep
-          number={1}
-          title="Connect source"
-          description="First, connect the platform your records come from."
-          complete={sourceComplete}
-          hasConnection={Boolean(sourceConn)}
-          nextRequired={nextRequired === 'source'}
-          isTesting={testingSource}
-          onFix={sourceConn ? () => openConnect(sourceConn) : undefined}
-        >
-          {sourcePlatformId ? (
-            <PlatformCard
-              conn={sourceConn ?? makeSlotConn(sourcePlatformId, 'source')}
-              onConnect={openConnect}
-              onUpdated={handleRowUpdated}
-              nextRequired={nextRequired === 'source'}
-              onTestingChange={setTestingSource}
-            />
-          ) : (
-            <SourcePlatformPicker projectId={projectId} />
-          )}
-        </ConnectionStep>
 
-        <ConnectionStep
-          number={2}
-          title="Connect destination"
-          description="Then, connect the platform your records will sync to."
-          complete={destinationComplete}
-          hasConnection={Boolean(destConn)}
-          nextRequired={nextRequired === 'destination'}
-          isTesting={testingDest}
-          onFix={destConn ? () => openConnect(destConn) : undefined}
-          last
-        >
-          {destPlatformId ? (
-            <PlatformCard
-              conn={destConn ?? makeSlotConn(destPlatformId, 'destination')}
-              onConnect={openConnect}
-              onUpdated={handleRowUpdated}
+        <CardContent className="space-y-6 pt-2">
+          <div className="space-y-5">
+            <ConnectionStep
+              number={1}
+              title="Connect source"
+              description="First, connect the platform your records come from."
+              complete={sourceComplete}
+              hasConnection={Boolean(sourceConn)}
+              nextRequired={nextRequired === 'source'}
+              isTesting={testingSource || inFlightVerify?.conn.connectionType === 'source'}
+              onFix={sourceConn ? () => openConnect(sourceConn) : undefined}
+            >
+              {sourcePlatformId ? (
+                <PlatformCard
+                  conn={sourceConn ?? makeSlotConn(sourcePlatformId, 'source')}
+                  onConnect={openConnect}
+                  onUpdated={handleRowUpdated}
+                  nextRequired={nextRequired === 'source'}
+                  onTestingChange={setTestingSource}
+                  isExternalTesting={inFlightVerify?.conn.connectionType === 'source'}
+                  testingStepLabel={
+                    inFlightVerify?.conn.connectionType === 'source'
+                      ? inFlightVerify.step === 'testing'
+                        ? 'Testing connection…'
+                        : 'Validating credentials…'
+                      : undefined
+                  }
+                />
+              ) : (
+                <SourcePlatformPicker projectId={projectId} />
+              )}
+            </ConnectionStep>
+
+            <ConnectionStep
+              number={2}
+              title="Connect destination"
+              description="Then, connect the platform your records will sync to."
+              complete={destinationComplete}
+              hasConnection={Boolean(destConn)}
               nextRequired={nextRequired === 'destination'}
-              connectDisabled={!sourceComplete && !destConn}
-              onTestingChange={setTestingDest}
-            />
-          ) : (
-            <div className="text-muted-foreground px-4 py-3 text-sm">
-              Choose a destination platform before connecting credentials.
+              isTesting={testingDest || inFlightVerify?.conn.connectionType === 'destination'}
+              onFix={destConn ? () => openConnect(destConn) : undefined}
+              last
+            >
+              {destPlatformId ? (
+                <PlatformCard
+                  conn={destConn ?? makeSlotConn(destPlatformId, 'destination')}
+                  onConnect={openConnect}
+                  onUpdated={handleRowUpdated}
+                  nextRequired={nextRequired === 'destination'}
+                  connectDisabled={!sourceComplete && !destConn}
+                  onTestingChange={setTestingDest}
+                  isExternalTesting={inFlightVerify?.conn.connectionType === 'destination'}
+                  testingStepLabel={
+                    inFlightVerify?.conn.connectionType === 'destination'
+                      ? inFlightVerify.step === 'testing'
+                        ? 'Testing connection…'
+                        : 'Validating credentials…'
+                      : undefined
+                  }
+                />
+              ) : (
+                <div className="text-muted-foreground px-4 py-3 text-sm">
+                  Choose a destination platform before connecting credentials.
+                </div>
+              )}
+            </ConnectionStep>
+          </div>
+
+          {sourceComplete && destinationComplete && (
+            <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <CheckCircle2 className="size-5" />
+                </div>
+                <div>
+                  <h4 className="font-heading text-sm font-semibold">Connections Ready · Project Active</h4>
+                  <p className="text-muted-foreground text-xs mt-0.5">
+                    Both platforms are connected and verified. Your project is active and ready for your sync flows.
+                  </p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                className="shrink-0"
+                onClick={onContinue}
+              >
+                Continue to Sync Flows
+                <ArrowRight className="ml-1.5 size-3.5" />
+              </Button>
             </div>
           )}
-        </ConnectionStep>
-      </div>
+        </CardContent>
+      </Card>
 
       {showManualModal && activeConn && (
         <CredentialsModal
@@ -311,7 +465,11 @@ export default function ConnectionBoard({
             handleSaved();
             onSaved?.();
           }}
-          onClose={resetModals}
+          onClose={handleModalClose}
+          onContinue={onContinue}
+          onVerify={handleVerifyModal}
+          initialFormValues={preservedFormValues}
+          initialError={initialError}
           willCompleteBoth={
             (activeConn.connectionType === 'source' && destinationComplete) ||
             (activeConn.connectionType === 'destination' && sourceComplete)

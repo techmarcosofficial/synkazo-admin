@@ -159,7 +159,11 @@ export default function ActiveProjectPipelineCard({
             type="button"
             aria-label="Configure platform connections"
             data-testid="step-connections"
-            onClick={() => navigate(`/projects/${project.id}?tab=connections`)}
+            onClick={() =>
+              navigate(`/projects/${project.id}?tab=connections`, {
+                state: { from: '/dashboard', fromLabel: 'Back to Dashboard' },
+              })
+            }
             disabled={!canManage}
             className={cn(
               'group bg-card border-border/80 flex flex-col justify-between rounded-2xl border p-4 text-left space-y-3 transition-all duration-200',
@@ -213,7 +217,11 @@ export default function ActiveProjectPipelineCard({
             aria-label="Configure sync flows and mappings"
             data-testid="step-sync-flows"
             disabled={step3State === 'pending' || !canManage}
-            onClick={() => navigate(`/projects/${project.id}?tab=sync-rules`)}
+            onClick={() =>
+              navigate(`/projects/${project.id}?tab=sync-rules`, {
+                state: { from: '/dashboard', fromLabel: 'Back to Dashboard' },
+              })
+            }
             className={cn(
               'group flex flex-col justify-between rounded-2xl border p-4 text-left space-y-3 transition-all duration-200',
               step3State !== 'pending' && canManage
@@ -280,7 +288,11 @@ export default function ActiveProjectPipelineCard({
             aria-label={isSandbox ? 'Review Sandbox test run' : 'Run limited sync'}
             data-testid="step-sample-test"
             disabled={step4State === 'pending' || !canManage}
-            onClick={() => navigate(`/projects/${project.id}?tab=sync-rules`)}
+            onClick={() =>
+              navigate(`/projects/${project.id}?tab=sync-rules`, {
+                state: { from: '/dashboard', fromLabel: 'Back to Dashboard' },
+              })
+            }
             className={cn(
               'group flex flex-col justify-between rounded-2xl border p-4 text-left space-y-3 transition-all duration-200',
               step4State !== 'pending' && canManage
