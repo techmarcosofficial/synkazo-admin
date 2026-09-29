@@ -88,6 +88,10 @@ export function sourceFieldOptionLabel(
     return `Imported property ${index + 1}`;
   return label || field.field;
 }
+const isRecordOwner = (targetObject: string) =>
+  targetObject === OWNER_OBJECT;
+const targetObjectLabel = (targetObject: string) =>
+  isRecordOwner(targetObject) ? 'Record Owner' : targetObject;
 
 function HelpTooltip({
   label,
@@ -252,7 +256,7 @@ export default function AssociationRuleFormDialog({
 
   useEffect(() => {
     if (mode === 'edit' || form.name) return;
-    const autoName = `${form.sourceObject} ↔ ${form.targetObject}`;
+    const autoName = `${form.sourceObject} ↔ ${targetObjectLabel(form.targetObject)}`;
     if (form.sourceObject && form.targetObject) {
       setForm((f) => ({ ...f, name: autoName }));
     }
@@ -276,7 +280,13 @@ export default function AssociationRuleFormDialog({
       .then((data: unknown) => setAssociationTypes(data as AssociationType[]))
       .catch(() => setAssociationTypes([]))
       .finally(() => setLoadingTypes(false));
-  }, [form.hsSourceObjectType, form.hsTargetObjectType, mode, projectId]);
+  }, [
+    form.hsSourceObjectType,
+    form.hsTargetObjectType,
+    form.targetObject,
+    mode,
+    projectId,
+  ]);
 
   const validate = () => {
     const errs: FormErrors = {};
@@ -304,7 +314,10 @@ export default function AssociationRuleFormDialog({
       if (!form.targetObject) errs.targetObject = 'Select target object';
       if (!form.targetMatchField)
         errs.targetMatchField = 'Select target match field';
-      if (form.sourceObject === form.targetObject)
+      if (
+        !isRecordOwner(form.targetObject) &&
+        form.sourceObject === form.targetObject
+      )
         errs.targetObject = 'Source and target must be different objects';
     }
     if (step === 1) {
@@ -597,6 +610,19 @@ export default function AssociationRuleFormDialog({
                           value={form.targetObject}
                           disabled={mode === 'edit'}
                           onValueChange={(v) => {
+                            if (isRecordOwner(v)) {
+                              setForm((f) => ({
+                                ...f,
+                                targetObject: OWNER_OBJECT,
+                                hsTargetObjectType: 'owners',
+                                targetMatchField: 'email',
+                                hsAssociationTypeId: '',
+                                hsAssociationCategory: 'OWNER_ASSIGNMENT',
+                                hsAssociationLabel: 'Record Owner',
+                                cardinality: 'one_to_one',
+                              }));
+                              return;
+                            }
                             const obj = projectObjects.find(
                               (o) => o.sourceObject === v,
                             );
@@ -712,7 +738,7 @@ export default function AssociationRuleFormDialog({
                       </span>
                       <span className="text-muted-foreground">matches</span>
                       <span className="text-primary">
-                        {form.targetObject}.
+                        {targetObjectLabel(form.targetObject)}.
                         <strong>{form.targetMatchField}</strong>
                       </span>
                     </div>
@@ -741,7 +767,7 @@ export default function AssociationRuleFormDialog({
                               name: e.target.value,
                             }))
                           }
-                          placeholder={`${form.sourceObject} ↔ ${form.targetObject}`}
+                          placeholder={`${form.sourceObject} ↔ ${targetObjectLabel(form.targetObject)}`}
                         />
                         {errors.name && (
                           <p className="text-destructive text-xs">
@@ -790,7 +816,8 @@ export default function AssociationRuleFormDialog({
                         </span>
                         <ArrowLeftRight className="text-muted-foreground size-3.5" />
                         <span>
-                          {form.targetObject}.{form.targetMatchField}
+                          {targetObjectLabel(form.targetObject)}.
+                          {form.targetMatchField}
                         </span>
                       </div>
                     </FieldGroup>
