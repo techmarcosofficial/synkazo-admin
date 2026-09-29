@@ -147,4 +147,29 @@ export const superAdminOperationsApi = {
         `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs/${jobId}/runs/${bullJobId}/retry`,
       )
       .then(d),
+
+  // GAP-008 / SA-605 — pause every ACTIVE job on the project.
+  holdProject: (
+    organisationId: string,
+    projectId: string,
+    reason?: string,
+  ): Promise<{ heldJobs: number }> =>
+    apiClient
+      .post<{ data: { heldJobs: number } }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}/hold`,
+        reason ? { reason } : {},
+      )
+      .then(d),
+
+  resumeProject: (
+    organisationId: string,
+    projectId: string,
+    reason?: string,
+  ): Promise<{ resumedJobs: number }> =>
+    apiClient
+      .post<{ data: { resumedJobs: number } }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}/resume`,
+        reason ? { reason } : {},
+      )
+      .then(d),
 };

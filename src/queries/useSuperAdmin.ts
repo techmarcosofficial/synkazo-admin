@@ -575,6 +575,47 @@ export function useSuperAdminRetryRunMutation(
   });
 }
 
+// GAP-008 / SA-605 — per-project hold + resume. Invalidates the org's
+// project + jobs cache so scheduleState changes render immediately.
+function invalidateProjectAfterHold(
+  queryClient: ReturnType<typeof useQueryClient>,
+  organisationId: string,
+  projectId: string,
+) {
+  queryClient.invalidateQueries({
+    queryKey: queryKeys.superAdmin.operations.jobs(organisationId, projectId),
+  });
+  queryClient.invalidateQueries({
+    queryKey: queryKeys.superAdmin.operations.project(organisationId, projectId),
+  });
+}
+
+export function useHoldSuperAdminProjectMutation(
+  organisationId: string,
+  projectId: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (reason?: string) =>
+      superAdminOperationsApi.holdProject(organisationId, projectId, reason),
+    onSuccess: () =>
+      invalidateProjectAfterHold(queryClient, organisationId, projectId),
+  });
+}
+
+export function useResumeSuperAdminProjectMutation(
+  organisationId: string,
+  projectId: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (reason?: string) =>
+      superAdminOperationsApi.resumeProject(organisationId, projectId, reason),
+    onSuccess: () =>
+      invalidateProjectAfterHold(queryClient, organisationId, projectId),
+  });
+}
+
 // ── Billing ───────────────────────────────────────────────────────────
 
 export function useSuperAdminBillingOverviewQuery(organisationId: string) {

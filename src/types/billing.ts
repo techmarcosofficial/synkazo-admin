@@ -223,7 +223,7 @@ export interface HistoryItem {
   orderStatus: OrderStatus | null;
 }
 
-// ── Admin plan catalogue (GET /billing/admin/plans, super_admin) ────────────────
+// ── Admin plan catalogue (GET /super-admin/billing/plans, super_admin) ─────────
 
 export interface AdminApiPrice extends ApiPrice {
   isActive: boolean;
