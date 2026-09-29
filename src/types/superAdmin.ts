@@ -463,3 +463,157 @@ export interface UpsertMarketplaceCatalogEntryDto {
   sortOrder?: number;
   reason: string;
 }
+
+// GAP-022 — SA association rules + env-migration.
+
+export type SuperAdminConditionOperator =
+  | 'equals'
+  | 'not_equals'
+  | 'is_empty'
+  | 'is_not_empty'
+  | 'contains'
+  | 'not_contains'
+  | 'starts_with'
+  | 'ends_with'
+  | 'in'
+  | 'not_in'
+  | 'gt'
+  | 'gte'
+  | 'lt'
+  | 'lte';
+
+export type SuperAdminConditionLogic = 'AND' | 'OR';
+
+export interface SuperAdminAssociationCondition {
+  field: string;
+  operator: SuperAdminConditionOperator;
+  value?: string | number | boolean | string[] | null;
+  normalization?: {
+    trim?: boolean;
+    lowercase?: boolean;
+    removeWhitespace?: boolean;
+  };
+}
+
+export interface SuperAdminAssociationRule {
+  id: string;
+  projectId: string;
+  name?: string;
+  sourceObject: string;
+  sourceMatchField: string;
+  destSourceObjectType?: string;
+  targetObject: string;
+  targetMatchField: string;
+  destTargetObjectType?: string;
+  assocTypeId?: number;
+  assocCategory?: string;
+  assocLabel?: string | null;
+  cardinality?: string;
+  isEnabled?: boolean;
+  conditions?: SuperAdminAssociationCondition[] | null;
+  conditionLogic?: SuperAdminConditionLogic;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface SuperAdminCreateAssociationRuleDto {
+  name: string;
+  sourceObject: string;
+  sourceMatchField: string;
+  destSourceObjectType: string;
+  targetObject: string;
+  targetMatchField: string;
+  destTargetObjectType: string;
+  assocTypeId: number;
+  assocCategory?: string;
+  assocLabel?: string;
+  cardinality?: string;
+  conditions?: SuperAdminAssociationCondition[];
+  conditionLogic?: SuperAdminConditionLogic;
+  reason: string;
+}
+
+export interface SuperAdminUpdateAssociationRuleDto {
+  name?: string;
+  assocTypeId?: number;
+  assocCategory?: string;
+  assocLabel?: string;
+  isEnabled?: boolean;
+  conditions?: SuperAdminAssociationCondition[];
+  conditionLogic?: SuperAdminConditionLogic;
+  reason: string;
+}
+
+export interface SuperAdminDeleteAssociationRuleDto {
+  reason: string;
+  confirmName: string;
+}
+
+export interface SuperAdminPendingAssociation {
+  id: string;
+  associationRuleId: string;
+  sourceId: string;
+  sourceHsId: string | null;
+  targetMatchValue: string;
+  targetId: string | null;
+  targetHsId: string | null;
+  status: 'pending' | 'completed' | 'failed';
+  retryCount: number;
+  lastAttemptedAt: string | null;
+  errorMessage: string | null;
+  createdAt: string;
+}
+
+export type SuperAdminConnectionEnvironment = 'production' | 'sandbox';
+
+export interface SuperAdminMigrationDiffItem {
+  identityKey: string;
+  kind: 'custom_object' | 'property' | 'association';
+  displayName: string;
+  objectType?: string;
+  status: 'missing' | 'in_sync' | 'conflict';
+  conflictReason?: string;
+  payload?: Record<string, unknown>;
+}
+
+export interface SuperAdminMigrationDiff {
+  from: SuperAdminConnectionEnvironment;
+  to: SuperAdminConnectionEnvironment;
+  ready: boolean;
+  sandboxConnected: boolean;
+  productionConnected: boolean;
+  message?: string;
+  customObjects: SuperAdminMigrationDiffItem[];
+  properties: SuperAdminMigrationDiffItem[];
+  associations: SuperAdminMigrationDiffItem[];
+}
+
+export interface SuperAdminMigrationRun {
+  id: string;
+  projectId: string;
+  status: 'pending' | 'running' | 'completed' | 'partial' | 'failed';
+  fromEnvironment: SuperAdminConnectionEnvironment;
+  toEnvironment: SuperAdminConnectionEnvironment;
+  totalItems: number;
+  succeeded: number;
+  skipped: number;
+  failed: number;
+  startedAt: string;
+  createdAt: string;
+  completedAt?: string;
+}
+
+export interface SuperAdminMigrationRunItem {
+  id: string;
+  kind: string;
+  displayName: string;
+  status: string;
+  errorMessage?: string | null;
+}
+
+export interface SuperAdminRunMigrationDto {
+  selectedKeys: string[];
+  from?: SuperAdminConnectionEnvironment;
+  to?: SuperAdminConnectionEnvironment;
+  reason: string;
+}

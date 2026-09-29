@@ -28,6 +28,8 @@ import {
   superAdminFeatureFlagsApi,
   superAdminMarketplaceApi,
 } from '@/api/superAdminSettings';
+import { superAdminAssociationsApi } from '@/api/superAdminAssociations';
+import { superAdminMigrationApi } from '@/api/superAdminMigration';
 import type {
   CancelAtPeriodEndDto,
   CancelSubscriptionImmediateDto,
@@ -37,8 +39,13 @@ import type {
   ProvisionOrganisationDto,
   ResumeSubscriptionDto,
   RetryInvoiceDto,
+  SuperAdminConnectionEnvironment,
+  SuperAdminCreateAssociationRuleDto,
+  SuperAdminDeleteAssociationRuleDto,
   SuperAdminInviteMemberDto,
   SuperAdminRunJobDto,
+  SuperAdminRunMigrationDto,
+  SuperAdminUpdateAssociationRuleDto,
   SuperAdminUpdateOrganisationDto,
   TransitionOrganisationStatusDto,
   UpsertFeatureFlagDto,
@@ -672,6 +679,186 @@ export function useUpsertSuperAdminMarketplaceEntryMutation() {
     }) => superAdminMarketplaceApi.upsert(payload.slug, payload.dto),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: MARKETPLACE_KEY });
+    },
+  });
+}
+
+// ── SA associations + env-migration (GAP-022) ───────────────────────
+
+export function useSuperAdminAssociationRulesQuery(
+  organisationId: string,
+  projectId: string,
+) {
+  return useQuery({
+    queryKey: queryKeys.superAdmin.associations.rules(organisationId, projectId),
+    queryFn: () =>
+      superAdminAssociationsApi.listRules(organisationId, projectId),
+    enabled: !!organisationId && !!projectId,
+  });
+}
+
+export function useCreateSuperAdminAssociationRuleMutation(
+  organisationId: string,
+  projectId: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: SuperAdminCreateAssociationRuleDto) =>
+      superAdminAssociationsApi.createRule(organisationId, projectId, dto),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.superAdmin.associations.rules(
+          organisationId,
+          projectId,
+        ),
+      });
+    },
+  });
+}
+
+export function useUpdateSuperAdminAssociationRuleMutation(
+  organisationId: string,
+  projectId: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      ruleId: string;
+      dto: SuperAdminUpdateAssociationRuleDto;
+    }) =>
+      superAdminAssociationsApi.updateRule(
+        organisationId,
+        projectId,
+        payload.ruleId,
+        payload.dto,
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.superAdmin.associations.rules(
+          organisationId,
+          projectId,
+        ),
+      });
+    },
+  });
+}
+
+export function useDeleteSuperAdminAssociationRuleMutation(
+  organisationId: string,
+  projectId: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      ruleId: string;
+      dto: SuperAdminDeleteAssociationRuleDto;
+    }) =>
+      superAdminAssociationsApi.deleteRule(
+        organisationId,
+        projectId,
+        payload.ruleId,
+        payload.dto,
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.superAdmin.associations.rules(
+          organisationId,
+          projectId,
+        ),
+      });
+    },
+  });
+}
+
+export function useSuperAdminPendingAssociationsQuery(
+  organisationId: string,
+  projectId: string,
+  page: number,
+  limit: number,
+) {
+  return useQuery({
+    queryKey: queryKeys.superAdmin.associations.pending(
+      organisationId,
+      projectId,
+      page,
+      limit,
+    ),
+    queryFn: () =>
+      superAdminAssociationsApi.listPending(organisationId, projectId, {
+        page,
+        limit,
+      }),
+    enabled: !!organisationId && !!projectId,
+  });
+}
+
+export function useSuperAdminMigrationDiffQuery(
+  organisationId: string,
+  projectId: string,
+  from: SuperAdminConnectionEnvironment,
+  to: SuperAdminConnectionEnvironment,
+) {
+  return useQuery({
+    queryKey: queryKeys.superAdmin.migration.diff(
+      organisationId,
+      projectId,
+      from,
+      to,
+    ),
+    queryFn: () =>
+      superAdminMigrationApi.diff(organisationId, projectId, from, to),
+    enabled: !!organisationId && !!projectId,
+  });
+}
+
+export function useSuperAdminMigrationRunsQuery(
+  organisationId: string,
+  projectId: string,
+) {
+  return useQuery({
+    queryKey: queryKeys.superAdmin.migration.runs(organisationId, projectId),
+    queryFn: () => superAdminMigrationApi.listRuns(organisationId, projectId),
+    enabled: !!organisationId && !!projectId,
+  });
+}
+
+export function useSuperAdminMigrationRunItemsQuery(
+  organisationId: string,
+  projectId: string,
+  runId: string | null,
+) {
+  return useQuery({
+    queryKey: runId
+      ? queryKeys.superAdmin.migration.runItems(organisationId, projectId, runId)
+      : ['superAdmin', organisationId, 'projects', projectId, 'migration', 'runs', 'missing'],
+    queryFn: () =>
+      superAdminMigrationApi.getRunItems(organisationId, projectId, runId!),
+    enabled: !!organisationId && !!projectId && !!runId,
+  });
+}
+
+export function useRunSuperAdminMigrationMutation(
+  organisationId: string,
+  projectId: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: SuperAdminRunMigrationDto) =>
+      superAdminMigrationApi.run(organisationId, projectId, dto),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.superAdmin.migration.runs(organisationId, projectId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: [
+          'superAdmin',
+          organisationId,
+          'projects',
+          projectId,
+          'migration',
+          'diff',
+        ],
+      });
     },
   });
 }
