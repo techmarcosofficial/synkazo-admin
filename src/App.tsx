@@ -61,6 +61,8 @@ import OrganisationBillingPage from '@/pages/superadmin/OrganisationBillingPage'
 import OrganisationDetailPage from '@/pages/superadmin/OrganisationDetailPage';
 import OrganisationMembersPage from '@/pages/superadmin/OrganisationMembersPage';
 import OrganisationProjectDetailPage from '@/pages/superadmin/OrganisationProjectDetailPage';
+import OrganisationProjectAssociationsPage from '@/pages/superadmin/associations/OrganisationProjectAssociationsPage';
+import OrganisationProjectMigrationPage from '@/pages/superadmin/migration/OrganisationProjectMigrationPage';
 import OrganisationProjectsPage from '@/pages/superadmin/OrganisationProjectsPage';
 import MarketingPage from '@/pages/superadmin/MarketingPage';
 import OverviewPage from '@/pages/superadmin/OverviewPage';
@@ -240,6 +242,14 @@ function App() {
                 <Route
                   path="organisations/:organisationId/projects/:projectId"
                   element={<OrganisationProjectDetailPage />}
+                />
+                <Route
+                  path="organisations/:organisationId/projects/:projectId/associations"
+                  element={<OrganisationProjectAssociationsPage />}
+                />
+                <Route
+                  path="organisations/:organisationId/projects/:projectId/migration"
+                  element={<OrganisationProjectMigrationPage />}
                 />
                 <Route
                   path="organisations/:organisationId/billing"
