@@ -403,6 +403,14 @@ export interface PlatformOverviewResponse {
     summary: string;
     createdAt: string;
   }>;
+  // GAP-023 / CAP-091 — process-local health signals.
+  systemHealth: {
+    processUptimeSeconds: number;
+    memoryHeapUsedMb: number;
+    memoryHeapTotalMb: number;
+    // null when the Redis PING failed.
+    redisPingMs: number | null;
+  };
   // GAP-043 / SA-302 — per-section error surface. Populated only when
   // at least one aggregate query on the API's Promise.allSettled path
   // rejected. Absent on a fully-successful load.
@@ -411,5 +419,47 @@ export interface PlatformOverviewResponse {
     subscriptions?: string;
     queue?: string;
     recentAlerts?: string;
+    systemHealth?: string;
   };
+}
+
+// GAP-023 — SA settings entities returned by the platform-settings
+// endpoints. Shapes mirror the API entities exactly.
+
+export interface PlatformFeatureFlag {
+  id: string;
+  key: string;
+  enabled: boolean;
+  description: string | null;
+  updatedByUserId: string | null;
+  updatedByUserEmail: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MarketplaceCatalogEntry {
+  id: string;
+  slug: string;
+  displayName: string | null;
+  shortDescription: string | null;
+  visible: boolean;
+  sortOrder: number;
+  updatedByUserId: string | null;
+  updatedByUserEmail: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpsertFeatureFlagDto {
+  enabled: boolean;
+  description?: string;
+  reason: string;
+}
+
+export interface UpsertMarketplaceCatalogEntryDto {
+  displayName?: string;
+  shortDescription?: string;
+  visible?: boolean;
+  sortOrder?: number;
+  reason: string;
 }
