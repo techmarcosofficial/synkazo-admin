@@ -24,6 +24,10 @@ import {
   superAdminOrganisationsApi,
   type ListSuperAdminOrganisationsParams,
 } from '@/api/superAdminOrganisations';
+import {
+  superAdminFeatureFlagsApi,
+  superAdminMarketplaceApi,
+} from '@/api/superAdminSettings';
 import type {
   CancelAtPeriodEndDto,
   CancelSubscriptionImmediateDto,
@@ -37,6 +41,8 @@ import type {
   SuperAdminRunJobDto,
   SuperAdminUpdateOrganisationDto,
   TransitionOrganisationStatusDto,
+  UpsertFeatureFlagDto,
+  UpsertMarketplaceCatalogEntryDto,
 } from '@/types';
 
 // ── Invoice retry (SA-706) ────────────────────────────────────────────
@@ -620,4 +626,52 @@ export function useClearSuperAdminOrgCache() {
       queryKey: queryKeys.superAdmin.orgScope(organisationId),
     });
   };
+}
+
+// ── Platform settings (GAP-023) ───────────────────────────────────────
+
+// Keyed under a shared `platform.settings.*` namespace so an operator
+// action on one topic invalidates only its own cache — the platform
+// overview / org-scoped caches are unaffected.
+const FEATURE_FLAGS_KEY = ['superAdmin', 'platform', 'featureFlags'] as const;
+const MARKETPLACE_KEY = ['superAdmin', 'platform', 'marketplace'] as const;
+
+export function useSuperAdminFeatureFlagsQuery() {
+  return useQuery({
+    queryKey: FEATURE_FLAGS_KEY,
+    queryFn: () => superAdminFeatureFlagsApi.list(),
+  });
+}
+
+export function useUpsertSuperAdminFeatureFlagMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      key: string;
+      dto: UpsertFeatureFlagDto;
+    }) => superAdminFeatureFlagsApi.upsert(payload.key, payload.dto),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: FEATURE_FLAGS_KEY });
+    },
+  });
+}
+
+export function useSuperAdminMarketplaceQuery() {
+  return useQuery({
+    queryKey: MARKETPLACE_KEY,
+    queryFn: () => superAdminMarketplaceApi.list(),
+  });
+}
+
+export function useUpsertSuperAdminMarketplaceEntryMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      slug: string;
+      dto: UpsertMarketplaceCatalogEntryDto;
+    }) => superAdminMarketplaceApi.upsert(payload.slug, payload.dto),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: MARKETPLACE_KEY });
+    },
+  });
 }
