@@ -29,7 +29,10 @@ export default function AssociationsTab() {
             Cross-flow record associations
           </AlertTitle>
           <AlertDescription className="text-muted-foreground text-xs">
-            Sync flows transfer individual objects (such as Contacts, Companies, or Jobs). Record associations establish relationships between those records so child records attach automatically to their parents across platforms.
+            Sync flows transfer individual objects (such as Contacts, Companies,
+            or Jobs). Record associations establish relationships between those
+            records so child records attach automatically to their parents
+            across platforms.
           </AlertDescription>
         </Alert>
 

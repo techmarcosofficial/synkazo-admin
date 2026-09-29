@@ -30,8 +30,8 @@ import {
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
-import CompanyOwnerSection from './CompanyOwnerSection';
 import AssociationRuleFormDialog from './AssociationRuleFormDialog';
+import CompanyOwnerSection from './CompanyOwnerSection';
 import AssociationRunsList, {
   type AssociationResultFilter,
   type AssociationRunFilters,

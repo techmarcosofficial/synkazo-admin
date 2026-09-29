@@ -108,6 +108,7 @@ export default function ExcludeConditionsEditor({
   onPreview,
   previewing = false,
   layout = 'stacked',
+  embedded = false,
 }: {
   sourceFields: FieldDef[];
   conditions: ExcludeCondition[];
@@ -122,6 +123,7 @@ export default function ExcludeConditionsEditor({
   /** The job-detail workspace uses an aligned grid; the creation wizard keeps
    *  the established stacked editor until that workflow is refined separately. */
   layout?: 'stacked' | 'grid';
+  embedded?: boolean;
 }) {
   const update = (index: number, patch: Partial<ExcludeCondition>) => {
     const next = conditions.map((c, i) =>
@@ -177,7 +179,13 @@ export default function ExcludeConditionsEditor({
   if (layout === 'grid') {
     return (
       <div className="flex flex-col gap-3">
-        <div className="bg-muted/40 flex items-start gap-3 rounded-4xl px-4 py-3">
+        <div
+          className={
+            embedded
+              ? 'hidden'
+              : 'bg-muted/40 flex items-start gap-3 rounded-4xl px-4 py-3'
+          }
+        >
           <Info className="text-primary mt-0.5 size-4 shrink-0" />
           <div className="min-w-0">
             <p className="text-foreground text-xs font-medium">
@@ -191,12 +199,18 @@ export default function ExcludeConditionsEditor({
           </div>
         </div>
 
-        <section className="border-border bg-card overflow-hidden rounded-4xl border">
+        <section
+          className={
+            embedded
+              ? 'overflow-hidden'
+              : 'border-border bg-card overflow-hidden rounded-4xl border'
+          }
+        >
           <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-2.5">
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-semibold">Skip conditions</h3>
+                  <h3 className="text-sm font-semibold">Source conditions</h3>
                   <Badge variant="secondary" className="font-normal">
                     {conditions.length}
                   </Badge>
@@ -221,7 +235,11 @@ export default function ExcludeConditionsEditor({
                   onChange(conditions, value as 'AND' | 'OR')
                 }
               >
-                <SelectTrigger size="sm" className="w-24">
+                <SelectTrigger
+                  size="sm"
+                  className="w-24"
+                  aria-label="Combine source conditions with"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -463,7 +481,7 @@ export default function ExcludeConditionsEditor({
           })}
 
           {conditions.length === 0 && (
-            <div className="border-t px-4 py-10 text-center">
+            <div className="border-t px-4 py-4 text-center">
               <p className="text-sm font-medium">No skip conditions</p>
               <p className="text-muted-foreground mt-1 text-xs">
                 Every source record is currently eligible to sync.
@@ -474,7 +492,7 @@ export default function ExcludeConditionsEditor({
           {normalizedSearch &&
             visibleConditions.length === 0 &&
             conditions.length > 0 && (
-              <div className="border-t px-4 py-10 text-center">
+              <div className="border-t px-4 py-4 text-center">
                 <p className="text-sm font-medium">No matching conditions</p>
                 <p className="text-muted-foreground mt-1 text-xs">
                   Try a different search term.

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 import type { ConsolidatedMapping } from '@/features/jobs/hooks';
-import type { ExcludeCondition } from '@/types/conditions';
+import type { DestinationSkipCondition, ExcludeCondition } from '@/types/conditions';
 
 export type MappingWorkspaceTab =
   | 'field-mapping'
@@ -15,6 +15,7 @@ export interface FieldMappingDraft {
   defaultMappings?: ConsolidatedMapping[];
   excludeConditions?: ExcludeCondition[];
   excludeConditionLogic?: 'AND' | 'OR';
+  destinationSkipConditions?: DestinationSkipCondition[];
   mappingMode?: 'edit' | 'fresh-setup';
   mappingDirty: boolean;
   defaultsDirty: boolean;

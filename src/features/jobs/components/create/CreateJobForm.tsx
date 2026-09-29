@@ -23,6 +23,7 @@ import { connectionsApi } from '@/api/connections';
 import { jobsApi } from '@/api/jobs';
 import CustomFieldModal from '@/components/fieldmapping/CustomFieldModal';
 import CustomObjectModal from '@/components/fieldmapping/CustomObjectModal';
+import { isValidDefaultValue } from '@/components/fieldmapping/EmptyValuePolicy';
 import EmptyState from '@/components/shared/EmptyState';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -95,10 +96,13 @@ const withDirection = (
     return dests.map((destField) => ({
       sourceField: m.sourceField,
       destField,
-      transformType: 'direct',
-      transformConfig: m.destRules?.[destField]
-        ? { rules: m.destRules[destField] }
-        : null,
+      transformType: m.transformType ?? 'direct',
+      transformConfig:
+        m.transformType === 'combine'
+          ? (m.transformConfig ?? null)
+          : m.destRules?.[destField]
+            ? { rules: m.destRules[destField] }
+            : null,
       isMatchField: m.matchDestKey === destField,
       matchPriority:
         m.matchDestKey === destField ? (m.matchOrder ?? null) : null,
@@ -223,6 +227,7 @@ export const CreateJobForm = forwardRef<
     idMappingDestField: 'hs_object_id',
     excludeConditions: [],
     excludeConditionLogic: 'AND',
+    destinationSkipConditions: [],
     skipUpdateOnMatch: false,
   });
   const [fieldMappings, setFieldMappings] = useState<MappingRow[]>([]);
@@ -523,7 +528,11 @@ export const CreateJobForm = forwardRef<
       destFields,
       fieldMappings,
       { includeSource: true, includeDest: true },
-    ).filter((i) => i.currentOnEmpty === 'none');
+    ).filter(
+      (i) =>
+        i.currentOnEmpty !== 'default' ||
+        !isValidDefaultValue(i.field.type, i.currentDefaultValue),
+    );
     if (!unresolved.length) return null;
     return `These required fields need a default value or a skip rule: ${unresolved
       .map((i) => i.field.label || i.field.key)
@@ -579,6 +588,11 @@ export const CreateJobForm = forwardRef<
               ? config.excludeConditions
               : null,
           excludeConditionLogic: config.excludeConditionLogic,
+          destinationSkipConditions:
+            config.destinationSkipConditions &&
+            config.destinationSkipConditions.length > 0
+              ? config.destinationSkipConditions
+              : null,
           skipUpdateOnMatch: config.skipUpdateOnMatch,
         };
         let savedId = draftJobId;
@@ -802,6 +816,11 @@ export const CreateJobForm = forwardRef<
             ? config.excludeConditions
             : null,
         excludeConditionLogic: config.excludeConditionLogic,
+        destinationSkipConditions:
+          config.destinationSkipConditions &&
+          config.destinationSkipConditions.length > 0
+            ? config.destinationSkipConditions
+            : null,
         skipUpdateOnMatch: config.skipUpdateOnMatch,
       });
 
@@ -898,6 +917,11 @@ export const CreateJobForm = forwardRef<
             ? config.excludeConditions
             : null,
         excludeConditionLogic: config.excludeConditionLogic,
+        destinationSkipConditions:
+          config.destinationSkipConditions &&
+          config.destinationSkipConditions.length > 0
+            ? config.destinationSkipConditions
+            : null,
         skipUpdateOnMatch: config.skipUpdateOnMatch,
       };
 
@@ -1187,6 +1211,13 @@ export const CreateJobForm = forwardRef<
               ...c,
               excludeConditions: conditions,
               excludeConditionLogic: logic,
+            }))
+          }
+          destinationSkipConditions={config.destinationSkipConditions ?? []}
+          onDestinationSkipConditionsChange={(conditions) =>
+            setConfig((current) => ({
+              ...current,
+              destinationSkipConditions: conditions,
             }))
           }
           skipUpdateOnMatch={config.skipUpdateOnMatch ?? false}

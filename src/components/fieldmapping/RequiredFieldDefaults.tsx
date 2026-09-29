@@ -1,4 +1,4 @@
-import { Check, Plus, X } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import EmptyValuePolicy, {
@@ -172,12 +172,12 @@ export default function RequiredFieldDefaults({
     })
     .filter((i): i is RequiredFieldItem => i !== null);
 
-  // Resolved means the current committed value (not a draft) is actually usable —
-  // 'skip_record' always is, 'default' only once its value passes validation.
+  // Default Mappings has one responsibility: a usable fallback value. Legacy
+  // skip_record policies remain stored until the user replaces them, but are
+  // intentionally shown as unresolved here.
   const isResolved = (item: RequiredFieldItem): boolean =>
-    item.currentOnEmpty === 'skip_record' ||
-    (item.currentOnEmpty === 'default' &&
-      isValidDefaultValue(item.field.type, item.currentDefaultValue));
+    item.currentOnEmpty === 'default' &&
+    isValidDefaultValue(item.field.type, item.currentDefaultValue);
 
   const fullyResolved = requiredItems.every(isResolved);
   useEffect(() => {
@@ -265,7 +265,7 @@ export default function RequiredFieldDefaults({
     return (
       <div
         key={itemKey(item)}
-        className="border-border grid min-w-0 gap-3 border-t px-4 py-3 lg:grid-cols-[minmax(12rem,0.8fr)_minmax(11rem,0.65fr)_minmax(25rem,1.7fr)_minmax(7rem,0.45fr)] lg:items-center"
+        className="border-border grid min-w-0 gap-3 border-t px-4 py-3 lg:grid-cols-[minmax(14rem,1fr)_minmax(20rem,1.5fr)_auto] lg:items-center"
       >
         <div className="min-w-0">
           <div className="flex min-w-0 items-center gap-2">
@@ -283,50 +283,27 @@ export default function RequiredFieldDefaults({
 
         <div className="min-w-0">
           <p className="text-muted-foreground mb-1 text-[11px] font-semibold tracking-wide uppercase lg:hidden">
-            Requirement
-          </p>
-          <p className="text-xs font-medium">
-            {item.field.required ? 'Required field' : 'Optional default'}
-          </p>
-          <p className="text-muted-foreground mt-0.5 text-xs">
-            {item.side === 'dest'
-              ? `When writing to ${platformLabel}`
-              : `On write-back to ${platformLabel}`}
-          </p>
-        </div>
-
-        <div className="min-w-0">
-          <p className="text-muted-foreground mb-1 text-[11px] font-semibold tracking-wide uppercase lg:hidden">
-            Empty value handling
+            Fallback default
           </p>
           <EmptyValuePolicy
-            compact
+            defaultOnly
             reasons={reasons}
             fieldType={item.field.type}
             fieldOptions={item.field.options}
             fieldLabel={item.field.label || item.field.key}
             forceShowInvalid={showValidation}
             value={{
-              onEmpty: item.currentOnEmpty,
-              defaultValue: item.currentDefaultValue,
+              onEmpty: 'default',
+              defaultValue:
+                item.currentOnEmpty === 'default'
+                  ? item.currentDefaultValue
+                  : '',
             }}
-            onChange={(v) => commit(item, v)}
+            onChange={(v) => commit(item, { ...v, onEmpty: 'default' })}
           />
         </div>
 
         <div className="flex items-center justify-between gap-2 lg:justify-end">
-          <Badge
-            variant="secondary"
-            className={cn(
-              'gap-1 whitespace-nowrap',
-              isResolved(item)
-                ? 'bg-success/10 text-success'
-                : 'bg-warning/10 text-warning',
-            )}
-          >
-            {isResolved(item) && <Check className="size-3" />}
-            {isResolved(item) ? 'Resolved' : 'Needs action'}
-          </Badge>
           {removable && (
             <Button
               variant="ghost"
@@ -404,11 +381,10 @@ export default function RequiredFieldDefaults({
         </Badge>
       </div>
 
-      <div className="bg-muted/15 text-muted-foreground hidden grid-cols-[minmax(12rem,0.8fr)_minmax(11rem,0.65fr)_minmax(25rem,1.7fr)_minmax(7rem,0.45fr)] gap-3 border-t px-4 py-2 text-[11px] font-semibold tracking-wide uppercase lg:grid">
+      <div className="bg-muted/15 text-muted-foreground hidden grid-cols-[minmax(14rem,1fr)_minmax(20rem,1.5fr)_auto] gap-3 border-t px-4 py-2 text-[11px] font-semibold tracking-wide uppercase lg:grid">
         <span>Field</span>
-        <span>Requirement</span>
-        <span>Empty value handling</span>
-        <span className="text-right">Status</span>
+        <span>Fallback default</span>
+        <span className="text-right">Actions</span>
       </div>
       <div>{items.map((item) => renderItem(item, removable))}</div>
     </section>
@@ -497,8 +473,8 @@ export default function RequiredFieldDefaults({
           <div>
             <h3 className="text-sm font-bold">Default values</h3>
             <p className="text-muted-foreground text-xs">
-              Every field a connected platform requires needs a default value or
-              a skip rule before the sync can run.
+              Set the fallback value written when a mapped source value is
+              empty.
             </p>
           </div>
           {requiredItems.length > 0 && (
