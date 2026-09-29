@@ -82,7 +82,7 @@ describe('RecordReason', () => {
     expect(tooltip).toHaveTextContent('HubSpot Contact');
   });
 
-  it('opens on hover and displays existing contact, mapping, and API details', async () => {
+  it('opens on hover and displays only IDs and API details', async () => {
     const user = userEvent.setup();
     renderReason({
       id: 'record-2',
@@ -115,14 +115,15 @@ describe('RecordReason', () => {
     await user.hover(trigger);
 
     const tooltip = await screen.findByRole('tooltip');
-    expect(tooltip).toHaveTextContent('person@example.com');
-    expect(tooltip).toHaveTextContent('+1 555 111 2222');
-    expect(tooltip).toHaveTextContent('Mapped field values');
+    expect(tooltip).toHaveTextContent('source-2002');
+    expect(tooltip).not.toHaveTextContent('person@example.com');
+    expect(tooltip).not.toHaveTextContent('+1 555 111 2222');
+    expect(tooltip).not.toHaveTextContent('Mapped field values');
     expect(tooltip).toHaveTextContent('Phone has an invalid format');
     expect(tooltip).not.toHaveTextContent(/null|undefined/i);
   });
 
-  it('displays multiple source records when they are present in the row payload', async () => {
+  it('does not expose source payload values in the tooltip', async () => {
     renderReason({
       id: 'record-duplicates',
       action: 'skipped',
@@ -145,9 +146,9 @@ describe('RecordReason', () => {
 
     const tooltip = await screen.findByRole('tooltip');
     expect(tooltip).toHaveTextContent('source-5001');
-    expect(tooltip).toHaveTextContent('source-5002');
-    expect(tooltip).toHaveTextContent('first@example.com');
-    expect(tooltip).toHaveTextContent('second@example.com');
+    expect(tooltip).not.toHaveTextContent('source-5002');
+    expect(tooltip).not.toHaveTextContent('first@example.com');
+    expect(tooltip).not.toHaveTextContent('second@example.com');
     expect(tooltip).toHaveTextContent('hubspot-9001');
   });
 
