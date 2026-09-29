@@ -49,6 +49,12 @@ const overviewFixture: PlatformOverviewResponse = {
       createdAt: new Date().toISOString(),
     },
   ],
+  systemHealth: {
+    processUptimeSeconds: 3600,
+    memoryHeapUsedMb: 128,
+    memoryHeapTotalMb: 256,
+    redisPingMs: 3,
+  },
 };
 
 const mocks = vi.hoisted(() => ({
