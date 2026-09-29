@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { useDialogCloseGuard } from '@/hooks/useDialogCloseGuard';
+import { cn } from '@/lib/utils';
 
 interface FormDialogProps {
   open: boolean;
@@ -20,6 +21,8 @@ interface FormDialogProps {
   title: string;
   description?: string;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
+  /** Tighter spacing without header/footer dividers for brief confirmations. */
+  compact?: boolean;
   children: React.ReactNode;
   // Function form receives requestClose, the same close handler used by the
   // header X button — wire footer Cancel buttons to it (instead of an onClose
@@ -52,6 +55,7 @@ export default function FormDialog({
   title,
   description,
   size = 'md',
+  compact = false,
   children,
   footer,
   currentStep,
@@ -83,7 +87,12 @@ export default function FormDialog({
           if (preventOutsideClose) e.preventDefault();
         }}
       >
-        <DialogHeader className="shrink-0 flex-row items-center justify-between gap-4 border-b px-6 py-4">
+        <DialogHeader
+          className={cn(
+            'shrink-0 flex-row items-center justify-between gap-4',
+            compact ? 'px-5 pt-5 pb-1' : 'border-b px-6 py-4',
+          )}
+        >
           {hasFullStepper ? (
             <WizardStepHeader
               title={title}
@@ -112,7 +121,10 @@ export default function FormDialog({
               <Button
                 variant="ghost"
                 size="icon-sm"
-                className="bg-secondary shrink-0"
+                className={cn(
+                  'shrink-0',
+                  compact ? 'bg-transparent' : 'bg-secondary',
+                )}
                 onClick={requestClose}
               >
                 <XIcon />
@@ -122,12 +134,22 @@ export default function FormDialog({
           )}
         </DialogHeader>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
+        <div
+          className={cn(
+            'min-h-0 flex-1 overflow-y-auto',
+            compact ? 'px-5 py-2' : 'px-6 py-6',
+          )}
+        >
           {children}
         </div>
 
         {footer && (
-          <DialogFooter className="shrink-0 border-t px-6 py-4">
+          <DialogFooter
+            className={cn(
+              'shrink-0',
+              compact ? 'px-5 pt-2 pb-5' : 'border-t px-6 py-4',
+            )}
+          >
             {typeof footer === 'function' ? footer(requestClose) : footer}
           </DialogFooter>
         )}

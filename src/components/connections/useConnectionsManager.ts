@@ -207,8 +207,9 @@ export function useConnectionsManager({
   };
 
   const envOf = (c: ExtConnection) => c.environment ?? 'production';
-  const isReal = (c: ExtConnection) =>
-    c.status === 'connected' || c.status === 'error' || c.accountName;
+  // A saved connection can remain disconnected when the verification request
+  // fails before the server has a chance to mark it as an error.
+  const isReal = (c: ExtConnection) => Boolean(c.id);
   const inActiveEnv = (c: ExtConnection) => envOf(c) === activeEnv;
 
   const realConnections = connections.filter(isReal).filter(inActiveEnv);
@@ -258,6 +259,7 @@ export function useConnectionsManager({
     makeSlotConn,
     openConnect,
     handleRowUpdated,
+    refreshConnections: () => loadConnections(true),
     activeConn,
     showMethodModal,
     showManualModal,

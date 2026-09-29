@@ -7,7 +7,7 @@ import {
   RotateCcw,
   Search,
 } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { jobsApi } from '@/api/jobs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -109,8 +109,15 @@ export default function SyncAllTab({
   const [checkError, setCheckError] = useState(false);
   const [attempted, setAttempted] = useState(false);
 
-  const startDateTime = combineDateTime(startDate, startTime);
-  const endDateTime = combineDateTime(endDate, endTime);
+  // Keep these values stable while the parent renders the action footer.
+  const startDateTime = useMemo(
+    () => combineDateTime(startDate, startTime),
+    [startDate, startTime],
+  );
+  const endDateTime = useMemo(
+    () => combineDateTime(endDate, endTime),
+    [endDate, endTime],
+  );
 
   const handleStartDateChange = (d?: Date) => {
     setStartDate(d);

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import CredentialsModal from './CredentialsModal';
 import { connectionsApi } from '@/api/connections';
+import type { Connection } from '@/types';
 
 vi.mock('@/api/connections', () => ({
   connectionsApi: {
@@ -67,7 +68,7 @@ describe('CredentialsModal In-Modal Verification', () => {
     });
 
     // Click verify
-    fireEvent.click(screen.getByRole('button', { name: /test connection/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^submit$/i }));
 
     // Verify modal does NOT close
     await waitFor(() => {
@@ -95,10 +96,64 @@ describe('CredentialsModal In-Modal Verification', () => {
     expect(secretInput).toHaveAttribute('aria-invalid', 'false');
     expect(screen.queryByText('Check Client Secret value')).not.toBeInTheDocument();
 
-    // Submit button shows Retry Test Connection
+    // The same form remains available for a correction and retry.
     expect(
-      screen.getByRole('button', { name: /retry test connection/i }),
+      screen.getByRole('button', { name: /retry verification/i }),
     ).toBeInTheDocument();
+  });
+
+  it('keeps the credential form visible through validation and server verification', async () => {
+    let finishSave!: (value: Connection) => void;
+    let finishTest!: (value: { success: boolean; message: string }) => void;
+    vi.mocked(connectionsApi.createConnection).mockReturnValue(
+      new Promise<Connection>((resolve) => { finishSave = resolve; }),
+    );
+    vi.mocked(connectionsApi.testConnection).mockReturnValue(
+      new Promise((resolve) => { finishTest = resolve; }),
+    );
+
+    render(
+      <CredentialsModal
+        projectId="proj-1"
+        conn={{ platformId: 'hubspot', connectionType: 'destination', environment: 'sandbox' }}
+        onClose={onCloseMock}
+        onSaved={onSavedMock}
+      />,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText('Enter your HubSpot access token'), {
+      target: { value: 'invalid-token' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /^submit$/i }));
+
+    expect(await screen.findByRole('button', { name: /validating/i })).toBeDisabled();
+    expect(screen.getByPlaceholderText('Enter your HubSpot access token')).toHaveValue('invalid-token');
+
+    finishSave({ id: 'conn-1' } as Connection);
+    expect(await screen.findByRole('button', { name: /verifying with server/i })).toBeDisabled();
+    expect(screen.getByPlaceholderText('Enter your HubSpot access token')).toHaveValue('invalid-token');
+
+    finishTest({ success: false, message: 'Token rejected by HubSpot' });
+    expect(await screen.findByText('Token rejected by HubSpot')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /retry verification/i })).toBeEnabled();
+    expect(onCloseMock).not.toHaveBeenCalled();
+  });
+
+  it('shows a retained connection error when Fix reopens the form', async () => {
+    render(
+      <CredentialsModal
+        projectId="proj-1"
+        conn={{ id: 'conn-1', platformId: 'servicetitan', connectionType: 'source', environment: 'sandbox' }}
+        initialError="Invalid client key for ServiceTitan API"
+        onClose={onCloseMock}
+        onSaved={onSavedMock}
+      />,
+    );
+
+    expect(screen.getByText('Invalid client key for ServiceTitan API')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /retry verification/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }));
+    expect(onCloseMock).toHaveBeenCalledTimes(1);
   });
 
   it('marks ONLY client ID red when error is invalid_client, leaving other fields clean', async () => {
@@ -136,7 +191,7 @@ describe('CredentialsModal In-Modal Verification', () => {
       target: { value: '1293100835' },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /test connection/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^submit$/i }));
 
     expect(await screen.findByText('Verification Failed')).toBeInTheDocument();
     expect(screen.getByText('ServiceTitan auth error: invalid_client')).toBeInTheDocument();
@@ -161,7 +216,7 @@ describe('CredentialsModal In-Modal Verification', () => {
     expect(tenantInput).toHaveAttribute('aria-invalid', 'false');
   });
 
-  it('shows success screen on verification, and closes when user clicks Done', async () => {
+  it('closes the source form after verification without showing the pair popup', async () => {
     vi.mocked(connectionsApi.createConnection).mockResolvedValue({
       id: 'conn-ok-1',
       projectId: 'proj-1',
@@ -196,22 +251,13 @@ describe('CredentialsModal In-Modal Verification', () => {
       target: { value: '12345' },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /test connection/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^submit$/i }));
 
-    // On 1st connection, popup is suppressed; button shows Connected and Close is available
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /connected/i })).toBeInTheDocument();
+      expect(onCloseMock).toHaveBeenCalledTimes(1);
     });
-
-    // Modal has NOT closed prematurely
-    expect(onCloseMock).not.toHaveBeenCalled();
-    expect(onSavedMock).toHaveBeenCalled();
-
-    // User closes modal manually
-    const closeBtn = screen.getAllByRole('button', { name: /close/i })[0];
-    fireEvent.click(closeBtn);
-
-    expect(onCloseMock).toHaveBeenCalled();
+    expect(onSavedMock).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/connections ready/i)).not.toBeInTheDocument();
   });
 
   it('verifies HubSpot destination credentials successfully on first connection', async () => {
@@ -242,24 +288,17 @@ describe('CredentialsModal In-Modal Verification', () => {
       target: { value: 'pat-eu1-12345678-abcd' },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /test connection/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^submit$/i }));
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /connected/i })).toBeInTheDocument();
+      expect(onCloseMock).toHaveBeenCalledTimes(1);
     });
-
-    // Modal has not closed prematurely
-    expect(onCloseMock).not.toHaveBeenCalled();
-    expect(onSavedMock).toHaveBeenCalled();
-
-    // User closes manually
-    const closeBtn = screen.getAllByRole('button', { name: /close/i })[0];
-    fireEvent.click(closeBtn);
-
-    expect(onCloseMock).toHaveBeenCalled();
+    expect(onSavedMock).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/connections ready/i)).not.toBeInTheDocument();
   });
 
-  it('displays project active celebration and Continue CTA when willCompleteBoth is true', async () => {
+  it('shows the environment-specific pair confirmation and creates a sync flow on request', async () => {
+    const onContinueMock = vi.fn();
     vi.mocked(connectionsApi.createConnection).mockResolvedValue({
       id: 'conn-hubspot-complete',
       projectId: 'proj-1',
@@ -280,6 +319,7 @@ describe('CredentialsModal In-Modal Verification', () => {
         willCompleteBoth={true}
         onClose={onCloseMock}
         onSaved={onSavedMock}
+        onContinue={onContinueMock}
       />,
     );
 
@@ -287,21 +327,25 @@ describe('CredentialsModal In-Modal Verification', () => {
       target: { value: 'pat-eu1-12345678-abcd' },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /test connection/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^submit$/i }));
 
+    expect(await screen.findByText('Sandbox connections ready')).toBeInTheDocument();
     expect(
-      (await screen.findAllByText(/HubSpot Connected · Connections Ready!/i)).length,
-    ).toBeGreaterThanOrEqual(1);
-    expect(
-      screen.getByText('Both platforms are connected and verified. Your project is active and ready for sync flows.'),
+      screen.getByText('Both connections verified. Your project activates automatically; create a sync flow next.'),
     ).toBeInTheDocument();
 
-    const continueBtn = screen.getByRole('button', { name: /^continue$/i });
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveAttribute('data-size', 'xs');
+    expect(dialog.querySelector('[data-slot="dialog-header"]')).not.toHaveClass('border-b');
+    expect(dialog.querySelector('[data-slot="dialog-footer"]')).not.toHaveClass('border-t');
+
+    const continueBtn = screen.getByRole('button', { name: /create sync flow/i });
     expect(continueBtn).toBeInTheDocument();
     fireEvent.click(continueBtn);
 
-    expect(onCloseMock).toHaveBeenCalled();
-    expect(onSavedMock).toHaveBeenCalled();
+    expect(onCloseMock).toHaveBeenCalledTimes(1);
+    expect(onSavedMock).toHaveBeenCalledTimes(1);
+    expect(onContinueMock).toHaveBeenCalledTimes(1);
   });
 
   it('renders method selection view for new OAuth-capable platform and transitions to form on Manual Setup', async () => {
@@ -438,4 +482,3 @@ describe('CredentialsModal In-Modal Verification', () => {
     ).not.toBeInTheDocument();
   });
 });
-

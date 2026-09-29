@@ -30,6 +30,9 @@ export default function OverviewTab() {
       hasBothConnections,
       hasJobs: jobs.length > 0,
       jobs,
+      runStatuses: logs
+        .filter((log) => jobs.some((job) => job.id === log.jobId))
+        .map((log) => log.metadata?.status),
     }) === 'complete';
   const isProductionReady = Boolean(envFullyConnected?.('production'));
 

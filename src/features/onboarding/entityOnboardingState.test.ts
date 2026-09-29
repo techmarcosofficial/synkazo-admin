@@ -67,13 +67,13 @@ describe('selectProjectOnboardingStage', () => {
     ).toBe('create_first_job');
   });
 
-  it('completes per-project onboarding after the first job exists (backwards compatible)', () => {
+  it('keeps setup on configuration when a job exists but has not run', () => {
     expect(
       selectProjectOnboardingStage({
         hasBothConnections: true,
         hasJobs: true,
       }),
-    ).toBe('complete');
+    ).toBe('configure_job');
   });
 
   it('keeps setup in configure_job when existing jobs are drafts or unactivated', () => {
@@ -86,20 +86,47 @@ describe('selectProjectOnboardingStage', () => {
     ).toBe('configure_job');
   });
 
-  it('completes onboarding when a job has synced records or active schedule', () => {
+  it('does not complete onboarding for an active job before its first successful run', () => {
     expect(
       selectProjectOnboardingStage({
         hasBothConnections: true,
         hasJobs: true,
         jobs: [{ status: 'active', syncEnabled: true }],
       }),
-    ).toBe('complete');
+    ).toBe('configure_job');
+  });
 
+  it('keeps testing current when the latest activity is only a partial run', () => {
     expect(
       selectProjectOnboardingStage({
         hasBothConnections: true,
         hasJobs: true,
-        jobs: [{ status: 'idle', lastSyncedAt: '2026-09-26T12:00:00Z' }],
+        jobs: [{ status: 'error', lastSyncedAt: '2026-09-26T12:00:00Z' }],
+        runStatuses: ['partial'],
+      }),
+    ).toBe('configure_job');
+  });
+
+  it('graduates after a clean run even when later activity has errors', () => {
+    expect(
+      selectProjectOnboardingStage({
+        hasBothConnections: true,
+        hasJobs: true,
+        jobs: [{ status: 'error', lastSyncedAt: '2026-09-26T12:00:00Z' }],
+        runStatuses: ['partial', 'success'],
+      }),
+    ).toBe('complete');
+  });
+
+  it('completes onboarding after any job has a successful run', () => {
+    expect(
+      selectProjectOnboardingStage({
+        hasBothConnections: true,
+        hasJobs: true,
+        jobs: [
+          { status: 'draft' },
+          { status: 'idle', lastSyncedAt: '2026-09-26T12:00:00Z' },
+        ],
       }),
     ).toBe('complete');
   });
@@ -110,7 +137,7 @@ describe('selectProjectOnboardingStage', () => {
         hasBothConnections: false,
         hasJobs: true,
       }),
-    ).toBe('complete');
+    ).toBe('connect_platforms');
 
     expect(
       selectProjectOnboardingStage({
@@ -134,7 +161,14 @@ describe('selectProjectOnboardingStage', () => {
       selectProjectOnboardingStage({
         hasBothConnections: false,
         hasJobs: true,
-        jobs: [{ status: 'active', isEnabled: false, lastSyncedAt: null, recordsSynced: 0 }],
+        jobs: [
+          {
+            status: 'active',
+            isEnabled: false,
+            lastSyncedAt: null,
+            recordsSynced: 0,
+          },
+        ],
       }),
     ).toBe('connect_platforms');
   });

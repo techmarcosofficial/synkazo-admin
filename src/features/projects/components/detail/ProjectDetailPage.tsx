@@ -125,9 +125,6 @@ export default function ProjectDetailPage() {
             try {
               sessionStorage.removeItem(prevStatusKey);
             } catch {}
-            toast.success(
-              'Both platforms connected! Project is now active and ready for sync flows.',
-            );
           })
           .catch(() => {})
           .finally(() => {
@@ -154,15 +151,6 @@ export default function ProjectDetailPage() {
             try {
               sessionStorage.removeItem(prevStatusKey);
             } catch {}
-            if (targetStatus === 'active') {
-              toast.success(
-                'Connections restored! Project is active and ready for sync flows.',
-              );
-            } else {
-              toast.success(
-                'Connections restored! Project returned to draft status.',
-              );
-            }
           })
           .catch(() => {})
           .finally(() => {
@@ -273,7 +261,7 @@ export default function ProjectDetailPage() {
       <Tabs
         value={activeTab}
         onValueChange={(v) => handleTabChange(v as ProjectDetailTabId)}
-        className="gap-0"
+        className="project-flow-guidance gap-0"
       >
         <StickyDetailHeader
           backLabel={backLabel}

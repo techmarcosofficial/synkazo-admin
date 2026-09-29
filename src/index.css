@@ -664,3 +664,23 @@
   }
 }
 
+/* Point from the project setup step to the actions already on the flow list. */
+.project-flow-guidance:has([data-project-configure-step="true"]:is(:hover, :focus-visible))
+  [data-flow-next-action="true"] {
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 40%, transparent);
+}
+
+.project-flow-guidance:has([data-project-configure-step="true"]:is(:hover, :focus-visible))
+  [data-flow-next-action="true"] [data-icon="inline-end"] {
+  transform: translateX(3px);
+}
+
+[data-flow-next-action="true"] [data-icon="inline-end"] {
+  transition: transform 180ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-flow-next-action="true"] [data-icon="inline-end"] {
+    transition: none;
+  }
+}

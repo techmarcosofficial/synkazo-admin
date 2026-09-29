@@ -8,7 +8,6 @@ import {
   ChevronDown,
   Clock,
   Database,
-  Info,
   Lock,
   Plus,
   Timer,
@@ -207,73 +206,31 @@ function SyncJobCard({
     },
   ];
 
-  const configItems = isNeedsMapping
-    ? {
-        next: {
-          label: 'Next step',
-          value: 'Match fields',
-          description: 'Choose what data moves',
-          icon: Database,
-        },
-        reason: {
-          label: 'Why it matters',
-          value: 'Avoid duplicates',
-          description: 'Choose an identifier',
-          icon: CheckCircle2,
-        },
-      }
-    : detailQuery.data?.pipelineRequired && !detailQuery.data.pipelineConfigured
-      ? {
-          next: {
-            label: 'Next step',
-            value: 'Choose pipeline',
-            description: 'Required for this flow',
-            icon: ArrowRight,
-          },
-          reason: {
-            label: 'Why it matters',
-            value: 'Route records',
-            description: 'Send data to the right place',
-            icon: Database,
-          },
-        }
-      : {
-          next: {
-            label: 'Next step',
-            value: 'Review first run',
-            description: 'Open flow details',
-            icon: ArrowRight,
-          },
-          reason: {
-            label: 'Why it matters',
-            value: 'Confirm results',
-            description: 'Check data before automation',
-            icon: CheckCircle2,
-          },
-        };
-
-  let guidanceMessage: React.ReactNode = null;
+  let guidanceMessage: React.ReactNode;
   if (isNeedsMapping) {
     guidanceMessage = (
       <>
-        Field mapping is required before synchronization can run. Click{' '}
+        Choose which information moves between platforms so it arrives in the
+        right place. Select{' '}
         <span className="font-semibold text-foreground">Configure Mapping</span>{' '}
         above to begin.
       </>
     );
   } else if (detailQuery.data?.pipelineRequired && !detailQuery.data.pipelineConfigured) {
     guidanceMessage =
-      'Choose the required destination pipeline in the job details before the first run.';
+      'Choose where this flow should place data in the destination. Open the flow to finish setup before syncing.';
   } else if (lifecycle.statusKey === 'ready_to_test') {
     guidanceMessage = (
       <>
-        Configuration is ready. Click{' '}
+        Everything is set for a first test. Select{' '}
         <span className="font-semibold text-foreground">
           Test &amp; Activate
         </span>{' '}
-        above to run your first test sync.
+        above to check the result.
       </>
     );
+  } else {
+    guidanceMessage = 'Open this flow to finish setup and run a first test.';
   }
 
   const handleRowClick = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -329,6 +286,9 @@ function SyncJobCard({
               asChild
               variant={lifecycle.actionVariant}
               size="sm"
+              data-flow-next-action={
+                lifecycle.isActionable ? 'true' : undefined
+              }
               className={cn(
                 lifecycle.actionVariant === 'default' &&
                   'font-medium shadow-xs',
@@ -369,8 +329,19 @@ function SyncJobCard({
         </div>
 
         <CollapsibleContent>
-          <div className="bg-muted space-y-2 border-t py-2 px-1.5">
-            {detailQuery.isLoading ? (
+          <div
+            className={cn(
+              'border-t',
+              hasAnyRun
+                ? 'bg-muted space-y-2 px-1.5 py-2'
+                : 'bg-muted/30 px-4 py-2',
+            )}
+          >
+            {!hasAnyRun ? (
+              <p className="text-muted-foreground text-xs leading-normal">
+                {guidanceMessage}
+              </p>
+            ) : detailQuery.isLoading ? (
               <div className="grid grid-cols-2 md:grid-cols-4">
                 {Array.from({ length: 4 }).map((_, index) => (
                   <div key={index} className={metricCellClass(index)}>
@@ -386,38 +357,6 @@ function SyncJobCard({
               <p className="text-muted-foreground px-4 text-sm" role="status">
                 Job setup details are temporarily unavailable.
               </p>
-            ) : !hasAnyRun ? (
-              <>
-                <div className="grid grid-cols-2">
-                  {[configItems.next, configItems.reason].map((item, index) => (
-                    <div key={item.label} className={metricCellClass(index)}>
-                      <span className="bg-card text-card-foreground flex size-10 shrink-0 items-center justify-center rounded-xl">
-                        <item.icon className="size-4.5" aria-hidden="true" />
-                      </span>
-                      <div className="min-w-0">
-                        <div className="text-foreground text-sm font-bold leading-tight sm:text-lg">
-                          {item.value}
-                        </div>
-                        <div className="text-muted-foreground text-xs font-medium">
-                          {item.label}
-                        </div>
-                        <div className="text-muted-foreground text-[11px] leading-tight">
-                          {item.description}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {guidanceMessage && (
-                  <div className="border-border/50 text-muted-foreground flex items-center gap-2 border-t px-4 py-2 text-xs">
-                    <Info
-                      className="text-muted-foreground size-3.5 shrink-0"
-                      aria-hidden="true"
-                    />
-                    <span>{guidanceMessage}</span>
-                  </div>
-                )}
-              </>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-4">
                 {metrics.map((metric, index) => (

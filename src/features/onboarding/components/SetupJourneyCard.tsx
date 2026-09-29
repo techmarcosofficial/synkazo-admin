@@ -12,6 +12,7 @@ export interface SetupJourneyStep {
   status: SetupJourneyStepStatus;
   optional?: boolean;
   onSelect?: () => void;
+  guidesFlowAction?: boolean;
 }
 
 interface SetupJourneyCardProps {
@@ -19,6 +20,7 @@ interface SetupJourneyCardProps {
   title: string;
   description: string;
   steps: SetupJourneyStep[];
+  compact?: boolean;
   actionLabel?: string;
   onContinue?: () => void;
   secondaryAction?: {
@@ -32,6 +34,7 @@ export default function SetupJourneyCard({
   title,
   description,
   steps,
+  compact = false,
   actionLabel = 'Continue setup',
   onContinue,
   secondaryAction,
@@ -41,8 +44,9 @@ export default function SetupJourneyCard({
     (step) => step.status === 'complete',
   ).length;
 
-  // ≤ 2 steps → compact 3-zone layout. > 2 steps → full-width grid (Job Setup).
-  const isCompact = steps.length <= 2;
+  // Project setup opts into this layout for three steps; Job Setup keeps its grid.
+  const isCompact = compact || steps.length <= 2;
+  const isThreeStepCompact = compact && steps.length === 3;
 
   return (
     <Card className="gap-0 overflow-hidden rounded-3xl py-0 shadow-xs">
@@ -50,16 +54,31 @@ export default function SetupJourneyCard({
         className={cn('px-3 py-3 sm:px-4', !isCompact && 'space-y-3')}
       >
         {isCompact ? (
-          /* ── Compact 3-zone layout (≤ 2 steps — Project Setup) ───────── */
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-
+          /* ── Compact 3-zone layout (Project Setup) ───────── */
+          <div
+            className={cn(
+              'flex flex-col gap-2',
+              isThreeStepCompact
+                ? 'xl:flex-row xl:items-center xl:gap-3'
+                : 'sm:flex-row sm:items-center sm:gap-3',
+            )}
+          >
             {/* Zone 1 — Intro */}
-            <div className="min-w-0 sm:w-[26%] sm:shrink-0">
+            <div
+              className={cn(
+                'min-w-0',
+                isThreeStepCompact
+                  ? 'xl:w-[22%] xl:shrink-0'
+                  : 'sm:w-[26%] sm:shrink-0',
+              )}
+            >
               <div className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
                 {eyebrow}
               </div>
-              <h2 className="text-foreground text-sm font-semibold tracking-tight">{title}</h2>
-              <p className="text-muted-foreground mt-0.5 text-xs font-normal leading-normal">
+              <h2 className="text-foreground text-sm font-semibold tracking-tight">
+                {title}
+              </h2>
+              <p className="text-muted-foreground mt-0.5 text-xs leading-normal font-normal">
                 {description}
               </p>
             </div>
@@ -88,14 +107,21 @@ export default function SetupJourneyCard({
                   <li
                     key={step.title}
                     aria-current={isCurrent ? 'step' : undefined}
-                    className="relative min-w-0 flex-1"
+                    className={cn(
+                      'relative min-w-0 h-auto flex-1',
+                      isThreeStepCompact && 'flex flex-col',
+                    )}
                   >
                     <button
                       type="button"
                       disabled={!canSelect}
                       onClick={step.onSelect}
+                      data-project-configure-step={
+                        step.guidesFlowAction ? 'true' : undefined
+                      }
                       className={cn(
-                        'flex w-full flex-col gap-1 rounded-2xl border px-3 py-2 text-left transition-colors',
+                        'flex w-full flex-col rounded-2xl border px-3 py-2 text-left transition-colors',
+                        isThreeStepCompact && 'flex-1',
                         isComplete &&
                           'border-success/30 bg-success/5 hover:bg-success/10',
                         isCurrent &&
@@ -110,7 +136,8 @@ export default function SetupJourneyCard({
                         <span
                           className={cn(
                             'flex size-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold',
-                            isComplete && 'border-success bg-success text-white',
+                            isComplete &&
+                              'border-success bg-success text-white',
                             isCurrent &&
                               'border-primary bg-primary text-primary-foreground',
                             isUpcoming &&
@@ -136,6 +163,7 @@ export default function SetupJourneyCard({
                         <span
                           className={cn(
                             'shrink-0 text-xs font-medium whitespace-nowrap',
+                            isThreeStepCompact && 'xl:sr-only 2xl:not-sr-only',
                             isComplete && 'text-success',
                             isCurrent && 'text-primary',
                             isUpcoming && 'text-muted-foreground',
@@ -166,13 +194,17 @@ export default function SetupJourneyCard({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                      className="text-muted-foreground hover:text-foreground h-7 text-xs"
                       onClick={secondaryAction.onClick}
                     >
                       {secondaryAction.label}
                     </Button>
                   )}
-                  <Button size="sm" className="h-7 text-xs" onClick={onContinue}>
+                  <Button
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={onContinue}
+                  >
                     {actionLabel}
                     <ArrowRight data-icon="inline-end" aria-hidden="true" />
                   </Button>
@@ -193,7 +225,7 @@ export default function SetupJourneyCard({
                     {title}
                   </h2>
                 </div>
-                <p className="text-muted-foreground mt-0.5 max-w-3xl text-xs font-normal leading-normal">
+                <p className="text-muted-foreground mt-0.5 max-w-3xl text-xs leading-normal font-normal">
                   {description}
                 </p>
               </div>
@@ -207,7 +239,7 @@ export default function SetupJourneyCard({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 text-xs text-muted-foreground hover:text-foreground"
+                      className="text-muted-foreground hover:text-foreground h-8 text-xs"
                       onClick={secondaryAction.onClick}
                     >
                       {secondaryAction.label}
@@ -271,7 +303,8 @@ export default function SetupJourneyCard({
                         <span
                           className={cn(
                             'flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-bold',
-                            isComplete && 'border-success bg-success text-white',
+                            isComplete &&
+                              'border-success bg-success text-white',
                             isCurrent &&
                               'border-primary bg-primary text-primary-foreground',
                             isUpcoming &&

@@ -11,7 +11,7 @@ export default function ConnectionsTab() {
     projectActiveEnv,
     connReloadKey,
     refetch,
-    handleTabChange,
+    onCreateSyncRule,
   } = useProjectDetailContext();
 
   return (
@@ -25,7 +25,7 @@ export default function ConnectionsTab() {
           setConnectionsCache(conns as ConnectionExt[])
         }
         onSaved={refetch}
-        onContinue={() => handleTabChange('sync-rules')}
+        onContinue={onCreateSyncRule}
         projectActiveEnv={projectActiveEnv}
         reloadKey={connReloadKey}
       />

@@ -13,10 +13,7 @@ export function selectContextualSetupAction(input: {
 }
 
 export type ProjectOnboardingStage =
-  | 'connect_platforms'
-  | 'create_first_job'
-  | 'configure_job'
-  | 'complete';
+  'connect_platforms' | 'create_first_job' | 'configure_job' | 'complete';
 
 export interface ProjectOnboardingStageJob {
   status?: string;
@@ -24,54 +21,33 @@ export interface ProjectOnboardingStageJob {
   isEnabled?: boolean;
   lastSyncedAt?: string | null;
   recordsSynced?: number;
-  cronExpression?: string | null;
-  intervalMinutes?: number | null;
-  scheduleTimes?: string[] | null;
 }
 
 export function selectProjectOnboardingStage(input: {
   hasBothConnections: boolean;
   hasJobs: boolean;
   jobs?: ProjectOnboardingStageJob[];
+  runStatuses?: Array<string | undefined>;
 }): ProjectOnboardingStage {
+  // Recent activity distinguishes a clean run from a partial one. Older
+  // projects without retained run activity can still use the job watermark.
+  const loggedRuns = input.runStatuses?.filter(Boolean) ?? [];
+  const hasCompletedRun =
+    loggedRuns.length > 0
+      ? loggedRuns.includes('success')
+      : (input.jobs?.some(
+          (job) => Boolean(job.lastSyncedAt) || (job.recordsSynced ?? 0) > 0,
+        ) ?? false);
+
   if (!input.hasBothConnections) {
-    const hasPastSyncedJob =
-      input.jobs?.some(
-        (j) =>
-          Boolean(j.lastSyncedAt) ||
-          (j.recordsSynced != null && j.recordsSynced > 0),
-      ) ?? false;
-
-    if (hasPastSyncedJob || (!input.jobs && input.hasJobs)) {
-      return 'complete';
-    }
-
-    return 'connect_platforms';
+    return hasCompletedRun ? 'complete' : 'connect_platforms';
   }
 
-  if (input.jobs && input.jobs.length > 0) {
-    const hasActiveOrCompletedJob = input.jobs.some((j) => {
-      if (j.status === 'draft') return false;
-      const hasSynced =
-        Boolean(j.lastSyncedAt) ||
-        (j.recordsSynced != null && j.recordsSynced > 0);
-      const isConfiguredAndActive =
-        (j.status === 'active' || j.syncEnabled || j.isEnabled) &&
-        (Boolean(j.cronExpression) ||
-          Boolean(j.intervalMinutes) ||
-          Boolean(j.scheduleTimes?.length) ||
-          j.syncEnabled ||
-          j.isEnabled);
-      return hasSynced || isConfiguredAndActive;
-    });
+  if (hasCompletedRun) return 'complete';
 
-    if (hasActiveOrCompletedJob) return 'complete';
-    return 'configure_job';
-  }
-
-  // Backward-compatible fallback when jobs list is not provided
-  if (input.hasJobs) return 'complete';
-  return 'create_first_job';
+  return input.hasJobs || Boolean(input.jobs?.length)
+    ? 'configure_job'
+    : 'create_first_job';
 }
 
 export type JobOnboardingStage =

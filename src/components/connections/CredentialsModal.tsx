@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
 
 import { CRED_SCHEMAS } from './platformMeta';
 
 import { connectionsApi } from '@/api/connections';
-import { SynkazoMark } from '@/components/branding/SynkazoMark';
 import FormDialog from '@/components/form/FormDialog';
 import { PlatformIcon } from '@/components/platform';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { DialogDescription } from '@/components/ui/dialog';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
@@ -40,7 +39,7 @@ interface ConnectionPayload {
   status?: string;
 }
 
-export type VerifyStep = 'idle' | 'testing' | 'validating' | 'connected';
+type VerifyStep = 'idle' | 'validating' | 'verifying' | 'connected';
 
 interface CredentialsModalProps {
   projectId: string;
@@ -52,22 +51,16 @@ interface CredentialsModalProps {
   };
   syncMode?: 'one_way' | 'two_way' | null;
   onOAuth?: () => void;
-  onSaved: () => void;
+  onSaved: () => void | Promise<void>;
   onClose: () => void;
   onContinue?: () => void;
   willCompleteBoth?: boolean;
-  initialFormValues?: Record<string, string>;
   initialError?: string | null;
-  onVerify?: (payload: {
-    credentials: Record<string, string>;
-    formValues: Record<string, string>;
-    isEdit: boolean;
-  }) => Promise<{ success: boolean; message?: string }>;
-  onStepChange?: (step: VerifyStep) => void;
-  onFormValuesChange?: (values: Record<string, string>) => void;
+  onVerificationError?: (message: string) => void;
+  onTestingChange?: (testing: boolean) => void;
 }
 
-type ModalPhase = 'method' | 'form' | 'verifying' | 'success';
+type ModalPhase = 'method' | 'form' | 'success';
 
 export default function CredentialsModal({
   projectId,
@@ -78,11 +71,9 @@ export default function CredentialsModal({
   onClose,
   onContinue,
   willCompleteBoth = false,
-  initialFormValues,
   initialError = null,
-  onVerify,
-  onStepChange,
-  onFormValuesChange,
+  onVerificationError,
+  onTestingChange,
 }: CredentialsModalProps) {
   const platformId = conn.platformId ?? 'servicetitan';
   const schema = CRED_SCHEMAS[platformId] ?? CRED_SCHEMAS.servicetitan;
@@ -94,18 +85,17 @@ export default function CredentialsModal({
   const initialPhase: ModalPhase = !isEdit && supportsOAuth ? 'method' : 'form';
   const [phase, setPhase] = useState<ModalPhase>(initialPhase);
   const [verifyStep, setVerifyStep] = useState<VerifyStep>('idle');
-  const [form, setForm] = useState<Record<string, string>>(() => ({
-    ...Object.fromEntries(schema.fields.map((f) => [f.key, ''])),
-    ...(initialFormValues ?? {}),
-  }));
+  const [form, setForm] = useState<Record<string, string>>(() =>
+    Object.fromEntries(schema.fields.map((f) => [f.key, ''])),
+  );
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [loading, setLoading] = useState(false);
-  const [previewLoading, setPreviewLoading] = useState(isEdit && !initialFormValues);
+  const [previewLoading, setPreviewLoading] = useState(isEdit);
   const [verifyError, setVerifyError] = useState<string | null>(initialError);
   const [currentConnId, setCurrentConnId] = useState<string | undefined>(conn?.id);
 
   useEffect(() => {
-    if (!isEdit || initialFormValues) return;
+    if (!isEdit) return;
     connectionsApi
       .getCredentialsPreview(projectId, conn.id!)
       .then((preview) => setForm((f) => ({ ...f, ...preview })))
@@ -114,11 +104,7 @@ export default function CredentialsModal({
   }, []);
 
   const setField = (key: string, val: string) => {
-    setForm((f) => {
-      const next = { ...f, [key]: val };
-      onFormValuesChange?.(next);
-      return next;
-    });
+    setForm((f) => ({ ...f, [key]: val }));
     setErrors((e) => ({ ...e, [key]: undefined }));
     setVerifyError(null);
   };
@@ -224,10 +210,11 @@ export default function CredentialsModal({
   };
 
   const handleVerify = async () => {
-    if (!validate()) return;
+    if (loading || !validate()) return;
     setLoading(true);
     setVerifyError(null);
-    setPhase('verifying');
+    setVerifyStep('validating');
+    onTestingChange?.(true);
 
     try {
       const credentials: Record<string, string> = {};
@@ -237,36 +224,6 @@ export default function CredentialsModal({
         // when blank so the backend keeps the existing stored value.
         if (val || f.requiredAlways) credentials[f.key] = val;
       });
-
-      if (onVerify) {
-        setVerifyStep('testing');
-        onStepChange?.('testing');
-        const res = await onVerify({ credentials, formValues: form, isEdit });
-        if (res.success) {
-          setVerifyStep('connected');
-          onStepChange?.('connected');
-          toast.success(`${schema.title} credentials verified`);
-          onSaved?.();
-
-          if (willCompleteBoth) {
-            setPhase('success');
-          } else {
-            setPhase('form');
-          }
-        } else {
-          const errorMsg =
-            res.message ||
-            'Invalid credentials — please check the values and try again.';
-          setVerifyError(errorMsg);
-          setVerifyStep('idle');
-          onStepChange?.('idle');
-          setPhase('form');
-        }
-        return;
-      }
-
-      setVerifyStep('testing');
-      onStepChange?.('testing');
 
       const payload: ConnectionPayload = {
         credentials,
@@ -293,59 +250,59 @@ export default function CredentialsModal({
         }
       }
 
-      setVerifyStep('validating');
-      onStepChange?.('validating');
+      if (!connId) {
+        throw new Error('Connection could not be saved. Please try again.');
+      }
+      setVerifyStep('verifying');
 
-      const result = await connectionsApi.testConnection(projectId, connId!);
+      const result = await connectionsApi.testConnection(projectId, connId);
 
       if (result?.success) {
+        await onSaved();
         setVerifyStep('connected');
-        onStepChange?.('connected');
-        toast.success(`${schema.title} credentials verified`);
-        onSaved?.();
-
         if (willCompleteBoth) {
           setPhase('success');
         } else {
-          setPhase('form');
+          onClose();
         }
       } else {
         const errorMsg =
           result?.message ||
           'Invalid credentials — please check the values and try again.';
         setVerifyError(errorMsg);
+        onVerificationError?.(errorMsg);
         setVerifyStep('idle');
-        onStepChange?.('idle');
-        setPhase('form');
       }
     } catch (err) {
-      const e = err as { response?: { data?: { message?: string } } };
+      const e = err as {
+        message?: string;
+        response?: { data?: { message?: string } };
+      };
       const errorMsg =
         e?.response?.data?.message ||
+        e?.message ||
         'Failed to save credentials. Please check your values and try again.';
       setVerifyError(errorMsg);
+      onVerificationError?.(errorMsg);
       setVerifyStep('idle');
-      onStepChange?.('idle');
-      setPhase('form');
     } finally {
       setLoading(false);
+      onTestingChange?.(false);
     }
   };
 
   const handleClose = () => {
+    if (loading) return;
     onClose();
-    if (phase === 'success' || verifyStep === 'connected') {
-      onSaved?.();
-    }
   };
 
   const handleDone = () => {
     onClose();
-    onSaved?.();
     onContinue?.();
   };
 
   const fieldsDisabled = loading || previewLoading;
+  const environmentLabel = conn.environment === 'sandbox' ? 'Sandbox' : 'Production';
 
   return (
     <FormDialog
@@ -353,28 +310,25 @@ export default function CredentialsModal({
       onOpenChange={(open) => !open && handleClose()}
       title={
         phase === 'success'
-          ? `${schema.title} Connected · Connections Ready!`
-          : phase === 'verifying'
-            ? `Verifying ${schema.title} Credentials`
-            : phase === 'method'
-              ? `Connect ${schema.title}`
-              : isEdit
-                ? `Edit ${schema.title} Connection`
-                : `Connect ${schema.title}`
+          ? `${environmentLabel} connections ready`
+          : phase === 'method'
+            ? `Connect ${schema.title}`
+            : isEdit
+              ? `Edit ${schema.title} Connection`
+              : `Connect ${schema.title}`
       }
       description={
         phase === 'success'
-          ? 'Both platforms are connected and verified. Your project is active and ready for sync flows.'
-          : phase === 'verifying'
-            ? 'Testing connection with API'
-            : phase === 'method'
-              ? 'Choose how to authenticate'
-              : isEdit
-                ? 'Update your API credentials'
-                : 'Enter your API credentials'
+          ? undefined
+          : phase === 'method'
+            ? 'Choose how to authenticate'
+            : isEdit
+              ? 'Update your API credentials'
+              : 'Enter your API credentials'
       }
-      size="sm"
-      preventOutsideClose={false}
+      size={phase === 'success' ? 'xs' : 'sm'}
+      compact={phase === 'success'}
+      preventOutsideClose={loading}
       footer={(requestClose) => {
         if (phase === 'method') {
           return (
@@ -393,27 +347,18 @@ export default function CredentialsModal({
             <div className="flex w-full items-center gap-2">
               <Button
                 variant="outline"
+                size="sm"
                 onClick={requestClose}
                 className="flex-1"
               >
                 Close
               </Button>
-              <Button onClick={handleDone} className="flex-1">
-                Continue
-              </Button>
+              {onContinue && (
+                <Button size="sm" onClick={handleDone} className="flex-1">
+                  Create Sync Flow
+                </Button>
+              )}
             </div>
-          );
-        }
-
-        if (phase === 'verifying') {
-          return (
-            <Button
-              variant="outline"
-              onClick={requestClose}
-              className="w-full"
-            >
-              Cancel
-            </Button>
           );
         }
 
@@ -422,36 +367,25 @@ export default function CredentialsModal({
             <Button
               variant="outline"
               onClick={requestClose}
+              disabled={loading}
               className="flex-1"
             >
-              {verifyStep === 'connected' ? 'Close' : 'Cancel'}
+              Cancel
             </Button>
             <Button
               onClick={handleVerify}
-              disabled={fieldsDisabled || verifyStep === 'connected'}
+              disabled={fieldsDisabled}
               className="flex-1"
             >
-              {verifyStep === 'testing' || verifyStep === 'validating' ? (
-                <span className="flex items-center justify-center gap-1.5">
-                  <SynkazoMark
-                    variant="glyph-on-primary"
-                    className="size-4 animate-spin text-primary-foreground shrink-0"
-                  />
-                  <span>
-                    {verifyStep === 'testing' ? 'Testing…' : 'Validating…'}
-                  </span>
-                </span>
-              ) : verifyStep === 'connected' ? (
-                <span className="flex items-center justify-center gap-1.5">
-                  <CheckCircle2 className="size-4 text-primary-foreground shrink-0" />
-                  <span>Connected</span>
+              {verifyStep === 'validating' || verifyStep === 'verifying' ? (
+                <span className="flex items-center justify-center gap-1.5" role="status">
+                  <Spinner className="size-4" />
+                  <span>{verifyStep === 'validating' ? 'Validating…' : 'Verifying with server…'}</span>
                 </span>
               ) : verifyError ? (
-                'Retry Test Connection'
-              ) : isEdit ? (
-                'Update & Test Connection'
+                'Retry verification'
               ) : (
-                'Test Connection'
+                'Submit'
               )}
             </Button>
           </>
@@ -562,60 +496,21 @@ export default function CredentialsModal({
         </div>
       )}
 
-      {/* Phase 1: Verifying Progress State */}
-      {phase === 'verifying' && (
-        <div className="flex flex-col items-center justify-center py-8 text-center space-y-4">
-          <div className="relative flex size-14 items-center justify-center">
-            <div className="bg-primary/10 absolute inset-0 animate-ping rounded-full opacity-75" />
-            <div className="bg-muted border-border flex size-12 items-center justify-center rounded-2xl border shadow-xs">
-              <PlatformIcon platformId={platformId} size="lg" />
-            </div>
-          </div>
-          <div className="space-y-1 max-w-xs">
-            <h3 className="text-foreground text-sm font-semibold">
-              Validating Credentials
-            </h3>
-            <p className="text-muted-foreground text-xs leading-relaxed">
-              Connecting to {schema.title} API and verifying permissions…
-            </p>
-          </div>
-          <div className="text-muted-foreground flex items-center gap-2 text-xs">
-            <Spinner className="size-3.5" />
-            <span>Verifying with server…</span>
-          </div>
-        </div>
-      )}
-
-      {/* Phase 2: Success Confirmation State */}
+      {/* Pair-complete confirmation appears only after the second verification. */}
       {phase === 'success' && (
-        <div className="flex flex-col items-center justify-center py-6 text-center space-y-3.5">
-          <div className="bg-success/15 text-success flex size-12 items-center justify-center rounded-2xl">
-            <CheckCircle2 className="size-6" />
+        <div className="flex items-start gap-3 py-1">
+          <div className="bg-success/15 text-success motion-safe:animate-in motion-safe:zoom-in-75 motion-safe:fade-in-0 flex size-9 shrink-0 items-center justify-center rounded-xl duration-300">
+            <CheckCircle2 className="size-5" />
           </div>
-          <div className="space-y-1 max-w-sm">
-            <h3 className="text-foreground text-base font-bold">
-              {willCompleteBoth
-                ? `${schema.title} Connected · Project Active!`
-                : `${schema.title} Connected Successfully!`}
-            </h3>
-            <p className="text-muted-foreground text-xs leading-relaxed">
-              {willCompleteBoth
-                ? 'Both platforms are connected and verified! Your project is now active and ready for sync flows.'
-                : `Thank you! Your ${schema.title} credentials have been verified and saved. Synkazo is ready to synchronize records with this platform.`}
-            </p>
-          </div>
-          <div className="bg-muted/60 border-border/60 flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs text-muted-foreground">
-            <span className="size-2 rounded-full bg-success inline-block" />
-            <span>
-              {willCompleteBoth
-                ? 'Project Status: Active & Ready'
-                : 'Status: Verified & Live'}
-            </span>
+          <div className="min-w-0 space-y-1">
+            <DialogDescription className="text-xs leading-relaxed">
+              Both connections verified. Your project activates automatically; create a sync flow next.
+            </DialogDescription>
           </div>
         </div>
       )}
 
-      {/* Phase 3: Form State (default or when error occurs) */}
+      {/* The form remains visible while validation and server verification run. */}
       {phase === 'form' && (
         <>
           {!isEdit && supportsOAuth && (

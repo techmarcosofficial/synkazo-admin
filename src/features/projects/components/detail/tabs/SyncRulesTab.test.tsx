@@ -218,6 +218,7 @@ describe('SyncRulesTab UI', () => {
 
     // Primary action button pointing straight to field mapping
     const configureBtn = screen.getByRole('link', { name: /configure mapping/i });
+    expect(configureBtn).toHaveAttribute('data-flow-next-action', 'true');
     expect(configureBtn).toBeInTheDocument();
     expect(configureBtn).toHaveAttribute(
       'href',
@@ -258,7 +259,7 @@ describe('SyncRulesTab UI', () => {
     expect(container.querySelector('.bg-warning\\/\\[0\\.03\\]')).toBeNull();
   });
 
-  it('shows concise setup tiles and preserves the footer guidance', () => {
+  it('shows one plain-language setup hint on a flow that has not run', () => {
     vi.mocked(useProjectDetailContext).mockReturnValue({
       project: { id: 'proj-1', name: 'My Project' },
       jobs: [
@@ -318,15 +319,15 @@ describe('SyncRulesTab UI', () => {
     expect(titleLink).toBeInTheDocument();
     expect(titleLink).toHaveAttribute('href', '/projects/proj-1/jobs/job-unmapped?tab=field-mapping');
 
-    expect(screen.getByText('Next step')).toBeInTheDocument();
-    expect(screen.getByText('Match fields')).toBeInTheDocument();
-    expect(screen.getByText('Why it matters')).toBeInTheDocument();
-    expect(screen.getByText('Avoid duplicates')).toBeInTheDocument();
+    expect(screen.queryByText('Next step')).not.toBeInTheDocument();
+    expect(screen.queryByText('Match fields')).not.toBeInTheDocument();
+    expect(screen.queryByText('Why it matters')).not.toBeInTheDocument();
+    expect(screen.queryByText('Avoid duplicates')).not.toBeInTheDocument();
     expect(screen.queryByText('No schedule')).not.toBeInTheDocument();
     expect(screen.queryByText('Never')).not.toBeInTheDocument();
 
     expect(
-      screen.getByText(/Field mapping is required before synchronization can run/i),
+      screen.getByText(/Choose which information moves between platforms/i),
     ).toBeInTheDocument();
 
     // Ensure Configure Mapping link button exists

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import { useProjectDetailContext } from './context';
 
@@ -13,9 +14,11 @@ import {
 } from '@/features/journey/draftSyncJob';
 
 export default function ProjectOnboardingJourney() {
+  const navigate = useNavigate();
   const {
     projectId,
     jobs,
+    logs,
     hasBothConnections,
     hasJobs,
     activeTab,
@@ -40,6 +43,9 @@ export default function ProjectOnboardingJourney() {
     hasBothConnections,
     hasJobs,
     jobs,
+    runStatuses: logs
+      ?.filter((log) => jobs.some((job) => job.id === log.jobId))
+      .map((log) => log.metadata?.status),
   });
 
   const completeOnMount = useRef(stage === 'complete');
@@ -48,6 +54,20 @@ export default function ProjectOnboardingJourney() {
 
   const isConnecting = stage === 'connect_platforms' || !hasBothConnections;
   const hasDraft = Boolean(draftState);
+  const onlyJob = jobs.length === 1 ? jobs[0] : null;
+  const mappingReady = Boolean(
+    onlyJob?.fieldMappings?.length &&
+    onlyJob.fieldMappings.some((mapping) => mapping.isMatchField),
+  );
+  const goToNextFlowStep = () => {
+    if (!onlyJob) {
+      handleTabChange('sync-rules');
+      return;
+    }
+    navigate(
+      `/projects/${projectId}/jobs/${onlyJob.id}${mappingReady ? '' : '?tab=field-mapping'}`,
+    );
+  };
 
   // Draft resolution helpers
   const draftStepNumber = Number(draftState?.step ?? 0) + 1;
@@ -115,12 +135,31 @@ export default function ProjectOnboardingJourney() {
       title: step2Title,
       description: step2Desc,
       status: step2Status,
+      onSelect: !hasBothConnections
+        ? undefined
+        : hasDraft || stage === 'create_first_job'
+          ? onCreateSyncRule
+          : () => handleTabChange('sync-rules'),
+    },
+    {
+      title: 'Configure & Test',
+      guidesFlowAction: stage === 'configure_job',
+      description:
+        stage === 'complete'
+          ? 'A sync flow has completed its first run.'
+          : hasJobs
+            ? 'Finish setup and run a successful test sync.'
+            : 'Available after you create a sync flow.',
+      status:
+        stage === 'complete'
+          ? 'complete'
+          : hasBothConnections && hasJobs
+            ? 'current'
+            : 'upcoming',
       onSelect:
-        !hasBothConnections
-          ? undefined
-          : hasDraft || stage === 'create_first_job'
-            ? onCreateSyncRule
-            : () => handleTabChange('sync-rules'),
+        hasBothConnections && hasJobs && stage !== 'complete'
+          ? goToNextFlowStep
+          : undefined,
     },
   ];
 
@@ -128,11 +167,14 @@ export default function ProjectOnboardingJourney() {
   if (!hasBothConnections || isConnecting) {
     return (
       <SetupJourneyCard
+        compact
         eyebrow="Project setup"
         title="Connect your source and destination"
         description="Both connections must be verified before you can create or run a sync flow."
         steps={steps}
-        actionLabel={activeTab === 'connections' ? undefined : 'Connect Platforms'}
+        actionLabel={
+          activeTab === 'connections' ? undefined : 'Connect Platforms'
+        }
         onContinue={
           activeTab === 'connections'
             ? undefined
@@ -142,17 +184,13 @@ export default function ProjectOnboardingJourney() {
     );
   }
 
-  if (stage === 'complete' || stage === 'configure_job') {
-    const jobCount = jobs.length;
+  if (stage === 'complete') {
     return (
       <SetupJourneyCard
+        compact
         eyebrow="Project setup"
         title="Project setup complete"
-        description={
-          jobCount === 1
-            ? 'Both platforms are connected and your first sync flow has been created. Go to the Sync Flows tab to configure field mappings, settings, and schedules.'
-            : `Both platforms are connected and ${jobCount} sync flows have been created. Go to the Sync Flows tab to configure or manage them.`
-        }
+        description="Your first sync flow completed a successful run. Manage other flows in Sync Flows."
         steps={steps}
         actionLabel={
           activeTab === 'sync-rules' ? undefined : 'Go to Sync Flows'
@@ -166,10 +204,33 @@ export default function ProjectOnboardingJourney() {
     );
   }
 
+  if (stage === 'configure_job') {
+    return (
+      <SetupJourneyCard
+        compact
+        eyebrow="Project setup"
+        title={
+          mappingReady
+            ? 'Run your first test sync'
+            : 'Configure and test a sync flow'
+        }
+        description={
+          onlyJob
+            ? mappingReady
+              ? 'Your flow has field mappings. Open it to finish setup and run a test sync.'
+              : 'Your flow has been created. Configure its field mappings, then run a test sync.'
+            : 'Choose a flow in Sync Flows to finish its setup and run a test sync.'
+        }
+        steps={steps}
+      />
+    );
+  }
+
   // Active configurations (only when hasBothConnections === true):
   if (hasDraft) {
     return (
       <SetupJourneyCard
+        compact
         eyebrow="Project setup"
         title="Unfinished sync flow in progress"
         description={`Your configuration for "${draftFlowName}" (${draftStepLabel}) was safely preserved. Continue setup to finish creating your sync flow.`}
@@ -187,11 +248,14 @@ export default function ProjectOnboardingJourney() {
   // Default: stage === 'create_first_job' (Both platforms connected and verified, 0 jobs)
   return (
     <SetupJourneyCard
+      compact
       eyebrow="Project setup"
       title="Your connections are ready!"
       description="Both platforms are connected and verified. Next, choose what data you want to sync."
       steps={steps}
-      actionLabel={activeTab === 'sync-rules' ? undefined : 'Create First Sync Flow'}
+      actionLabel={
+        activeTab === 'sync-rules' ? undefined : 'Create First Sync Flow'
+      }
       onContinue={activeTab === 'sync-rules' ? undefined : onCreateSyncRule}
     />
   );

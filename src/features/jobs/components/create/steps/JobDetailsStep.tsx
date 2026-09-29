@@ -206,17 +206,12 @@ export default function JobDetailsStep({
     <div className={cn(compact ? 'space-y-4' : 'space-y-6')}>
       {/* Recommended Recipes (showing 2 at a time) */}
       {displayedRecipes.length > 0 && (
-        <div className="rounded-2xl border bg-muted/20 p-3.5 space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="flex items-center gap-1.5 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-              <Sparkles className="size-3.5 text-primary" />
-              Recommended Sync Recipes (1-Click)
-            </span>
-            <span className="text-xs text-muted-foreground">
-              Select to auto-fill records & name
-            </span>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <section aria-label="Recommended sync recipes" className="space-y-2">
+          <h3 className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+            <Sparkles className="size-3.5 text-primary" />
+            Recommended Sync Recipes (1-Click)
+          </h3>
+          <div className="space-y-1.5">
             {displayedRecipes.map((recipe) => {
               const isSelected =
                 config.sourceObject === recipe.sourceObject &&
@@ -225,6 +220,7 @@ export default function JobDetailsStep({
                 <button
                   key={recipe.id}
                   type="button"
+                  aria-pressed={isSelected}
                   onClick={() => {
                     setConfig((c) => ({
                       ...c,
@@ -240,52 +236,47 @@ export default function JobDetailsStep({
                     }));
                   }}
                   className={cn(
-                    'group flex flex-col justify-between rounded-xl border p-3 text-left transition-all relative overflow-hidden',
+                    'group flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left transition-colors',
                     isSelected
-                      ? 'border-primary bg-primary/10 ring-1 ring-primary shadow-xs'
+                      ? 'border-primary bg-primary/5'
                       : 'border-border/70 bg-card hover:border-primary/40 hover:bg-muted/30',
                   )}
                 >
-                  <div className="space-y-1.5 min-w-0 w-full">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors truncate">
+                  <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                      <span className="text-xs font-semibold text-foreground group-hover:text-primary">
                         {recipe.title}
                       </span>
                       {recipe.badge && (
                         <Badge
                           variant="secondary"
-                          className="border-primary/20 bg-primary/10 text-primary px-1.5 py-0 text-[10px] shrink-0 font-medium leading-4"
+                          className="border-primary/20 bg-primary/10 text-primary shrink-0 px-1.5 py-0 text-[10px] font-medium leading-4"
                         >
                           {recipe.badge}
                         </Badge>
                       )}
-                    </div>
+                    </span>
                     {recipe.description && (
-                      <p className="text-muted-foreground text-xs leading-relaxed line-clamp-2">
+                      <span className="text-muted-foreground mt-0.5 block truncate text-xs">
                         {recipe.description}
-                      </p>
+                      </span>
                     )}
-                  </div>
-                  <div className="mt-3 flex items-center justify-between pt-2 border-t border-border/40 text-[11px] w-full">
-                    <span className="font-mono text-muted-foreground text-[10px]">
-                      {recipe.sourceObject} → {recipe.destObject}
-                    </span>
-                    <span
-                      className={cn(
-                        'font-medium flex items-center gap-1',
-                        isSelected
-                          ? 'text-primary'
-                          : 'text-muted-foreground group-hover:text-primary',
-                      )}
-                    >
-                      {isSelected ? '✓ Selected' : 'Apply template →'}
-                    </span>
-                  </div>
+                  </span>
+                  <span
+                    className={cn(
+                      'shrink-0 text-xs font-medium',
+                      isSelected
+                        ? 'text-primary'
+                        : 'text-muted-foreground group-hover:text-primary',
+                    )}
+                  >
+                    {isSelected ? '✓ Selected' : 'Apply →'}
+                  </span>
                 </button>
               );
             })}
           </div>
-        </div>
+        </section>
       )}
 
       {/* Connection */}
