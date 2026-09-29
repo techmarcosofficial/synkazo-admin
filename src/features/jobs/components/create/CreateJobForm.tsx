@@ -106,8 +106,10 @@ const withDirection = (
       isMatchField: m.matchDestKey === destField,
       matchPriority:
         m.matchDestKey === destField ? (m.matchOrder ?? null) : null,
-      updatePolicy: m.destUpdatePolicy?.[destField] ?? 'always',
-      conflictScope: m.destConflictScope?.[destField] ?? 'field',
+      updatePolicy:
+        m.destUpdatePolicy?.[destField] === 'create_only'
+          ? 'create_only'
+          : 'always',
       onEmpty: m.destOnEmpty?.[destField] ?? 'none',
       defaultValue: m.destDefaults?.[destField] ?? null,
       reverseOnEmpty: m.destReverseOnEmpty?.[destField] ?? 'none',
@@ -1098,7 +1100,7 @@ export const CreateJobForm = forwardRef<
   return (
     <div className="w-full">
       {step === 0 && hasPreviousJobs && !detailsOnly && (
-        <div className="mb-4 flex items-center justify-between rounded-2xl border border-border/60 bg-muted/30 px-3.5 py-2 text-xs">
+        <div className="border-border/60 bg-muted/30 mb-4 flex items-center justify-between rounded-2xl border px-3.5 py-2 text-xs">
           <span className="text-muted-foreground">
             {compactLayout
               ? 'Compact creation layout active'

@@ -25,7 +25,6 @@ describe('useFieldMappingDraftStore', () => {
           matchPriority: null,
           destRules: {},
           destUpdatePolicy: {},
-          destConflictScope: {},
           destOnEmpty: {},
           destDefaults: {},
           destReverseOnEmpty: {},

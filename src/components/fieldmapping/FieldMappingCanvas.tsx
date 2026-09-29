@@ -166,7 +166,7 @@ export interface FieldDef {
 export type OnEmptyPolicy = 'none' | 'default' | 'skip_record';
 
 /** What happens to an already-mapped field on an update (not a create). */
-export type MappingUpdatePolicy = 'always' | 'create_only' | 'fill_if_empty';
+export type MappingUpdatePolicy = 'always' | 'create_only';
 
 export type MappingDirection =
   'forward_only' | 'reverse_only' | 'bidirectional';
@@ -191,32 +191,6 @@ const UPDATE_POLICY_OPTIONS: Array<{
     value: 'create_only',
     label: 'Create only',
     hint: 'Set this field only when the record is first created. Later syncs never touch it again, so edits made directly in the destination are preserved.',
-  },
-  {
-    value: 'fill_if_empty',
-    label: 'Fill if empty',
-    hint: 'Only write this field if it\'s currently blank in the destination. If the destination already has the same value, nothing changes. If the destination already has a different value — a genuine mismatch — nothing is overwritten; use "On Conflict" below to decide whether that mismatch skips just this field or the whole record.',
-  },
-];
-
-/** Only meaningful when updatePolicy is 'fill_if_empty' — decides what a genuine
- *  mismatch (destination already holds a value that differs from the incoming
- *  one — not simply empty) discards. Never triggers when the destination is
- *  empty (that's a fill, not a mismatch) or when both sides already agree. */
-const CONFLICT_SCOPE_OPTIONS: Array<{
-  value: 'field' | 'record';
-  label: string;
-  hint: string;
-}> = [
-  {
-    value: 'field',
-    label: 'This field only',
-    hint: 'When both sides already have a value and they differ (a genuine mismatch — not just an empty destination), that mismatch is logged and only this field is skipped. The rest of the record still updates normally.',
-  },
-  {
-    value: 'record',
-    label: 'Skip Whole Record',
-    hint: "When both sides already have a value and they differ (a genuine mismatch — not just an empty destination), the entire record's update is discarded, not just this field. Nothing on the record is written this sync.",
   },
 ];
 
@@ -253,10 +227,6 @@ export interface MappingRow {
    *  per destination for the same fan-out reason as destOnEmpty. Missing/'always'
    *  is the historical behaviour — write it every time. */
   destUpdatePolicy?: Record<string, MappingUpdatePolicy>;
-  /** Only meaningful when the matching destUpdatePolicy entry is 'fill_if_empty'. 'record'
-   *  escalates a genuine conflict on that destination into discarding the whole record's
-   *  write, not just this field. Missing/'field' is the default (existing) behaviour. */
-  destConflictScope?: Record<string, 'field' | 'record'>;
   /** Same shape as destOnEmpty/destDefaults, but for the reverse leg — the empty-value
    *  policy that applies when a bidirectional row writes back into the SOURCE platform
    *  (i.e. the source platform requires this field on its side). Kept separate from
@@ -350,8 +320,6 @@ function removeFrom(
     const { [destKey]: _default, ...restDefaults } = m.destDefaults || {};
     const { [destKey]: _updatePolicy, ...restUpdatePolicy } =
       m.destUpdatePolicy || {};
-    const { [destKey]: _conflictScope, ...restConflictScope } =
-      m.destConflictScope || {};
     const remainingManualDestKeys = (m.manuallyAddedDestKeys ?? []).filter(
       (key) => key !== destKey,
     );
@@ -363,7 +331,6 @@ function removeFrom(
         destOnEmpty: restOnEmpty,
         destDefaults: restDefaults,
         destUpdatePolicy: restUpdatePolicy,
-        destConflictScope: restConflictScope,
         ...(remainingManualDestKeys.length > 0
           ? { manuallyAddedDestKeys: remainingManualDestKeys }
           : {}),
@@ -1281,25 +1248,6 @@ export default function FieldMappingCanvas({
       ),
     );
 
-  const setConflictScope = (
-    sourceKey: string,
-    destKey: string,
-    scope: 'field' | 'record',
-  ) =>
-    onMappingsChange(
-      mappings.map((m) =>
-        m.sourceField === sourceKey
-          ? {
-              ...m,
-              destConflictScope: {
-                ...(m.destConflictScope || {}),
-                [destKey]: scope,
-              },
-            }
-          : m,
-      ),
-    );
-
   /**
    * Repoints an existing (source, dest) pair. Everything hanging off the old
    * destination key — its rules, empty-value policy and match-field flag — moves
@@ -1317,7 +1265,6 @@ export default function FieldMappingCanvas({
       matchOrder: row.matchOrder,
       wasManuallyAdded: row.manuallyAddedDestKeys?.includes(from.destKey),
       updatePolicy: row.destUpdatePolicy?.[from.destKey],
-      conflictScope: row.destConflictScope?.[from.destKey],
       direction: row.direction,
     };
 
@@ -1353,14 +1300,6 @@ export default function FieldMappingCanvas({
                   destUpdatePolicy: {
                     ...(m.destUpdatePolicy || {}),
                     [to.destKey]: carried.updatePolicy,
-                  },
-                }
-              : {}),
-            ...(carried.conflictScope
-              ? {
-                  destConflictScope: {
-                    ...(m.destConflictScope || {}),
-                    [to.destKey]: carried.conflictScope,
                   },
                 }
               : {}),
@@ -2346,7 +2285,9 @@ export default function FieldMappingCanvas({
                 <SelectTrigger size="sm" className="h-7 w-36 shrink-0">
                   <SelectValue
                     placeholder={
-                      activeMatches.length === 0 ? 'Choose identifier' : '+ Add identifier'
+                      activeMatches.length === 0
+                        ? 'Choose identifier'
+                        : '+ Add identifier'
                     }
                   />
                 </SelectTrigger>
@@ -2685,7 +2626,7 @@ export default function FieldMappingCanvas({
               )}
 
               {filteredPairs.length > 0 && (
-                <Table className="min-w-[1080px]">
+                <Table className="min-w-[920px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[22%]">Source field</TableHead>
@@ -2698,9 +2639,6 @@ export default function FieldMappingCanvas({
                       <TableHead className="w-24">Identifier</TableHead>
                       <TableHead className="w-[9.5rem]">
                         Update Policy
-                      </TableHead>
-                      <TableHead className="w-[8.5rem]">
-                        Conflict handling
                       </TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -2737,8 +2675,10 @@ export default function FieldMappingCanvas({
                           ? glow.stage
                           : null;
                       const onEmpty = m.destOnEmpty?.[dk] ?? 'none';
-                      const updatePolicy = m.destUpdatePolicy?.[dk] ?? 'always';
-                      const conflictScope = m.destConflictScope?.[dk] ?? 'field';
+                      const updatePolicy =
+                        m.destUpdatePolicy?.[dk] === 'create_only'
+                          ? 'create_only'
+                          : 'always';
                       return (
                         <TableRow
                           key={`${m.sourceField}-${dk}`}
@@ -2874,25 +2814,14 @@ export default function FieldMappingCanvas({
                                       : `Default: ${m.destDefaults?.[dk] || '—'}`}
                                   </Badge>
                                 )}
-                                {updatePolicy !== 'always' && (
+                                {updatePolicy === 'create_only' && (
                                   <Badge
                                     variant="secondary"
                                     className="shrink-0 gap-1 whitespace-nowrap"
                                   >
-                                    {updatePolicy === 'create_only'
-                                      ? 'Create only'
-                                      : 'Fill if empty'}
+                                    Create only
                                   </Badge>
                                 )}
-                                {updatePolicy === 'fill_if_empty' &&
-                                  conflictScope === 'record' && (
-                                    <Badge
-                                      variant="secondary"
-                                      className="bg-warning/10 text-warning shrink-0 gap-1 whitespace-nowrap"
-                                    >
-                                      Skips whole record on mismatch
-                                    </Badge>
-                                  )}
                                 <TypeChip type={df?.type} />
                               </div>
                             )}
@@ -2944,7 +2873,7 @@ export default function FieldMappingCanvas({
                             </TableCell>
                           )}
                           {isEditing ? (
-                            <TableCell colSpan={4} className="text-right">
+                            <TableCell colSpan={3} className="text-right">
                               <div className="flex items-center justify-end gap-1.5">
                                 <Button
                                   type="button"
@@ -3039,43 +2968,6 @@ export default function FieldMappingCanvas({
                                   </SelectTrigger>
                                   <SelectContent align="end">
                                     {UPDATE_POLICY_OPTIONS.map((option) => (
-                                      <Tooltip key={option.value}>
-                                        <TooltipTrigger asChild>
-                                          <SelectItem value={option.value}>
-                                            {option.label}
-                                          </SelectItem>
-                                        </TooltipTrigger>
-                                        <TooltipContent
-                                          side="right"
-                                          className="max-w-56"
-                                        >
-                                          {option.hint}
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </TableCell>
-                              <TableCell>
-                                <Select
-                                  value={conflictScope}
-                                  disabled={updatePolicy !== 'fill_if_empty'}
-                                  onValueChange={(value) =>
-                                    setConflictScope(
-                                      m.sourceField,
-                                      dk,
-                                      value as 'field' | 'record',
-                                    )
-                                  }
-                                >
-                                  <SelectTrigger
-                                    size="sm"
-                                    className="h-8 w-[8.5rem]"
-                                  >
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent align="end">
-                                    {CONFLICT_SCOPE_OPTIONS.map((option) => (
                                       <Tooltip key={option.value}>
                                         <TooltipTrigger asChild>
                                           <SelectItem value={option.value}>

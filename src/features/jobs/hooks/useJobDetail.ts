@@ -14,7 +14,6 @@ import type {
   UpdatePolicy,
 } from '@/types';
 
-
 export type ScheduleState =
   | 'active'
   | 'paused'
@@ -72,9 +71,6 @@ export interface ConsolidatedMapping extends Omit<FieldMapping, 'destField'> {
   /** What happens to this destination's value on an update (not a create), keyed
    *  per destination for the same fan-out reason as destOnEmpty. */
   destUpdatePolicy?: Record<string, UpdatePolicy>;
-  /** Only meaningful for destinations whose destUpdatePolicy entry is 'fill_if_empty' —
-   *  see conflictScope on FieldMapping. */
-  destConflictScope?: Record<string, 'field' | 'record'>;
   transformConfig?: Record<string, unknown> | null;
   isRequired?: boolean;
   /** Set by the canvas when the user waves off a type mismatch. Not persisted. */
@@ -107,13 +103,7 @@ export function consolidateMappings(
         ? row.reverseOnEmpty
         : null;
     const updatePolicy =
-      row.updatePolicy && row.updatePolicy !== 'always'
-        ? row.updatePolicy
-        : null;
-    const conflictScope =
-      row.conflictScope && row.conflictScope !== 'field'
-        ? row.conflictScope
-        : null;
+      row.updatePolicy === 'create_only' ? 'create_only' : null;
     if (map.has(row.sourceField)) {
       const existing = map.get(row.sourceField)!;
       existing.destField = Array.isArray(existing.destField)
@@ -145,10 +135,6 @@ export function consolidateMappings(
         existing.destUpdatePolicy = existing.destUpdatePolicy ?? {};
         existing.destUpdatePolicy[row.destField] = updatePolicy;
       }
-      if (conflictScope) {
-        existing.destConflictScope = existing.destConflictScope ?? {};
-        existing.destConflictScope[row.destField] = conflictScope;
-      }
     } else {
       map.set(row.sourceField, {
         ...row,
@@ -168,9 +154,6 @@ export function consolidateMappings(
           ? { [row.destField]: row.reverseDefaultValue ?? '' }
           : {},
         destUpdatePolicy: updatePolicy ? { [row.destField]: updatePolicy } : {},
-        destConflictScope: conflictScope
-          ? { [row.destField]: conflictScope }
-          : {},
       });
     }
   });

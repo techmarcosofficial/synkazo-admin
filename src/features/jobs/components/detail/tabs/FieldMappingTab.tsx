@@ -79,8 +79,8 @@ function normalizeMappings(
       isRequired: m.isRequired ?? false,
       isMatchField: m.matchDestKey === dk,
       matchPriority: m.matchDestKey === dk ? (m.matchOrder ?? null) : null,
-      updatePolicy: m.destUpdatePolicy?.[dk] ?? 'always',
-      conflictScope: m.destConflictScope?.[dk] ?? 'field',
+      updatePolicy:
+        m.destUpdatePolicy?.[dk] === 'create_only' ? 'create_only' : 'always',
       onEmpty: m.destOnEmpty?.[dk] ?? 'none',
       defaultValue: m.destDefaults?.[dk] ?? null,
       reverseOnEmpty: m.destReverseOnEmpty?.[dk] ?? 'none',
@@ -964,7 +964,7 @@ export default function FieldMappingTab() {
                 </TabsList>
                 {anyDirty && (
                   <span className="text-muted-foreground hidden items-center gap-1.5 text-xs sm:inline-flex">
-                    <span className="bg-warning size-1.5 rounded-full animate-pulse" />
+                    <span className="bg-warning size-1.5 animate-pulse rounded-full" />
                     Draft saved locally
                   </span>
                 )}
@@ -1059,7 +1059,8 @@ export default function FieldMappingTab() {
                         <strong className="text-foreground">Email</strong> or{' '}
                         <strong className="text-foreground">Record ID</strong>)
                         to set it as a unique identifier. Synkazo uses this to
-                        identify matching records and update them instead of creating duplicates.
+                        identify matching records and update them instead of
+                        creating duplicates.
                       </p>
                     </div>
                   </div>
@@ -1107,7 +1108,8 @@ export default function FieldMappingTab() {
                       Need to link related records together?
                     </p>
                     <p className="text-muted-foreground text-xs">
-                      Configure Record Associations to automatically link synced records (e.g. Contacts to Companies or Jobs to Customers).
+                      Configure Record Associations to automatically link synced
+                      records (e.g. Contacts to Companies or Jobs to Customers).
                     </p>
                   </div>
                 </div>
