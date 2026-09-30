@@ -288,6 +288,81 @@ export const queryKeys = {
           filters,
         ] as const,
     },
+    associations: {
+      rules: (organisationId: string, projectId: string) =>
+        [
+          'superAdmin',
+          organisationId,
+          'projects',
+          projectId,
+          'associations',
+          'rules',
+        ] as const,
+      rule: (organisationId: string, projectId: string, ruleId: string) =>
+        [
+          'superAdmin',
+          organisationId,
+          'projects',
+          projectId,
+          'associations',
+          'rules',
+          ruleId,
+        ] as const,
+      pending: (
+        organisationId: string,
+        projectId: string,
+        page: number,
+        limit: number,
+      ) =>
+        [
+          'superAdmin',
+          organisationId,
+          'projects',
+          projectId,
+          'associations',
+          'pending',
+          page,
+          limit,
+        ] as const,
+    },
+    migration: {
+      diff: (
+        organisationId: string,
+        projectId: string,
+        from: string,
+        to: string,
+      ) =>
+        [
+          'superAdmin',
+          organisationId,
+          'projects',
+          projectId,
+          'migration',
+          'diff',
+          from,
+          to,
+        ] as const,
+      runs: (organisationId: string, projectId: string) =>
+        [
+          'superAdmin',
+          organisationId,
+          'projects',
+          projectId,
+          'migration',
+          'runs',
+        ] as const,
+      runItems: (organisationId: string, projectId: string, runId: string) =>
+        [
+          'superAdmin',
+          organisationId,
+          'projects',
+          projectId,
+          'migration',
+          'runs',
+          runId,
+          'items',
+        ] as const,
+    },
     // Prefix used to nuke every cached entry for one organisation on
     // context switch. Any org-scoped key above lives under
     // ['superAdmin', <organisationId>, ...] — so removing that prefix

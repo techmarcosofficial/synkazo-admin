@@ -1,8 +1,9 @@
 import { formatDistanceToNow } from 'date-fns';
-import { ArrowLeft, FolderOpen, Play } from 'lucide-react';
+import { ArrowLeft, Database, FolderOpen, Link2, Pause, Play } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
+import LifecycleConfirmDialog from './lifecycle/LifecycleConfirmDialog';
 import RunJobDialog, { type RunJobDialogValues } from './projects/RunJobDialog';
 import RunStatusPoller from './projects/RunStatusPoller';
 
@@ -22,6 +23,8 @@ import {
 } from '@/components/ui/table';
 import { showToast } from '@/lib/toast';
 import {
+  useHoldSuperAdminProjectMutation,
+  useResumeSuperAdminProjectMutation,
   useRunSuperAdminJobMutation,
   useSuperAdminJobsQuery,
   useSuperAdminOrganisationQuery,
@@ -154,11 +157,21 @@ export default function OrganisationProjectDetailPage() {
     jobName: string;
   } | null>(null);
   const [activeRun, setActiveRun] = useState<ActiveRun | null>(null);
+  const [holdKind, setHoldKind] = useState<'hold' | 'resume' | null>(null);
 
   const runMutation = useRunSuperAdminJobMutation(
     organisationId ?? '',
     projectId ?? '',
     runDialog?.jobId ?? '',
+  );
+
+  const holdMutation = useHoldSuperAdminProjectMutation(
+    organisationId ?? '',
+    projectId ?? '',
+  );
+  const resumeMutation = useResumeSuperAdminProjectMutation(
+    organisationId ?? '',
+    projectId ?? '',
   );
 
   if (!organisationId || !projectId) {
@@ -235,6 +248,40 @@ export default function OrganisationProjectDetailPage() {
           </Badge>
           <Badge variant="outline">{project.schedulerMode}</Badge>
         </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button asChild size="sm" variant="outline">
+            <Link
+              to={`/super-admin/organisations/${organisationId}/projects/${projectId}/associations`}
+            >
+              <Link2 className="size-3.5" aria-hidden />
+              Association rules
+            </Link>
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <Link
+              to={`/super-admin/organisations/${organisationId}/projects/${projectId}/migration`}
+            >
+              <Database className="size-3.5" aria-hidden />
+              Environment migration
+            </Link>
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setHoldKind('hold')}
+          >
+            <Pause className="size-3.5" aria-hidden />
+            Hold project
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setHoldKind('resume')}
+          >
+            <Play className="size-3.5" aria-hidden />
+            Resume project
+          </Button>
+        </div>
       </div>
 
       {activeRun ? (
@@ -305,6 +352,49 @@ export default function OrganisationProjectDetailPage() {
           runMutation.isError ? extractErrorMessage(runMutation.error) : null
         }
         onSubmit={submitRun}
+      />
+
+      <LifecycleConfirmDialog
+        open={holdKind !== null}
+        onOpenChange={(o) => (o ? undefined : setHoldKind(null))}
+        title={holdKind === 'hold' ? 'Hold every active job' : 'Resume held jobs'}
+        description={
+          holdKind === 'hold'
+            ? 'Every active job on this project flips to HELD and stops scheduling until explicitly resumed.'
+            : 'Every operator-held job on this project flips back to ACTIVE. Tenant-paused jobs are not touched.'
+        }
+        actionLabel={holdKind === 'hold' ? 'Hold project' : 'Resume project'}
+        tone={holdKind === 'hold' ? 'warning' : 'warning'}
+        organisationName=""
+        requiresNameConfirm={false}
+        minReasonLength={10}
+        reasonPlaceholder={
+          holdKind === 'hold'
+            ? 'Why is this project being held?'
+            : 'Why is this project being resumed?'
+        }
+        isSubmitting={holdMutation.isPending || resumeMutation.isPending}
+        errorMessage={
+          holdKind === 'hold' && holdMutation.isError
+            ? extractErrorMessage(holdMutation.error)
+            : holdKind === 'resume' && resumeMutation.isError
+              ? extractErrorMessage(resumeMutation.error)
+              : null
+        }
+        onSubmit={({ reason }) => {
+          const mutation = holdKind === 'hold' ? holdMutation : resumeMutation;
+          const verb = holdKind === 'hold' ? 'held' : 'resumed';
+          mutation.mutate(reason, {
+            onSuccess: (data) => {
+              const count =
+                holdKind === 'hold'
+                  ? (data as { heldJobs: number }).heldJobs
+                  : (data as { resumedJobs: number }).resumedJobs;
+              showToast.success(`${count} job${count === 1 ? '' : 's'} ${verb}.`);
+              setHoldKind(null);
+            },
+          });
+        }}
       />
     </div>
   );

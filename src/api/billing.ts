@@ -132,34 +132,34 @@ export const billingApi = {
 // Super-admin plan-catalogue management (guarded server-side to super_admin).
 export const billingAdminApi = {
   listPlans: (): Promise<AdminApiPlan[]> =>
-    apiClient.get('/billing/admin/plans').then(d),
+    apiClient.get('/super-admin/billing/plans').then(d),
   createPlan: (body: CreatePlanRequest): Promise<AdminApiPlan> =>
-    apiClient.post('/billing/admin/plans', body).then(d),
+    apiClient.post('/super-admin/billing/plans', body).then(d),
   updatePlan: (id: string, body: UpdatePlanRequest): Promise<AdminApiPlan> =>
-    apiClient.patch(`/billing/admin/plans/${id}`, body).then(d),
+    apiClient.patch(`/super-admin/billing/plans/${id}`, body).then(d),
   deactivatePlan: (id: string): Promise<AdminApiPlan> =>
-    apiClient.delete(`/billing/admin/plans/${id}`).then(d),
+    apiClient.delete(`/super-admin/billing/plans/${id}`).then(d),
   addPrice: (id: string, body: CreatePriceRequest): Promise<AdminApiPlan> =>
-    apiClient.post(`/billing/admin/plans/${id}/prices`, body).then(d),
+    apiClient.post(`/super-admin/billing/plans/${id}/prices`, body).then(d),
   updatePrice: (
     id: string,
     priceId: string,
     body: UpdatePriceRequest,
   ): Promise<AdminApiPlan> =>
     apiClient
-      .patch(`/billing/admin/plans/${id}/prices/${priceId}`, body)
+      .patch(`/super-admin/billing/plans/${id}/prices/${priceId}`, body)
       .then(d),
   updateFeatures: (
     id: string,
     features: Record<string, string>,
   ): Promise<Record<string, string>> =>
     apiClient
-      .patch(`/billing/admin/plans/${id}/features`, { features })
+      .patch(`/super-admin/billing/plans/${id}/features`, { features })
       .then(d),
   resyncPlan: (
     id: string,
   ): Promise<{ plan: AdminApiPlan; relinked: string[] }> =>
-    apiClient.post(`/billing/admin/plans/${id}/resync`).then(d),
+    apiClient.post(`/super-admin/billing/plans/${id}/resync`).then(d),
 
   // Manually assign an existing plan to an org, bypassing Stripe — the org then functions
   // exactly per that plan's limits/features without being billed for it.
@@ -168,39 +168,39 @@ export const billingAdminApi = {
     planId: string,
   ): Promise<Organisation> =>
     apiClient
-      .patch(`/billing/admin/organisations/${organisationId}/plan`, { planId })
+      .patch(`/super-admin/billing/organisations/${organisationId}/plan`, { planId })
       .then(d),
 
   // ── Coupons + discount settings ─────────────────────────────────────────────
   listCoupons: (): Promise<Coupon[]> =>
-    apiClient.get('/billing/admin/coupons').then(d),
+    apiClient.get('/super-admin/billing/coupons').then(d),
   createCoupon: (body: CreateCouponRequest): Promise<Coupon> =>
-    apiClient.post('/billing/admin/coupons', body).then(d),
+    apiClient.post('/super-admin/billing/coupons', body).then(d),
   updateCoupon: (id: string, body: UpdateCouponRequest): Promise<Coupon> =>
-    apiClient.patch(`/billing/admin/coupons/${id}`, body).then(d),
+    apiClient.patch(`/super-admin/billing/coupons/${id}`, body).then(d),
   deactivateCoupon: (id: string): Promise<Coupon> =>
-    apiClient.delete(`/billing/admin/coupons/${id}`).then(d),
+    apiClient.delete(`/super-admin/billing/coupons/${id}`).then(d),
   resyncCoupon: (id: string): Promise<Coupon> =>
-    apiClient.post(`/billing/admin/coupons/${id}/resync`).then(d),
+    apiClient.post(`/super-admin/billing/coupons/${id}/resync`).then(d),
 
   listDiscountRules: (): Promise<DiscountRule[]> =>
-    apiClient.get('/billing/admin/discount-rules').then(d),
+    apiClient.get('/super-admin/billing/discount-rules').then(d),
   createDiscountRule: (
     body: CreateDiscountRuleRequest,
   ): Promise<DiscountRule> =>
-    apiClient.post('/billing/admin/discount-rules', body).then(d),
+    apiClient.post('/super-admin/billing/discount-rules', body).then(d),
   updateDiscountRule: (
     id: string,
     body: UpdateDiscountRuleRequest,
   ): Promise<DiscountRule> =>
-    apiClient.patch(`/billing/admin/discount-rules/${id}`, body).then(d),
+    apiClient.patch(`/super-admin/billing/discount-rules/${id}`, body).then(d),
   deactivateDiscountRule: (id: string): Promise<DiscountRule> =>
-    apiClient.delete(`/billing/admin/discount-rules/${id}`).then(d),
+    apiClient.delete(`/super-admin/billing/discount-rules/${id}`).then(d),
 
   getDiscountSettings: (): Promise<DiscountSettings> =>
-    apiClient.get('/billing/admin/settings/discounts').then(d),
+    apiClient.get('/super-admin/billing/settings/discounts').then(d),
   updateDiscountSettings: (
     body: Partial<DiscountSettings>,
   ): Promise<DiscountSettings> =>
-    apiClient.patch('/billing/admin/settings/discounts', body).then(d),
+    apiClient.patch('/super-admin/billing/settings/discounts', body).then(d),
 };
