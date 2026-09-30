@@ -25,7 +25,7 @@ export default function SectionTabsLayout({
   if (!active || !access) return <Navigate to={fallbackPath} replace />;
 
   return (
-    <div className="animate-fade-in-up flex flex-col gap-6">
+    <div className="animate-fade-in-up flex flex-col gap-4">
       <PageHeader
         backTo={{ label: 'Back to Dashboard', to: '/dashboard' }}
         title={section.title}

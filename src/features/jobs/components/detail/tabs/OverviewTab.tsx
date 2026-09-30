@@ -2,7 +2,7 @@ import {
   CalendarClock,
   Clock,
   Database,
-  Info,
+  History,
   Play,
   RotateCcw,
   Timer,
@@ -10,6 +10,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { formatDistanceToNow } from 'date-fns';
 
 import { useJobDetailContext } from '../context';
 
@@ -33,12 +34,14 @@ import {
   hasScheduleDefinition,
 } from '@/features/jobs/lib/jobScheduleSettings';
 import { formatSchedule } from '@/features/jobs/utils';
+import { selectJobOnboardingState } from '@/features/onboarding';
 import {
   deriveSyncJobSummary,
   formatDurationMs,
 } from '@/features/projects/lib/syncJobSummary';
 import { BROWSER_TIMEZONE } from '@/lib/timezones';
 import { usePriorityQueueQuery } from '@/queries/usePriorityQueue';
+import type { Project, ProjectEnvironment } from '@/types';
 
 function SyncSummaryCard({
   icon: Icon,
@@ -52,24 +55,22 @@ function SyncSummaryCard({
   description: string;
 }) {
   return (
-    <Card size="sm" className="min-w-0 gap-0 rounded-3xl py-0 shadow-none">
-      <CardContent className="space-y-2.5 p-4">
-        <span className="bg-muted text-muted-foreground flex size-9 items-center justify-center rounded-3xl">
-          <Icon className="size-4" aria-hidden="true" />
-        </span>
-        <div className="min-w-0">
-          <p className="text-lg leading-tight font-bold tracking-tight">
-            {value}
-          </p>
-          <p className="text-muted-foreground mt-0.5 text-xs font-medium">
-            {label}
-          </p>
-          <p className="text-muted-foreground mt-0.5 text-[11px]">
-            {description}
-          </p>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="bg-secondary/40 border-border/60 min-w-0 space-y-2 rounded-2xl border p-4 transition-colors">
+      <span className="bg-background text-muted-foreground border-border/40 flex size-8 items-center justify-center rounded-xl border">
+        <Icon className="size-3.5" aria-hidden="true" />
+      </span>
+      <div className="min-w-0">
+        <p className="text-foreground text-base leading-tight font-bold tracking-tight tabular-nums">
+          {value}
+        </p>
+        <p className="text-muted-foreground mt-0.5 text-xs font-medium">
+          {label}
+        </p>
+        <p className="text-muted-foreground/80 mt-0.5 text-[11px] leading-tight font-normal">
+          {description}
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -82,7 +83,6 @@ export default function OverviewTab() {
     hasConnection,
     refetch,
     isSyncing,
-    toggling,
     stopping,
     cancellingQueue,
     retryingQueue,
@@ -99,11 +99,9 @@ export default function OverviewTab() {
     handleStop,
     handleCancelQueue,
     handleRetryQueue,
-    handleToggle,
     handleTabChange,
     manualDialogOpen,
     setManualDialogOpen,
-    triggerInactiveGuide,
   } = useJobDetailContext();
 
   const priorityQueueQuery = usePriorityQueueQuery(projectId);
@@ -119,6 +117,9 @@ export default function OverviewTab() {
       job.scheduleState === 'retry_pending' ||
       job.scheduleState === 'resume_pending');
   const effectiveTimezone = BROWSER_TIMEZONE;
+  const activeEnvironment =
+    (project as (Project & { activeEnvironment?: ProjectEnvironment }) | null)
+      ?.activeEnvironment ?? project?.active_environment;
   const nextRunAt = priorityModeActive
     ? projectQueue?.nextStartAt
     : job.nextRunAt;
@@ -162,10 +163,28 @@ export default function OverviewTab() {
   });
   const summaryCards = [
     {
-      label: 'Records synced',
+      label: 'Total records synced',
       value: (job.recordsSynced ?? 0).toLocaleString(),
-      description: 'Total synced records',
+      description: 'Across all executions',
       icon: Database,
+    },
+    {
+      label: 'Last run',
+      value: performance.lastSyncAt
+        ? formatDistanceToNow(new Date(performance.lastSyncAt), {
+            addSuffix: true,
+          })
+        : 'Never',
+      description: performance.lastSyncAt
+        ? 'Previous sync execution'
+        : 'No runs recorded yet',
+      icon: History,
+    },
+    {
+      label: 'Next run',
+      value: nextRunCard.value,
+      description: nextRunCard.description,
+      icon: Play,
     },
     {
       label: 'Schedule at',
@@ -183,22 +202,6 @@ export default function OverviewTab() {
       description: 'Based on recent runs',
       icon: Timer,
     },
-    {
-      label: 'Last sync',
-      value: performance.lastSyncAt
-        ? formatScheduledAt(performance.lastSyncAt, effectiveTimezone)
-        : 'Never',
-      description: performance.lastSyncAt
-        ? 'Most recent completed run'
-        : 'No completed runs',
-      icon: Clock,
-    },
-    {
-      label: 'Next run',
-      value: nextRunCard.value,
-      description: nextRunCard.description,
-      icon: Play,
-    },
   ];
   const canActivate =
     project?.status === 'active' &&
@@ -206,11 +209,18 @@ export default function OverviewTab() {
     jobFieldMappings.length > 0 &&
     jobFieldMappings.some((mapping) => mapping.matchDestKey);
 
-  // Sync is physically impossible when already running or queued — keep disabled.
-  // When inactive the button stays clickable; clicking it guides to the existing
-  // inline alert below instead of opening the dialog.
-  const syncBlocked = queued || isSyncing;
-  const inactiveBlocked = !job.isEnabled;
+  const onboarding = selectJobOnboardingState({
+    mappings: jobFieldMappings,
+    pipelineRequired,
+    pipelineConfigured,
+    runLogs,
+    lastSyncedAt: job.lastSyncedAt,
+  });
+  const hasRunHistory = onboarding.testComplete;
+  const canStartSync =
+    canActivate && onboarding.configurationReady && job.isEnabled;
+
+  const syncBlocked = queued || isSyncing || !canStartSync;
   const summaryRun =
     activeRunLog?.status === 'running' || activeRunLog?.id
       ? activeRunLog
@@ -294,93 +304,162 @@ export default function OverviewTab() {
         destinationLabel={summaryRun?.destObject ?? job.destObject}
         errorMessage={summaryRun?.errorMessage}
         onStop={summaryRunning ? () => void handleStop() : undefined}
+        onViewHistory={() =>
+          handleTabChange('run-history', {
+            searchParams: summaryRun?.id ? { runId: summaryRun.id } : undefined,
+          })
+        }
+        onViewRun={(targetRunId) => {
+          const runIdToView = targetRunId || summaryRun?.id;
+          handleTabChange('run-history', {
+            searchParams: runIdToView ? { runId: runIdToView } : undefined,
+          });
+        }}
         stopping={stopping}
       />
     ) : null;
-  const progress = renderProgress('default', true);
+  const progress = renderProgress(
+    'default',
+    Boolean(summaryRunning || activeRunLog),
+  );
+  const overviewMessage = queued
+    ? {
+        title: 'Your first run is queued',
+        description: 'This overview will show results once the run finishes.',
+      }
+    : summaryRunning
+      ? {
+          title: 'Your first sync is in progress',
+          description: 'This overview will show results once the run finishes.',
+        }
+      : runLogs.length > 0
+        ? {
+            title: 'No completed sync yet',
+            description:
+              'Review the previous attempt in Run History. After a run completes, you’ll see records synced, run timing, and upcoming activity here.',
+          }
+        : {
+            title: 'Your sync overview starts after the first run',
+            description:
+              'Follow the setup steps above to prepare this job and run its first sync. Once it finishes, you’ll see records synced, run timing, and upcoming activity here.',
+          };
 
   return (
     <div className="space-y-5">
-      {!manualDialogOpen && progress}
+      {hasRunHistory ? (
+        <Card size="sm" className="min-w-0 rounded-4xl">
+          <CardHeader visualLevel="section">
+            <div className="space-y-0.5">
+              <CardTitle>Sync overview</CardTitle>
+              <CardDescription>
+                Monitor sync activity and trigger fresh data syncs whenever you
+                need to.
+              </CardDescription>
+            </div>
+            <CardAction className="flex flex-wrap items-center gap-2">
+              {runLogs[0]?.bullmqJobId && queued && !isSyncing && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCancelQueue}
+                  disabled={cancellingQueue}
+                  className="text-destructive"
+                >
+                  <X /> {cancellingQueue ? 'Cancelling…' : 'Cancel queue'}
+                </Button>
+              )}
+              {failedQueueJob && !isSyncing && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRetryQueue}
+                  disabled={retryingQueue}
+                >
+                  <RotateCcw /> {retryingQueue ? 'Retrying…' : 'Retry'}
+                </Button>
+              )}
+              <Button
+                onClick={() => setManualDialogOpen(true)}
+                disabled={syncBlocked}
+              >
+                <Play /> Sync now
+              </Button>
+            </CardAction>
+          </CardHeader>
 
-      <Card size="sm" className="min-w-0 rounded-4xl">
-        <CardHeader>
-          <div className="space-y-0.5">
-            <CardTitle className="text-base font-semibold">
-              Job performance
-            </CardTitle>
-            <CardDescription className="text-xs leading-tight">
-              See how this job is doing and sync fresh data whenever you need
-              to.
-            </CardDescription>
+          <CardContent className="space-y-6">
+            {/* Sync progress — appears right after header on sync */}
+            {!manualDialogOpen && progress}
+
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              {summaryCards.map((card) => (
+                <SyncSummaryCard key={card.label} {...card} />
+              ))}
+            </div>
+
+            {queued && !isSyncing && (
+              <Alert className="py-2.5">
+                <Clock />
+                <AlertDescription className="space-y-0.5 [&_p:not(:last-child)]:mb-0">
+                  <p className="text-foreground font-semibold">Run queued</p>
+                  <p>
+                    Cancel the queued run before starting a different manual
+                    run.
+                  </p>
+                </AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <section className="min-w-0 space-y-5 py-8" aria-label="Sync overview">
+          {!manualDialogOpen && progress}
+          <div className="mx-auto max-w-xl space-y-2 text-center">
+            <h2 className="font-heading text-foreground text-lg font-semibold">
+              {overviewMessage.title}
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              {overviewMessage.description}
+            </p>
           </div>
-          <CardAction className="flex flex-wrap items-center gap-2">
-            {runLogs[0]?.bullmqJobId && queued && !isSyncing && (
+          {queued && !isSyncing && runLogs[0]?.bullmqJobId && (
+            <div className="flex justify-center">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleCancelQueue}
                 disabled={cancellingQueue}
-                className="text-destructive"
               >
                 <X /> {cancellingQueue ? 'Cancelling…' : 'Cancel queue'}
               </Button>
-            )}
-            {failedQueueJob && !isSyncing && (
+            </div>
+          )}
+          {failedQueueJob && !isSyncing && (
+            <div className="flex justify-center">
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={handleRetryQueue}
                 disabled={retryingQueue}
               >
-                <RotateCcw /> {retryingQueue ? 'Retrying…' : 'Retry'}
+                <RotateCcw /> {retryingQueue ? 'Retrying…' : 'Retry queued run'}
               </Button>
-            )}
-            <Button
-              onClick={() => {
-                if (inactiveBlocked) {
-                  triggerInactiveGuide();
-                  return;
-                }
-                setManualDialogOpen(true);
-              }}
-              disabled={syncBlocked}
-            >
-              <Play /> Sync now
-            </Button>
-          </CardAction>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-            {summaryCards.map((card) => (
-              <SyncSummaryCard key={card.label} {...card} />
-            ))}
-          </div>
-
-          {queued && !isSyncing && (
-            <Alert className="py-2.5">
-              <Clock />
-              <AlertDescription className="space-y-0.5 [&_p:not(:last-child)]:mb-0">
-                <p className="text-foreground font-semibold">Run queued</p>
-                <p>
-                  Cancel the queued run before starting a different manual run.
-                </p>
-              </AlertDescription>
-            </Alert>
+            </div>
           )}
-        </CardContent>
-      </Card>
+        </section>
+      )}
 
       {manualDialogOpen && (
         <StartSyncModal
           projectId={projectId}
           jobId={job.id}
           job={job}
+          environment={activeEnvironment}
           hasBaseline={Boolean(
             job.lastSyncedAt ||
-              runLogs.some(
-                (r) => r.status === 'completed' || r.status === 'success',
-              ),
+            runLogs.some(
+              (r) => r.status === 'completed' || r.status === 'success',
+            ),
           )}
           pipelineRequired={pipelineRequired}
           pipelineConfigured={pipelineConfigured}
@@ -390,16 +469,22 @@ export default function OverviewTab() {
             handleTabChange('pipeline');
           }}
           onClose={() => setManualDialogOpen(false)}
-          onRunNow={() => void handleRunNow()}
-          onLimitSyncStarted={() => void beginTracking()}
+          onRunNow={() => {
+            setManualDialogOpen(false);
+            void handleRunNow();
+          }}
+          onLimitSyncStarted={() => {
+            setManualDialogOpen(false);
+            void beginTracking();
+          }}
           onLimitSyncDone={() => {
             setManualDialogOpen(false);
             void refetch();
           }}
-          onSyncAll={(range) => void handleSyncAll(undefined, range)}
-          runProgress={
-            summaryRunning ? renderProgress('compact', false) : undefined
-          }
+          onSyncAll={(range) => {
+            setManualDialogOpen(false);
+            void handleSyncAll(undefined, range);
+          }}
         />
       )}
 

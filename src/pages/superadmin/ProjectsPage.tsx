@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
+import HeadingPair from '@/components/shared/HeadingPair';
 import ManagementToolbar from '@/components/shared/ManagementToolbar';
 import PageHeader from '@/components/shared/PageHeader';
 import PaginationBar from '@/components/shared/PaginationBar';
@@ -162,12 +163,11 @@ export default function ProjectsPage() {
       <Card>
         <CardContent className="space-y-6">
           <div className="flex justify-between">
-            <div className="space-y-1">
-              <h3 className="text-2xl font-semibold">Manage projects</h3>
-              <p className="text-muted-foreground text-sm">
-                View every project across the platform
-              </p>
-            </div>
+            <HeadingPair
+              level="h3"
+              title="Manage projects"
+              subtitle="View every project across the platform"
+            />
             <ManagementToolbar
               searchValue={search}
               onSearchChange={setSearch}
@@ -198,7 +198,7 @@ export default function ProjectsPage() {
               viewMode="table"
             />
           ) : (
-            <div className="overflow-hidden rounded-4xl border">
+            <div className="overflow-hidden rounded-3xl border">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted hover:bg-muted/50">

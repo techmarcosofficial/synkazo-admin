@@ -400,7 +400,8 @@ export default function ManualMappingDialog({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
           size="md"
-          className="flex h-[85vh] max-h-[85vh] flex-col gap-0 p-0"
+          padding="none"
+          className="flex h-[85vh] max-h-[85vh] flex-col gap-0"
           onPointerDownOutside={(e) => e.preventDefault()}
         >
           <DialogHeader className="shrink-0 gap-1.5 border-b px-6 py-4 pr-14">
@@ -414,7 +415,10 @@ export default function ManualMappingDialog({
           <ScrollArea className="min-h-0 flex-1">
             <div className="flex flex-col gap-6 px-6 py-4">
               <div className="grid grid-cols-3 gap-2.5">
-                <Card className="ring-border gap-4 py-4 shadow-none ring-1">
+                <Card
+                  surface="inner"
+                  className="ring-border gap-4 py-4 shadow-none ring-1"
+                >
                   <CardContent className="px-4">
                     <div className="flex items-baseline gap-1.5">
                       <span className="text-2xl font-extrabold">
@@ -427,7 +431,10 @@ export default function ManualMappingDialog({
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="ring-border gap-4 py-4 shadow-none ring-1">
+                <Card
+                  surface="inner"
+                  className="ring-border gap-4 py-4 shadow-none ring-1"
+                >
                   <CardContent className="px-4">
                     <div className="flex items-baseline gap-1.5">
                       <span className="text-2xl font-extrabold">
@@ -440,7 +447,10 @@ export default function ManualMappingDialog({
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="ring-border gap-4 py-4 shadow-none ring-1">
+                <Card
+                  surface="inner"
+                  className="ring-border gap-4 py-4 shadow-none ring-1"
+                >
                   <CardContent className="px-4">
                     <div className="flex items-baseline gap-1.5">
                       <span className="text-2xl font-extrabold">
@@ -501,6 +511,7 @@ export default function ManualMappingDialog({
                       const score = scores[d.id];
                       return (
                         <Card
+                          surface="inner"
                           key={d.id}
                           className="ring-border gap-4 py-4 shadow-none ring-1"
                         >
@@ -580,12 +591,21 @@ export default function ManualMappingDialog({
                             {pairReasons.length > 0 && (
                               <div className="mt-1 border-t pt-3">
                                 <EmptyValuePolicy
+                                  defaultOnly
                                   reasons={pairReasons}
                                   value={{
-                                    onEmpty: d.onEmpty,
-                                    defaultValue: d.defaultValue,
+                                    onEmpty: 'default',
+                                    defaultValue:
+                                      d.onEmpty === 'default'
+                                        ? d.defaultValue
+                                        : '',
                                   }}
-                                  onChange={(v) => updateDraft(d.id, v)}
+                                  onChange={(v) =>
+                                    updateDraft(d.id, {
+                                      ...v,
+                                      onEmpty: 'default',
+                                    })
+                                  }
                                 />
                               </div>
                             )}
@@ -596,6 +616,7 @@ export default function ManualMappingDialog({
 
                     return (
                       <Card
+                        surface="inner"
                         key={d.id}
                         className="ring-border gap-4 py-4 shadow-none ring-1"
                       >

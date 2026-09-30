@@ -19,6 +19,11 @@
   background-size: 22px 22px;
 }
 
+@utility ring-0.5 {
+  --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(0.5px + var(--tw-ring-offset-width, 0px)) var(--tw-ring-color, currentColor);
+  box-shadow: var(--tw-inset-shadow, 0 0 #0000), var(--tw-inset-ring-shadow, 0 0 #0000), var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow, 0 0 #0000);
+}
+
 @theme inline {
   --font-sans: "Plus Jakarta Sans Variable", sans-serif;
 
@@ -55,13 +60,13 @@
   --color-card: var(--card);
   --color-foreground: var(--foreground);
   --color-background: var(--background);
-  --radius-sm: calc(var(--radius) * 0.8);
-  --radius-md: calc(var(--radius) * 1);
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.2);
-  --radius-2xl: calc(var(--radius) * 2);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-xl: calc(var(--radius) * 1.25);
+  --radius-2xl: calc(var(--radius) * 1.5);
+  --radius-3xl: calc(var(--radius) * 2);
+  --radius-4xl: calc(var(--radius) * 2.5);
 
   /* Synkazo semantic extensions: sync/job status colors */
   --color-success: var(--success);
@@ -102,9 +107,9 @@
   --spacing: 0.26rem;
   /* Base — Synkazo theme source of truth: Synkazo/Synkazo.dc.html (light --bg/--text) */
   --background:
-    #f5f6f9;
+    #f6f7fa;
   --foreground:
-    #14151b;
+    #101322;
 
   --footer: #0b0c11;
   --footer-foreground:#ffffff;
@@ -112,12 +117,12 @@
   --card:
     #ffffff;
   --card-foreground:
-    #14151b;
+    #101322;
 
   --popover:
     #ffffff;
   --popover-foreground:
-    #14151b;
+    #101322;
 
   /* Primary — rich black in light mode; brand orange is reserved for focused
      accents and the dark-mode primary. */
@@ -128,22 +133,22 @@
 
   /* Secondary surfaces */
   --secondary:
-    #f1f2f6;
+    #f0f1f5;
   --secondary-foreground:
-    #14151b;
+    #101322;
 
   /* Muted */
   --muted:
-    #f1f2f6;
+    #f0f1f5;
   --muted-foreground:
-    #565c6b;
+    #5a6072;
 
   /* Accent — kept as a neutral hover surface (same as muted), not the vivid
      brand orange, so existing hover/selected states stay subtle. */
   --accent:
-    #f1f2f6;
+    #f0f1f5;
   --accent-foreground:
-    #14151b;
+    #101322;
 
   /* States */
   --destructive:
@@ -160,10 +165,10 @@
 
   /* Borders */
   --border:
-    #e5e7ee;
+    #e2e4ec;
   --f-border: #262a37;
   --input:
-    #e5e7ee;
+    #e2e4ec;
   --ring:
     rgba(248, 85, 8, 0.35);
 
@@ -181,7 +186,7 @@
 
   /* Radius */
   --radius:
-    0.35rem;
+    0.5rem;
 
   /* Sidebar */
   --sidebar:
@@ -222,19 +227,19 @@
 .dark {
   /* Base — Synkazo theme source of truth: Synkazo/Synkazo.dc.html ([data-theme="dark"] --bg/--text) */
   --background:
-    #0b0c11;
+    #090a0f;
   --foreground:
     #eceef4;
   --card:
-    #14161f;
+    #12141d;
   --card-foreground:
     #eceef4;
 
-  --footer: #0b0c11;
+  --footer: #090a0f;
   --footer-foreground:#ffffff;
 
   --popover:
-    #14161f;
+    #12141d;
   --popover-foreground:
     #eceef4;
 
@@ -244,19 +249,19 @@
     #ffffff;
 
   --secondary:
-    #1a1d28;
+    #181a24;
   --secondary-foreground:
     #eceef4;
 
   --muted:
-    #1a1d28;
+    #181a24;
   --muted-foreground:
-    #99a0b2;
+    #939ab0;
 
   /* Accent — kept as a neutral hover surface (same as muted), not the vivid
      brand orange, so existing hover/selected states stay subtle. */
   --accent:
-    #1a1d28;
+    #181a24;
   --accent-foreground:
     #eceef4;
 
@@ -272,11 +277,11 @@
   --paused: #a78bfa;
 
   --border:
-    #262a37;
-  --f-border:#262a37;
+    #242838;
+  --f-border:#242838;
 
   --input:
-    #262a37;
+    #242838;
   --ring:
     rgba(248, 85, 8, 0.45);
 
@@ -631,4 +636,51 @@
 
 .animate-pointer-nudge {
   animation: pointer-nudge 1.2s ease-in-out infinite;
+}
+
+/* Rotating border beam animation used during verification on connector cards */
+@keyframes border-beam-spin {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+@keyframes border-beam-dash {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -100;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [class*="border-beam-spin"],
+  [style*="border-beam-dash"] {
+    animation: none !important;
+  }
+}
+
+/* Point from the project setup step to the actions already on the flow list. */
+.project-flow-guidance:has([data-project-configure-step="true"]:is(:hover, :focus-visible))
+  [data-flow-next-action="true"] {
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 40%, transparent);
+}
+
+.project-flow-guidance:has([data-project-configure-step="true"]:is(:hover, :focus-visible))
+  [data-flow-next-action="true"] [data-icon="inline-end"] {
+  transform: translateX(3px);
+}
+
+[data-flow-next-action="true"] [data-icon="inline-end"] {
+  transition: transform 180ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-flow-next-action="true"] [data-icon="inline-end"] {
+    transition: none;
+  }
 }

@@ -1,7 +1,7 @@
 // features/projects/components/CreateProjectDialog.tsx
 
 import { useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import type { CreateProjectFormRef, CreateProjectSelection } from '../../types';
 
@@ -21,6 +21,7 @@ import { useCreateProjectStore } from '@/features/projects/store';
 
 export default function CreateProjectDialog() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const formRef = useRef<CreateProjectFormRef>(null);
   const [selection, setSelection] = useState<CreateProjectSelection>({
@@ -35,7 +36,8 @@ export default function CreateProjectDialog() {
   return (
     <Dialog open={isOpen} onOpenChange={setOpen}>
       <DialogContent
-        className="flex max-h-[85vh] w-full flex-col gap-0 p-0 sm:max-w-4xl"
+        padding="none"
+        className="flex max-h-[85vh] w-full flex-col gap-0 sm:max-w-4xl"
         onEscapeKeyDown={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
       >
@@ -52,14 +54,22 @@ export default function CreateProjectDialog() {
             onSelectionChange={setSelection}
             onSuccess={(project) => {
               close();
-              navigate(`/projects/${project.id}`);
+              const isFromDashboard = location.pathname.includes('/dashboard');
+              navigate(`/projects/${project.id}?tab=connections`, {
+                state: {
+                  from: location.pathname,
+                  fromLabel: isFromDashboard
+                    ? 'Back to Dashboard'
+                    : 'Back to Projects',
+                },
+              });
             }}
           />
         </div>
 
         <DialogFooter className="bg-muted/40 shrink-0 flex-row items-center justify-between gap-2 border-t p-4">
           {selection.sourcePlatformId && selection.syncMode && (
-            <div className="bg-background flex items-center gap-2 rounded-4xl border px-3 py-2">
+            <div className="bg-background flex items-center gap-2 rounded-3xl border px-3 py-2">
               <PlatformPair
                 sourcePlatformId={selection.sourcePlatformId}
                 destPlatformId="hubspot"

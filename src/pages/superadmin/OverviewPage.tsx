@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+import HeadingPair from '@/components/shared/HeadingPair';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
@@ -50,15 +51,15 @@ function MetricCard({
 }) {
   const toneClasses =
     tone === 'danger'
-      ? 'border-red-200 bg-red-50 text-red-900 hover:border-red-300'
+      ? 'border-destructive/30 bg-destructive/5 text-destructive hover:border-destructive/50'
       : tone === 'warning'
-        ? 'border-amber-200 bg-amber-50 text-amber-900 hover:border-amber-300'
-        : 'bg-card hover:border-primary';
+        ? 'border-warning/30 bg-warning/5 text-warning hover:border-warning/50'
+        : 'border-border bg-card text-card-foreground hover:border-primary/40';
 
   return (
     <Link
       to={to}
-      className={`rounded-lg border p-4 transition-colors ${toneClasses}`}
+      className={`block rounded-3xl border p-4 transition-colors focus-visible:outline-2 focus-visible:outline-ring ${toneClasses}`}
     >
       <div className="flex items-center gap-3">
         <Icon className="size-5 shrink-0" aria-hidden />
@@ -82,8 +83,8 @@ function BreakdownList({
   linkFor: (key: string) => string;
 }) {
   return (
-    <div className="bg-card rounded-lg border p-4">
-      <div className="mb-3 text-sm font-medium">{title}</div>
+    <div className="bg-card rounded-4xl border border-border p-4">
+      <div className="mb-3 text-base font-semibold">{title}</div>
       <ul className="divide-y">
         {rows.map((row) => (
           <li key={row.key}>
@@ -110,8 +111,8 @@ function RecentAlerts({
 }) {
   if (alerts.length === 0) {
     return (
-      <div className="bg-card rounded-lg border p-4">
-        <div className="mb-2 text-sm font-medium">Recent alerts</div>
+      <div className="bg-card rounded-4xl border border-border p-4">
+        <div className="mb-2 text-base font-semibold">Recent alerts</div>
         <p className="text-muted-foreground text-sm">
           No warning or critical events in the last window. All quiet.
         </p>
@@ -120,8 +121,8 @@ function RecentAlerts({
   }
 
   return (
-    <div className="bg-card rounded-lg border">
-      <div className="border-b px-4 py-3 text-sm font-medium">
+    <div className="bg-card rounded-4xl border border-border">
+      <div className="border-b px-4 py-3 text-base font-semibold">
         Recent alerts
       </div>
       <ul className="divide-y">
@@ -138,7 +139,7 @@ function RecentAlerts({
               >
                 <ShieldAlert
                   className={`mt-0.5 size-4 shrink-0 ${
-                    isCritical ? 'text-red-600' : 'text-amber-600'
+                    isCritical ? 'text-destructive' : 'text-warning'
                   }`}
                   aria-hidden
                 />
@@ -175,7 +176,7 @@ function RecentAlerts({
 // the working data.
 function SectionErrorBanner({ label, error }: { label: string; error: string }) {
   return (
-    <div className="border-amber-300 bg-amber-50 text-amber-900 flex items-start gap-2 rounded-md border px-3 py-2 text-xs">
+    <div className="border-warning/30 bg-warning/5 text-warning flex items-start gap-2 rounded-xl border px-3 py-2 text-xs">
       <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden />
       <div className="min-w-0 flex-1">
         <div className="font-medium">{label}</div>
@@ -208,8 +209,8 @@ function SystemHealthCard({
       : null;
 
   return (
-    <div className="bg-card rounded-lg border">
-      <div className="border-b px-4 py-3 text-sm font-medium">
+    <div className="bg-card rounded-4xl border border-border">
+      <div className="border-b px-4 py-3 text-base font-semibold">
         System health
       </div>
       <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-4">
@@ -298,18 +299,21 @@ export default function OverviewPage() {
   ];
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">Platform overview</h1>
-          <p className="text-muted-foreground flex items-center gap-2 text-sm">
-            <Clock className="size-3.5" aria-hidden />
-            <span>Updated {relative}</span>
-            {query.isFetching ? (
-              <Loader2 className="size-3.5 animate-spin" aria-hidden />
-            ) : null}
-          </p>
-        </div>
+        <HeadingPair
+          level="h1"
+          title="Platform overview"
+          subtitle={
+            <span className="inline-flex items-center gap-2">
+              <Clock className="size-3.5" aria-hidden />
+              <span>Updated {relative}</span>
+              {query.isFetching ? (
+                <Loader2 className="size-3.5 animate-spin" aria-hidden />
+              ) : null}
+            </span>
+          }
+        />
         <Button
           variant="outline"
           size="sm"

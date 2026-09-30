@@ -29,7 +29,12 @@ import { Spinner } from '@/components/ui/spinner';
 import { sseClient } from '@/lib/sseClient';
 import { mergeSyncProgress } from '@/lib/mergeSyncProgress';
 import { cn } from '@/lib/utils';
-import type { Job, SyncProgressEvent, SyncRun } from '@/types';
+import type {
+  Job,
+  ProjectEnvironment,
+  SyncProgressEvent,
+  SyncRun,
+} from '@/types';
 
 const MAX_POLL_COUNT = 180;
 const STUCK_THRESHOLD = 30;
@@ -38,6 +43,7 @@ interface LimitSyncModalProps {
   projectId: string;
   jobId: string;
   job?: Job;
+  environment?: ProjectEnvironment;
   onStarted?: () => void;
   onDone?: () => void;
   onClose: () => void;
@@ -49,6 +55,7 @@ interface LimitSyncModalProps {
   /** Uses the parent section heading and moves technical fields behind disclosure. */
   compact?: boolean;
   disabled?: boolean;
+  onFooterChange?: (footer: ReactNode) => void;
 }
 
 // DialogTitle requires Radix Dialog context — swap for a plain equivalent when embedded.
@@ -94,11 +101,14 @@ function Frame({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         size="md"
-        className="flex max-h-[90vh] flex-col"
+        padding="none"
+        className="flex max-h-[90vh] flex-col gap-0 overflow-hidden rounded-4xl sm:max-h-[85vh]"
         onEscapeKeyDown={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
       >
-        {children}
+        <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          {children}
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -108,6 +118,7 @@ export default function LimitSyncModal({
   projectId,
   jobId,
   job,
+  environment,
   onStarted,
   onDone,
   onClose,
@@ -117,11 +128,21 @@ export default function LimitSyncModal({
   embedded = false,
   compact = false,
   disabled = false,
+  onFooterChange,
 }: LimitSyncModalProps) {
+  const isSandbox = environment === 'sandbox';
+  const isSandboxTest = isSandbox && !job?.lastSyncedAt;
+  const runButtonLabel = isSandboxTest ? 'Run Test Sync' : 'Start Limited Sync';
+  const destinationLabel =
+    environment === 'sandbox'
+      ? 'the Sandbox destination'
+      : environment === 'production'
+        ? 'the Production destination'
+        : 'the destination';
   const pipelineBlocked = pipelineRequired && !pipelineConfigured;
   const [step, setStep] = useState('config');
 
-  const [limit, setLimit] = useState<number>(100);
+  const [limit, setLimit] = useState<number>(!job?.lastSyncedAt ? 5 : 100);
   const [startPage, setStartPage] = useState<number>(1);
   const [batchSize, setBatchSize] = useState<number>(100);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -364,29 +385,66 @@ export default function LimitSyncModal({
     onClose();
   };
 
+  const footerNode = (
+    <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end w-full">
+      <Button
+        onClick={handleStart}
+        disabled={pipelineBlocked || disabled}
+      >
+        <Play /> {runButtonLabel}
+      </Button>
+    </div>
+  );
+
+  useEffect(() => {
+    if (onFooterChange && step === 'config') {
+      onFooterChange(footerNode);
+    }
+  }, [
+    step,
+    safeLimit,
+    safeStart,
+    safeBatch,
+    pipelineBlocked,
+    disabled,
+    runButtonLabel,
+    onFooterChange,
+  ]);
+
   return (
     <>
       <Frame embedded={embedded} onClose={onClose}>
         {step === 'config' && (
           <>
             {!compact && (
-              <DialogHeader>
-                <Title embedded={embedded} className="flex items-center gap-3">
-                  <div className="bg-primary/10 flex size-8 items-center justify-center rounded-lg">
-                    <Sliders className="text-primary size-4" />
-                  </div>
-                  <div>
-                    <div>Limited run</div>
-                    <p className="text-muted-foreground flex items-center gap-1 text-xs font-normal">
-                      {job?.sourceObject} <ArrowRight className="size-3" />{' '}
-                      {job?.destObject}
-                    </p>
-                  </div>
-                </Title>
-              </DialogHeader>
+              <div className="px-6 pt-6 pb-4 border-b border-border/60 shrink-0">
+                <DialogHeader>
+                  <Title embedded={embedded} className="flex items-center gap-3">
+                    <div className="bg-primary/10 flex size-8 items-center justify-center rounded-lg">
+                      <Sliders className="text-primary size-4" />
+                    </div>
+                    <div>
+                      <div>
+                        {isSandbox
+                          ? 'Sandbox Test & Limited Run'
+                          : 'Limited Run'}
+                      </div>
+                      <p className="text-muted-foreground flex items-center gap-1 text-xs font-normal">
+                        {job?.sourceObject} <ArrowRight className="size-3" />{' '}
+                        {job?.destObject}
+                      </p>
+                    </div>
+                  </Title>
+                </DialogHeader>
+              </div>
             )}
 
-            <div className="flex-1 space-y-3 overflow-y-auto">
+            <div
+              className={cn(
+                'flex-1 min-h-0 space-y-3 overflow-y-auto',
+                !embedded && 'px-6 py-4',
+              )}
+            >
               {pipelineBlocked && (
                 <Alert variant="destructive" className="py-2.5">
                   <AlertTriangle />
@@ -418,14 +476,63 @@ export default function LimitSyncModal({
                 <Info className="text-primary" />
                 <AlertDescription className="space-y-0.5 [&_p:not(:last-child)]:mb-0">
                   <p className="text-foreground font-semibold">
-                    About limited runs
+                    {isSandboxTest
+                      ? 'Sandbox Testing (Recommended)'
+                      : 'About Limited Runs'}
                   </p>
                   <p>
-                    Process a controlled subset using this job's existing sync
-                    rules. This does not update the last synced timestamp.
+                    {isSandboxTest
+                      ? 'Run a small sample through your mappings. This writes or updates records in the Sandbox destination and does not advance the sync bookmark.'
+                      : `Process a controlled subset using this job's existing sync rules. This writes or updates records in ${destinationLabel} and does not advance the sync bookmark.`}
                   </p>
                 </AlertDescription>
               </Alert>
+
+              <div className="space-y-1.5">
+                <p className="text-foreground text-xs font-medium">
+                  Quick Record Limits
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant={limit === 5 ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => {
+                      setLimit(5);
+                      setErrors((e) => ({ ...e, limit: '' }));
+                    }}
+                    className="h-7 text-xs"
+                  >
+                    {isSandboxTest
+                      ? '5 Records (Recommended Test)'
+                      : '5 Records'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={limit === 50 ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => {
+                      setLimit(50);
+                      setErrors((e) => ({ ...e, limit: '' }));
+                    }}
+                    className="h-7 text-xs"
+                  >
+                    50 Records
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={limit === 100 ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => {
+                      setLimit(100);
+                      setErrors((e) => ({ ...e, limit: '' }));
+                    }}
+                    className="h-7 text-xs"
+                  >
+                    100 Records
+                  </Button>
+                </div>
+              </div>
 
               <FieldGroup className="grid gap-3 sm:grid-cols-3">
                 <Field data-invalid={!!errors.limit}>
@@ -502,7 +609,7 @@ export default function LimitSyncModal({
               <Card className="bg-muted/30 border-muted py-0">
                 <CardContent className="space-y-3 p-4">
                   <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                    Preview
+                    Run summary
                   </p>
                   <div className="grid grid-cols-2 gap-x-6 gap-y-2">
                     <div className="flex items-center gap-2">
@@ -550,20 +657,29 @@ export default function LimitSyncModal({
               </Card>
             </div>
 
-            <DialogFooter>
-              {!compact && (
+            {!compact && !embedded ? (
+              <DialogFooter className="shrink-0 border-t bg-muted/20 px-6 py-4">
                 <Button variant="outline" onClick={onClose} className="flex-1">
                   Cancel
                 </Button>
-              )}
-              <Button
-                onClick={handleStart}
-                disabled={pipelineBlocked || disabled}
-                className={compact ? undefined : 'flex-1'}
-              >
-                <Play /> Start Sync
-              </Button>
-            </DialogFooter>
+                <Button
+                  onClick={handleStart}
+                  disabled={pipelineBlocked || disabled}
+                  className="flex-1"
+                >
+                  <Play /> {runButtonLabel}
+                </Button>
+              </DialogFooter>
+            ) : !onFooterChange ? (
+              <div className="border-t border-border/60 -mx-6 -mb-6 mt-6 px-6 py-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end bg-muted/20">
+                <Button
+                  onClick={handleStart}
+                  disabled={pipelineBlocked || disabled}
+                >
+                  <Play /> {runButtonLabel}
+                </Button>
+              </div>
+            ) : null}
           </>
         )}
 

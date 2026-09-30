@@ -51,7 +51,7 @@ export default function StatCardGrid({
                   {stat.icon ? (
                     <div
                       className={cn(
-                        'flex size-11 items-center justify-center rounded-3xl',
+                        'flex size-10 items-center justify-center rounded-xl',
                         stat.tone,
                       )}
                     >

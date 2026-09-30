@@ -87,7 +87,8 @@ export default function CustomFieldForm({
                   setField((f) => ({ ...f, key: e.target.value }))
                 }
                 placeholder="e.g. custom_field_1"
-                className="h-8 font-mono text-xs"
+                uiSize="sm"
+                className="font-mono"
               />
             </Field>
             <Field>
@@ -100,7 +101,7 @@ export default function CustomFieldForm({
                   setField((f) => ({ ...f, label: e.target.value }))
                 }
                 placeholder="e.g. Custom Field"
-                className="h-8 text-xs"
+                uiSize="sm"
               />
             </Field>
           </div>

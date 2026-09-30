@@ -3,6 +3,7 @@ import { type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
 import AccountContextAlert from '@/components/shared/AccountContextAlert';
+import HeadingPair from '@/components/shared/HeadingPair';
 import { cn } from '@/lib/utils';
 import { useHeaderStore } from '@/stores/useHeaderStore';
 
@@ -55,23 +56,38 @@ export default function PageHeader({
 
   return (
     <>
-      <header className="w-full space-y-4">
+      <header className={cn('w-full', backTo ? 'space-y-4' : 'space-y-3')}>
         {backTo && <BackLink label={backTo.label} to={backTo.to} />}
 
-        <div className="flex gap-4 md:flex-row md:items-start md:justify-between">
+        <div
+          className={cn(
+            'flex gap-4 md:flex-row md:items-start md:justify-between',
+            !backTo && 'flex-col',
+          )}
+        >
           {/* Left */}
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-              {badge}
-            </div>
+          {backTo ? (
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+                {badge}
+              </div>
 
-            {description && (
-              <p className="text-muted-foreground mt-1.5 max-w-3xl text-sm leading-5">
-                {description}
-              </p>
-            )}
-          </div>
+              {description && (
+                <p className="text-muted-foreground mt-1.5 max-w-3xl text-sm leading-5">
+                  {description}
+                </p>
+              )}
+            </div>
+          ) : (
+            <HeadingPair
+              level="h1"
+              title={title}
+              subtitle={description}
+              trailing={badge}
+              className="max-w-3xl flex-1"
+            />
+          )}
 
           {/* Right */}
           {hasActions && (

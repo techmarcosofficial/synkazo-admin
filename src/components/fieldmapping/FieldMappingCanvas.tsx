@@ -38,6 +38,7 @@ import AutoMapReviewDialog, {
   type AutoMapPreview,
   type AutoMapPreviewRow,
 } from './AutoMapReviewDialog';
+import CombineFieldsDialog from './CombineFieldsDialog';
 import type { RequiredReason } from './EmptyValuePolicy';
 import ManualMappingDialog, {
   type ManualMappingPrefill,
@@ -47,6 +48,7 @@ import RuleBuilderModal from './RuleBuilderModal';
 
 import { associationsApi } from '@/api/associations';
 import { PlatformIcon } from '@/components/platform';
+import HeadingPair from '@/components/shared/HeadingPair';
 import { usePlanUpgradePrompt } from '@/components/shared/PlanGate';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -95,6 +97,7 @@ import {
   type MatchableField,
 } from '@/lib/fieldMatching';
 import { suggestCastRule, type Rule } from '@/lib/ruleEngine';
+import { combineMappingName, type CombineConfig } from '@/lib/combineFields';
 import { cn } from '@/lib/utils';
 import { useEntitlements } from '@/queries/useEntitlements';
 
@@ -164,7 +167,7 @@ export interface FieldDef {
 export type OnEmptyPolicy = 'none' | 'default' | 'skip_record';
 
 /** What happens to an already-mapped field on an update (not a create). */
-export type MappingUpdatePolicy = 'always' | 'create_only' | 'fill_if_empty';
+export type MappingUpdatePolicy = 'always' | 'create_only';
 
 export type MappingDirection =
   'forward_only' | 'reverse_only' | 'bidirectional';
@@ -190,32 +193,6 @@ const UPDATE_POLICY_OPTIONS: Array<{
     label: 'Create only',
     hint: 'Set this field only when the record is first created. Later syncs never touch it again, so edits made directly in the destination are preserved.',
   },
-  {
-    value: 'fill_if_empty',
-    label: 'Fill if empty',
-    hint: 'Only write this field if it\'s currently blank in the destination. If the destination already has the same value, nothing changes. If the destination already has a different value — a genuine mismatch — nothing is overwritten; use "On Conflict" below to decide whether that mismatch skips just this field or the whole record.',
-  },
-];
-
-/** Only meaningful when updatePolicy is 'fill_if_empty' — decides what a genuine
- *  mismatch (destination already holds a value that differs from the incoming
- *  one — not simply empty) discards. Never triggers when the destination is
- *  empty (that's a fill, not a mismatch) or when both sides already agree. */
-const CONFLICT_SCOPE_OPTIONS: Array<{
-  value: 'field' | 'record';
-  label: string;
-  hint: string;
-}> = [
-  {
-    value: 'field',
-    label: 'This field only',
-    hint: 'When both sides already have a value and they differ (a genuine mismatch — not just an empty destination), that mismatch is logged and only this field is skipped. The rest of the record still updates normally.',
-  },
-  {
-    value: 'record',
-    label: 'Skip Whole Record',
-    hint: "When both sides already have a value and they differ (a genuine mismatch — not just an empty destination), the entire record's update is discarded, not just this field. Nothing on the record is written this sync.",
-  },
 ];
 
 export interface MappingRow {
@@ -224,6 +201,7 @@ export interface MappingRow {
   sourceType?: string;
   destType?: string;
   transformType?: string;
+  transformConfig?: Record<string, unknown> | null;
   rules?: unknown[];
   /** Which of this row's (possibly several) destinations is the match/lookup field, if any.
    *  Per-destination rather than per-row because one source can fan out to multiple
@@ -250,10 +228,6 @@ export interface MappingRow {
    *  per destination for the same fan-out reason as destOnEmpty. Missing/'always'
    *  is the historical behaviour — write it every time. */
   destUpdatePolicy?: Record<string, MappingUpdatePolicy>;
-  /** Only meaningful when the matching destUpdatePolicy entry is 'fill_if_empty'. 'record'
-   *  escalates a genuine conflict on that destination into discarding the whole record's
-   *  write, not just this field. Missing/'field' is the default (existing) behaviour. */
-  destConflictScope?: Record<string, 'field' | 'record'>;
   /** Same shape as destOnEmpty/destDefaults, but for the reverse leg — the empty-value
    *  policy that applies when a bidirectional row writes back into the SOURCE platform
    *  (i.e. the source platform requires this field on its side). Kept separate from
@@ -347,8 +321,6 @@ function removeFrom(
     const { [destKey]: _default, ...restDefaults } = m.destDefaults || {};
     const { [destKey]: _updatePolicy, ...restUpdatePolicy } =
       m.destUpdatePolicy || {};
-    const { [destKey]: _conflictScope, ...restConflictScope } =
-      m.destConflictScope || {};
     const remainingManualDestKeys = (m.manuallyAddedDestKeys ?? []).filter(
       (key) => key !== destKey,
     );
@@ -360,7 +332,6 @@ function removeFrom(
         destOnEmpty: restOnEmpty,
         destDefaults: restDefaults,
         destUpdatePolicy: restUpdatePolicy,
-        destConflictScope: restConflictScope,
         ...(remainingManualDestKeys.length > 0
           ? { manuallyAddedDestKeys: remainingManualDestKeys }
           : {}),
@@ -387,6 +358,9 @@ function newMappingRow(
     destType: dest.type,
     transformType: 'direct',
     rules: [],
+    ...(source.key.startsWith('__cross_object__:')
+      ? { direction: 'forward_only' as const }
+      : {}),
     ...(cast ? { destRules: { [dest.key]: [cast] } } : {}),
   };
 }
@@ -883,6 +857,10 @@ export default function FieldMappingCanvas({
 }: FieldMappingCanvasProps) {
   const attentionSectionRef = useRef<HTMLDivElement>(null);
   const [showComposer, setShowComposer] = useState(false);
+  const [showCombineComposer, setShowCombineComposer] = useState(false);
+  const [editingCombineSource, setEditingCombineSource] = useState<
+    string | null
+  >(null);
   const [composerPrefill, setComposerPrefill] =
     useState<ManualMappingPrefill | null>(null);
   const [mapSearch, setMapSearch] = useState('');
@@ -1104,10 +1082,29 @@ export default function FieldMappingCanvas({
   const totalRef = Math.max(requiredDest.length, pairCount, 1);
   const progress = Math.min(100, Math.round((readyCount / totalRef) * 100));
 
+  const combineNames = new Map<string, string>();
+  const usedCombineNames: string[] = mappings
+    .filter((mapping) => mapping.transformType === 'combine')
+    .map((mapping) =>
+      (
+        mapping.transformConfig as unknown as CombineConfig | null
+      )?.name?.trim(),
+    )
+    .filter((name): name is string => Boolean(name));
+  for (const mapping of mappings) {
+    if (mapping.transformType !== 'combine') continue;
+    const config = mapping.transformConfig as unknown as CombineConfig | null;
+    if (!config?.components) continue;
+    const name = combineMappingName(config, sourceFields, usedCombineNames);
+    combineNames.set(mapping.sourceField, name);
+    if (!config.name?.trim()) usedCombineNames.push(name);
+  }
+
   const filtered = mapSearch
     ? pairRows.filter((m) => {
         const sl = (
           sourceFields.find((f) => f.key === m.sourceField)?.label ??
+          combineNames.get(m.sourceField) ??
           m.sourceField
         ).toLowerCase();
         const dests = Array.isArray(m.destField) ? m.destField : [m.destField];
@@ -1252,25 +1249,6 @@ export default function FieldMappingCanvas({
       ),
     );
 
-  const setConflictScope = (
-    sourceKey: string,
-    destKey: string,
-    scope: 'field' | 'record',
-  ) =>
-    onMappingsChange(
-      mappings.map((m) =>
-        m.sourceField === sourceKey
-          ? {
-              ...m,
-              destConflictScope: {
-                ...(m.destConflictScope || {}),
-                [destKey]: scope,
-              },
-            }
-          : m,
-      ),
-    );
-
   /**
    * Repoints an existing (source, dest) pair. Everything hanging off the old
    * destination key — its rules, empty-value policy and match-field flag — moves
@@ -1288,7 +1266,6 @@ export default function FieldMappingCanvas({
       matchOrder: row.matchOrder,
       wasManuallyAdded: row.manuallyAddedDestKeys?.includes(from.destKey),
       updatePolicy: row.destUpdatePolicy?.[from.destKey],
-      conflictScope: row.destConflictScope?.[from.destKey],
       direction: row.direction,
     };
 
@@ -1324,14 +1301,6 @@ export default function FieldMappingCanvas({
                   destUpdatePolicy: {
                     ...(m.destUpdatePolicy || {}),
                     [to.destKey]: carried.updatePolicy,
-                  },
-                }
-              : {}),
-            ...(carried.conflictScope
-              ? {
-                  destConflictScope: {
-                    ...(m.destConflictScope || {}),
-                    [to.destKey]: carried.conflictScope,
                   },
                 }
               : {}),
@@ -1799,6 +1768,20 @@ export default function FieldMappingCanvas({
             : `${showReadOnly ? 'Hide' : 'Show'} the ${readOnlyDestFields.length} destination field${readOnlyDestFields.length !== 1 ? 's' : ''} that can't be mapped to.`}
         </TooltipContent>
       </Tooltip>
+      <Button
+        type="button"
+        variant="outline"
+        size={toolbarControlSize}
+        onClick={() => {
+          if (!canUseTransforms) {
+            promptUpgrade(TRANSFORM_UPGRADE_MESSAGE);
+            return;
+          }
+          setShowCombineComposer(true);
+        }}
+      >
+        {!canUseTransforms ? <Lock /> : <Plus />} Combine fields
+      </Button>
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
@@ -1919,11 +1902,11 @@ export default function FieldMappingCanvas({
             <div className="flex flex-wrap items-center gap-2">
               <div
                 className="flex shrink-0 items-center gap-1.5"
-                title="Fields used to find an existing destination record"
+                title="Fields used to uniquely identify records and match them between platforms"
               >
                 <KeyRound className="text-primary size-3.5" />
                 <h3 id="matched-by-heading" className="text-xs font-semibold">
-                  Matched by
+                  Identifier
                 </h3>
               </div>
 
@@ -1931,7 +1914,7 @@ export default function FieldMappingCanvas({
                 <div
                   className="bg-muted flex shrink-0 items-center rounded-xl p-0.5"
                   role="group"
-                  aria-label="Match key behavior"
+                  aria-label="Identifier key behavior"
                 >
                   <button
                     type="button"
@@ -1942,7 +1925,7 @@ export default function FieldMappingCanvas({
                         : 'text-muted-foreground hover:text-foreground',
                     )}
                     onClick={() => setMatchMode('and')}
-                    title="All selected keys must match"
+                    title="All selected identifier keys must match"
                   >
                     AND
                   </button>
@@ -1955,7 +1938,7 @@ export default function FieldMappingCanvas({
                         : 'text-muted-foreground hover:text-foreground',
                     )}
                     onClick={() => setMatchMode('or')}
-                    title="Try keys in priority order; first match wins"
+                    title="Try identifier keys in priority order; first match wins"
                   >
                     OR
                   </button>
@@ -1980,7 +1963,7 @@ export default function FieldMappingCanvas({
                 >
                   <SelectValue
                     placeholder={
-                      activeMatches.length === 0 ? 'Choose key' : '+ Add key'
+                      activeMatches.length === 0 ? 'Choose identifier' : '+ Add identifier'
                     }
                   />
                 </SelectTrigger>
@@ -1989,7 +1972,7 @@ export default function FieldMappingCanvas({
                     <div className="text-muted-foreground px-2.5 py-1.5 text-xs">
                       {matchOptions.length === 0
                         ? 'No fields mapped yet'
-                        : 'All mapped fields already added'}
+                        : 'All mapped fields already added as identifiers'}
                     </div>
                   ) : (
                     addableMatchOptions.map(({ sourceField, destKey }) => {
@@ -2150,46 +2133,46 @@ export default function FieldMappingCanvas({
             >
               <div
                 className="flex shrink-0 items-center gap-1.5"
-                title="Fields used to find an existing destination record"
+                title="Fields used to uniquely identify records and match them between platforms"
               >
                 <KeyRound className="text-primary size-3.5" />
                 <h3
                   id="matched-by-heading"
                   className="text-xs font-semibold whitespace-nowrap"
                 >
-                  Matched by
+                  Identifier
                 </h3>
               </div>
 
               {activeMatches.length >= 2 && (
                 <div
-                  className="bg-muted h-7 flex shrink-0 items-center rounded-xl p-0.5"
+                  className="bg-muted flex h-7 shrink-0 items-center rounded-xl p-0.5"
                   role="group"
-                  aria-label="Match key behavior"
+                  aria-label="Identifier key behavior"
                 >
                   <button
                     type="button"
                     className={cn(
-                      'rounded-lg px-2 h-6 text-[11px] font-semibold transition-colors',
+                      'h-6 rounded-lg px-2 text-[11px] font-semibold transition-colors',
                       matchMode === 'and'
                         ? 'bg-background text-foreground shadow-sm'
                         : 'text-muted-foreground hover:text-foreground',
                     )}
                     onClick={() => setMatchMode('and')}
-                    title="All selected keys must match"
+                    title="All selected identifier keys must match"
                   >
                     AND
                   </button>
                   <button
                     type="button"
                     className={cn(
-                      'rounded-lg px-2 h-6 text-[11px] font-semibold transition-colors',
+                      'h-6 rounded-lg px-2 text-[11px] font-semibold transition-colors',
                       matchMode === 'or'
                         ? 'bg-background text-foreground shadow-sm'
                         : 'text-muted-foreground hover:text-foreground',
                     )}
                     onClick={() => setMatchMode('or')}
-                    title="Try keys in priority order; first match wins"
+                    title="Try identifier keys in priority order; first match wins"
                   >
                     OR
                   </button>
@@ -2284,7 +2267,7 @@ export default function FieldMappingCanvas({
                 </DragDropContext>
               ) : (
                 <span className="text-muted-foreground shrink-0 text-xs italic">
-                  No keys selected
+                  No identifiers selected
                 </span>
               )}
 
@@ -2300,10 +2283,12 @@ export default function FieldMappingCanvas({
                   setMatchActive(selected.sourceField, selected.destKey, true);
                 }}
               >
-                <SelectTrigger size="sm" className="h-7 w-36 shrink-0">
+                <SelectTrigger size="sm" className="w-36 shrink-0">
                   <SelectValue
                     placeholder={
-                      activeMatches.length === 0 ? 'Choose key' : '+ Add key'
+                      activeMatches.length === 0
+                        ? 'Choose identifier'
+                        : '+ Add identifier'
                     }
                   />
                 </SelectTrigger>
@@ -2312,7 +2297,7 @@ export default function FieldMappingCanvas({
                     <div className="text-muted-foreground px-2.5 py-1.5 text-xs">
                       {matchOptions.length === 0
                         ? 'No fields mapped yet'
-                        : 'All mapped fields already added'}
+                        : 'All mapped fields already added as identifiers'}
                     </div>
                   ) : (
                     addableMatchOptions.map(({ sourceField, destKey }) => {
@@ -2364,13 +2349,10 @@ export default function FieldMappingCanvas({
               )}
             >
               {showHeading && (
-                <div className="min-w-0">
-                  <h2 className="text-lg font-semibold">Field mappings</h2>
-                  <p className="text-muted-foreground mt-0.5 text-xs">
-                    Map fields between your connected platforms to keep data in
-                    sync.
-                  </p>
-                </div>
+                <HeadingPair
+                  title="Field mappings"
+                  subtitle="Map fields between your connected platforms to keep data in sync."
+                />
               )}
               {mappingToolbar}
             </div>
@@ -2416,6 +2398,77 @@ export default function FieldMappingCanvas({
             projectId={projectId}
             sourceObject={sourceObject}
             jobId={jobId}
+          />
+          <CombineFieldsDialog
+            open={showCombineComposer}
+            onOpenChange={(open) => {
+              setShowCombineComposer(open);
+              if (!open) setEditingCombineSource(null);
+            }}
+            sourceFields={sourceFields}
+            destinationFields={destFields}
+            initial={
+              editingCombineSource
+                ? (() => {
+                    const mapping = mappings.find(
+                      (item) => item.sourceField === editingCombineSource,
+                    );
+                    return mapping
+                      ? {
+                          destinationField: Array.isArray(mapping.destField)
+                            ? mapping.destField[0]
+                            : mapping.destField,
+                          config:
+                            mapping.transformConfig as unknown as CombineConfig,
+                        }
+                      : null;
+                  })()
+                : null
+            }
+            onApply={(destinationField, config) => {
+              const otherNames = [...combineNames.entries()]
+                .filter(([source]) => source !== editingCombineSource)
+                .map(([, name]) => name);
+              const namedConfig = {
+                ...config,
+                name: combineMappingName(config, sourceFields, otherNames),
+              };
+              if (editingCombineSource) {
+                onMappingsChange(
+                  mappings.map((mapping) =>
+                    mapping.sourceField === editingCombineSource
+                      ? {
+                          ...mapping,
+                          destField: destinationField,
+                          transformConfig: namedConfig as unknown as Record<
+                            string,
+                            unknown
+                          >,
+                          direction: 'forward_only',
+                        }
+                      : mapping,
+                  ),
+                );
+                return;
+              }
+              const id =
+                typeof crypto !== 'undefined' && crypto.randomUUID
+                  ? crypto.randomUUID()
+                  : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+              onMappingsChange([
+                ...mappings,
+                {
+                  sourceField: `__combine__:${id}`,
+                  destField: destinationField,
+                  transformType: 'combine',
+                  transformConfig: namedConfig as unknown as Record<
+                    string,
+                    unknown
+                  >,
+                  direction: 'forward_only',
+                },
+              ]);
+            }}
           />
           <div className="overflow-hidden">
             <div className="bg-muted/30 flex items-center gap-2 border-b px-4 py-3">
@@ -2571,7 +2624,7 @@ export default function FieldMappingCanvas({
               )}
 
               {filteredPairs.length > 0 && (
-                <Table className="min-w-[1080px]">
+                <Table className="min-w-[920px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[22%]">Source field</TableHead>
@@ -2581,12 +2634,9 @@ export default function FieldMappingCanvas({
                       {showDirectionToggle && (
                         <TableHead className="w-40">Direction</TableHead>
                       )}
-                      <TableHead className="w-20">Match</TableHead>
+                      <TableHead className="w-24">Identifier</TableHead>
                       <TableHead className="w-[9.5rem]">
                         Update Policy
-                      </TableHead>
-                      <TableHead className="w-[8.5rem]">
-                        Conflict handling
                       </TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -2609,9 +2659,11 @@ export default function FieldMappingCanvas({
                       );
                       const direction = m.direction ?? 'bidirectional';
                       const rowDirectionReadOnly =
-                        typeof directionReadOnly === 'function'
+                        m.transformType === 'combine' ||
+                        m.sourceField.startsWith('__cross_object__:') ||
+                        (typeof directionReadOnly === 'function'
                           ? directionReadOnly(m)
-                          : directionReadOnly;
+                          : directionReadOnly);
                       const isEditing =
                         editingPair?.sourceField === m.sourceField &&
                         editingPair?.destKey === dk;
@@ -2621,9 +2673,10 @@ export default function FieldMappingCanvas({
                           ? glow.stage
                           : null;
                       const onEmpty = m.destOnEmpty?.[dk] ?? 'none';
-                      const updatePolicy = m.destUpdatePolicy?.[dk] ?? 'always';
-                      const conflictScope =
-                        m.destConflictScope?.[dk] ?? 'field';
+                      const updatePolicy =
+                        m.destUpdatePolicy?.[dk] === 'create_only'
+                          ? 'create_only'
+                          : 'always';
                       return (
                         <TableRow
                           key={`${m.sourceField}-${dk}`}
@@ -2650,7 +2703,10 @@ export default function FieldMappingCanvas({
                                   <>
                                     <div className="flex min-w-0 items-center gap-2">
                                       <span className="truncate text-sm font-semibold">
-                                        {sf?.label ?? m.sourceField}
+                                        {m.transformType === 'combine'
+                                          ? (combineNames.get(m.sourceField) ??
+                                            'Combined fields')
+                                          : (sf?.label ?? m.sourceField)}
                                         {sourceRequiredActive &&
                                           sf?.required && (
                                             <span className="text-destructive ml-0.5">
@@ -2658,10 +2714,40 @@ export default function FieldMappingCanvas({
                                             </span>
                                           )}
                                       </span>
+                                      {m.transformType === 'combine' && (
+                                        <Badge
+                                          variant="secondary"
+                                          className="shrink-0 text-[10px]"
+                                        >
+                                          Combined
+                                        </Badge>
+                                      )}
                                       <TypeChip type={sf?.type} />
                                     </div>
                                     <div className="text-muted-foreground truncate font-mono text-[10px]">
-                                      {m.sourceField}
+                                      {m.transformType === 'combine'
+                                        ? ((
+                                            m.transformConfig as
+                                              CombineConfig | undefined
+                                          )?.components
+                                            .filter(
+                                              (component) =>
+                                                component.type === 'field',
+                                            )
+                                            .map(
+                                              (component) =>
+                                                sourceFields.find(
+                                                  (field) =>
+                                                    field.key ===
+                                                    component.value,
+                                                )?.label ?? component.value,
+                                            )
+                                            .join(' + ') ?? m.sourceField)
+                                        : m.sourceField.includes(
+                                              '__cross_object__:',
+                                            )
+                                          ? 'Imported Property'
+                                          : m.sourceField}
                                     </div>
                                   </>
                                 )}
@@ -2700,8 +2786,7 @@ export default function FieldMappingCanvas({
                                 </span>
                                 {isMatch && (
                                   <Badge className="bg-primary/10 text-primary shrink-0 gap-1 whitespace-nowrap">
-                                    <KeyRound className="size-2.5" /> Match
-                                    field
+                                    <KeyRound className="size-2.5" /> Identifier
                                     {matchMode === 'or' &&
                                       m.matchOrder != null &&
                                       ` · ${m.matchOrder}`}
@@ -2727,25 +2812,14 @@ export default function FieldMappingCanvas({
                                       : `Default: ${m.destDefaults?.[dk] || '—'}`}
                                   </Badge>
                                 )}
-                                {updatePolicy !== 'always' && (
+                                {updatePolicy === 'create_only' && (
                                   <Badge
                                     variant="secondary"
                                     className="shrink-0 gap-1 whitespace-nowrap"
                                   >
-                                    {updatePolicy === 'create_only'
-                                      ? 'Create only'
-                                      : 'Fill if empty'}
+                                    Create only
                                   </Badge>
                                 )}
-                                {updatePolicy === 'fill_if_empty' &&
-                                  conflictScope === 'record' && (
-                                    <Badge
-                                      variant="secondary"
-                                      className="bg-warning/10 text-warning shrink-0 gap-1 whitespace-nowrap"
-                                    >
-                                      Skips whole record on mismatch
-                                    </Badge>
-                                  )}
                                 <TypeChip type={df?.type} />
                               </div>
                             )}
@@ -2779,10 +2853,7 @@ export default function FieldMappingCanvas({
                                     )
                                   }
                                 >
-                                  <SelectTrigger
-                                    size="sm"
-                                    className="h-8 w-full"
-                                  >
+                                  <SelectTrigger size="sm" className="w-full">
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent align="start">
@@ -2797,7 +2868,7 @@ export default function FieldMappingCanvas({
                             </TableCell>
                           )}
                           {isEditing ? (
-                            <TableCell colSpan={4} className="text-right">
+                            <TableCell colSpan={3} className="text-right">
                               <div className="flex items-center justify-end gap-1.5">
                                 <Button
                                   type="button"
@@ -2860,86 +2931,49 @@ export default function FieldMappingCanvas({
                                         }
                                         aria-label={
                                           isMatch
-                                            ? 'Remove as match field'
-                                            : 'Set as match field'
+                                            ? 'Remove as identifier'
+                                            : 'Set as identifier'
                                         }
                                       />
                                     </label>
                                   </TooltipTrigger>
                                   <TooltipContent side="bottom">
                                     {isMatch
-                                      ? 'This field is used to find existing records. Click to unset.'
-                                      : 'Use this field to find existing records to update.'}
+                                      ? 'This field is used as a unique identifier to match existing records. Click to unset.'
+                                      : 'Use this field as a unique identifier to match existing records.'}
                                   </TooltipContent>
                                 </Tooltip>
                               </TableCell>
                               <TableCell>
                                 <Select
                                   value={updatePolicy}
-                                  onValueChange={(v) =>
+                                  onValueChange={(value) =>
                                     setUpdatePolicy(
                                       m.sourceField,
                                       dk,
-                                      v as MappingUpdatePolicy,
+                                      value as MappingUpdatePolicy,
                                     )
                                   }
                                 >
                                   <SelectTrigger
                                     size="sm"
-                                    className="h-8 w-[9.5rem]"
+                                    className="w-[9.5rem]"
                                   >
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent align="end">
-                                    {UPDATE_POLICY_OPTIONS.map((o) => (
-                                      <Tooltip key={o.value}>
+                                    {UPDATE_POLICY_OPTIONS.map((option) => (
+                                      <Tooltip key={option.value}>
                                         <TooltipTrigger asChild>
-                                          <SelectItem value={o.value}>
-                                            {o.label}
+                                          <SelectItem value={option.value}>
+                                            {option.label}
                                           </SelectItem>
                                         </TooltipTrigger>
                                         <TooltipContent
                                           side="right"
                                           className="max-w-56"
                                         >
-                                          {o.hint}
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </TableCell>
-                              <TableCell>
-                                <Select
-                                  value={conflictScope}
-                                  disabled={updatePolicy !== 'fill_if_empty'}
-                                  onValueChange={(v) =>
-                                    setConflictScope(
-                                      m.sourceField,
-                                      dk,
-                                      v as 'field' | 'record',
-                                    )
-                                  }
-                                >
-                                  <SelectTrigger
-                                    size="sm"
-                                    className="h-8 w-[8.5rem]"
-                                  >
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent align="end">
-                                    {CONFLICT_SCOPE_OPTIONS.map((o) => (
-                                      <Tooltip key={o.value}>
-                                        <TooltipTrigger asChild>
-                                          <SelectItem value={o.value}>
-                                            {o.label}
-                                          </SelectItem>
-                                        </TooltipTrigger>
-                                        <TooltipContent
-                                          side="right"
-                                          className="max-w-56"
-                                        >
-                                          {o.hint}
+                                          {option.hint}
                                         </TooltipContent>
                                       </Tooltip>
                                     ))}
@@ -3003,6 +3037,13 @@ export default function FieldMappingCanvas({
                                         className="text-muted-foreground"
                                         aria-label="Edit mapping"
                                         onClick={() => {
+                                          if (m.transformType === 'combine') {
+                                            setEditingCombineSource(
+                                              m.sourceField,
+                                            );
+                                            setShowCombineComposer(true);
+                                            return;
+                                          }
                                           setEditingPair({
                                             sourceField: m.sourceField,
                                             destKey: dk,

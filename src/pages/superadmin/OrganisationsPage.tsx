@@ -96,7 +96,7 @@ function ToneBadge({
         : tone === 'muted'
           ? 'bg-muted text-muted-foreground'
           : 'bg-emerald-100 text-emerald-900';
-  return <Badge className={`rounded-full ${classes}`}>{children}</Badge>;
+  return <Badge className={classes}>{children}</Badge>;
 }
 
 export default function OrganisationsPage() {

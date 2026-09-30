@@ -29,7 +29,6 @@ const VARIANT_META: Record<
     icon: LucideIcon;
     iconClassName: string;
     mediaClassName: string;
-    actionClassName?: string;
   }
 > = {
   danger: {
@@ -50,7 +49,7 @@ const VARIANT_META: Record<
   info: {
     icon: Info,
     iconClassName: 'text-info',
-    mediaClassName: 'bg-info/10 text-info'
+    mediaClassName: 'bg-info/10 text-info',
   },
 };
 
@@ -94,6 +93,7 @@ export default function ConfirmDialog() {
 
         <AlertDialogFooter>
           <AlertDialogCancel
+            variant="outline"
             size="sm"
             className="w-full"
             disabled={isConfirming}
@@ -102,6 +102,7 @@ export default function ConfirmDialog() {
             {cancelLabel}
           </AlertDialogCancel>
           <AlertDialogAction
+            variant="default"
             size="sm"
             disabled={isConfirming}
             onClick={(e) => {

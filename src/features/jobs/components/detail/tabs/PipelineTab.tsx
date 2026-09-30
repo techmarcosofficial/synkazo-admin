@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useJobDetailContext } from '../context';
 
 import { jobsApi } from '@/api/jobs';
+import HeadingPair from '@/components/shared/HeadingPair';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -142,22 +143,26 @@ export default function PipelineTab() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <Card>
-        <CardContent className="space-y-5">
-          <div>
-            <h3 className="mb-1 font-semibold">HubSpot Pipeline</h3>
-            <p className="text-muted-foreground text-xs">
-              Choose which HubSpot pipeline synced{' '}
-              <strong className="text-foreground">{dstLabel}</strong> records
-              are placed into.
-            </p>
-          </div>
+        <CardContent className="space-y-4">
+          <HeadingPair
+            visualLevel="card"
+            level="h3"
+            title="HubSpot Pipeline"
+            subtitle={
+              <>
+                Choose which HubSpot pipeline synced{' '}
+                <strong className="text-foreground">{dstLabel}</strong> records
+                are placed into.
+              </>
+            }
+          />
 
           {pipelines.length === 0 ? (
             <div className="space-y-3">
               {scopeError ? (
-                <div className="bg-destructive/10 flex items-start gap-3 rounded-4xl px-4 py-3 text-xs">
+                <div className="bg-destructive/10 flex items-start gap-3 rounded-3xl px-4 py-3 text-xs">
                   <AlertTriangle className="text-destructive mt-0.5 size-3.5 shrink-0" />
                   <div className="space-y-2">
                     <p className="text-destructive font-semibold">
@@ -202,7 +207,7 @@ export default function PipelineTab() {
                 </div>
               ) : (
                 <>
-                  <div className="bg-warning/10 flex items-start gap-3 rounded-4xl px-4 py-3 text-xs">
+                  <div className="bg-warning/10 flex items-start gap-3 rounded-3xl px-4 py-3 text-xs">
                     <AlertTriangle className="text-warning mt-0.5 size-3.5 shrink-0" />
                     <div className="space-y-1">
                       <p className="text-warning font-medium">
@@ -265,20 +270,23 @@ export default function PipelineTab() {
       {pipelines.length > 0 && (
         <Card>
           <CardContent className="flex items-start justify-between gap-4">
-            <div>
-              <h3 className="font-semibold">
-                Replicate Source Status to HubSpot Pipeline Stage
-              </h3>
-              <p className="text-muted-foreground mt-1 text-xs">
-                When enabled, each synced{' '}
-                <strong className="text-foreground">{srcLabel}</strong> status
-                is used as-is for the HubSpot stage name — reusing a matching
-                stage if one already exists, or creating it automatically if
-                not. Bypasses the manual mapping below. When disabled, the
-                manual mapping is used (unchanged default behavior). A
-                missing/empty source status never creates or overrides a stage.
-              </p>
-            </div>
+            <HeadingPair
+              visualLevel="card"
+              level="h3"
+              title="Replicate Source Status to HubSpot Pipeline Stage"
+              subtitle={
+                <>
+                  When enabled, each synced{' '}
+                  <strong className="text-foreground">{srcLabel}</strong> status
+                  is used as-is for the HubSpot stage name — reusing a matching
+                  stage if one already exists, or creating it automatically if
+                  not. Bypasses the manual mapping below. When disabled, the
+                  manual mapping is used (unchanged default behavior). A
+                  missing/empty source status never creates or overrides a
+                  stage.
+                </>
+              }
+            />
             <Switch
               checked={replicateStatus}
               onCheckedChange={setReplicateStatus}
@@ -303,15 +311,21 @@ export default function PipelineTab() {
         stages.length > 0 &&
         stStatuses.length > 0 && (
           <div className="overflow-hidden rounded-4xl border">
-            <div className="bg-muted/40 border-b px-6 py-4">
-              <h3 className="font-semibold">Status → Stage Mapping</h3>
-              <p className="text-muted-foreground mt-0.5 text-xs">
-                Map each source{' '}
-                <strong className="text-foreground">{srcLabel}</strong> status
-                to a HubSpot pipeline stage.
-              </p>
+            <div className="bg-muted/40 border-b px-4 py-3">
+              <HeadingPair
+                visualLevel="card"
+                level="h3"
+                title="Status → Stage Mapping"
+                subtitle={
+                  <>
+                    Map each source{' '}
+                    <strong className="text-foreground">{srcLabel}</strong>{' '}
+                    status to a HubSpot pipeline stage.
+                  </>
+                }
+              />
             </div>
-            <div className="bg-muted/40 text-muted-foreground grid grid-cols-2 border-b px-6 py-2 text-xs font-semibold tracking-wider uppercase">
+            <div className="bg-muted/40 text-muted-foreground grid grid-cols-2 border-b px-4 py-2 text-xs font-semibold tracking-wider uppercase">
               <span>Source Status</span>
               <span>HubSpot Stage</span>
             </div>

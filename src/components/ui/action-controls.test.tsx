@@ -18,7 +18,7 @@ describe('compact action controls', () => {
       'size-8',
       'aspect-square',
       'p-0',
-      'rounded-3xl',
+      'rounded-xl',
       'items-center',
       'justify-center',
     );

@@ -31,6 +31,7 @@ interface UseProjectDetailTabsInput {
 export interface ProjectDetailTabChangeOptions {
   replace?: boolean;
   section?: ProjectSettingsSectionId;
+  env?: string;
 }
 
 // Tab is the URL's source of truth (`?tab=...`) so it's bookmarkable/shareable
@@ -40,11 +41,15 @@ export function useProjectDetailTabs(input: UseProjectDetailTabsInput) {
 
   const requestedTab = searchParams.get('tab');
   const legacySection = legacyProjectSettingsSectionForTab(requestedTab);
+  const fallbackTab: ProjectDetailTabId =
+    !input.loading && !input.hasBothConnections
+      ? 'connections'
+      : DEFAULT_TAB_ID;
   const activeTab: ProjectDetailTabId = legacySection
     ? 'settings'
     : TAB_DEFS.some((t) => t.id === requestedTab)
       ? (requestedTab as ProjectDetailTabId)
-      : DEFAULT_TAB_ID;
+      : fallbackTab;
 
   const tabs: ProjectDetailTabView[] = TAB_DEFS.map((tab) => ({
     id: tab.id,
@@ -66,6 +71,11 @@ export function useProjectDetailTabs(input: UseProjectDetailTabsInput) {
     }
     next.set('tab', id);
     next.delete('section');
+    if (options?.env) {
+      next.set('env', options.env);
+    } else {
+      next.delete('env');
+    }
     setSearchParams(next, { replace: options?.replace });
   };
 

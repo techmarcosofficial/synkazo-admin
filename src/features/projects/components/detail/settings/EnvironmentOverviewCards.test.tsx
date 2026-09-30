@@ -99,12 +99,11 @@ describe('environmentReadiness', () => {
 });
 
 describe('EnvironmentOverviewCards', () => {
-  it('shows the active environment and both readiness cards', () => {
+  it('shows the active environment and both readiness columns', () => {
     renderCards();
 
     expect(screen.getByText('Active sync environment')).toBeInTheDocument();
     expect(screen.getByText('sandbox is active')).toBeInTheDocument();
-    expect(screen.getByText('Environment readiness')).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Switch to Production' }),
     ).toBeEnabled();
@@ -121,8 +120,8 @@ describe('EnvironmentOverviewCards', () => {
     });
 
     expect(
-      screen.getByRole('button', { name: 'Switch to Production' }),
-    ).toBeDisabled();
+      screen.queryByRole('button', { name: 'Switch to Production' }),
+    ).not.toBeInTheDocument();
     await userEvent.click(
       screen.getByRole('button', { name: 'Configure Production' }),
     );

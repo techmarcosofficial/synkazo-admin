@@ -47,10 +47,10 @@ export default function JobStatusDropdown({
   const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false);
 
   const disabledReason = !hasConnection
-    ? 'Connect platforms first'
+    ? 'Connect both platforms first'
     : fieldMappingCount === 0
-      ? 'Add field mappings first'
-      : 'Mark at least 1 Match Field';
+      ? 'Map your fields first'
+      : 'Designate a Unique Identifier first';
 
   return (
     <>
@@ -61,8 +61,9 @@ export default function JobStatusDropdown({
               id="job-status-dropdown"
               variant="outline"
               size="sm"
+              shape="pill"
               className={cn(
-                'group h-7 rounded-full px-2.5 transition-all duration-300',
+                'group transition-all duration-300',
                 highlighted &&
                   'ring-primary ring-offset-background animate-alert-shake ring-2 ring-offset-2',
               )}
@@ -147,7 +148,6 @@ export default function JobStatusDropdown({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              variant="destructive"
               onClick={() => {
                 setShowDeactivateConfirm(false);
                 if (isSyncing) {

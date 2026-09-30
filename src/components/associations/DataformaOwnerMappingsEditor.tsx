@@ -332,7 +332,7 @@ function MappingDraftRow({
     <div className="bg-muted/30 space-y-3 rounded-4xl border p-3">
       <div className="grid items-center gap-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto]">
         <Select value={draftSource} onValueChange={setDraftSource}>
-          <SelectTrigger className="h-8 w-full font-mono text-xs">
+          <SelectTrigger size="sm" className="w-full font-mono">
             <SelectValue placeholder="Dataforma field…" />
           </SelectTrigger>
           <SelectContent>
@@ -348,7 +348,8 @@ function MappingDraftRow({
         </span>
         <Select value={draftTarget} onValueChange={setDraftTarget}>
           <SelectTrigger
-            className="h-8 w-full text-xs"
+            size="sm"
+            className="w-full"
             aria-invalid={duplicateTarget}
           >
             <SelectValue placeholder="HubSpot owner property…" />

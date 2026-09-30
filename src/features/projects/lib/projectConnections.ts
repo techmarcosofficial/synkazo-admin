@@ -24,3 +24,21 @@ export function hasBothConnections(connections: ConnectionExt[]): boolean {
     );
   });
 }
+
+export function isEnvironmentFullyConnected(
+  connections: Array<{
+    status?: string;
+    connectionType?: string;
+    environment?: string;
+  }>,
+  env: 'production' | 'sandbox' = 'production',
+): boolean {
+  const envConns = connections.filter(
+    (c) => (c.environment ?? 'production') === env && c.status === 'connected',
+  );
+  return (
+    envConns.some((c) => c.connectionType === 'source') &&
+    envConns.some((c) => c.connectionType === 'destination')
+  );
+}
+

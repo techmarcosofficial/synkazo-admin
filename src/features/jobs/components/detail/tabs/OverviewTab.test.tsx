@@ -6,6 +6,7 @@ import {
   waitFor,
 } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 
 import type { JobDetailContextValue } from '../context';
 import OverviewTab from './OverviewTab';
@@ -110,29 +111,42 @@ function buildContext(
   };
 }
 
+function renderOverview() {
+  return render(
+    <MemoryRouter>
+      <OverviewTab />
+    </MemoryRouter>,
+  );
+}
+
 describe('OverviewTab sync prerequisite guidance', () => {
   beforeEach(() => {
     mockContext = buildContext();
   });
 
-  it('triggers the inactive guide when clicking sync on an inactive job without opening dialog', () => {
-    render(<OverviewTab />);
+  it('explains the overview instead of showing stats before the first run', () => {
+    renderOverview();
 
-    fireEvent.click(screen.getByRole('button', { name: /sync now/i }));
-
-    expect(mockContext.triggerInactiveGuide).toHaveBeenCalledOnce();
-    expect(mockContext.setManualDialogOpen).not.toHaveBeenCalled();
-    expect(mockContext.handleRunNow).not.toHaveBeenCalled();
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-  });
-
-  it('does not render duplicate inactive alert inside OverviewTab (single source of truth)', () => {
-    render(<OverviewTab />);
-
-    expect(screen.queryByText('Job is inactive')).not.toBeInTheDocument();
+    expect(
+      screen.getByText('Your sync overview starts after the first run'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/records synced, run timing, and upcoming activity/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Total records synced')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /sync now/i }),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: /activate job/i }),
     ).not.toBeInTheDocument();
+    expect(mockContext.setManualDialogOpen).not.toHaveBeenCalled();
+  });
+
+  it('does not render duplicate inactive alert inside OverviewTab (single source of truth)', () => {
+    renderOverview();
+
+    expect(screen.queryByText('Job is inactive')).not.toBeInTheDocument();
   });
 
   it('opens the sync dialog for an active job', () => {
@@ -141,8 +155,14 @@ describe('OverviewTab sync prerequisite guidance', () => {
         ...buildContext().job,
         isEnabled: true,
       },
+      runLogs: [
+        {
+          id: 'run-1',
+          status: 'completed',
+        } as JobDetailContextValue['runLogs'][number],
+      ],
     });
-    render(<OverviewTab />);
+    renderOverview();
 
     fireEvent.click(screen.getByRole('button', { name: /sync now/i }));
 
@@ -150,21 +170,74 @@ describe('OverviewTab sync prerequisite guidance', () => {
     expect(mockContext.triggerInactiveGuide).not.toHaveBeenCalled();
   });
 
+  it('leaves navigation to the setup steps for an unmapped new job', () => {
+    mockContext = buildContext({ jobFieldMappings: [] });
+    renderOverview();
+
+    expect(
+      screen.getByText('Your sync overview starts after the first run'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Total records synced')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Go to Field Mapping' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('keeps historical stats visible when an existing job is inactive', () => {
+    mockContext = buildContext({
+      runLogs: [
+        {
+          id: 'run-1',
+          status: 'completed',
+        } as JobDetailContextValue['runLogs'][number],
+      ],
+    });
+    renderOverview();
+
+    expect(screen.getByText('Total records synced')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /sync now/i })).toBeDisabled();
+  });
+
   it('renders StartSyncModal when manualDialogOpen is true', () => {
     mockContext = buildContext({
       manualDialogOpen: true,
     });
-    render(<OverviewTab />);
+    renderOverview();
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
   it('renders run queued alert when a run is queued', () => {
     mockContext = buildContext({
-      runLogs: [{ id: 'run-1', status: 'queued', bullmqJobId: 'bull-1' } as JobDetailContextValue['runLogs'][number]],
+      runLogs: [
+        {
+          id: 'run-1',
+          status: 'queued',
+          bullmqJobId: 'bull-1',
+        } as JobDetailContextValue['runLogs'][number],
+      ],
     });
-    render(<OverviewTab />);
+    renderOverview();
 
-    expect(screen.getByText('Run queued')).toBeInTheDocument();
+    expect(screen.getByText('Your first run is queued')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Cancel queue' }),
+    ).toBeInTheDocument();
+  });
+
+  it('renders Total records synced and Last run KPI cards with fallback and active values', () => {
+    mockContext = buildContext({
+      job: {
+        ...buildContext().job,
+        recordsSynced: 1250,
+        lastSyncedAt: new Date(Date.now() - 3600 * 1000).toISOString(),
+      },
+    });
+    renderOverview();
+
+    expect(screen.getByText('Total records synced')).toBeInTheDocument();
+    expect(screen.getByText('1,250')).toBeInTheDocument();
+    expect(screen.getByText('Last run')).toBeInTheDocument();
+    expect(screen.getByText(/ago/)).toBeInTheDocument();
   });
 });

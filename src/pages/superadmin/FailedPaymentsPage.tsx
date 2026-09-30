@@ -302,7 +302,7 @@ export default function FailedPaymentsPage() {
                   </TableCell>
                   <TableCell>
                     <Badge
-                      className={`rounded-full ${toneClass(toneForStatus(row.subscriptionStatus))}`}
+                      className={toneClass(toneForStatus(row.subscriptionStatus))}
                     >
                       {STATUS_LABELS[
                         row.subscriptionStatus as StatusFilter

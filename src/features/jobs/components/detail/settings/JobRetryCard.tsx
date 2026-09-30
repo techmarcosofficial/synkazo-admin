@@ -2,6 +2,7 @@ import { Check, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 
 import { jobsApi } from '@/api/jobs';
+import HeadingPair from '@/components/shared/HeadingPair';
 import { Button } from '@/components/ui/button';
 import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -44,12 +45,14 @@ export default function JobRetryCard({
 
   return (
     <section aria-labelledby="job-retry-title">
-      <h3 id="job-retry-title" className="font-semibold">
-        Retry &amp; Backoff
-      </h3>
-      <p className="text-muted-foreground mb-4 text-xs">
-        Automatic retry behaviour on failed scheduled runs.
-      </p>
+      <HeadingPair
+        visualLevel="card"
+        level="h3"
+        titleId="job-retry-title"
+        title="Retry & Backoff"
+        subtitle="Automatic retry behaviour on failed scheduled runs."
+        className="mb-4"
+      />
       <div className="space-y-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field>

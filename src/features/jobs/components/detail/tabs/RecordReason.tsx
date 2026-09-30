@@ -36,6 +36,7 @@ const REASON_SUMMARIES: Record<string, string> = {
   manually_excluded: 'Manually excluded',
   matched_no_update: 'Matched record left unchanged',
   record_level_conflict: 'Record-level conflict',
+  destination_condition: 'Matched a destination skip rule',
   api_error: 'API error',
   rate_limited: 'Rate limit reached',
   transform_error: 'Transformation failed',
@@ -44,25 +45,6 @@ const REASON_SUMMARIES: Record<string, string> = {
   network_error: 'Network error',
   unknown: 'Unknown error',
 };
-
-const CONTACT_FIELD_NAMES = new Set([
-  'email',
-  'emailaddress',
-  'email_address',
-  'phone',
-  'phonenumber',
-  'phone_number',
-  'mobilephone',
-  'mobile_phone',
-]);
-
-const SOURCE_ID_FIELD_NAMES = new Set([
-  'source_record_id',
-  'sourcerecordid',
-  'record_id',
-  'recordid',
-  'id',
-]);
 
 function enumLabel(value: string): string {
   return value
@@ -79,97 +61,16 @@ function objectLabel(platform: string | undefined, object: string): string {
   return [platformName, enumLabel(object)].filter(Boolean).join(' ');
 }
 
-function isEmptyValue(value: unknown): boolean {
-  return (
-    value == null ||
-    (typeof value === 'string' && value.trim() === '') ||
-    (Array.isArray(value) && value.length === 0) ||
-    (typeof value === 'object' &&
-      !Array.isArray(value) &&
-      Object.keys(value).length === 0)
-  );
-}
-
-function sanitizeStructuredValue(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    const cleaned = value
-      .map(sanitizeStructuredValue)
-      .filter((item) => !isEmptyValue(item));
-    return cleaned.length > 0 ? cleaned : undefined;
-  }
-
-  if (value && typeof value === 'object') {
-    const cleaned = Object.fromEntries(
-      Object.entries(value)
-        .map(([key, item]) => [key, sanitizeStructuredValue(item)])
-        .filter(([, item]) => !isEmptyValue(item)),
-    );
-    return Object.keys(cleaned).length > 0 ? cleaned : undefined;
-  }
-
-  return isEmptyValue(value) ? undefined : value;
-}
-
-function parseStructuredValue(value: unknown): unknown {
-  if (typeof value !== 'string') return sanitizeStructuredValue(value);
-
-  const trimmed = value.trim();
-  if (!trimmed) return undefined;
-
-  try {
-    return sanitizeStructuredValue(JSON.parse(trimmed));
-  } catch {
-    return trimmed;
-  }
-}
-
-function formatStructuredValue(value: unknown): string | null {
-  const parsed = parseStructuredValue(value);
-  if (parsed == null) return null;
-  return typeof parsed === 'string' ? parsed : JSON.stringify(parsed, null, 2);
-}
-
-function collectContactDetails(
-  value: unknown,
-  path: string[] = [],
-  details: DetailItem[] = [],
-): DetailItem[] {
-  const parsed = path.length === 0 ? parseStructuredValue(value) : value;
-
-  if (Array.isArray(parsed)) {
-    parsed.forEach((item, index) =>
-      collectContactDetails(item, [...path, String(index + 1)], details),
-    );
-    return details;
-  }
-
-  if (!parsed || typeof parsed !== 'object') return details;
-
-  Object.entries(parsed).forEach(([key, item]) => {
-    if (isEmptyValue(item)) return;
-
-    const normalizedKey = key.toLowerCase().replace(/[\s.-]/g, '_');
-    const nextPath = [...path, key];
-    const isSourceId =
-      SOURCE_ID_FIELD_NAMES.has(normalizedKey) &&
-      (normalizedKey !== 'id' ||
-        path.length === 0 ||
-        path.some((segment) => /source|records?/i.test(segment)));
-    if (
-      (CONTACT_FIELD_NAMES.has(normalizedKey) || isSourceId) &&
-      ['string', 'number'].includes(typeof item)
-    ) {
-      details.push({
-        label: nextPath.join(' › '),
-        value: String(item),
-      });
-      return;
+function formatErrorDetails(value: unknown): string | null {
+  if (!value) return null;
+  if (typeof value === 'string') {
+    try {
+      return JSON.stringify(JSON.parse(value), null, 2);
+    } catch {
+      return null;
     }
-
-    collectContactDetails(item, nextPath, details);
-  });
-
-  return details;
+  }
+  return typeof value === 'object' ? JSON.stringify(value, null, 2) : null;
 }
 
 function getSummary(rec: SyncLogRecord, reason?: string | null): string {
@@ -243,25 +144,8 @@ export function RecordReason({ rec, context }: RecordReasonProps) {
 
   const actionLabel = rec.action === 'failed' ? 'Failed' : 'Skipped';
   const summary = getSummary(rec, reason);
-  const contactDetails = collectContactDetails(rec.sourceData).filter(
-    (item, index, items) =>
-      !(
-        item.value === rec.sourceRecordId &&
-        SOURCE_ID_FIELD_NAMES.has(
-          item.label
-            .split(' › ')
-            .slice(-1)[0]
-            .toLowerCase()
-            .replace(/[\s.-]/g, '_'),
-        )
-      ) &&
-      items.findIndex(
-        (candidate) =>
-          candidate.label === item.label && candidate.value === item.value,
-      ) === index,
-  );
-  const mappedData = formatStructuredValue(rec.mappedData);
-  const apiDetails = formatStructuredValue(rec.destResponse);
+  const apiDetails =
+    rec.action === 'failed' ? formatErrorDetails(rec.destResponse) : null;
   const sourceItems: DetailItem[] = [
     ...(context?.sourceObject
       ? [
@@ -272,10 +156,9 @@ export function RecordReason({ rec, context }: RecordReasonProps) {
         ]
       : []),
     ...(rec.sourceRecordId ? [{ label: 'ID', value: rec.sourceRecordId }] : []),
-    ...contactDetails,
   ];
   const destinationItems: DetailItem[] = [
-    ...(context?.destObject
+    ...(rec.destRecordId && context?.destObject
       ? [
           {
             label: 'Object',
@@ -368,14 +251,6 @@ export function RecordReason({ rec, context }: RecordReasonProps) {
           {destinationItems.length > 0 && (
             <DetailSection title="Destination record">
               <DetailList items={destinationItems} />
-            </DetailSection>
-          )}
-
-          {mappedData && (
-            <DetailSection title="Mapped field values">
-              <pre className="bg-muted/50 max-w-full rounded-xl px-3 py-2 font-mono text-[11px] leading-relaxed break-words whitespace-pre-wrap">
-                {mappedData}
-              </pre>
             </DetailSection>
           )}
 

@@ -42,7 +42,7 @@ export default function InvoicesTab() {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader visualLevel="section">
         <CardTitle>Invoices</CardTitle>
         <CardDescription>Your past payments and receipts.</CardDescription>
       </CardHeader>
@@ -54,7 +54,7 @@ export default function InvoicesTab() {
         ) : !data || data.items.length === 0 ? (
           <EmptyState icon={Receipt} title="No invoices yet" viewMode="table" />
         ) : (
-          <div className="overflow-hidden rounded-4xl border">
+          <div className="overflow-hidden rounded-3xl border">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted hover:bg-muted/50">

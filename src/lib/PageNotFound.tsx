@@ -1,6 +1,7 @@
 import { Home } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 
+import HeadingPair from '@/components/shared/HeadingPair';
 import { Button } from '@/components/ui/button';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
 
@@ -11,7 +12,7 @@ export default function PageNotFound() {
   const isAdmin = hasRole('org_admin');
 
   return (
-    <div className="bg-background flex min-h-screen items-center justify-center p-6">
+    <div className="bg-background flex min-h-screen items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="space-y-6 text-center">
           <div className="space-y-2">
@@ -20,16 +21,19 @@ export default function PageNotFound() {
             </h1>
             <div className="bg-border mx-auto h-0.5 w-16"></div>
           </div>
-          <div className="space-y-3">
-            <h2 className="text-foreground text-2xl font-medium tracking-tight">
-              Page Not Found
-            </h2>
-            <p className="text-muted-foreground leading-relaxed">
-              The page{' '}
-              <span className="text-foreground font-medium">"{pageName}"</span>{' '}
-              could not be found.
-            </p>
-          </div>
+          <HeadingPair
+            title="Page Not Found"
+            subtitle={
+              <>
+                The page{' '}
+                <span className="text-foreground font-medium">
+                  "{pageName}"
+                </span>{' '}
+                could not be found.
+              </>
+            }
+            className="items-center"
+          />
           {isAdmin && (
             <div className="bg-muted border-border mt-8 rounded-4xl border p-4">
               <div className="flex items-start space-x-3">

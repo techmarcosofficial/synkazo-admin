@@ -71,10 +71,12 @@ function LatestResult({ run }: { run: MigrationRun }) {
 export default function MigrationPanel({
   projectId,
   connections,
+  isProductionReady = true,
   onGoToConnections,
 }: {
   projectId: string;
   connections?: ConnectionExt[];
+  isProductionReady?: boolean;
   onGoToConnections: () => void;
 }) {
   const { hasRole } = useSynkazoAuth();
@@ -83,27 +85,28 @@ export default function MigrationPanel({
 
   return (
     <div className="space-y-4">
-      {migration.diffLoading ? (
-        <ComparisonSkeleton />
-      ) : (
-        <MigrationComparisonCard
-          diff={migration.diff}
-          diffError={migration.diffError}
-          selected={migration.selected}
-          filter={migration.filter}
-          reversed={migration.reversed}
-          migrating={migration.migrating}
-          migrationError={migration.migrationError}
-          canManage={canManage}
-          onFilterChange={migration.setFilter}
-          onReverse={migration.reverseDirection}
-          onToggle={migration.toggle}
-          onToggleAll={migration.toggleAll}
-          onRefresh={() => void migration.loadDiff()}
-          onTransfer={migration.transfer}
-          onGoToConnections={onGoToConnections}
-        />
-      )}
+      {isProductionReady &&
+        (migration.diffLoading ? (
+          <ComparisonSkeleton />
+        ) : (
+          <MigrationComparisonCard
+            diff={migration.diff}
+            diffError={migration.diffError}
+            selected={migration.selected}
+            filter={migration.filter}
+            reversed={migration.reversed}
+            migrating={migration.migrating}
+            migrationError={migration.migrationError}
+            canManage={canManage}
+            onFilterChange={migration.setFilter}
+            onReverse={migration.reverseDirection}
+            onToggle={migration.toggle}
+            onToggleAll={migration.toggleAll}
+            onRefresh={() => void migration.loadDiff()}
+            onTransfer={migration.transfer}
+            onGoToConnections={onGoToConnections}
+          />
+        ))}
 
       {migration.migrationError && (
         <Alert variant="destructive">
@@ -123,6 +126,7 @@ export default function MigrationPanel({
         loading={migration.runsLoading}
         error={migration.runsError}
         latestRunId={migration.lastResult?.id}
+        isProductionReady={isProductionReady}
         onRetry={() => void migration.loadRuns()}
         onLoadRunItems={migration.loadRunItems}
       />

@@ -212,8 +212,8 @@ export default function OrgInvitationsTab() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+      <CardHeader visualLevel="section">
+        <CardTitle className="flex items-center gap-2">
           <Mail className="text-muted-foreground size-4" /> Invitations
         </CardTitle>
         <CardDescription>
@@ -270,7 +270,7 @@ export default function OrgInvitationsTab() {
             action={{ onClick: clearFilters, label: 'Clear filters' }}
           />
         ) : (
-          <div className="border-border overflow-x-auto rounded-4xl border">
+          <div className="border-border overflow-x-auto rounded-3xl border">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted hover:bg-muted/50">

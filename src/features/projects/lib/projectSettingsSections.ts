@@ -24,8 +24,9 @@ export const PROJECT_SETTINGS_SECTION_DEFS: ProjectSettingsSectionDef[] = [
   },
   {
     id: 'schedule',
-    label: 'Schedule & Execution',
-    description: 'Control when jobs run and how work is ordered.',
+    label: 'Bulk Scheduler',
+    description:
+      'Coordinated project-wide scheduling and priority queue execution across all sync flows.',
     requires: { connections: true, jobs: true },
   },
   {

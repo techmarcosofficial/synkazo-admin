@@ -24,12 +24,12 @@ export function useJobDetailTabs(ctx: JobDetailTabContext) {
   );
 
   const rawRequestedTab = searchParams.get('tab');
-  const requestedTab =
-    rawRequestedTab === 'schedule'
-      ? DEFAULT_TAB_ID
+  const normalizedRequestedTab =
+    rawRequestedTab === 'sync-history'
+      ? 'run-history'
       : (rawRequestedTab as JobDetailTabId | null);
-  const activeTab = visibleDefs.some((t) => t.id === requestedTab)
-    ? (requestedTab as JobDetailTabId)
+  const activeTab = visibleDefs.some((t) => t.id === normalizedRequestedTab)
+    ? (normalizedRequestedTab as JobDetailTabId)
     : DEFAULT_TAB_ID;
 
   const tabs: JobDetailTabView[] = visibleDefs.map((tab) => ({
@@ -37,22 +37,37 @@ export function useJobDetailTabs(ctx: JobDetailTabContext) {
     label: tab.label,
   }));
 
-  // Keep existing Sync & Schedule bookmarks useful by replacing the retired
-  // tab with the new Overview in-place.
+  // Automatically migrate legacy ?tab=settings&section=schedule links to the top-level Schedule tab.
   useEffect(() => {
-    if (rawRequestedTab !== 'schedule') return;
-
-    const next = new URLSearchParams(searchParams);
-    next.set('tab', DEFAULT_TAB_ID);
-    setSearchParams(next, { replace: true });
+    if (
+      rawRequestedTab === 'settings' &&
+      searchParams.get('section') === 'schedule'
+    ) {
+      const next = new URLSearchParams(searchParams);
+      next.set('tab', 'schedule');
+      next.delete('section');
+      setSearchParams(next, { replace: true });
+    }
   }, [rawRequestedTab, searchParams, setSearchParams]);
 
   const handleTabChange = (
     id: JobDetailTabId,
-    options?: { replace?: boolean },
+    options?: {
+      replace?: boolean;
+      searchParams?: Record<string, string | undefined | null>;
+    },
   ) => {
     const next = new URLSearchParams(searchParams);
     next.set('tab', id);
+    if (options?.searchParams) {
+      Object.entries(options.searchParams).forEach(([k, v]) => {
+        if (v === undefined || v === null || v === '') {
+          next.delete(k);
+        } else {
+          next.set(k, v);
+        }
+      });
+    }
     setSearchParams(next, { replace: options?.replace });
   };
 

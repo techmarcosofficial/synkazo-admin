@@ -60,8 +60,10 @@ export default function JobDetailPage() {
   const runLogs = detailQuery.data?.runLogs ?? [];
   const jobFieldMappings = detailQuery.data?.jobFieldMappings ?? [];
   const hasConnection = detailQuery.data?.hasConnection ?? false;
+  const isProductionReady = detailQuery.data?.isProductionReady ?? false;
   const pipelineRequired = detailQuery.data?.pipelineRequired ?? false;
   const pipelineConfigured = detailQuery.data?.pipelineConfigured ?? true;
+
 
   const runState = useJobRunState({
     projectId,
@@ -152,7 +154,9 @@ export default function JobDetailPage() {
     runLogs,
     jobFieldMappings,
     hasConnection,
+    isProductionReady,
     pipelineRequired,
+
     pipelineConfigured,
     activeTab,
     patchJob,

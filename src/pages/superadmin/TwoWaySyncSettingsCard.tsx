@@ -70,7 +70,7 @@ export default function TwoWaySyncSettingsCard() {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader visualLevel="section">
         <CardTitle className="flex items-center gap-2 font-semibold">
           <Timer className="size-4" />
           Two-Way Sync Time
@@ -95,7 +95,7 @@ export default function TwoWaySyncSettingsCard() {
               return (
                 <div
                   key={row.platformId}
-                  className="bg-card flex flex-wrap items-center justify-between gap-3 rounded-4xl border p-4"
+                  className="bg-card flex flex-wrap items-center justify-between gap-3 rounded-3xl border p-4"
                 >
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{row.label}</span>

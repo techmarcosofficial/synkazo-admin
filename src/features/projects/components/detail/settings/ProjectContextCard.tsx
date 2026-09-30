@@ -36,7 +36,7 @@ export default function ProjectContextCard({
   return (
     <Card className={cn('gap-0 border py-0', className)}>
       <CardHeader className="gap-0 px-4 py-3">
-        <CardTitle className="text-sm font-semibold">Project context</CardTitle>
+        <CardTitle>Project context</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4 px-4 pb-4">
         <dl className="grid gap-3 sm:grid-cols-2">
@@ -90,6 +90,14 @@ export default function ProjectContextCard({
                 <span className="text-muted-foreground text-sm">
                   Not activated
                 </span>
+              )}
+              {environmentsHref && (
+                <Button asChild variant="ghost" size="sm">
+                  <Link to={environmentsHref}>
+                    View environments
+                    <ExternalLink aria-hidden="true" />
+                  </Link>
+                </Button>
               )}
             </dd>
           </div>

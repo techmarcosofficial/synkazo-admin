@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import { jobsApi } from '@/api/jobs';
+import HeadingPair from '@/components/shared/HeadingPair';
 import { Button } from '@/components/ui/button';
 import {
   Field,
@@ -60,9 +61,13 @@ export default function JobSkipUpdateCard({
 
   return (
     <section aria-labelledby="job-matched-records-title">
-      <h3 id="job-matched-records-title" className="mb-4 font-semibold">
-        Matched Record Behavior
-      </h3>
+      <HeadingPair
+        level="h3"
+        visualLevel="card"
+        titleId="job-matched-records-title"
+        title="Matched Record Behavior"
+        className="mb-4"
+      />
       <form onSubmit={onSubmit} className="space-y-4">
         <Field orientation="horizontal">
           <FieldContent>

@@ -85,7 +85,7 @@ export default function PlatformSelector({
                 type="button"
                 variant="ghost"
                 size="icon-xs"
-                className="text-muted-foreground hover:text-foreground rounded-full"
+                className="text-muted-foreground hover:text-foreground"
                 aria-label={`About ${label}`}
               >
                 <CircleHelp className="size-3.5" aria-hidden="true" />

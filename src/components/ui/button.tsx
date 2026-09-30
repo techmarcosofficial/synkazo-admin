@@ -25,19 +25,24 @@ const buttonVariants = cva(
       size: {
         default:
           'h-9 gap-1.5 px-3 has-data-[icon=inline-end]:pr-2.5 has-data-[icon=inline-start]:pl-2.5',
-        xs: "h-6 gap-1 px-2.5 text-xs has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 [&_svg:not([class*='size-'])]:size-3",
-        sm: 'h-8 gap-1 px-3 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
-        lg: 'h-10 gap-1.5 px-4 has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3',
-        icon: 'size-9 aspect-square rounded-2xl p-0',
+        xs: "h-6 gap-1 rounded-lg px-2.5 text-xs has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 [&_svg:not([class*='size-'])]:size-3",
+        sm: 'h-8 gap-1 rounded-xl px-3 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',
+        lg: 'h-10 gap-1.5 rounded-2xl px-4 has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3',
+        icon: 'size-9 aspect-square p-0',
         'icon-xs':
-          "size-7 aspect-square rounded-2xl p-0 [&_svg:not([class*='size-'])]:size-3",
-        'icon-sm': 'size-8 aspect-square rounded-2xl p-0',
+          "size-7 aspect-square rounded-xl p-0 [&_svg:not([class*='size-'])]:size-3",
+        'icon-sm': 'size-8 aspect-square rounded-xl p-0',
         'icon-lg': 'size-10 aspect-square rounded-2xl p-0',
+      },
+      shape: {
+        default: '',
+        pill: 'rounded-full',
       },
     },
     defaultVariants: {
       variant: 'default',
       size: 'default',
+      shape: 'default',
     },
   },
 );
@@ -46,6 +51,7 @@ function Button({
   className,
   variant = 'default',
   size = 'default',
+  shape = 'default',
   asChild = false,
   loading = false,
   disabled,
@@ -63,7 +69,7 @@ function Button({
       data-slot="button"
       data-variant={variant}
       data-size={size}
-      className={cn(buttonVariants({ variant, size, className }))}
+      className={cn(buttonVariants({ variant, size, shape, className }))}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       {...props}

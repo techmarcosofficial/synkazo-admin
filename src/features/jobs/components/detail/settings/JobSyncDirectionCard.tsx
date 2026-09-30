@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useJobDetailContext } from '../context';
 
 import { jobsApi } from '@/api/jobs';
+import HeadingPair from '@/components/shared/HeadingPair';
 import { Button } from '@/components/ui/button';
 import SyncDirectionFields from '@/features/jobs/components/SyncDirectionFields';
 import { showToast } from '@/lib/toast';
@@ -88,13 +89,14 @@ export default function JobSyncDirectionCard() {
 
   return (
     <section aria-labelledby="job-sync-direction-title">
-      <h3 id="job-sync-direction-title" className="font-semibold">
-        Sync Direction &amp; Behavior
-      </h3>
-      <p className="text-muted-foreground mb-4 text-xs">
-        How this job moves records between platforms. Set at creation and locked
-        from here on, aside from the HubSpot webhook opt-in.
-      </p>
+      <HeadingPair
+        visualLevel="card"
+        level="h3"
+        titleId="job-sync-direction-title"
+        title="Sync Direction & Behavior"
+        subtitle="How this job moves records between platforms. Set at creation and locked from here on, aside from the HubSpot webhook opt-in."
+        className="mb-4"
+      />
 
       <SyncDirectionFields
         syncDirection={syncDirection}

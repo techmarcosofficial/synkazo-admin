@@ -91,9 +91,7 @@ export default function GeneralSettingsCard({
   return (
     <Card className={cn('gap-0 border py-0', className)}>
       <CardHeader className="gap-0 px-4 py-3">
-        <CardTitle className="text-sm font-semibold">
-          Project information
-        </CardTitle>
+        <CardTitle>Project information</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4 px-4 pb-4">
         <form onSubmit={onSubmit} className="space-y-4">

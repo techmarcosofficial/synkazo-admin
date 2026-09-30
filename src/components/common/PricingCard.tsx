@@ -1,6 +1,7 @@
 import { Check } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+import HeadingPair from '@/components/shared/HeadingPair';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -39,8 +40,13 @@ export function PricingCard({
         </Badge>
       )}
       <CardContent className="flex flex-1 flex-col">
-        <h3 className="mb-1 text-lg font-semibold">{plan.name}</h3>
-        <p className="text-muted-foreground mb-6 text-sm">{plan.tagline}</p>
+        <HeadingPair
+          visualLevel="card"
+          level="h3"
+          title={plan.name}
+          subtitle={plan.tagline}
+          className="mb-4"
+        />
 
         <div className="mb-1 flex items-baseline gap-1">
           <span className="text-3xl font-extrabold">

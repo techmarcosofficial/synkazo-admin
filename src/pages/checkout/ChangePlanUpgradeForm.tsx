@@ -367,7 +367,7 @@ function ChangePlanForm({ plan, price, onSuccess }: ChangePlanFormProps) {
             )}
 
             {selectedId === NEW_CARD && (
-              <div className="border-border bg-muted/40 rounded-4xl border p-3">
+              <div className="border-border bg-muted/40 rounded-2xl border p-3">
                 <PaymentElement options={{ layout: 'tabs' }} />
               </div>
             )}

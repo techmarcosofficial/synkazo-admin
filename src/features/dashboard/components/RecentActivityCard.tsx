@@ -314,11 +314,9 @@ export default function RecentActivityCard({
 
   return (
     <Card>
-      <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1.5">
-          <CardTitle className="text-xl font-semibold">
-            Recent Activity
-          </CardTitle>
+      <CardHeader visualLevel="section" className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-1">
+          <CardTitle>Recent Activity</CardTitle>
           <CardDescription>Latest sync runs and system events</CardDescription>
         </div>
 
@@ -367,7 +365,7 @@ export default function RecentActivityCard({
             </EmptyHeader>
           </Empty>
         ) : (
-          <div className="overflow-hidden rounded-4xl border">
+          <div className="overflow-hidden rounded-3xl border">
             <div className="bg-muted text-muted-foreground hidden grid-cols-[110px_minmax(220px,1.45fr)_minmax(190px,1.1fr)_130px_110px_24px] items-center gap-x-5 px-5 py-2 text-xs font-medium xl:grid">
               <span>Status</span>
               <span>Sync Job</span>

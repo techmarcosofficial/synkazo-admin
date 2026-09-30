@@ -2,6 +2,10 @@ import * as React from 'react';
 import { Dialog as SheetPrimitive } from 'radix-ui';
 
 import { cn } from '@/lib/utils';
+import {
+  headingSubtitleStyles,
+  headingTitleStyles,
+} from '@/components/shared/headingStyles';
 import { Button } from '@/components/ui/button';
 import { XIcon } from 'lucide-react';
 
@@ -88,7 +92,7 @@ function SheetHeader({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="sheet-header"
-      className={cn('flex flex-col gap-1.5 p-6', className)}
+      className={cn('flex flex-col gap-1 p-4', className)}
       {...props}
     />
   );
@@ -98,7 +102,7 @@ function SheetFooter({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="sheet-footer"
-      className={cn('mt-auto flex flex-col gap-2 p-6', className)}
+      className={cn('mt-auto flex flex-col gap-2 p-4', className)}
       {...props}
     />
   );
@@ -112,7 +116,8 @@ function SheetTitle({
     <SheetPrimitive.Title
       data-slot="sheet-title"
       className={cn(
-        'font-heading text-foreground text-base font-medium',
+        'font-heading text-foreground',
+        headingTitleStyles.section,
         className,
       )}
       {...props}
@@ -127,7 +132,11 @@ function SheetDescription({
   return (
     <SheetPrimitive.Description
       data-slot="sheet-description"
-      className={cn('text-muted-foreground text-sm', className)}
+      className={cn(
+        'text-muted-foreground',
+        headingSubtitleStyles.section,
+        className,
+      )}
       {...props}
     />
   );

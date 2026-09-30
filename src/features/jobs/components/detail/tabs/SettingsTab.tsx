@@ -1,5 +1,4 @@
 import {
-  CalendarClock,
   RotateCcw,
   Settings2,
   type LucideIcon,
@@ -12,13 +11,12 @@ import {
   JobDangerZoneCard,
   JobGeneralCard,
   JobRetryCard,
-  JobScheduleSettings,
-  JobScheduleSettingsHeader,
   JobSkipUpdateCard,
   JobSyncDirectionCard,
 } from '../settings';
 
 import { jobsApi } from '@/api/jobs';
+import HeadingPair from '@/components/shared/HeadingPair';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -30,7 +28,7 @@ import {
 } from '@/components/ui/select';
 import { showToast } from '@/lib/toast';
 
-type JobSettingsSectionId = 'general' | 'schedule' | 'execution-recovery';
+type JobSettingsSectionId = 'general' | 'advanced';
 
 interface JobSettingsSection {
   id: JobSettingsSectionId;
@@ -43,18 +41,12 @@ const SECTIONS: JobSettingsSection[] = [
   {
     id: 'general',
     label: 'General',
-    description: 'Job identity, objects, sync direction, and behavior.',
+    description: 'Job identity, objects, sync direction, and danger zone.',
     icon: Settings2,
   },
   {
-    id: 'schedule',
-    label: 'Schedule',
-    description: 'Control when this job runs automatically.',
-    icon: CalendarClock,
-  },
-  {
-    id: 'execution-recovery',
-    label: 'Execution & Recovery',
+    id: 'advanced',
+    label: 'Advanced',
     description: 'Retry behavior, matched records, and saved progress.',
     icon: RotateCcw,
   },
@@ -82,17 +74,18 @@ function CheckpointInformation() {
 
   return (
     <section aria-labelledby="job-checkpoint-title">
-      <h3 id="job-checkpoint-title" className="font-semibold">
-        Resume &amp; Checkpoint
-      </h3>
-      <p className="text-muted-foreground mb-4 text-xs">
-        Saved progress used to continue an interrupted sync without starting
-        over.
-      </p>
+      <HeadingPair
+        visualLevel="card"
+        level="h3"
+        titleId="job-checkpoint-title"
+        title="Sync Progress Bookmark (Checkpoint)"
+        subtitle="Saved progress used to continue an interrupted sync without starting over from scratch."
+        className="mb-4"
+      />
 
       <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="bg-muted/50 rounded-3xl border px-3 py-2.5">
-          <dt className="text-muted-foreground text-xs">Sync page</dt>
+          <dt className="text-muted-foreground text-xs">Current Bookmark (Page)</dt>
           <dd className="mt-1 text-sm font-medium">
             {job.checkpointPage != null
               ? `Page ${job.checkpointPage}`
@@ -100,13 +93,13 @@ function CheckpointInformation() {
           </dd>
         </div>
         <div className="bg-muted/50 rounded-3xl border px-3 py-2.5">
-          <dt className="text-muted-foreground text-xs">Checkpoint date</dt>
+          <dt className="text-muted-foreground text-xs">Bookmark Timestamp</dt>
           <dd className="mt-1 text-sm font-medium">
             {formatCheckpointDate(job.checkpointSince)}
           </dd>
         </div>
         <div className="bg-muted/50 rounded-3xl border px-3 py-2.5">
-          <dt className="text-muted-foreground text-xs">Full resync page</dt>
+          <dt className="text-muted-foreground text-xs">Full Resync Bookmark</dt>
           <dd className="mt-1 text-sm font-medium">
             {job.syncAllPage != null
               ? `Page ${job.syncAllPage}`
@@ -129,10 +122,14 @@ export default function SettingsTab() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { projectId, job, project, patchJob } = useJobDetailContext();
   const requestedSection = searchParams.get('section');
+  const normalizedSection =
+    requestedSection === 'execution-recovery'
+      ? 'advanced'
+      : requestedSection;
   const activeSectionId: JobSettingsSectionId = SECTIONS.some(
-    (section) => section.id === requestedSection,
+    (section) => section.id === normalizedSection,
   )
-    ? (requestedSection as JobSettingsSectionId)
+    ? (normalizedSection as JobSettingsSectionId)
     : 'general';
   const activeSection = SECTIONS.find(
     (section) => section.id === activeSectionId,
@@ -175,13 +172,14 @@ export default function SettingsTab() {
             onUpdated={patchJob}
           />
         </div>
-        <div className="pt-6">
+        <div className="py-6">
           <JobSyncDirectionCard />
+        </div>
+        <div className="pt-6">
+          <JobDangerZoneCard onDelete={handleDelete} />
         </div>
       </div>
     );
-  } else if (activeSectionId === 'schedule') {
-    sectionBody = <JobScheduleSettings />;
   } else {
     sectionBody = (
       <div className="divide-border divide-y">
@@ -199,7 +197,7 @@ export default function SettingsTab() {
           <CheckpointInformation />
         </div>
         {showDataformaCustomerCursor && (
-          <div className="py-6">
+          <div className="pt-6">
             <DataformaCustomerCursorCard
               projectId={projectId}
               job={job}
@@ -207,9 +205,6 @@ export default function SettingsTab() {
             />
           </div>
         )}
-        <div className="pt-6">
-          <JobDangerZoneCard onDelete={handleDelete} />
-        </div>
       </div>
     );
   }
@@ -222,7 +217,7 @@ export default function SettingsTab() {
           className="top-[calc(var(--detail-sticky-top)+var(--detail-header-height)+(--spacing(4)))] gap-0 py-0 lg:sticky"
         >
           <CardHeader className="px-3.5 py-3">
-            <CardTitle className="text-sm font-semibold">
+            <CardTitle>
               Job settings
             </CardTitle>
           </CardHeader>
@@ -293,22 +288,12 @@ export default function SettingsTab() {
         className="min-w-0 gap-0 py-0"
         aria-labelledby="job-settings-section-title"
       >
-        <CardHeader className="gap-0 px-4 py-3">
-          {activeSectionId === 'schedule' ? (
-            <JobScheduleSettingsHeader />
-          ) : (
-            <>
-              <h2
-                id="job-settings-section-title"
-                className="font-heading text-lg font-semibold tracking-tight"
-              >
-                {activeSection.label}
-              </h2>
-              <p className="text-muted-foreground mt-0.5 text-xs">
-                {activeSection.description}
-              </p>
-            </>
-          )}
+        <CardHeader className="px-4 py-3">
+          <HeadingPair
+            titleId="job-settings-section-title"
+            title={activeSection.label}
+            subtitle={activeSection.description}
+          />
         </CardHeader>
         <CardContent className="px-3.5 pt-2.5 pb-3.5 sm:px-4 sm:pb-4">
           {sectionBody}

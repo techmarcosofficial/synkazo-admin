@@ -5,6 +5,8 @@ import type { ProjectExtended } from '../../types';
 
 import { usePlanUpgradePrompt } from '@/components/shared/PlanGate';
 import { Button } from '@/components/ui/button';
+import { ActionTooltip } from '@/features/journey';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { useEntitlements } from '@/queries/useEntitlements';
 
 interface CreateProjectButtonProps {
@@ -13,40 +15,58 @@ interface CreateProjectButtonProps {
   onCreated?: (project: ProjectExtended) => void;
 }
 
-// Renders only the trigger — callers are expected to also render a single
-// <CreateProjectDialog /> (both current call sites already do), since the
-// dialog is driven by the shared useCreateProjectStore and mounting it here
-// too would double it up with the caller's instance.
+// Renders the project creation trigger. Enforces both organization-level role
+// permissions (must be org_admin) and plan-level entitlements, providing
+// clear tooltip explanations rather than silent 403 errors.
 export default function CreateProjectButton({
   label = 'New Project',
   variant,
   onCreated,
 }: CreateProjectButtonProps) {
   const open = useCreateProjectStore((s) => s.open);
-  // Explain the project allowance up front rather than after a 403 from the create call.
+  const { hasRole } = useSynkazoAuth();
+  const canManage = hasRole('org_admin');
   const { canAddProject } = useEntitlements();
   const { prompt, dialog } = usePlanUpgradePrompt();
 
+  const isBlockedByRole = !canManage;
+  const isBlockedByPlan = canManage && !canAddProject;
+
+  const tooltipExplanation = isBlockedByRole
+    ? 'Only Organization Admins can create new projects. Contact your administrator for access.'
+    : isBlockedByPlan
+      ? "You've reached your plan's project limit. Upgrade to add more."
+      : undefined;
+
   return (
     <>
-      <Button
-        size={'lg'}
-        variant={variant}
-        onClick={() =>
-          canAddProject
-            ? open({ onCreated })
-            : prompt(
-                "You've reached the number of projects your plan allows. Upgrade to add more.",
-              )
-        }
+      <ActionTooltip
+        tooltip={tooltipExplanation}
+        disabled={isBlockedByRole || isBlockedByPlan}
       >
-        {canAddProject ? (
-          <Plus className="mr-2 h-4 w-4" />
-        ) : (
-          <Lock className="mr-2 h-4 w-4" />
-        )}
-        {label}
-      </Button>
+        <Button
+          size="lg"
+          variant={variant}
+          disabled={isBlockedByRole}
+          onClick={() => {
+            if (isBlockedByRole) return;
+            if (isBlockedByPlan) {
+              prompt(
+                "You've reached the number of projects your plan allows. Upgrade to add more.",
+              );
+              return;
+            }
+            open({ onCreated });
+          }}
+        >
+          {canManage && canAddProject ? (
+            <Plus className="mr-2 h-4 w-4" />
+          ) : (
+            <Lock className="mr-2 h-4 w-4" />
+          )}
+          {label}
+        </Button>
+      </ActionTooltip>
       {dialog}
     </>
   );

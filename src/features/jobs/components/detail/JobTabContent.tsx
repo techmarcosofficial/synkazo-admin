@@ -7,6 +7,7 @@ const TAB_COMPONENTS = {
   overview: lazy(() => import('./tabs/OverviewTab')),
   'field-mapping': lazy(() => import('./tabs/FieldMappingTab')),
   pipeline: lazy(() => import('./tabs/PipelineTab')),
+  schedule: lazy(() => import('./tabs/ScheduleTab')),
   'run-history': lazy(() => import('./tabs/RunHistoryTab')),
   conflicts: lazy(() => import('./tabs/ConflictsTab')),
   'webhook-events': lazy(() => import('./tabs/WebhookEventsTab')),

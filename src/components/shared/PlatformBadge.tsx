@@ -8,11 +8,11 @@ import { cn } from '@/lib/utils';
 /* Brand tokens (see index.css). Platforms without a dedicated brand token
    fall back to neutral surfaces. */
 const BADGE_CLASS: Record<string, string> = {
-  servicetitan: 'bg-servicetitan/10 border-servicetitan/30 text-servicetitan',
-  hubspot: 'bg-hubspot/10 border-hubspot/30 text-hubspot',
-  dataforma: 'bg-dataforma/10 border-dataforma/30 text-dataforma',
-  texada: 'bg-texada/10 border-texada/30 text-texada',
-  salesforce: 'bg-salesforce/10 border-salesforce/30 text-salesforce',
+  servicetitan: 'bg-secondary text-secondary-foreground',
+  hubspot: 'bg-secondary text-secondary-foreground',
+  dataforma: 'bg-secondary text-secondary-foreground',
+  texada: 'bg-secondary text-secondary-foreground',
+  salesforce: 'bg-secondary text-secondary-foreground',
 };
 
 interface PlatformTileProps {
@@ -99,12 +99,12 @@ function PlatformBadge({
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-lg border font-medium',
+        'inline-flex items-center rounded-3xl font-medium',
         s.gap,
         s.text,
         s.px,
         BADGE_CLASS[platformId] ??
-          'bg-muted border-border text-muted-foreground',
+          'bg-secondary text-secondary-foreground',
         isComingSoon && 'opacity-60',
       )}
     >
