@@ -318,7 +318,7 @@ function PageRow({
   const loggedRecordCount =
     pg.createdCount + pg.updatedCount + pg.skippedCount + pg.failedCount;
   const filterCounts: Record<PageRecordFilter, number> = {
-    all: filter === 'all' && !loading && !loadError ? total : loggedRecordCount,
+    all: loggedRecordCount,
     created: pg.createdCount,
     updated: pg.updatedCount,
     failed: pg.failedCount,
@@ -473,8 +473,11 @@ function PageRow({
             </div>
           ) : records.length === 0 ? (
             <div className="text-muted-foreground px-3 py-4 text-xs">
-              No {filter === 'all' ? '' : `${filter} `}record logs for this
-              page.
+              {recordSearch
+                ? 'No record IDs match this search on this page.'
+                : filterCounts[filter] > 0
+                  ? 'Record details are no longer available for this page. The page counts above are retained.'
+                  : `No ${filter === 'all' ? '' : `${filter} `}record logs for this page.`}
             </div>
           ) : (
             <div className="overflow-x-auto">
