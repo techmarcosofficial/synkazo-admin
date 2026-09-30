@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from 'react';
 
 import PlatformObjectSelector from '../PlatformObjectSelector';
 
+import HeadingPair from '@/components/shared/HeadingPair';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -282,12 +283,12 @@ export default function JobDetailsStep({
       {/* Connection */}
       <div className={cn(compact ? 'space-y-2' : 'space-y-3')}>
         {!compact && (
-          <div>
-            <h3 className="text-sm font-semibold">Objects to sync</h3>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Choose the source and destination records for this sync.
-            </p>
-          </div>
+          <HeadingPair
+            visualLevel="card"
+            level="h3"
+            title="Objects to sync"
+            subtitle="Choose the source and destination records for this sync."
+          />
         )}
 
         <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-[1fr_auto_1fr]">
@@ -371,12 +372,12 @@ export default function JobDetailsStep({
       {/* Job Details */}
       <div className={cn(!compact && 'space-y-3 border-t pt-6')}>
         {!compact && (
-          <div>
-            <h3 className="text-sm font-semibold">Job details</h3>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Give this sync a clear name so it is easy to identify later.
-            </p>
-          </div>
+          <HeadingPair
+            visualLevel="card"
+            level="h3"
+            title="Job details"
+            subtitle="Give this sync a clear name so it is easy to identify later."
+          />
         )}
         <Field data-invalid={!!errors.name}>
           <FieldLabel htmlFor="job-name" required>
@@ -399,12 +400,12 @@ export default function JobDetailsStep({
       {/* Sync Behaviour */}
       <div className={cn(!compact && 'space-y-3 border-t pt-6')}>
         {!compact && (
-          <div>
-            <h3 className="text-sm font-semibold">Sync settings</h3>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Control which changes are included in this sync.
-            </p>
-          </div>
+          <HeadingPair
+            visualLevel="card"
+            level="h3"
+            title="Sync settings"
+            subtitle="Control which changes are included in this sync."
+          />
         )}
 
         <SyncDirectionFields

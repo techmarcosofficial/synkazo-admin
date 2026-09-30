@@ -698,13 +698,13 @@ export default function SyncRunProgress({
                   {current.state === 'running' && onStop ? (
                     <Button
                       variant="outline"
-                      size="sm"
+                      size="xs"
                       onClick={(e) => {
                         e.stopPropagation();
                         onStop();
                       }}
                       disabled={stopping}
-                      className="border-destructive/30 text-destructive hover:bg-destructive/10 font-semibold h-6.5 rounded-lg px-2 text-[11px]"
+                      className="border-destructive/30 text-destructive hover:bg-destructive/10 font-semibold px-2"
                     >
                       {stopping ? (
                         <Spinner className="size-2.5" />
@@ -718,25 +718,25 @@ export default function SyncRunProgress({
                       {(onViewRun || onViewHistory) && (
                         <Button
                           variant="outline"
-                          size="sm"
+                          size="xs"
                           onClick={(e) => {
                             e.stopPropagation();
                             if (onViewRun) onViewRun(runId);
                             else onViewHistory?.();
                           }}
-                          className="text-primary border-primary/30 hover:bg-primary/10 font-semibold h-6.5 rounded-lg px-2 text-[11px]"
+                          className="text-primary border-primary/30 hover:bg-primary/10 font-semibold px-2"
                         >
                           View Run
                         </Button>
                       )}
                       <Button
                         variant="ghost"
-                        size="sm"
+                        size="xs"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDismiss();
                         }}
-                        className="text-muted-foreground hover:text-foreground hover:bg-muted/60 font-medium h-6.5 rounded-lg px-2 text-[11px]"
+                        className="text-muted-foreground hover:text-foreground hover:bg-muted/60 font-medium px-2"
                       >
                         Close
                       </Button>
@@ -746,10 +746,11 @@ export default function SyncRunProgress({
                   <CollapsibleTrigger asChild>
                     <Button
                       type="button"
-                      variant="ghost"
-                      size="icon-sm"
+                      variant="outline"
+                      size="icon-xs"
+                      shape="pill"
                       aria-label={isOpen ? 'Collapse' : 'Expand'}
-                      className="text-muted-foreground hover:text-foreground hover:bg-muted/60 size-6.5 rounded-lg transition-colors"
+                      className="text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
                     >
                       <ChevronDown
                         className={cn(
@@ -995,7 +996,7 @@ export default function SyncRunProgress({
                       onStop();
                     }}
                     disabled={stopping}
-                    className="border-destructive/30 text-destructive hover:bg-destructive/10 font-semibold h-7.5 rounded-xl px-2.5 text-xs"
+                    className="border-destructive/30 text-destructive hover:bg-destructive/10 font-semibold"
                   >
                     {stopping ? (
                       <Spinner className="size-3" />
@@ -1015,7 +1016,7 @@ export default function SyncRunProgress({
                           if (onViewRun) onViewRun(runId);
                           else onViewHistory?.();
                         }}
-                        className="text-primary border-primary/30 hover:bg-primary/10 font-semibold h-7.5 rounded-xl px-2.5 text-xs"
+                        className="text-primary border-primary/30 hover:bg-primary/10 font-semibold"
                       >
                         View Run
                       </Button>
@@ -1027,7 +1028,7 @@ export default function SyncRunProgress({
                         e.stopPropagation();
                         handleDismiss();
                       }}
-                      className="text-muted-foreground hover:text-foreground hover:bg-muted/60 font-medium h-7.5 rounded-xl px-2.5 text-xs"
+                      className="text-muted-foreground hover:text-foreground hover:bg-muted/60 font-medium"
                     >
                       Close
                     </Button>
@@ -1038,10 +1039,11 @@ export default function SyncRunProgress({
                 <CollapsibleTrigger asChild>
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="outline"
                     size="icon-sm"
+                    shape="pill"
                     aria-label={isOpen ? 'Collapse' : 'Expand'}
-                    className="text-muted-foreground hover:text-foreground hover:bg-muted/60 size-7.5 rounded-lg transition-colors"
+                    className="text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
                   >
                     <ChevronDown
                       className={cn(

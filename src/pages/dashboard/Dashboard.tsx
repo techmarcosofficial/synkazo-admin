@@ -292,7 +292,7 @@ export default function Dashboard() {
 
           <section aria-label="Sync metrics">
             <Card>
-              <CardHeader>
+          <CardHeader visualLevel="section">
                 <CardTitle>
                   Sync Metrics
                 </CardTitle>

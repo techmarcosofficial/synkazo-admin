@@ -102,8 +102,8 @@ export default function OrgMembersTab() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+      <CardHeader visualLevel="section">
+        <CardTitle className="flex items-center gap-2">
           <Users className="text-muted-foreground size-4" /> Members
         </CardTitle>
         <CardDescription>
@@ -147,7 +147,7 @@ export default function OrgMembersTab() {
             action={{ onClick: () => setSearch(''), label: 'Clear search' }}
           />
         ) : (
-          <div className="border-border overflow-x-auto rounded-4xl border">
+          <div className="border-border overflow-x-auto rounded-3xl border">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted hover:bg-muted/50">

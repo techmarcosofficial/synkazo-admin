@@ -101,7 +101,8 @@ function Frame({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         size="md"
-        className="flex max-h-[90vh] sm:max-h-[85vh] flex-col gap-0 p-0 overflow-hidden rounded-4xl"
+        padding="none"
+        className="flex max-h-[90vh] flex-col gap-0 overflow-hidden rounded-4xl sm:max-h-[85vh]"
         onEscapeKeyDown={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
       >

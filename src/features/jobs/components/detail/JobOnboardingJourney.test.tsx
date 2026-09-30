@@ -431,7 +431,9 @@ describe('JobOnboardingJourney - Step Gating & Activation Flow', () => {
     );
 
     // Shows informative activation title and button
-    expect(screen.getByRole('heading', { name: 'Activate your sync job' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Activate your sync job' }),
+    ).toBeInTheDocument();
     const activateBtn = screen.getByRole('button', { name: /^activate job/i });
     expect(activateBtn).toBeInTheDocument();
 
@@ -469,7 +471,11 @@ describe('JobOnboardingJourney - Step Gating & Activation Flow', () => {
 
     // Eyebrow and heading confirm active state
     expect(screen.getByText('Job active')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Job is active — Ready for test sync' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', {
+        name: 'Job is active — Ready for test sync',
+      }),
+    ).toBeInTheDocument();
 
     const runSyncBtn = screen.getByRole('button', { name: /^run test sync/i });
     expect(runSyncBtn).toBeInTheDocument();
@@ -492,7 +498,7 @@ describe('JobOnboardingJourney - Step Gating & Activation Flow', () => {
       jobFieldMappings: mappingWithMatch,
       pipelineRequired: false,
       pipelineConfigured: true,
-      activeTab: 'overview',
+      activeTab: 'field-mapping',
       handleTabChange,
       setManualDialogOpen: vi.fn(),
       handleToggle: vi.fn(),
@@ -505,11 +511,36 @@ describe('JobOnboardingJourney - Step Gating & Activation Flow', () => {
       </MemoryRouter>,
     );
 
-    const automateBtn = screen.getByRole('button', { name: /automate \(optional\)/i });
+    const automateBtn = screen.getByRole('button', {
+      name: /automate \(optional\)/i,
+    });
     expect(automateBtn).toBeInTheDocument();
 
     fireEvent.click(automateBtn);
 
     expect(handleTabChange).toHaveBeenCalledWith('schedule');
+  });
+
+  it('keeps setup steps visible on Overview before the first run', () => {
+    vi.mocked(useJobDetailContext).mockReturnValue({
+      projectId: 'proj-123',
+      job: { ...mockJob, isEnabled: false },
+      project: mockProject,
+      runLogs: [],
+      jobFieldMappings: [],
+      pipelineRequired: false,
+      pipelineConfigured: true,
+      activeTab: 'overview',
+    } as any);
+
+    render(
+      <MemoryRouter>
+        <JobOnboardingJourney />
+      </MemoryRouter>,
+    );
+
+    expect(
+      screen.getByRole('heading', { name: 'Map the fields for this sync job' }),
+    ).toBeInTheDocument();
   });
 });

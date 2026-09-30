@@ -1,5 +1,6 @@
 import { AlertCircleIcon } from 'lucide-react';
 
+import HeadingPair from '@/components/shared/HeadingPair';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Field, FieldLabel } from '@/components/ui/field';
@@ -78,12 +79,12 @@ export default function StatusMappingStep({
 
   return (
     <div className="space-y-5">
-      <div>
-        <h3 className="text-sm font-medium">Sales Deal Stages (HubSpot Pipeline)</h3>
-        <p className="text-muted-foreground mt-1 text-xs">
-          Choose which sales pipeline to use, then map each job status to a deal stage in HubSpot.
-        </p>
-      </div>
+      <HeadingPair
+        visualLevel="card"
+        level="h3"
+        title="Sales Deal Stages (HubSpot Pipeline)"
+        subtitle="Choose which sales pipeline to use, then map each job status to a deal stage in HubSpot."
+      />
 
       <Field>
         <FieldLabel>Sales Pipeline (HubSpot Pipeline)</FieldLabel>

@@ -75,7 +75,7 @@ function ConnectionItem({
               platformId={platformId}
               variant="icon-text"
               size="sm"
-              className="min-w-0 max-w-full text-xs font-medium"
+              className="max-w-full min-w-0 text-xs font-medium"
             />
           ) : (
             <span className="text-muted-foreground text-xs font-medium">
@@ -169,9 +169,7 @@ export default function EnvironmentOverviewCards({
         <CardHeader className="bg-card border-b px-4 py-3.5 sm:px-5">
           <div className="flex flex-wrap items-center justify-between gap-2.5">
             <div className="flex flex-wrap items-center gap-2">
-              <CardTitle className="text-base font-semibold">
-                Active sync environment
-              </CardTitle>
+              <CardTitle>Active sync environment</CardTitle>
               {activeEnvironment ? (
                 <StatusBadge
                   status={activeEnvironment}
@@ -183,9 +181,7 @@ export default function EnvironmentOverviewCards({
                   size="sm"
                 />
               ) : (
-                <Badge variant="outline" className="rounded-full">
-                  Not activated
-                </Badge>
+                <Badge variant="outline">Not activated</Badge>
               )}
             </div>
           </div>
@@ -215,10 +211,7 @@ export default function EnvironmentOverviewCards({
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm font-semibold">Sandbox</span>
                   {activeEnvironment === 'sandbox' && (
-                    <Badge
-                      variant="default"
-                      className="h-4.5 rounded-full px-1.5 text-[10px] font-medium"
-                    >
+                    <Badge variant="default" size="xs">
                       Active
                     </Badge>
                   )}
@@ -256,10 +249,7 @@ export default function EnvironmentOverviewCards({
                       {activating ? 'Activating…' : 'Switch to Sandbox'}
                     </Button>
                   ) : (
-                    <Badge
-                      variant="secondary"
-                      className="rounded-full text-[10px]"
-                    >
+                    <Badge variant="secondary" size="xs">
                       Admin access required
                     </Badge>
                   )
@@ -299,10 +289,7 @@ export default function EnvironmentOverviewCards({
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm font-semibold">Production</span>
                   {activeEnvironment === 'production' && (
-                    <Badge
-                      variant="default"
-                      className="h-4.5 rounded-full px-1.5 text-[10px] font-medium"
-                    >
+                    <Badge variant="default" size="xs">
                       Active
                     </Badge>
                   )}
@@ -348,10 +335,7 @@ export default function EnvironmentOverviewCards({
                     {activating ? 'Activating…' : 'Switch to Production'}
                   </Button>
                 ) : (
-                  <Badge
-                    variant="secondary"
-                    className="rounded-full text-[10px]"
-                  >
+                  <Badge variant="secondary" size="xs">
                     Admin access required
                   </Badge>
                 )}

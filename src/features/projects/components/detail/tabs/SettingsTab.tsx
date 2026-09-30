@@ -11,6 +11,7 @@ import {
 
 import ConnectionEnvDropdown from '@/components/connections/ConnectionEnvToggle';
 import EmptyState from '@/components/shared/EmptyState';
+import HeadingPair from '@/components/shared/HeadingPair';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -184,7 +185,7 @@ export default function SettingsTab() {
           className="top-[calc(var(--detail-sticky-top)+var(--detail-header-height)+(--spacing(4)))] gap-0 py-0 lg:sticky"
         >
           <CardHeader className="px-3.5 py-3">
-            <CardTitle className="text-sm font-semibold">
+            <CardTitle>
               Project settings
             </CardTitle>
           </CardHeader>
@@ -265,17 +266,11 @@ export default function SettingsTab() {
           aria-labelledby="project-settings-section-title"
         >
           <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 py-3">
-            <div>
-              <h2
-                id="project-settings-section-title"
-                className="font-heading text-lg font-semibold tracking-tight"
-              >
-                {activeSection.label}
-              </h2>
-              <p className="text-muted-foreground mt-0.5 text-xs">
-                {activeSection.description}
-              </p>
-            </div>
+            <HeadingPair
+              titleId="project-settings-section-title"
+              title={activeSection.label}
+              subtitle={activeSection.description}
+            />
             {activeSection.id === 'environments' && (
               <div className="shrink-0">
                 <ConnectionEnvDropdown

@@ -109,8 +109,8 @@ export default function OrgGeneralTab() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+      <CardHeader visualLevel="section">
+        <CardTitle className="flex items-center gap-2">
           <Building2 className="text-muted-foreground size-4" /> Organization
           Information
         </CardTitle>

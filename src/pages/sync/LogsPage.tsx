@@ -6,6 +6,7 @@ import { syncLogsApi } from '@/api/syncLogs';
 import { PlatformPair } from '@/components/platform';
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
+import HeadingPair from '@/components/shared/HeadingPair';
 import ManagementToolbar from '@/components/shared/ManagementToolbar';
 import PageHeader from '@/components/shared/PageHeader';
 import PaginationBar from '@/components/shared/PaginationBar';
@@ -58,7 +59,7 @@ const DOT: Record<string, string> = {
 function StatusPill({ level }: { level: string }) {
   const cfg = BADGE[level] ?? BADGE.info;
   return (
-    <Badge className="bg-muted text-muted-foreground gap-1.5 rounded-full font-bold">
+    <Badge className="bg-muted text-muted-foreground gap-1.5 font-semibold">
       <span className={cn('size-1.5 rounded-full', DOT[level] ?? 'bg-info')} />
       {cfg.label}
     </Badge>
@@ -276,12 +277,11 @@ export default function LogsPage() {
       <Card>
         <CardContent className="space-y-6">
           <div className="flex justify-between">
-            <div className="space-y-1">
-              <h3 className="text-lg font-semibold">Manage sync history</h3>
-              <p className="text-muted-foreground text-sm">
-                Every transfer across all projects, newest first
-              </p>
-            </div>
+            <HeadingPair
+              level="h3"
+              title="Manage sync history"
+              subtitle="Every transfer across all projects, newest first"
+            />
             <ManagementToolbar
               searchValue={search}
               onSearchChange={handleSearchChange}
@@ -344,7 +344,7 @@ export default function LogsPage() {
               viewMode="table"
             />
           ) : (
-            <div className="overflow-hidden rounded-4xl border">
+            <div className="overflow-hidden rounded-3xl border">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted hover:bg-muted/50">
@@ -427,7 +427,7 @@ export default function LogsPage() {
                           <TableRow>
                             <TableCell colSpan={6} className="p-0">
                               <div className="bg-muted! p-2.5">
-                                <div className="bg-card flex flex-wrap gap-6 rounded-4xl border p-3">
+                                <div className="bg-card flex flex-wrap gap-6 rounded-2xl border p-3">
                                   {log.createdAt && (
                                     <div>
                                       <div className="text-muted-foreground mb-1 text-xs font-semibold tracking-wide uppercase">

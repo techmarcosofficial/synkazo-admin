@@ -297,7 +297,6 @@ export default function ExcludeConditionsEditor({
                     onChange={(value) => update(index, { field: value })}
                     placeholder="Select field…"
                     highlightRequired={false}
-                    className="h-9 text-xs"
                   />
                   {selectedField && (
                     <div className="mt-1 flex min-w-0 items-center gap-1.5">
@@ -367,7 +366,7 @@ export default function ExcludeConditionsEditor({
                           isMulti ? 'value1, value2, …' : 'Comparison value'
                         }
                         aria-invalid={missingValue}
-                        className="h-9 font-mono text-xs"
+                        className="font-mono"
                       />
                       {missingValue && (
                         <p className="text-destructive mt-1 text-xs">
@@ -590,7 +589,7 @@ export default function ExcludeConditionsEditor({
                   onChange={(v) => update(i, { field: v })}
                   placeholder="Select field…"
                   highlightRequired={false}
-                  className="h-9 flex-1 text-xs"
+                  className="flex-1"
                 />
 
                 <Select
@@ -599,7 +598,7 @@ export default function ExcludeConditionsEditor({
                     update(i, { operator: v as ConditionOperator })
                   }
                 >
-                  <SelectTrigger className="h-9 w-52 text-xs">
+                  <SelectTrigger className="w-52">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -638,7 +637,7 @@ export default function ExcludeConditionsEditor({
                   placeholder={
                     isMulti ? 'value1, value2, …' : 'Comparison value'
                   }
-                  className="h-9 font-mono text-xs"
+                  className="font-mono"
                 />
               )}
 

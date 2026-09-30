@@ -174,8 +174,9 @@ export default function StartSyncModal(props: StartSyncModalProps) {
     <Dialog open onOpenChange={(open) => !open && props.onClose()}>
       <DialogContent
         size="md"
+        padding="none"
         showCloseButton={false}
-        className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0 rounded-4xl"
+        className="flex max-h-[85vh] flex-col gap-0 overflow-hidden rounded-4xl"
       >
         <DialogHeader className="shrink-0 flex-row items-center justify-between gap-4 border-b px-6 py-4">
           <div className="flex min-w-0 flex-1 flex-col gap-1">

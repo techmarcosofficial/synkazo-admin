@@ -36,7 +36,8 @@ export default function CreateProjectDialog() {
   return (
     <Dialog open={isOpen} onOpenChange={setOpen}>
       <DialogContent
-        className="flex max-h-[85vh] w-full flex-col gap-0 p-0 sm:max-w-4xl"
+        padding="none"
+        className="flex max-h-[85vh] w-full flex-col gap-0 sm:max-w-4xl"
         onEscapeKeyDown={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
       >
@@ -68,7 +69,7 @@ export default function CreateProjectDialog() {
 
         <DialogFooter className="bg-muted/40 shrink-0 flex-row items-center justify-between gap-2 border-t p-4">
           {selection.sourcePlatformId && selection.syncMode && (
-            <div className="bg-background flex items-center gap-2 rounded-4xl border px-3 py-2">
+            <div className="bg-background flex items-center gap-2 rounded-3xl border px-3 py-2">
               <PlatformPair
                 sourcePlatformId={selection.sourcePlatformId}
                 destPlatformId="hubspot"

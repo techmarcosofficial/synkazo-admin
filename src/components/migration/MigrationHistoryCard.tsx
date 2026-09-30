@@ -211,12 +211,15 @@ export default function MigrationHistoryCard({
 }) {
   return (
     <Card>
-      <CardHeader className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+      <CardHeader
+        visualLevel="section"
+        className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start"
+      >
         <div>
           <CardTitle className="flex items-center gap-2">
             <Clock className="text-muted-foreground size-4" /> Transfer history
           </CardTitle>
-          <CardDescription className="mt-1">
+          <CardDescription>
             Recent configuration transfers and item-level outcomes.
           </CardDescription>
         </div>

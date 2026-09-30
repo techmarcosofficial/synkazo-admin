@@ -34,6 +34,7 @@ import {
   hasScheduleDefinition,
 } from '@/features/jobs/lib/jobScheduleSettings';
 import { formatSchedule } from '@/features/jobs/utils';
+import { selectJobOnboardingState } from '@/features/onboarding';
 import {
   deriveSyncJobSummary,
   formatDurationMs,
@@ -59,13 +60,13 @@ function SyncSummaryCard({
         <Icon className="size-3.5" aria-hidden="true" />
       </span>
       <div className="min-w-0">
-        <p className="text-base font-bold leading-tight tracking-tight tabular-nums text-foreground">
+        <p className="text-foreground text-base leading-tight font-bold tracking-tight tabular-nums">
           {value}
         </p>
         <p className="text-muted-foreground mt-0.5 text-xs font-medium">
           {label}
         </p>
-        <p className="text-muted-foreground/80 mt-0.5 text-[11px] font-normal leading-tight">
+        <p className="text-muted-foreground/80 mt-0.5 text-[11px] leading-tight font-normal">
           {description}
         </p>
       </div>
@@ -82,7 +83,6 @@ export default function OverviewTab() {
     hasConnection,
     refetch,
     isSyncing,
-    toggling,
     stopping,
     cancellingQueue,
     retryingQueue,
@@ -99,11 +99,9 @@ export default function OverviewTab() {
     handleStop,
     handleCancelQueue,
     handleRetryQueue,
-    handleToggle,
     handleTabChange,
     manualDialogOpen,
     setManualDialogOpen,
-    triggerInactiveGuide,
   } = useJobDetailContext();
 
   const priorityQueueQuery = usePriorityQueueQuery(projectId);
@@ -211,11 +209,18 @@ export default function OverviewTab() {
     jobFieldMappings.length > 0 &&
     jobFieldMappings.some((mapping) => mapping.matchDestKey);
 
-  // Sync is physically impossible when already running or queued — keep disabled.
-  // When inactive the button stays clickable; clicking it guides to the existing
-  // inline alert below instead of opening the dialog.
-  const syncBlocked = queued || isSyncing;
-  const inactiveBlocked = !job.isEnabled;
+  const onboarding = selectJobOnboardingState({
+    mappings: jobFieldMappings,
+    pipelineRequired,
+    pipelineConfigured,
+    runLogs,
+    lastSyncedAt: job.lastSyncedAt,
+  });
+  const hasRunHistory = onboarding.testComplete;
+  const canStartSync =
+    canActivate && onboarding.configurationReady && job.isEnabled;
+
+  const syncBlocked = queued || isSyncing || !canStartSync;
   const summaryRun =
     activeRunLog?.status === 'running' || activeRunLog?.id
       ? activeRunLog
@@ -313,81 +318,136 @@ export default function OverviewTab() {
         stopping={stopping}
       />
     ) : null;
-  const progress = renderProgress('default', Boolean(summaryRunning || activeRunLog));
+  const progress = renderProgress(
+    'default',
+    Boolean(summaryRunning || activeRunLog),
+  );
+  const overviewMessage = queued
+    ? {
+        title: 'Your first run is queued',
+        description: 'This overview will show results once the run finishes.',
+      }
+    : summaryRunning
+      ? {
+          title: 'Your first sync is in progress',
+          description: 'This overview will show results once the run finishes.',
+        }
+      : runLogs.length > 0
+        ? {
+            title: 'No completed sync yet',
+            description:
+              'Review the previous attempt in Run History. After a run completes, you’ll see records synced, run timing, and upcoming activity here.',
+          }
+        : {
+            title: 'Your sync overview starts after the first run',
+            description:
+              'Follow the setup steps above to prepare this job and run its first sync. Once it finishes, you’ll see records synced, run timing, and upcoming activity here.',
+          };
 
   return (
     <div className="space-y-5">
-      <Card size="sm" className="min-w-0 rounded-4xl">
-        <CardHeader>
-          <div className="space-y-0.5">
-            <CardTitle>
-              Sync overview
-            </CardTitle>
-            <CardDescription>
-              Monitor sync activity and trigger fresh data syncs whenever you
-              need to.
-            </CardDescription>
+      {hasRunHistory ? (
+        <Card size="sm" className="min-w-0 rounded-4xl">
+          <CardHeader visualLevel="section">
+            <div className="space-y-0.5">
+              <CardTitle>Sync overview</CardTitle>
+              <CardDescription>
+                Monitor sync activity and trigger fresh data syncs whenever you
+                need to.
+              </CardDescription>
+            </div>
+            <CardAction className="flex flex-wrap items-center gap-2">
+              {runLogs[0]?.bullmqJobId && queued && !isSyncing && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCancelQueue}
+                  disabled={cancellingQueue}
+                  className="text-destructive"
+                >
+                  <X /> {cancellingQueue ? 'Cancelling…' : 'Cancel queue'}
+                </Button>
+              )}
+              {failedQueueJob && !isSyncing && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRetryQueue}
+                  disabled={retryingQueue}
+                >
+                  <RotateCcw /> {retryingQueue ? 'Retrying…' : 'Retry'}
+                </Button>
+              )}
+              <Button
+                onClick={() => setManualDialogOpen(true)}
+                disabled={syncBlocked}
+              >
+                <Play /> Sync now
+              </Button>
+            </CardAction>
+          </CardHeader>
+
+          <CardContent className="space-y-6">
+            {/* Sync progress — appears right after header on sync */}
+            {!manualDialogOpen && progress}
+
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              {summaryCards.map((card) => (
+                <SyncSummaryCard key={card.label} {...card} />
+              ))}
+            </div>
+
+            {queued && !isSyncing && (
+              <Alert className="py-2.5">
+                <Clock />
+                <AlertDescription className="space-y-0.5 [&_p:not(:last-child)]:mb-0">
+                  <p className="text-foreground font-semibold">Run queued</p>
+                  <p>
+                    Cancel the queued run before starting a different manual
+                    run.
+                  </p>
+                </AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <section className="min-w-0 space-y-5 py-8" aria-label="Sync overview">
+          {!manualDialogOpen && progress}
+          <div className="mx-auto max-w-xl space-y-2 text-center">
+            <h2 className="font-heading text-foreground text-lg font-semibold">
+              {overviewMessage.title}
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              {overviewMessage.description}
+            </p>
           </div>
-          <CardAction className="flex flex-wrap items-center gap-2">
-            {runLogs[0]?.bullmqJobId && queued && !isSyncing && (
+          {queued && !isSyncing && runLogs[0]?.bullmqJobId && (
+            <div className="flex justify-center">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleCancelQueue}
                 disabled={cancellingQueue}
-                className="text-destructive"
               >
                 <X /> {cancellingQueue ? 'Cancelling…' : 'Cancel queue'}
               </Button>
-            )}
-            {failedQueueJob && !isSyncing && (
+            </div>
+          )}
+          {failedQueueJob && !isSyncing && (
+            <div className="flex justify-center">
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={handleRetryQueue}
                 disabled={retryingQueue}
               >
-                <RotateCcw /> {retryingQueue ? 'Retrying…' : 'Retry'}
+                <RotateCcw /> {retryingQueue ? 'Retrying…' : 'Retry queued run'}
               </Button>
-            )}
-            <Button
-              onClick={() => {
-                if (inactiveBlocked) {
-                  triggerInactiveGuide();
-                  return;
-                }
-                setManualDialogOpen(true);
-              }}
-              disabled={syncBlocked}
-            >
-              <Play /> Sync now
-            </Button>
-          </CardAction>
-        </CardHeader>
-
-        <CardContent className="space-y-6">
-          {/* Sync progress — appears right after header on sync */}
-          {!manualDialogOpen && progress}
-
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-            {summaryCards.map((card) => (
-              <SyncSummaryCard key={card.label} {...card} />
-            ))}
-          </div>
-
-          {queued && !isSyncing && (
-            <Alert className="py-2.5">
-              <Clock />
-              <AlertDescription className="space-y-0.5 [&_p:not(:last-child)]:mb-0">
-                <p className="text-foreground font-semibold">Run queued</p>
-                <p>
-                  Cancel the queued run before starting a different manual run.
-                </p>
-              </AlertDescription>
-            </Alert>
+            </div>
           )}
-        </CardContent>
-      </Card>
+        </section>
+      )}
 
       {manualDialogOpen && (
         <StartSyncModal
@@ -397,9 +457,9 @@ export default function OverviewTab() {
           environment={activeEnvironment}
           hasBaseline={Boolean(
             job.lastSyncedAt ||
-              runLogs.some(
-                (r) => r.status === 'completed' || r.status === 'success',
-              ),
+            runLogs.some(
+              (r) => r.status === 'completed' || r.status === 'success',
+            ),
           )}
           pipelineRequired={pipelineRequired}
           pipelineConfigured={pipelineConfigured}

@@ -7,6 +7,7 @@ import ProjectStatusDropdown from './ProjectStatusDropdown';
 
 import { projectsApi } from '@/api/projects';
 import { PlatformIcon } from '@/components/platform';
+import HeadingPair from '@/components/shared/HeadingPair';
 import HeaderPrimaryActionButton from '@/components/shared/HeaderPrimaryActionButton';
 import StatusBadge from '@/components/shared/StatusBadge';
 import type { ProjectStatus } from '@/types';
@@ -44,7 +45,7 @@ export default function ProjectHeader() {
   };
 
   return (
-    <div className="flex flex-col gap-5 px-6 py-5 lg:flex-row lg:justify-between lg:items-start">
+    <div className="flex flex-col gap-3 px-4 py-4 lg:flex-row lg:items-start lg:justify-between">
       <div className="flex min-w-0 items-center gap-4">
         <div className="flex shrink-0 items-center gap-2">
           <PlatformIcon
@@ -65,26 +66,18 @@ export default function ProjectHeader() {
             className="size-12 rounded-2xl"
           />
         </div>
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="truncate text-2xl font-bold tracking-tight">
-              {project.name}
-            </h1>
+        <HeadingPair
+          level="h1"
+          title={<span className="block truncate">{project.name}</span>}
+          trailing={
             <ProjectStatusDropdown
               current={project.status}
               options={PROJECT_STATUSES}
               onSelect={handleStatusSelect}
             />
-          </div>
-          <div className="text-muted-foreground mt-1 text-sm leading-5">
-            {project.createdAt
-              ? `Created ${format(new Date(project.createdAt), 'MMM d, yyyy')}`
-              : ''}
-            {project.lastSyncedAt
-              ? ` · Last synced ${formatDistanceToNow(new Date(project.lastSyncedAt), { addSuffix: true })}`
-              : ' · Not synced yet'}
-          </div>
-        </div>
+          }
+          subtitle={`${project.createdAt ? `Created ${format(new Date(project.createdAt), 'MMM d, yyyy')}` : ''}${project.lastSyncedAt ? ` · Last synced ${formatDistanceToNow(new Date(project.lastSyncedAt), { addSuffix: true })}` : ' · Not synced yet'}`}
+        />
       </div>
 
       <div className="ml-auto flex flex-wrap items-center justify-end gap-2.5">

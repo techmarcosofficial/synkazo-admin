@@ -16,6 +16,7 @@ import {
 } from '../settings';
 
 import { jobsApi } from '@/api/jobs';
+import HeadingPair from '@/components/shared/HeadingPair';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -73,12 +74,14 @@ function CheckpointInformation() {
 
   return (
     <section aria-labelledby="job-checkpoint-title">
-      <h3 id="job-checkpoint-title" className="font-semibold">
-        Sync Progress Bookmark (Checkpoint)
-      </h3>
-      <p className="text-muted-foreground mb-4 text-xs">
-        Saved progress used to continue an interrupted sync without starting over from scratch.
-      </p>
+      <HeadingPair
+        visualLevel="card"
+        level="h3"
+        titleId="job-checkpoint-title"
+        title="Sync Progress Bookmark (Checkpoint)"
+        subtitle="Saved progress used to continue an interrupted sync without starting over from scratch."
+        className="mb-4"
+      />
 
       <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="bg-muted/50 rounded-3xl border px-3 py-2.5">
@@ -214,7 +217,7 @@ export default function SettingsTab() {
           className="top-[calc(var(--detail-sticky-top)+var(--detail-header-height)+(--spacing(4)))] gap-0 py-0 lg:sticky"
         >
           <CardHeader className="px-3.5 py-3">
-            <CardTitle className="text-sm font-semibold">
+            <CardTitle>
               Job settings
             </CardTitle>
           </CardHeader>
@@ -285,16 +288,12 @@ export default function SettingsTab() {
         className="min-w-0 gap-0 py-0"
         aria-labelledby="job-settings-section-title"
       >
-        <CardHeader className="gap-0 px-4 py-3">
-          <h2
-            id="job-settings-section-title"
-            className="font-heading text-lg font-semibold tracking-tight"
-          >
-            {activeSection.label}
-          </h2>
-          <p className="text-muted-foreground mt-0.5 text-xs">
-            {activeSection.description}
-          </p>
+        <CardHeader className="px-4 py-3">
+          <HeadingPair
+            titleId="job-settings-section-title"
+            title={activeSection.label}
+            subtitle={activeSection.description}
+          />
         </CardHeader>
         <CardContent className="px-3.5 pt-2.5 pb-3.5 sm:px-4 sm:pb-4">
           {sectionBody}

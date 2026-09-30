@@ -48,6 +48,7 @@ import RuleBuilderModal from './RuleBuilderModal';
 
 import { associationsApi } from '@/api/associations';
 import { PlatformIcon } from '@/components/platform';
+import HeadingPair from '@/components/shared/HeadingPair';
 import { usePlanUpgradePrompt } from '@/components/shared/PlanGate';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -2282,7 +2283,7 @@ export default function FieldMappingCanvas({
                   setMatchActive(selected.sourceField, selected.destKey, true);
                 }}
               >
-                <SelectTrigger size="sm" className="h-7 w-36 shrink-0">
+                <SelectTrigger size="sm" className="w-36 shrink-0">
                   <SelectValue
                     placeholder={
                       activeMatches.length === 0
@@ -2348,13 +2349,10 @@ export default function FieldMappingCanvas({
               )}
             >
               {showHeading && (
-                <div className="min-w-0">
-                  <h2 className="text-lg font-semibold">Field mappings</h2>
-                  <p className="text-muted-foreground mt-0.5 text-xs">
-                    Map fields between your connected platforms to keep data in
-                    sync.
-                  </p>
-                </div>
+                <HeadingPair
+                  title="Field mappings"
+                  subtitle="Map fields between your connected platforms to keep data in sync."
+                />
               )}
               {mappingToolbar}
             </div>
@@ -2855,10 +2853,7 @@ export default function FieldMappingCanvas({
                                     )
                                   }
                                 >
-                                  <SelectTrigger
-                                    size="sm"
-                                    className="h-8 w-full"
-                                  >
+                                  <SelectTrigger size="sm" className="w-full">
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent align="start">
@@ -2962,7 +2957,7 @@ export default function FieldMappingCanvas({
                                 >
                                   <SelectTrigger
                                     size="sm"
-                                    className="h-8 w-[9.5rem]"
+                                    className="w-[9.5rem]"
                                   >
                                     <SelectValue />
                                   </SelectTrigger>

@@ -50,7 +50,7 @@ export default function SubscriptionHistory() {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader visualLevel="section">
         <CardTitle>Billing history</CardTitle>
         <CardDescription>
           A full audit trail of subscription and payment events.
@@ -83,7 +83,7 @@ export default function SubscriptionHistory() {
             }))}
           />
         ) : (
-          <div className="overflow-hidden rounded-4xl border">
+          <div className="overflow-hidden rounded-3xl border">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted hover:bg-muted/50">

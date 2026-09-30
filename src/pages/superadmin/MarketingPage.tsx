@@ -4,10 +4,12 @@ import { toast } from 'sonner';
 
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
+import HeadingPair from '@/components/shared/HeadingPair';
 import ManagementToolbar from '@/components/shared/ManagementToolbar';
 import PageHeader from '@/components/shared/PageHeader';
 import PaginationBar from '@/components/shared/PaginationBar';
 import SkeletonTable from '@/components/shared/skeletons/SkeletonTable';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import {
@@ -19,6 +21,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -71,14 +74,9 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function StatusBadge({ status }: { status: LeadStatus }) {
   return (
-    <span
-      className={cn(
-        'inline-flex rounded-full px-2.5 py-1 text-xs font-medium',
-        STATUS_CLASSES[status],
-      )}
-    >
+    <Badge size="sm" className={STATUS_CLASSES[status]}>
       {STATUS_LABELS[status]}
-    </span>
+    </Badge>
   );
 }
 
@@ -182,12 +180,12 @@ function LeadDrawer({
                 <label className="text-sm font-medium" htmlFor="lead-notes">
                   Internal notes
                 </label>
-                <textarea
+                <Textarea
                   id="lead-notes"
                   value={notes ?? lead.adminNotes ?? ''}
                   onChange={(event) => setNotes(event.target.value)}
                   maxLength={5000}
-                  className="border-input bg-background focus-visible:ring-ring min-h-28 w-full rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-2"
+                  className="min-h-28"
                   placeholder="Add internal context or next steps"
                 />
               </div>
@@ -476,12 +474,11 @@ export default function MarketingPage() {
         <Card>
           <CardContent className="space-y-6">
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
-              <div className="space-y-1">
-                <h3 className="text-lg font-semibold">Manage demo requests</h3>
-                <p className="text-muted-foreground text-sm">
-                  Requests submitted from the marketing website.
-                </p>
-              </div>
+              <HeadingPair
+                level="h3"
+                title="Manage demo requests"
+                subtitle="Requests submitted from the marketing website."
+              />
               <ManagementToolbar
                 searchValue={search}
                 onSearchChange={(value) => {
@@ -525,7 +522,7 @@ export default function MarketingPage() {
                 viewMode="table"
               />
             ) : (
-              <div className="overflow-hidden overflow-x-auto rounded-4xl border">
+              <div className="overflow-hidden overflow-x-auto rounded-3xl border">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted hover:bg-muted/50">

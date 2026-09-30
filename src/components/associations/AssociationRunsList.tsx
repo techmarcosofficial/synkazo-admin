@@ -599,7 +599,7 @@ export default function AssociationRunsList({
 
   return (
     <Card className="gap-0 py-0">
-      <CardHeader className="border-b px-4 py-3">
+      <CardHeader visualLevel="section" className="border-b px-4 py-3">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <div>
             <CardTitle>Association Runs</CardTitle>

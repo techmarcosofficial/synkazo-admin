@@ -370,10 +370,13 @@ export default function MigrationComparisonCard({
         }}
       />
 
-      <CardHeader className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+      <CardHeader
+        visualLevel="section"
+        className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start"
+      >
         <div>
           <CardTitle>Compare configuration</CardTitle>
-          <CardDescription className="mt-1">
+          <CardDescription>
             Review differences first, then select only missing items to create
             in the target.
           </CardDescription>

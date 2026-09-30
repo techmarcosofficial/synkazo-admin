@@ -13,6 +13,7 @@ import { useState } from 'react';
 import DateRangePicker from '@/components/shared/DateRangePicker';
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
+import HeadingPair from '@/components/shared/HeadingPair';
 import ManagementToolbar from '@/components/shared/ManagementToolbar';
 import PageContextAlert from '@/components/shared/PageContextAlert';
 import PageHeader from '@/components/shared/PageHeader';
@@ -65,7 +66,7 @@ const SEVERITY_CONFIG: Record<
 function SeverityBadge({ severity }: { severity: string }) {
   const cfg = SEVERITY_CONFIG[severity] ?? SEVERITY_CONFIG.info;
   return (
-    <Badge className="bg-muted text-muted-foreground gap-1 rounded-full font-semibold">
+    <Badge className="bg-muted text-muted-foreground gap-1 font-semibold">
       <cfg.Icon className={cn('size-2.5', cfg.iconClassName)} />
       {cfg.label}
     </Badge>
@@ -246,14 +247,11 @@ export default function AuditLogPage() {
                 <Card>
                   <CardContent className="space-y-6">
                     <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
-                      <div className="space-y-1">
-                        <h3 className="text-lg font-semibold">
-                          Manage audit logs
-                        </h3>
-                        <p className="text-muted-foreground text-sm">
-                          Organization-wide activity trail
-                        </p>
-                      </div>
+                      <HeadingPair
+                        level="h3"
+                        title="Manage audit logs"
+                        subtitle="Organization-wide activity trail"
+                      />
                       <ManagementToolbar
                         searchValue={search}
                         onSearchChange={handleSearchChange}
@@ -330,7 +328,7 @@ export default function AuditLogPage() {
                         viewMode="table"
                       />
                     ) : (
-                      <div className="overflow-hidden rounded-4xl border">
+                      <div className="overflow-hidden rounded-3xl border">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-muted hover:bg-muted/50">
@@ -420,14 +418,11 @@ export default function AuditLogPage() {
                 <Card>
                   <CardContent className="space-y-6">
                     <div className="flex justify-between">
-                      <div className="space-y-1">
-                        <h3 className="text-lg font-semibold">
-                          Manage system logs
-                        </h3>
-                        <p className="text-muted-foreground text-sm">
-                          Operational and technical activity trail
-                        </p>
-                      </div>
+                      <HeadingPair
+                        level="h3"
+                        title="Manage system logs"
+                        subtitle="Operational and technical activity trail"
+                      />
                       <ManagementToolbar
                         searchValue={sysSearch}
                         onSearchChange={handleSysSearchChange}
@@ -441,7 +436,7 @@ export default function AuditLogPage() {
                         viewMode="table"
                       />
                     ) : (
-                      <div className="overflow-hidden rounded-4xl border">
+                      <div className="overflow-hidden rounded-3xl border">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-muted hover:bg-muted/50">

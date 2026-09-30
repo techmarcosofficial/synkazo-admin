@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 import PasswordInput from '@/components/auth/PasswordInput';
 import PasswordStrength from '@/components/auth/PasswordStrength';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -111,7 +112,7 @@ export default function SecurityTab() {
       description: 'This cannot be undone.',
       body: (
         <div className="space-y-3 text-sm">
-          <div className="bg-muted overflow-hidden rounded-4xl border">
+          <div className="bg-muted overflow-hidden rounded-2xl border">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-border/60 border-b text-left">
@@ -141,7 +142,7 @@ export default function SecurityTab() {
               </tbody>
             </table>
           </div>
-          <div className="bg-muted overflow-hidden rounded-4xl border">
+          <div className="bg-muted overflow-hidden rounded-2xl border">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-border/60 border-b text-left">
@@ -185,7 +186,7 @@ export default function SecurityTab() {
   return (
     <>
       <Card className="h-full">
-        <CardHeader>
+        <CardHeader visualLevel="section">
           <CardTitle className="flex items-center gap-2">
             <Lock className="text-muted-foreground size-4" /> Password &
             Security
@@ -193,9 +194,9 @@ export default function SecurityTab() {
           <CardDescription>
             Protect your account with a strong, unique password.
           </CardDescription>
-          <div className="bg-success/10 text-success mt-2 flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium">
+          <Badge size="md" className="bg-success/10 text-success mt-2 gap-1.5">
             <ShieldCheck className="size-3.5" /> Account protected
-          </div>
+          </Badge>
         </CardHeader>
         <CardContent>
           <FieldGroup>
@@ -254,7 +255,7 @@ export default function SecurityTab() {
       </Card>
 
       <Card className="border-destructive/30 lg:col-span-2">
-        <CardHeader>
+        <CardHeader visualLevel="section">
           <CardTitle className="text-destructive flex items-center gap-2">
             <ShieldAlert className="size-4" /> Danger Zone
           </CardTitle>

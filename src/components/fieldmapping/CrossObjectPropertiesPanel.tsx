@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 
 import type { FieldDef } from './FieldMappingCanvas';
 
+import HeadingPair from '@/components/shared/HeadingPair';
 import { connectionsApi } from '@/api/connections';
 import {
   jobsApi,
@@ -109,13 +110,12 @@ export default function CrossObjectPropertiesPanel({
 
   return (
     <div className="space-y-4">
-      <div>
-        <h3 className="text-sm font-semibold">Cross-object properties</h3>
-        <p className="text-muted-foreground mt-1 text-xs">
-          Import a property through an ID or employee-name field on each source
-          record. Imported values become forward-only source fields.
-        </p>
-      </div>
+      <HeadingPair
+        visualLevel="card"
+        level="h3"
+        title="Cross-object properties"
+        subtitle="Import a property through an ID or employee-name field on each source record. Imported values become forward-only source fields."
+      />
       <div className="bg-muted/20 space-y-4 rounded-3xl border p-4">
         <div className="grid gap-4 md:grid-cols-3">
           <div className="space-y-1.5">

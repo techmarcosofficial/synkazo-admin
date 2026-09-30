@@ -11,7 +11,10 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 
 import { PlatformPair } from '@/components/platform';
+import HeadingPair from '@/components/shared/HeadingPair';
+import TextPair from '@/components/shared/TextPair';
 import StatusBadge from '@/components/shared/StatusBadge';
+import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { Connection, Job, Project, ProjectEnvironment } from '@/types';
@@ -36,14 +39,16 @@ export default function ActiveProjectPipelineCard({
   className,
 }: ActiveProjectPipelineCardProps) {
   const navigate = useNavigate();
-  const activeEnvironment = (
-    project as Project & { activeEnvironment?: ProjectEnvironment }
-  ).activeEnvironment ?? project.active_environment;
+  const activeEnvironment =
+    (project as Project & { activeEnvironment?: ProjectEnvironment })
+      .activeEnvironment ?? project.active_environment;
   const isSandbox = activeEnvironment === 'sandbox';
 
   const isMultipleProjects = totalProjects > 1;
 
-  const projectConnections = connections.filter((c) => c.projectId === project.id);
+  const projectConnections = connections.filter(
+    (c) => c.projectId === project.id,
+  );
   const projectJobs = jobs.filter((j) => j.projectId === project.id);
 
   const sourceConnection = projectConnections.find(
@@ -66,7 +71,9 @@ export default function ActiveProjectPipelineCard({
     projectJobs.some((j) => (j.recordsSynced ?? 0) > 0 || j.lastSyncedAt),
   );
 
-  const step2State: MilestoneState = areConnectionsComplete ? 'completed' : 'in_progress';
+  const step2State: MilestoneState = areConnectionsComplete
+    ? 'completed'
+    : 'in_progress';
   const step3State: MilestoneState = !areConnectionsComplete
     ? 'pending'
     : isJobsComplete
@@ -79,74 +86,76 @@ export default function ActiveProjectPipelineCard({
       : 'in_progress';
 
   return (
-    <Card
-      className={cn(
-        'border-border bg-card relative overflow-hidden rounded-4xl p-5 shadow-xs sm:p-6',
-        className,
-      )}
-    >
+    <Card className={cn('relative p-4', className)}>
       <div className="space-y-4">
         {/* Header (Clean, concise, indicates recent project when multiple exist) */}
         <div className="space-y-1">
           <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
-            {/* Project Name and Platform Pair in one line */}
-            <div className="flex min-w-0 flex-wrap items-center gap-2.5">
-              <h2 className="text-foreground text-lg font-bold tracking-tight sm:text-xl">
-                {project.name}
-              </h2>
-              <PlatformPair
-                sourcePlatformId={project.sourcePlatformId ?? 'servicetitan'}
-                destPlatformId={project.destPlatformId ?? 'hubspot'}
-                variant="badge"
-              />
-            </div>
+            <HeadingPair
+              visualLevel="card"
+              title={project.name}
+              trailing={
+                <PlatformPair
+                  sourcePlatformId={project.sourcePlatformId ?? 'servicetitan'}
+                  destPlatformId={project.destPlatformId ?? 'hubspot'}
+                  variant="badge"
+                />
+              }
+              subtitle={
+                isMultipleProjects ? (
+                  <>
+                    Showing setup for your most recently created project (1 of{' '}
+                    {totalProjects} in progress).{' '}
+                    <Link
+                      to="/projects"
+                      className="text-primary inline-flex items-center gap-0.5 font-medium hover:underline"
+                    >
+                      <span>View all projects</span>
+                      <ArrowRight className="size-3" />
+                    </Link>
+                  </>
+                ) : (
+                  'Setup pipeline checkpoints for this integration. Click any checkpoint to configure.'
+                )
+              }
+            />
 
             {/* Right Corner: Project Status & Tags */}
             <div className="flex shrink-0 items-center gap-2">
               {isMultipleProjects && (
-                <span
+                <Badge
                   data-testid="tag-recently-created"
-                  className="border-border/80 bg-muted/60 text-muted-foreground inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium"
+                  variant="outline"
+                  size="xs"
+                  className="bg-muted/60 text-muted-foreground"
                 >
                   Recently Created
-                </span>
+                </Badge>
               )}
               <StatusBadge status={project.status} size="sm" />
             </div>
           </div>
-          <p className="text-muted-foreground text-xs sm:text-sm">
-            {isMultipleProjects ? (
-              <>
-                Showing setup for your most recently created project (1 of {totalProjects} in progress).{' '}
-                <Link
-                  to="/projects"
-                  className="text-primary hover:underline font-medium inline-flex items-center gap-0.5"
-                >
-                  <span>View all projects</span>
-                  <ArrowRight className="size-3" />
-                </Link>
-              </>
-            ) : (
-              'Setup pipeline checkpoints for this integration. Click any checkpoint to configure.'
-            )}
-          </p>
         </div>
 
         {/* Milestone Steps Tracker (Clickable cards without inner button clutter) */}
         <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
           {/* Step 1: Project Established */}
-          <div className="bg-card border-border/80 flex flex-col justify-between rounded-2xl border p-4 space-y-3">
+          <div className="bg-card border-border/80 flex flex-col justify-between space-y-3 rounded-2xl border p-4">
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
+                <span className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
                   Step 1
                 </span>
                 <div className="bg-success/15 text-success flex size-5.5 items-center justify-center rounded-full">
                   <Check className="size-3" />
                 </div>
               </div>
-              <h3 className="text-foreground text-sm font-semibold">Project Created</h3>
-              <p className="text-muted-foreground text-xs">Endpoints defined</p>
+              <HeadingPair
+                level="h3"
+                visualLevel="item"
+                title="Project Created"
+                subtitle="Endpoints defined"
+              />
             </div>
             <div className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
               <CheckCircle2 className="text-success size-3 shrink-0" />
@@ -166,15 +175,15 @@ export default function ActiveProjectPipelineCard({
             }
             disabled={!canManage}
             className={cn(
-              'group bg-card border-border/80 flex flex-col justify-between rounded-2xl border p-4 text-left space-y-3 transition-all duration-200',
+              'group bg-card border-border/80 flex flex-col justify-between space-y-3 rounded-2xl border p-4 text-left transition-all duration-200',
               canManage
-                ? 'hover:-translate-y-0.5 hover:shadow-xs hover:border-foreground/20 hover:bg-muted/30 cursor-pointer'
-                : 'opacity-60 cursor-not-allowed',
+                ? 'hover:border-foreground/20 hover:bg-muted/30 cursor-pointer hover:-translate-y-0.5 hover:shadow-xs'
+                : 'cursor-not-allowed opacity-60',
             )}
           >
-            <div className="space-y-1.5 w-full">
+            <div className="w-full space-y-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
+                <span className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
                   Step 2
                 </span>
                 {step2State === 'completed' ? (
@@ -187,14 +196,14 @@ export default function ActiveProjectPipelineCard({
                   </div>
                 )}
               </div>
-              <h3 className="text-foreground text-sm font-semibold transition-colors">
-                Connections
-              </h3>
-              <p className="text-muted-foreground text-xs">
-                {areConnectionsComplete
-                  ? 'Both platforms authorized'
-                  : 'Authenticate endpoints'}
-              </p>
+              <TextPair
+                title="Connections"
+                subtitle={
+                  areConnectionsComplete
+                    ? 'Both platforms authorized'
+                    : 'Authenticate endpoints'
+                }
+              />
             </div>
 
             <div className="flex items-center justify-between pt-1 text-[11px]">
@@ -207,7 +216,7 @@ export default function ActiveProjectPipelineCard({
               >
                 {step2State === 'completed' ? 'Connected' : 'Action Required'}
               </span>
-              <ArrowRight className="text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 size-3.5 transition-all" />
+              <ArrowRight className="text-muted-foreground group-hover:text-foreground size-3.5 transition-all group-hover:translate-x-0.5" />
             </div>
           </button>
 
@@ -223,15 +232,15 @@ export default function ActiveProjectPipelineCard({
               })
             }
             className={cn(
-              'group flex flex-col justify-between rounded-2xl border p-4 text-left space-y-3 transition-all duration-200',
+              'group flex flex-col justify-between space-y-3 rounded-2xl border p-4 text-left transition-all duration-200',
               step3State !== 'pending' && canManage
-                ? 'bg-card border-border/80 hover:-translate-y-0.5 hover:shadow-xs hover:border-foreground/20 hover:bg-muted/30 cursor-pointer'
-                : 'bg-muted/20 border-border/40 opacity-50 cursor-not-allowed',
+                ? 'bg-card border-border/80 hover:border-foreground/20 hover:bg-muted/30 cursor-pointer hover:-translate-y-0.5 hover:shadow-xs'
+                : 'bg-muted/20 border-border/40 cursor-not-allowed opacity-50',
             )}
           >
-            <div className="space-y-1.5 w-full">
+            <div className="w-full space-y-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
+                <span className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
                   Step 3
                 </span>
                 {step3State === 'completed' ? (
@@ -248,16 +257,16 @@ export default function ActiveProjectPipelineCard({
                   </div>
                 )}
               </div>
-              <h3 className="text-foreground text-sm font-semibold transition-colors">
-                Sync Flows
-              </h3>
-              <p className="text-muted-foreground text-xs">
-                {step3State === 'completed'
-                  ? `${projectJobs.length} flow(s) configured`
-                  : step3State === 'in_progress'
-                    ? 'Map object fields'
-                    : 'Requires connections'}
-              </p>
+              <TextPair
+                title="Sync Flows"
+                subtitle={
+                  step3State === 'completed'
+                    ? `${projectJobs.length} flow(s) configured`
+                    : step3State === 'in_progress'
+                      ? 'Map object fields'
+                      : 'Requires connections'
+                }
+              />
             </div>
 
             <div className="flex items-center justify-between pt-1 text-[11px]">
@@ -277,7 +286,7 @@ export default function ActiveProjectPipelineCard({
                     : 'Locked'}
               </span>
               {step3State !== 'pending' && (
-                <ArrowRight className="text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 size-3.5 transition-all" />
+                <ArrowRight className="text-muted-foreground group-hover:text-foreground size-3.5 transition-all group-hover:translate-x-0.5" />
               )}
             </div>
           </button>
@@ -285,7 +294,9 @@ export default function ActiveProjectPipelineCard({
           {/* Step 4: Limited run (Clickable card) */}
           <button
             type="button"
-            aria-label={isSandbox ? 'Review Sandbox test run' : 'Run limited sync'}
+            aria-label={
+              isSandbox ? 'Review Sandbox test run' : 'Run limited sync'
+            }
             data-testid="step-sample-test"
             disabled={step4State === 'pending' || !canManage}
             onClick={() =>
@@ -294,15 +305,15 @@ export default function ActiveProjectPipelineCard({
               })
             }
             className={cn(
-              'group flex flex-col justify-between rounded-2xl border p-4 text-left space-y-3 transition-all duration-200',
+              'group flex flex-col justify-between space-y-3 rounded-2xl border p-4 text-left transition-all duration-200',
               step4State !== 'pending' && canManage
-                ? 'bg-card border-border/80 hover:-translate-y-0.5 hover:shadow-xs hover:border-foreground/20 hover:bg-muted/30 cursor-pointer'
-                : 'bg-muted/20 border-border/40 opacity-50 cursor-not-allowed',
+                ? 'bg-card border-border/80 hover:border-foreground/20 hover:bg-muted/30 cursor-pointer hover:-translate-y-0.5 hover:shadow-xs'
+                : 'bg-muted/20 border-border/40 cursor-not-allowed opacity-50',
             )}
           >
-            <div className="space-y-1.5 w-full">
+            <div className="w-full space-y-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground text-[11px] font-semibold uppercase tracking-wider">
+                <span className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
                   Step 4
                 </span>
                 {step4State === 'completed' ? (
@@ -319,18 +330,18 @@ export default function ActiveProjectPipelineCard({
                   </div>
                 )}
               </div>
-              <h3 className="text-foreground text-sm font-semibold transition-colors">
-                {isSandbox ? 'Test & Review' : 'Limited Run'}
-              </h3>
-              <p className="text-muted-foreground text-xs">
-                {step4State === 'completed'
-                  ? 'Sync run completed'
-                  : step4State === 'in_progress'
-                    ? isSandbox
-                      ? 'Review a 5-record Sandbox run'
-                      : 'Run a controlled subset'
-                    : 'Requires sync flows'}
-              </p>
+              <TextPair
+                title={isSandbox ? 'Test & Review' : 'Limited Run'}
+                subtitle={
+                  step4State === 'completed'
+                    ? 'Sync run completed'
+                    : step4State === 'in_progress'
+                      ? isSandbox
+                        ? 'Review a 5-record Sandbox run'
+                        : 'Run a controlled subset'
+                      : 'Requires sync flows'
+                }
+              />
             </div>
 
             <div className="flex items-center justify-between pt-1 text-[11px]">
@@ -352,14 +363,14 @@ export default function ActiveProjectPipelineCard({
                     : 'Locked'}
               </span>
               {step4State !== 'pending' && (
-                <ArrowRight className="text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 size-3.5 transition-all" />
+                <ArrowRight className="text-muted-foreground group-hover:text-foreground size-3.5 transition-all group-hover:translate-x-0.5" />
               )}
             </div>
           </button>
         </div>
 
         {/* Safety Callout Footer */}
-        <div className="border-border/60 flex items-center gap-2 border-t pt-3 text-[11.5px] text-muted-foreground">
+        <div className="border-border/60 text-muted-foreground flex items-center gap-2 border-t pt-3 text-[11.5px]">
           <ShieldCheck className="text-muted-foreground size-3.5 shrink-0" />
           <span>
             {isSandbox

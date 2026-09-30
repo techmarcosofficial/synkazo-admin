@@ -609,7 +609,7 @@ function KnowMore({ label, helpText, helpUrl }: KnowMoreProps) {
           type="button"
           variant="ghost"
           size="icon-xs"
-          className="text-muted-foreground hover:text-foreground size-5 rounded-full"
+                className="text-muted-foreground hover:text-foreground size-5"
           aria-label={`Help with ${label}`}
         >
           <CircleHelp className="size-3.5" />

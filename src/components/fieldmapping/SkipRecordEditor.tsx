@@ -2,6 +2,7 @@ import DestinationSkipConditionsEditor from './DestinationSkipConditionsEditor';
 import ExcludeConditionsEditor from './ExcludeConditionsEditor';
 import type { FieldDef } from './FieldMappingCanvas';
 
+import HeadingPair from '@/components/shared/HeadingPair';
 import type {
   DestinationSkipCondition,
   ExcludeCondition,
@@ -46,14 +47,14 @@ export default function SkipRecordEditor({
       aria-labelledby="skip-record-heading"
     >
       <div className="bg-muted/30 border-b px-4 py-3">
-        <h3 id="skip-record-heading" className="text-sm font-semibold">
-          Skip Record
-        </h3>
-        <p className="text-muted-foreground mt-1 max-w-4xl text-xs leading-relaxed">
-          Source conditions inspect incoming source data before mapping.
-          Destination conditions run only after an existing destination record
-          is found and can skip that record&apos;s update.
-        </p>
+        <HeadingPair
+          visualLevel="card"
+          level="h3"
+          titleId="skip-record-heading"
+          title="Skip Record"
+          subtitle="Source conditions inspect incoming source data before mapping. Destination conditions run only after an existing destination record is found and can skip that record's update."
+          className="max-w-4xl"
+        />
       </div>
 
       <div className="divide-border divide-y">

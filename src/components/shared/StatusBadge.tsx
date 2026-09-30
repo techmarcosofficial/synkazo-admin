@@ -7,7 +7,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
+import { Badge, badgeVariants } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 export const statusDot = cva('shrink-0 rounded-full', {
@@ -49,10 +49,10 @@ export const statusBadge = cva('', {
       muted: '',
     },
     size: {
-      xs: 'h-4 px-1.5 text-[10px] gap-1',
-      sm: 'h-5 px-2 text-xs gap-1.5',
-      md: 'h-6 px-2.5 text-sm gap-1.5',
-      lg: 'h-7 px-3 text-sm gap-2',
+      xs: 'gap-1',
+      sm: 'gap-1.5',
+      md: 'gap-1.5',
+      lg: 'gap-2',
       default: '',
     },
   },
@@ -221,12 +221,9 @@ export default function StatusBadge({
         }}
         title={title ?? `${label} - Click to ${action.label.toLowerCase()}`}
         className={cn(
-          'inline-flex items-center rounded-full font-semibold transition-colors cursor-pointer border border-transparent bg-muted text-muted-foreground hover:bg-muted/80',
-          size === 'xs' && 'h-4 px-1.5 text-[10px] gap-1',
-          size === 'sm' && 'h-5 px-2 text-xs gap-1.5',
-          size === 'md' && 'h-6 px-2.5 text-sm gap-1.5',
-          size === 'lg' && 'h-7 px-3 text-sm gap-2',
-          size === 'default' && 'h-5 px-2 text-xs gap-1.5',
+          badgeVariants({ variant: 'secondary', size: size === 'default' ? 'sm' : size }),
+          'cursor-pointer font-semibold hover:bg-muted/80',
+          statusBadge({ variant: 'default', tone: cfg.tone, size }),
           className,
         )}
       >
@@ -277,6 +274,7 @@ export default function StatusBadge({
   return (
     <Badge
       title={title}
+      size={size === 'default' ? 'sm' : size}
       className={cn(
         'font-semibold',
         statusBadge({
@@ -301,4 +299,3 @@ export default function StatusBadge({
     </Badge>
   );
 }
-

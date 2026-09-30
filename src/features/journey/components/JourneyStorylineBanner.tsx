@@ -5,6 +5,8 @@ import type { NextActionResolution } from '../types';
 import ActionTooltip from './ActionTooltip';
 
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import HeadingPair from '@/components/shared/HeadingPair';
 import { Card, CardContent } from '@/components/ui/card';
 import { useCreateProjectStore } from '@/features/projects/store/useCreateProjectStore';
 import { cn } from '@/lib/utils';
@@ -64,18 +66,22 @@ export default function JourneyStorylineBanner({
                 Setup Storyline · Step {stepNumber} of {totalSteps}
               </span>
               {nextAction.estimatedTime && (
-                <span className="text-muted-foreground bg-background/80 rounded-full px-2 py-0.5 text-[10px] font-medium">
+                <Badge
+                  size="xs"
+                  variant="secondary"
+                  className="bg-background/80 text-muted-foreground"
+                >
                   {nextAction.estimatedTime}
-                </span>
+                </Badge>
               )}
             </div>
 
-            <h3 className="text-sm font-semibold tracking-tight">
-              {nextAction.title}
-            </h3>
-            <p className="text-muted-foreground text-xs leading-relaxed">
-              {nextAction.description}
-            </p>
+            <HeadingPair
+              visualLevel="card"
+              level="h3"
+              title={nextAction.title}
+              subtitle={nextAction.description}
+            />
 
             {nextAction.isBlocked && nextAction.blockerReason && (
               <p className="text-warning text-xs font-medium">

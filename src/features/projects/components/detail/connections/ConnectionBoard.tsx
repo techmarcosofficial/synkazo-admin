@@ -4,6 +4,7 @@ import PlatformCard from './PlatformCard';
 import SourcePlatformPicker from './SourcePlatformPicker';
 
 import ConnectionEnvDropdown from '@/components/connections/ConnectionEnvToggle';
+import HeadingPair from '@/components/shared/HeadingPair';
 import CredentialsModal from '@/components/connections/CredentialsModal';
 import type { ExtConnection } from '@/components/connections/types';
 import { useConnectionsManager } from '@/components/connections/useConnectionsManager';
@@ -167,12 +168,7 @@ function ConnectionStep({
       >
         {isTesting && <BorderBeam />}
         <div className="flex flex-col justify-between gap-2 px-4 py-3 sm:flex-row sm:items-center">
-          <div className="min-w-0">
-            <h3 className="font-heading text-sm font-semibold">{title}</h3>
-            <p className="text-muted-foreground mt-0.5 text-xs">
-              {description}
-            </p>
-          </div>
+          <HeadingPair level="h3" visualLevel="card" title={title} subtitle={description} />
           <StatusBadge
             status={isTesting ? 'in_progress' : status}
             action={
@@ -327,9 +323,9 @@ export default function ConnectionBoard({
   return (
     <>
       <Card className={cn('w-full', className)}>
-        <CardHeader className="gap-1">
+      <CardHeader visualLevel="section" className="gap-1">
           <div className="flex items-center gap-2">
-            <CardTitle className="font-semibold">Connections</CardTitle>
+            <CardTitle>Connections</CardTitle>
             <StatusBadge
               status={activeEnv === 'production' ? 'production' : 'sandbox'}
               label={

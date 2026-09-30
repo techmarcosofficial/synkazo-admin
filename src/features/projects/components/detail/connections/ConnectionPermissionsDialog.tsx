@@ -150,8 +150,9 @@ export default function ConnectionPermissionsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         size="md"
+        padding="none"
         showCloseButton={false}
-        className="flex max-h-[calc(100dvh-10rem)] flex-col gap-0 overflow-hidden p-0"
+        className="flex max-h-[calc(100dvh-10rem)] flex-col gap-0 overflow-hidden"
       >
         <DialogHeader className="bg-popover shrink-0 border-b px-4 py-4 pr-14 sm:px-6 sm:pr-14">
           <DialogTitle>

@@ -172,7 +172,7 @@ export default function BillingOverviewTab() {
   return (
     <div className="flex flex-col gap-4">
       <Card data-tour="current-plan">
-        <CardHeader>
+        <CardHeader visualLevel="section">
           <CardTitle className="flex items-center gap-2">
             <CreditCard className="text-muted-foreground size-4" />
             Subscription overview
@@ -328,7 +328,7 @@ export default function BillingOverviewTab() {
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.7fr)]">
         <Card>
-          <CardHeader>
+          <CardHeader visualLevel="section">
             <CardTitle className="flex items-center gap-2">
               <FileText className="text-muted-foreground size-4" /> Plan limits
               &amp; features
@@ -401,7 +401,7 @@ export default function BillingOverviewTab() {
         </Card>
 
         <Card className="h-fit">
-          <CardHeader>
+          <CardHeader visualLevel="section">
             <CardTitle className="flex items-center gap-2">
               <CalendarDays className="text-muted-foreground size-4" />
               Upcoming billing

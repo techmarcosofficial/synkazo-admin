@@ -267,9 +267,9 @@ export default function ProjectDetailPage() {
           backLabel={backLabel}
           backTo={backTo}
           header={
-            <Card className="gap-0 space-y-3 overflow-hidden py-0">
+            <Card className="gap-0 space-y-2 overflow-hidden py-0">
               <ProjectHeader />
-              <div className="overflow-x-auto px-5">
+              <div className="overflow-x-auto px-4">
                 <ProjectTabs tabs={tabs} />
               </div>
             </Card>

@@ -107,10 +107,10 @@ export default function ActivityTab() {
   }
 
   const renderHeader = () => (
-    <CardHeader className="flex flex-col gap-4 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
+      <CardHeader visualLevel="section" className="flex flex-col gap-4 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <CardTitle>Sync activity</CardTitle>
-        <CardDescription className="mt-1">
+        <CardDescription>
           Complete history of sync executions, record outcomes, and timings across this project.
         </CardDescription>
       </div>
@@ -123,7 +123,7 @@ export default function ActivityTab() {
           size="sm"
           onClick={() => query.refetch()}
           disabled={query.isFetching}
-          className="gap-1.5 rounded-xl text-xs"
+          className="gap-1.5"
         >
           <RefreshCw className={cn('size-3.5', query.isFetching && 'animate-spin')} />
           Refresh
@@ -312,7 +312,7 @@ export default function ActivityTab() {
                         variant="ghost"
                         size="xs"
                         asChild
-                        className="h-7 gap-1 rounded-lg bg-destructive/10 px-2 text-[11px] font-medium text-destructive hover:bg-destructive/20"
+                        className="gap-1 bg-destructive/10 px-2 font-medium text-destructive hover:bg-destructive/20"
                       >
                         <Link
                           to={linkHref}
@@ -330,7 +330,7 @@ export default function ActivityTab() {
                       variant="outline"
                       size="xs"
                       asChild
-                      className="h-7 gap-1 rounded-lg px-2.5 text-xs font-medium hover:border-primary/40 hover:bg-primary/5 hover:text-primary transition-colors"
+                      className="gap-1 font-medium hover:border-primary/40 hover:bg-primary/5 hover:text-primary transition-colors"
                     >
                       <Link
                         to={linkHref}

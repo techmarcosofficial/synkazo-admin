@@ -810,7 +810,7 @@ export default function AssociationRuleFormDialog({
                         </Field>
                       )}
 
-                      <div className="bg-muted/30 flex flex-wrap items-center gap-2 rounded-3xl px-3 py-2 font-mono text-xs">
+                      <div className="bg-muted/30 flex flex-wrap items-center gap-2 rounded-2xl px-3 py-2 font-mono text-xs">
                         <span>
                           {form.sourceObject}.{form.sourceMatchField}
                         </span>
@@ -836,7 +836,7 @@ export default function AssociationRuleFormDialog({
                       {mode === 'edit' ? (
                         <Field>
                           <FieldLabel>Association type</FieldLabel>
-                          <div className="bg-muted/30 rounded-3xl px-3 py-2 text-sm">
+                          <div className="bg-muted/30 rounded-2xl px-3 py-2 text-sm">
                             <div className="font-medium">
                               {form.hsAssociationLabel ||
                                 (form.hsAssociationTypeId
@@ -891,7 +891,7 @@ export default function AssociationRuleFormDialog({
                                     }))
                                   }
                                   className={cn(
-                                    'w-full rounded-3xl border px-3 py-2 text-left text-sm transition-colors',
+                                    'w-full rounded-2xl border px-3 py-2 text-left text-sm transition-colors',
                                     isSelected
                                       ? 'border-primary bg-primary/5 text-primary'
                                       : 'bg-muted/30 text-muted-foreground hover:bg-muted',

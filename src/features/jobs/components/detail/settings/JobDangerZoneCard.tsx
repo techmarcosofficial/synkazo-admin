@@ -1,6 +1,7 @@
 import { Trash2 } from 'lucide-react';
 
 import { ActionTooltip } from '@/features/journey';
+import HeadingPair from '@/components/shared/HeadingPair';
 import { Button } from '@/components/ui/button';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
@@ -19,12 +20,15 @@ export default function JobDangerZoneCard({
       aria-labelledby="job-danger-zone-title"
       className="border-destructive/20 bg-destructive/[0.02] rounded-3xl border p-4"
     >
-      <h3 id="job-danger-zone-title" className="text-destructive font-semibold">
-        Danger Zone
-      </h3>
-      <p className="text-muted-foreground mb-3 text-xs">
-        These actions are irreversible.
-      </p>
+      <HeadingPair
+        visualLevel="card"
+        level="h3"
+        titleId="job-danger-zone-title"
+        title="Danger Zone"
+        subtitle="These actions are irreversible."
+        tone="danger"
+        className="mb-3"
+      />
 
       <div className="pt-3">
         <p className="text-sm font-medium">Delete Job</p>

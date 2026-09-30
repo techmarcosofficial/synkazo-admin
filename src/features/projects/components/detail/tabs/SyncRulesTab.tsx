@@ -240,7 +240,7 @@ function SyncJobCard({
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <Card className="gap-0 rounded-4xl border py-0 transition-colors">
+      <Card surface="inner" className="gap-0 py-0 transition-colors">
         <div
           className="hover:bg-muted/30 flex cursor-pointer flex-col gap-4 px-4 py-4 transition-colors sm:px-5 lg:flex-row lg:items-center"
           onClick={handleRowClick}
@@ -314,8 +314,9 @@ function SyncJobCard({
             <CollapsibleTrigger asChild>
               <Button
                 type="button"
-                variant="ghost"
+                variant="outline"
                 size="icon-sm"
+                shape="pill"
                 aria-label={
                   open ? `Collapse ${job.name}` : `Expand ${job.name}`
                 }
@@ -441,8 +442,8 @@ export default function SyncRulesTab() {
       <Card>
         <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0 space-y-1">
-            <CardTitle>Sync flows</CardTitle>
-            <CardDescription>
+            <CardTitle visualLevel="section">Sync flows</CardTitle>
+            <CardDescription visualLevel="section">
               View each data flow and expand a sync flow to review its recent
               performance.
             </CardDescription>

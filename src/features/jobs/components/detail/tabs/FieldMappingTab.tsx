@@ -27,6 +27,7 @@ import FieldMappingCanvas, {
   type MappingRow as CanvasMappingRow,
 } from '@/components/fieldmapping/FieldMappingCanvas';
 import RequiredFieldDefaults from '@/components/fieldmapping/RequiredFieldDefaults';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import SkipRecordEditor from '@/components/fieldmapping/SkipRecordEditor';
 import { Card, CardContent } from '@/components/ui/card';
@@ -1050,9 +1051,13 @@ export default function FieldMappingTab() {
                         <p className="text-foreground text-xs font-semibold">
                           How should we identify matching records?
                         </p>
-                        <span className="text-muted-foreground bg-background rounded-full border px-2 py-0.5 text-[10px] font-medium">
+                        <Badge
+                          size="xs"
+                          variant="outline"
+                          className="text-muted-foreground bg-background"
+                        >
                           Unique Identifier
-                        </span>
+                        </Badge>
                       </div>
                       <p className="text-muted-foreground text-xs leading-relaxed">
                         Toggle the switch on at least one mapped field (like{' '}

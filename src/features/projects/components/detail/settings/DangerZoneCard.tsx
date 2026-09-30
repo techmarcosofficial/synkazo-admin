@@ -165,7 +165,6 @@ function ArchiveDialog({
             Cancel
           </Button>
           <Button
-            variant="destructive"
             onClick={performArchive}
             disabled={!confirmed || archiving}
           >
@@ -218,7 +217,7 @@ export default function DangerZoneCard({
       <CardHeader className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
         <div>
           <CardTitle className="text-destructive">Danger Zone</CardTitle>
-          <CardDescription className="mt-1">
+          <CardDescription>
             Archive this project only after reviewing its live execution impact.
           </CardDescription>
         </div>

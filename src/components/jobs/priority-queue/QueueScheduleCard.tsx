@@ -3,7 +3,13 @@ import { Clock3 } from 'lucide-react';
 
 import type { UpdateQueueSchedulePayload } from '@/api/priorityQueue';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -93,12 +99,12 @@ export default function QueueScheduleCard({
         <div className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-lg">
           <Clock3 className="size-4" aria-hidden="true" />
         </div>
-        <div>
-          <CardTitle className="text-sm">Queue Schedule</CardTitle>
-          <p className="text-muted-foreground mt-0.5 text-xs">
+        <div className="flex flex-col gap-1">
+          <CardTitle>Queue Schedule</CardTitle>
+          <CardDescription>
             Choose when a new queue cycle starts. It continues until every
             job&apos;s pending work is done.
-          </p>
+          </CardDescription>
         </div>
       </CardHeader>
       <CardContent className="space-y-2.5">
@@ -136,7 +142,8 @@ export default function QueueScheduleCard({
                         amount: Math.max(1, parseInt(e.target.value) || 1),
                       }))
                     }
-                    className="h-8 w-20 font-mono"
+                    uiSize="sm"
+                    className="w-20 font-mono"
                   />
                   <Select
                     value={interval.unit}
@@ -166,7 +173,8 @@ export default function QueueScheduleCard({
                   type="time"
                   value={time}
                   onChange={(e) => setTime(e.target.value)}
-                  className="h-8 w-36 font-mono"
+                  uiSize="sm"
+                  className="w-36 font-mono"
                 />
               </div>
             )}
@@ -197,7 +205,8 @@ export default function QueueScheduleCard({
                     type="time"
                     value={time}
                     onChange={(e) => setTime(e.target.value)}
-                    className="h-8 w-36 font-mono"
+                    uiSize="sm"
+                    className="w-36 font-mono"
                   />
                 </div>
               </div>
@@ -210,7 +219,8 @@ export default function QueueScheduleCard({
                   type="datetime-local"
                   value={oneTimeAt}
                   onChange={(e) => setOneTimeAt(e.target.value)}
-                  className="h-8 w-56 max-w-full"
+                  uiSize="sm"
+                  className="w-56 max-w-full"
                 />
               </div>
             )}

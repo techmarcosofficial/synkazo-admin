@@ -16,6 +16,7 @@ import {
 } from './FieldMappingCanvas';
 
 import { PlatformIcon } from '@/components/platform';
+import HeadingPair from '@/components/shared/HeadingPair';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -470,13 +471,12 @@ export default function RequiredFieldDefaults({
     <div className="flex flex-col gap-4">
       {showHeader && (
         <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-bold">Default values</h3>
-            <p className="text-muted-foreground text-xs">
-              Set the fallback value written when a mapped source value is
-              empty.
-            </p>
-          </div>
+          <HeadingPair
+            visualLevel="card"
+            level="h3"
+            title="Default values"
+            subtitle="Set the fallback value written when a mapped source value is empty."
+          />
           {requiredItems.length > 0 && (
             <Badge
               variant="secondary"

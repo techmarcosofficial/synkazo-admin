@@ -171,7 +171,7 @@ export default function EditorDashboard() {
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="gap-0 py-0">
-          <CardHeader className="bg-muted py-3!">
+          <CardHeader visualLevel="section" className="bg-muted py-3">
             <CardTitle>Your Projects</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -205,7 +205,7 @@ export default function EditorDashboard() {
         </Card>
 
         <Card className="gap-0 py-0">
-          <CardHeader className="bg-muted py-3!">
+          <CardHeader visualLevel="section" className="bg-muted py-3">
             <CardTitle>Recent Activity</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -231,7 +231,10 @@ export default function EditorDashboard() {
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-1.5">
                           {status && (
-                            <Badge className="bg-muted text-muted-foreground gap-1 rounded-full text-[10px] font-medium">
+                            <Badge
+                              size="xs"
+                              className="bg-muted text-muted-foreground gap-1"
+                            >
                               <span
                                 className={cn(
                                   'size-1.5 rounded-full',
@@ -275,7 +278,7 @@ export default function EditorDashboard() {
       </div>
 
       <Card>
-        <CardHeader>
+        <CardHeader visualLevel="section">
           <CardTitle className="flex items-center gap-2">
             <Lock className="text-muted-foreground size-4" /> Your Access Level
           </CardTitle>

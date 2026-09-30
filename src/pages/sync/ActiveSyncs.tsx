@@ -11,6 +11,7 @@ import { Link } from 'react-router-dom';
 import type { ActiveSync } from '@/api/dashboard';
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
+import HeadingPair from '@/components/shared/HeadingPair';
 import ListPanel from '@/components/shared/list/ListPanel';
 import ListRow from '@/components/shared/list/ListRow';
 import ManagementToolbar from '@/components/shared/ManagementToolbar';
@@ -182,12 +183,11 @@ export default function ActiveSyncs() {
       <Card>
         <CardContent className="space-y-6">
           <div className="flex justify-between">
-            <div className="space-y-1">
-              <h3 className="text-lg font-semibold">Manage live activity</h3>
-              <p className="text-muted-foreground text-sm">
-                Syncs currently running or idle, grouped by project
-              </p>
-            </div>
+            <HeadingPair
+              level="h3"
+              title="Manage live activity"
+              subtitle="Syncs currently running or idle, grouped by project"
+            />
             <ManagementToolbar
               searchValue={search}
               onSearchChange={setSearch}
@@ -206,14 +206,14 @@ export default function ActiveSyncs() {
             );
             return (
               <Collapsible
-                className="overflow-hidden rounded-4xl border"
+                className="overflow-hidden rounded-3xl border"
                 key={pid}
                 defaultOpen
               >
                 <div className="bg-muted flex items-center justify-between px-3 py-2">
                   <CollapsibleTrigger className="group flex min-w-0 flex-1 items-center gap-2.5 text-left">
                     <ChevronRight className="text-muted-foreground group-hover:text-foreground size-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-90" />
-                    <h3 className="group-hover:text-primary text-md truncate font-semibold transition-colors">
+                    <h3 className="group-hover:text-primary truncate text-sm leading-5 font-semibold transition-colors">
                       {project?.name ?? 'Unknown Project'}
                     </h3>
 

@@ -50,7 +50,8 @@ interface FixSuggestion {
 
 function getRecordFixSuggestions(rec: SyncLogRecord): FixSuggestion[] {
   const suggestions: FixSuggestion[] = [];
-  const text = `${rec.failReason || ''} ${rec.failReasonDetail || ''} ${rec.skipReason || ''} ${rec.skipReasonDetail || ''}`.toLowerCase();
+  const text =
+    `${rec.failReason || ''} ${rec.failReasonDetail || ''} ${rec.skipReason || ''} ${rec.skipReasonDetail || ''}`.toLowerCase();
 
   const isAuth =
     text.includes('auth') ||
@@ -200,7 +201,11 @@ export function TriageDrawer({
     setLoading(true);
 
     const actionParam =
-      filter === 'failed' ? 'failed' : filter === 'skipped' ? 'skipped' : undefined;
+      filter === 'failed'
+        ? 'failed'
+        : filter === 'skipped'
+          ? 'skipped'
+          : undefined;
 
     syncLogsApi
       .listRecords(projectId, jobId, run.id, {
@@ -224,7 +229,9 @@ export function TriageDrawer({
     };
   }, [open, run, filter, projectId, jobId]);
 
-  const handleAction = async (destination: 'mapping' | 'connections' | 'retry') => {
+  const handleAction = async (
+    destination: 'mapping' | 'connections' | 'retry',
+  ) => {
     if (destination === 'mapping') {
       onOpenChange(false);
       navigate(`/projects/${projectId}/jobs/${jobId}?tab=field-mapping`);
@@ -279,15 +286,15 @@ export function TriageDrawer({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="flex w-full flex-col sm:max-w-[540px] p-0"
+        className="flex w-full flex-col p-0 sm:max-w-[540px]"
       >
         {/* Drawer Header */}
-        <SheetHeader className="border-b px-5 py-4 shrink-0">
+        <SheetHeader className="shrink-0 border-b px-5 py-4">
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex min-w-0 items-center gap-2.5">
               <div
                 className={cn(
-                  'flex size-9 items-center justify-center rounded-2xl shrink-0',
+                  'flex size-9 shrink-0 items-center justify-center rounded-2xl',
                   (run.failedCount ?? 0) > 0
                     ? 'bg-destructive/10 text-destructive'
                     : 'bg-warning/10 text-warning',
@@ -295,12 +302,11 @@ export function TriageDrawer({
               >
                 <Wrench className="size-4" />
               </div>
-              <div className="min-w-0">
-                <SheetTitle className="text-base font-semibold leading-tight">
-                  Triage & Recovery
-                </SheetTitle>
-                <SheetDescription className="text-xs text-muted-foreground truncate">
-                  Run ID: {run.id} · {totalIssues} affected record{totalIssues !== 1 ? 's' : ''}
+              <div className="flex min-w-0 flex-col gap-1">
+                <SheetTitle>Triage & Recovery</SheetTitle>
+                <SheetDescription className="truncate">
+                  Run ID: {run.id} · {totalIssues} affected record
+                  {totalIssues !== 1 ? 's' : ''}
                 </SheetDescription>
               </div>
             </div>
@@ -310,7 +316,7 @@ export function TriageDrawer({
                 size="sm"
                 onClick={handleRetryRun}
                 disabled={retrying}
-                className="gap-1.5 text-xs shrink-0"
+                className="shrink-0 gap-1.5 text-xs"
               >
                 {retrying ? (
                   <RefreshCw className="size-3.5 animate-spin" />
@@ -324,7 +330,7 @@ export function TriageDrawer({
         </SheetHeader>
 
         {/* Filter and Search Controls */}
-        <div className="border-b bg-muted/20 px-5 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
+        <div className="bg-muted/20 flex shrink-0 flex-col justify-between gap-2 border-b px-5 py-2.5 sm:flex-row sm:items-center">
           <Tabs
             value={filter}
             onValueChange={(v) => setFilter(v as 'all' | 'failed' | 'skipped')}
@@ -344,18 +350,19 @@ export function TriageDrawer({
           </Tabs>
 
           <div className="relative flex-1 sm:max-w-[200px]">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3 text-muted-foreground" />
+            <Search className="text-muted-foreground absolute top-1/2 left-2.5 size-3 -translate-y-1/2" />
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Filter records..."
-              className="h-7 pl-7 text-xs rounded-xl"
+              uiSize="sm"
+              className="pl-7"
             />
           </div>
         </div>
 
         {/* Affected Records Area */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+        <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
           {loading ? (
             <div className="space-y-3">
               <Skeleton className="h-24 w-full rounded-2xl" />
@@ -363,12 +370,12 @@ export function TriageDrawer({
               <Skeleton className="h-24 w-full rounded-2xl" />
             </div>
           ) : filteredRecords.length === 0 ? (
-            <div className="rounded-2xl border border-dashed p-8 text-center space-y-2">
-              <AlertTriangle className="size-6 text-muted-foreground mx-auto opacity-40" />
-              <p className="text-xs font-medium text-foreground">
+            <div className="space-y-2 rounded-2xl border border-dashed p-8 text-center">
+              <AlertTriangle className="text-muted-foreground mx-auto size-6 opacity-40" />
+              <p className="text-foreground text-xs font-medium">
                 No affected records found
               </p>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-muted-foreground text-[11px]">
                 {searchQuery
                   ? 'No records match your search filter.'
                   : 'All processed records succeeded cleanly in this run.'}
@@ -383,14 +390,16 @@ export function TriageDrawer({
                   rec.failReason ||
                   rec.skipReasonDetail ||
                   rec.skipReason ||
-                  (isFailed ? 'Record processing failed' : 'Excluded by sync rule');
+                  (isFailed
+                    ? 'Record processing failed'
+                    : 'Excluded by sync rule');
                 const fixes = getRecordFixSuggestions(rec);
 
                 return (
                   <div
                     key={rec.id}
                     className={cn(
-                      'rounded-2xl border p-3.5 space-y-2 transition-colors bg-card/60 hover:bg-card',
+                      'bg-card/60 hover:bg-card space-y-2 rounded-2xl border p-3.5 transition-colors',
                       isFailed
                         ? 'border-destructive/20 hover:border-destructive/40'
                         : 'border-warning/20 hover:border-warning/40',
@@ -398,8 +407,8 @@ export function TriageDrawer({
                   >
                     {/* Record Header */}
                     <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5 min-w-0 font-mono text-xs">
-                        <span className="font-semibold text-foreground truncate">
+                      <div className="flex min-w-0 items-center gap-1.5 font-mono text-xs">
+                        <span className="text-foreground truncate font-semibold">
                           {rec.sourceRecordId}
                         </span>
                         {rec.destRecordId && (
@@ -415,10 +424,10 @@ export function TriageDrawer({
                       <Badge
                         variant="secondary"
                         className={cn(
-                          'text-[10px] px-2 py-0 capitalize shrink-0 font-semibold',
+                          'shrink-0 px-2 py-0 text-[10px] font-semibold capitalize',
                           isFailed
-                            ? 'bg-destructive/10 text-destructive border border-destructive/20'
-                            : 'bg-warning/10 text-warning border border-warning/20',
+                            ? 'bg-destructive/10 text-destructive border-destructive/20 border'
+                            : 'bg-warning/10 text-warning border-warning/20 border',
                         )}
                       >
                         {rec.action}
@@ -426,14 +435,14 @@ export function TriageDrawer({
                     </div>
 
                     {/* Reason / Failure Detail */}
-                    <p className="text-xs text-muted-foreground leading-relaxed break-words">
+                    <p className="text-muted-foreground text-xs leading-relaxed break-words">
                       {reasonText}
                     </p>
 
                     {/* Actionable Fix Suggestions */}
                     {fixes.length > 0 && (
-                      <div className="pt-2 border-t border-border/50 flex flex-wrap items-center gap-1.5">
-                        <span className="text-[11px] font-medium text-muted-foreground">
+                      <div className="border-border/50 flex flex-wrap items-center gap-1.5 border-t pt-2">
+                        <span className="text-muted-foreground text-[11px] font-medium">
                           Possible fixes:
                         </span>
                         {fixes.map((fix) => {
@@ -445,9 +454,9 @@ export function TriageDrawer({
                               size="xs"
                               onClick={() => handleAction(fix.destination)}
                               title={fix.hint}
-                              className="h-6 px-2 text-[11px] gap-1 hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors"
+                              className="hover:bg-primary/10 hover:text-primary hover:border-primary/30 h-6 gap-1 px-2 text-[11px] transition-colors"
                             >
-                              <Icon className="size-3 text-primary" />
+                              <Icon className="text-primary size-3" />
                               <span>{fix.label}</span>
                               <ArrowRight className="size-2.5 opacity-60" />
                             </Button>

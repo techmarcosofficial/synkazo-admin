@@ -690,7 +690,7 @@ function CopyPriceIdButton({ priceId }: { priceId: string }) {
           onClick={copy}
           variant="ghost"
           size="icon-xs"
-          className="text-muted-foreground hover:text-foreground rounded-full"
+          className="text-muted-foreground hover:text-foreground"
           aria-label="Copy price ID"
         >
           <Copy className="size-3" />
@@ -781,7 +781,7 @@ function PriceGroup({
               key={price.id}
               htmlFor={`price-${price.id}`}
               className={cn(
-                'flex flex-wrap cursor-pointer items-center gap-2 rounded-3xl border px-3 py-1.5 transition-all',
+                'flex cursor-pointer flex-wrap items-center gap-2 rounded-3xl border px-3 py-1.5 transition-all',
                 selected
                   ? 'border-primary bg-primary/5'
                   : 'hover:border-primary/40 hover:bg-muted/40',
@@ -1495,7 +1495,7 @@ function PlanFormDialog(
                         onClick={() => removeStagedPrice(i)}
                         variant="ghost"
                         size="icon-xs"
-                        className="hover:text-destructive ml-1 size-5 rounded-full"
+                        className="hover:text-destructive ml-1 size-5"
                         title="Remove"
                         aria-label={`Remove ${staged.interval} staged price`}
                       >
@@ -1665,7 +1665,7 @@ function PlanCard({ plan }: { plan: AdminApiPlan }) {
             </div>
           )}
           {/* Features & limits */}
-          <div className="bg-muted space-y-2 rounded-4xl p-3">
+          <div className="bg-muted space-y-2 rounded-3xl p-3">
             <p className="text-xs font-bold tracking-wide uppercase">
               Features & Limits
             </p>

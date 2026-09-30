@@ -217,7 +217,6 @@ export default function EmptyValuePolicy({
         placeholder={`Default value for ${fieldLabel}`}
         aria-label={`Default value for ${fieldLabel}`}
         aria-invalid={showInvalid}
-        className="h-9 text-xs"
       />
     );
 

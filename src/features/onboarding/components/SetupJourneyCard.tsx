@@ -1,6 +1,11 @@
 import { ArrowRight, Check } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import HeadingPair from '@/components/shared/HeadingPair';
+import {
+  headingSubtitleStyles,
+  headingTitleStyles,
+} from '@/components/shared/headingStyles';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
@@ -14,6 +19,9 @@ export interface SetupJourneyStep {
   onSelect?: () => void;
   guidesFlowAction?: boolean;
 }
+
+const setupEyebrowStyles =
+  'text-muted-foreground text-[10px] leading-4 font-semibold tracking-wider uppercase';
 
 interface SetupJourneyCardProps {
   eyebrow: string;
@@ -49,7 +57,7 @@ export default function SetupJourneyCard({
   const isThreeStepCompact = compact && steps.length === 3;
 
   return (
-    <Card className="gap-0 overflow-hidden rounded-3xl py-0 shadow-xs">
+    <Card className="gap-0 overflow-hidden py-0">
       <CardContent
         className={cn('px-3 py-3 sm:px-4', !isCompact && 'space-y-3')}
       >
@@ -72,15 +80,12 @@ export default function SetupJourneyCard({
                   : 'sm:w-[26%] sm:shrink-0',
               )}
             >
-              <div className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
-                {eyebrow}
-              </div>
-              <h2 className="text-foreground text-sm font-semibold tracking-tight">
-                {title}
-              </h2>
-              <p className="text-muted-foreground mt-0.5 text-xs leading-normal font-normal">
-                {description}
-              </p>
+              <div className={setupEyebrowStyles}>{eyebrow}</div>
+              <HeadingPair
+                title={title}
+                subtitle={description}
+                visualLevel="card"
+              />
             </div>
 
             {/* Zone 2 — Step pills, single horizontal row each */}
@@ -108,7 +113,7 @@ export default function SetupJourneyCard({
                     key={step.title}
                     aria-current={isCurrent ? 'step' : undefined}
                     className={cn(
-                      'relative min-w-0 h-auto flex-1',
+                      'relative h-auto min-w-0 flex-1',
                       isThreeStepCompact && 'flex flex-col',
                     )}
                   >
@@ -152,7 +157,8 @@ export default function SetupJourneyCard({
                         </span>
                         <span
                           className={cn(
-                            'min-w-0 flex-1 truncate text-xs font-semibold',
+                            'min-w-0 flex-1 truncate',
+                            headingTitleStyles.item,
                             isComplete || isCurrent
                               ? 'text-foreground'
                               : 'text-muted-foreground',
@@ -174,7 +180,12 @@ export default function SetupJourneyCard({
                       </span>
 
                       {/* Description — indented to align with title */}
-                      <span className="text-muted-foreground pl-7 text-xs leading-normal">
+                      <span
+                        className={cn(
+                          'text-muted-foreground pl-7',
+                          headingSubtitleStyles.item,
+                        )}
+                      >
                         {step.description}
                       </span>
                     </button>
@@ -194,17 +205,13 @@ export default function SetupJourneyCard({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-muted-foreground hover:text-foreground h-7 text-xs"
+                      className="text-muted-foreground hover:text-foreground"
                       onClick={secondaryAction.onClick}
                     >
                       {secondaryAction.label}
                     </Button>
                   )}
-                  <Button
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={onContinue}
-                  >
+                  <Button size="sm" onClick={onContinue}>
                     {actionLabel}
                     <ArrowRight data-icon="inline-end" aria-hidden="true" />
                   </Button>
@@ -217,17 +224,13 @@ export default function SetupJourneyCard({
           <>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                  <div className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
-                    {eyebrow}
-                  </div>
-                  <h2 className="text-foreground text-sm font-semibold tracking-tight">
-                    {title}
-                  </h2>
-                </div>
-                <p className="text-muted-foreground mt-0.5 max-w-3xl text-xs leading-normal font-normal">
-                  {description}
-                </p>
+                <div className={setupEyebrowStyles}>{eyebrow}</div>
+                <HeadingPair
+                  title={title}
+                  subtitle={description}
+                  visualLevel="card"
+                  className="max-w-3xl"
+                />
               </div>
 
               <div className="flex shrink-0 items-center gap-3">
@@ -290,7 +293,7 @@ export default function SetupJourneyCard({
                         disabled={!canSelect}
                         onClick={step.onSelect}
                         className={cn(
-                          'relative flex h-full min-h-14 w-full items-center gap-2.5 rounded-3xl border px-3.5 py-2.5 text-left transition-colors',
+                          'relative flex h-full min-h-14 w-full items-center gap-2.5 rounded-2xl border px-3.5 py-2.5 text-left transition-colors',
                           isComplete &&
                             'border-success/30 bg-success/5 hover:bg-success/10',
                           isCurrent &&
@@ -320,7 +323,7 @@ export default function SetupJourneyCard({
                         <span className="min-w-0 flex-1 text-xs leading-normal">
                           <span
                             className={cn(
-                              'text-xs',
+                              headingTitleStyles.item,
                               isComplete || isCurrent
                                 ? 'text-foreground font-semibold'
                                 : 'text-muted-foreground font-medium',

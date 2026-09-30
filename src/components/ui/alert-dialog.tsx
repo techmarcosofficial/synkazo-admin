@@ -4,6 +4,7 @@ import * as React from 'react';
 import { AlertDialog as AlertDialogPrimitive } from 'radix-ui';
 
 import { cn } from '@/lib/utils';
+import { headingSubtitleStyles, headingTitleStyles } from '@/components/shared/headingStyles';
 import { Button } from '@/components/ui/button';
 
 function AlertDialog({
@@ -59,7 +60,7 @@ function AlertDialogContent({
         data-size={size}
         data-layout-surface="outer"
         className={cn(
-          'group/alert-dialog-content bg-popover text-popover-foreground border-border data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid w-full -translate-x-1/2 -translate-y-1/2 gap-5 rounded-3xl border p-5 shadow-lg shadow-black/5 duration-100 outline-none data-[size=default]:max-w-[calc(100%-2rem)] data-[size=sm]:max-w-[calc(100%-2rem)] sm:data-[size=default]:max-w-100 sm:data-[size=sm]:max-w-90',
+          'group/alert-dialog-content bg-popover text-popover-foreground border-border data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid w-full -translate-x-1/2 -translate-y-1/2 gap-4 rounded-4xl border p-4 shadow-md duration-100 outline-none data-[size=default]:max-w-[calc(100%-2rem)] data-[size=sm]:max-w-[calc(100%-2rem)] sm:data-[size=default]:max-w-100 sm:data-[size=sm]:max-w-90',
           className,
         )}
         {...props}
@@ -75,7 +76,7 @@ function AlertDialogHeader({
   return (
     <div
       data-slot="alert-dialog-header"
-      className={cn('grid place-items-center text-center', className)}
+      className={cn('grid gap-1 place-items-center text-center', className)}
       {...props}
     />
   );
@@ -118,7 +119,8 @@ function AlertDialogTitle({
     <AlertDialogPrimitive.Title
       data-slot="alert-dialog-title"
       className={cn(
-        'font-heading text-base leading-6 font-semibold tracking-[-0.01em]',
+        'font-heading',
+        headingTitleStyles.section,
         className,
       )}
       {...props}
@@ -134,7 +136,8 @@ function AlertDialogDescription({
     <AlertDialogPrimitive.Description
       data-slot="alert-dialog-description"
       className={cn(
-        'text-muted-foreground *:[a]:hover:text-foreground mt-1.5 max-w-sm text-sm leading-5 text-balance *:[a]:underline *:[a]:underline-offset-3',
+        'text-muted-foreground *:[a]:hover:text-foreground max-w-sm text-balance *:[a]:underline *:[a]:underline-offset-3',
+        headingSubtitleStyles.section,
         className,
       )}
       {...props}
@@ -150,7 +153,7 @@ function AlertDialogAction({
 }: React.ComponentProps<typeof AlertDialogPrimitive.Action> &
   Pick<React.ComponentProps<typeof Button>, 'variant' | 'size'>) {
   return (
-    <Button variant={variant} size={size} asChild className='pb-0.5'>
+    <Button variant={variant} size={size} asChild>
       <AlertDialogPrimitive.Action
         data-slot="alert-dialog-action"
         className={cn(className)}

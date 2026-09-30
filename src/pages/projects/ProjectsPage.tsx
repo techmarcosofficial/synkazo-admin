@@ -4,6 +4,7 @@ import { useEffect, useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 import ErrorState from '@/components/shared/ErrorState';
+import HeadingPair from '@/components/shared/HeadingPair';
 import ManagementToolbar from '@/components/shared/ManagementToolbar';
 import PageHeader from '@/components/shared/PageHeader';
 import PaginationBar from '@/components/shared/PaginationBar';
@@ -215,12 +216,10 @@ export default function ProjectsPage() {
       <Card>
         <CardContent className="space-y-6">
           <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
-            <div className="space-y-1">
-              <h2 className="text-xl font-semibold">Manage projects</h2>
-              <p className="text-muted-foreground text-sm">
-                Find a project, review its status, or open it to manage syncs.
-              </p>
-            </div>
+            <HeadingPair
+              title="Manage projects"
+              subtitle="Find a project, review its status, or open it to manage syncs."
+            />
             <ManagementToolbar
               searchValue={filters.search}
               onSearchChange={(search) => setFilters({ ...filters, search })}
@@ -304,7 +303,7 @@ export default function ProjectsPage() {
               viewMode={viewMode}
             />
           ) : viewMode === 'table' ? (
-            <div className="border-border overflow-x-auto rounded-4xl border">
+            <div className="border-border overflow-x-auto rounded-3xl border">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted hover:bg-muted/50">

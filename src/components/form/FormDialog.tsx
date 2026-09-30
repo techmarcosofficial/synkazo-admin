@@ -1,7 +1,9 @@
 import { XIcon } from 'lucide-react';
+import { useContext } from 'react';
 
 import WizardStepHeader from './WizardStepHeader';
 
+import { TenantAdminVisualContext } from '@/components/shared/TenantAdminVisualContext';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -65,6 +67,7 @@ export default function FormDialog({
   preventOutsideClose = true,
   isDirty = false,
 }: FormDialogProps) {
+  const tenantAdminVisuals = useContext(TenantAdminVisualContext);
   const { requestClose } = useDialogCloseGuard({
     isDirty,
     onClose: () => onOpenChange(false),
@@ -73,13 +76,37 @@ export default function FormDialog({
   const isWizard =
     typeof currentStep === 'number' && typeof totalSteps === 'number';
   const hasFullStepper = isWizard && !!stepLabels;
+  const dialogSpacing = tenantAdminVisuals
+    ? compact
+      ? {
+          header: 'px-4 pt-4 pb-1',
+          body: 'px-4 py-2',
+          footer: 'px-4 pt-2 pb-4',
+        }
+      : {
+          header: 'border-b px-4 py-3',
+          body: 'px-4 py-4',
+          footer: 'border-t px-4 py-3',
+        }
+    : compact
+      ? {
+          header: 'px-5 pt-5 pb-1',
+          body: 'px-5 py-2',
+          footer: 'px-5 pt-2 pb-5',
+        }
+      : {
+          header: 'border-b px-6 py-4',
+          body: 'px-6 py-6',
+          footer: 'border-t px-6 py-4',
+        };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         size={size}
+        padding="none"
         showCloseButton={false}
-        className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0"
+        className="flex max-h-[85vh] flex-col gap-0 overflow-hidden"
         onEscapeKeyDown={(e) => {
           if (preventOutsideClose) e.preventDefault();
         }}
@@ -90,7 +117,7 @@ export default function FormDialog({
         <DialogHeader
           className={cn(
             'shrink-0 flex-row items-center justify-between gap-4',
-            compact ? 'px-5 pt-5 pb-1' : 'border-b px-6 py-4',
+            dialogSpacing.header,
           )}
         >
           {hasFullStepper ? (
@@ -135,21 +162,13 @@ export default function FormDialog({
         </DialogHeader>
 
         <div
-          className={cn(
-            'min-h-0 flex-1 overflow-y-auto',
-            compact ? 'px-5 py-2' : 'px-6 py-6',
-          )}
+          className={cn('min-h-0 flex-1 overflow-y-auto', dialogSpacing.body)}
         >
           {children}
         </div>
 
         {footer && (
-          <DialogFooter
-            className={cn(
-              'shrink-0',
-              compact ? 'px-5 pt-2 pb-5' : 'border-t px-6 py-4',
-            )}
-          >
+          <DialogFooter className={cn('shrink-0', dialogSpacing.footer)}>
             {typeof footer === 'function' ? footer(requestClose) : footer}
           </DialogFooter>
         )}

@@ -32,6 +32,7 @@ import { syncLogsApi, type SyncPageLog } from '@/api/syncLogs';
 import { PlatformPair } from '@/components/platform';
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
+import HeadingPair from '@/components/shared/HeadingPair';
 import ListStack from '@/components/shared/list/ListStack';
 import PaginationBar from '@/components/shared/PaginationBar';
 import StatusBadge from '@/components/shared/StatusBadge';
@@ -414,9 +415,9 @@ function PageRow({
                     key={option}
                     type="button"
                     variant={active ? 'secondary' : 'ghost'}
-                    size="sm"
+                    size="xs"
                     className={cn(
-                      'h-6 rounded-md px-2 text-[11px]',
+                      'px-2 text-[11px]',
                       active && actionConfig?.className,
                     )}
                     aria-pressed={active}
@@ -434,11 +435,17 @@ function PageRow({
           </>
         )}
 
-        <CollapsibleTrigger
-          className="group flex size-5 shrink-0 items-center justify-center rounded-full border"
-          aria-label={`${open ? 'Collapse' : 'Expand'} page ${pg.pageNumber} records`}
-        >
-          <ExpandChevron open={open} />
+        <CollapsibleTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-xs"
+            shape="pill"
+            className="group shrink-0"
+            aria-label={`${open ? 'Collapse' : 'Expand'} page ${pg.pageNumber} records`}
+          >
+            <ExpandChevron open={open} />
+          </Button>
         </CollapsibleTrigger>
       </div>
 
@@ -552,7 +559,6 @@ function PageRow({
                   <SelectTrigger
                     id={`page-${pg.id}-page-size`}
                     size="sm"
-                    className="h-6! rounded-xl"
                     aria-label={`Rows per page for sync page ${pg.pageNumber}`}
                   >
                     <SelectValue />
@@ -569,7 +575,6 @@ function PageRow({
                 <Button
                   variant="outline"
                   size="xs"
-                  className="rounded-xl"
                   disabled={loading || recordPage <= 1}
                   onClick={() => changeRecordPage(recordPage - 1)}
                   aria-label={`Previous records for page ${pg.pageNumber}`}
@@ -582,7 +587,6 @@ function PageRow({
                 <Button
                   variant="outline"
                   size="xs"
-                  className="rounded-xl"
                   disabled={loading || recordPage >= totalPages}
                   onClick={() => changeRecordPage(recordPage + 1)}
                   aria-label={`Next records for page ${pg.pageNumber}`}
@@ -950,12 +954,12 @@ function RunLogRow({
           ) : pages.length > 0 ? (
             <section>
               <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
-                <div>
-                  <h3 className="text-sm font-semibold">Page Breakdown</h3>
-                  <p className="text-muted-foreground mt-0.5 text-xs">
-                    Expand a page to review and filter only its records.
-                  </p>
-                </div>
+          <HeadingPair
+            visualLevel="card"
+            level="h3"
+            title="Page Breakdown"
+                  subtitle="Expand a page to review and filter only its records."
+                />
                 <button
                   type="button"
                   className="text-muted-foreground hover:text-foreground flex min-w-0 items-center gap-1.5 text-xs transition-colors"
@@ -1160,10 +1164,10 @@ export default function RunHistoryTab() {
 
   return (
     <Card className="gap-0 overflow-hidden">
-      <CardHeader className="flex flex-col gap-4 border-b pb-4 xl:flex-row xl:items-center xl:justify-between">
+      <CardHeader visualLevel="section" className="flex flex-col gap-4 border-b pb-4 xl:flex-row xl:items-center xl:justify-between">
         <div className="shrink-0">
           <CardTitle>Run History</CardTitle>
-          <CardDescription className="mt-1">
+          <CardDescription>
             Review each sync run and expand it for page and record details.
           </CardDescription>
         </div>
@@ -1179,13 +1183,13 @@ export default function RunHistoryTab() {
               onChange={(event) => setSearchDraft(event.target.value)}
               placeholder="Search run or record ID…"
               aria-label="Search Run History"
-              className="h-9 pl-9"
+              className="pl-9"
             />
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger size="sm" className="h-9 w-36">
+              <SelectTrigger className="w-36">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent align="end">
@@ -1199,7 +1203,7 @@ export default function RunHistoryTab() {
             </Select>
 
             <Select value={triggeredBy} onValueChange={setTriggeredBy}>
-              <SelectTrigger size="sm" className="h-9 w-40">
+              <SelectTrigger className="w-40">
                 <SelectValue placeholder="Sync type" />
               </SelectTrigger>
               <SelectContent align="end">
@@ -1213,7 +1217,7 @@ export default function RunHistoryTab() {
             </Select>
 
             <Select value={period} onValueChange={setPeriod}>
-              <SelectTrigger size="sm" className="h-9 w-40">
+              <SelectTrigger className="w-40">
                 <CalendarDays className="text-muted-foreground" />
                 <SelectValue />
               </SelectTrigger>
@@ -1288,7 +1292,7 @@ export default function RunHistoryTab() {
         ) : runLogsQuery.isLoading ? (
           <div className="space-y-3" aria-label="Loading run history">
             {Array.from({ length: 3 }).map((_, index) => (
-              <Skeleton key={index} className="h-20 w-full rounded-4xl" />
+              <Skeleton key={index} className="h-20 w-full rounded-3xl" />
             ))}
           </div>
         ) : runLogs.length === 0 ? (

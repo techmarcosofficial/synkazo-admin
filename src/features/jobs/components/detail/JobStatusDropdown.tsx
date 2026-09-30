@@ -61,8 +61,9 @@ export default function JobStatusDropdown({
               id="job-status-dropdown"
               variant="outline"
               size="sm"
+              shape="pill"
               className={cn(
-                'group h-7 rounded-full px-2.5 transition-all duration-300',
+                'group transition-all duration-300',
                 highlighted &&
                   'ring-primary ring-offset-background animate-alert-shake ring-2 ring-offset-2',
               )}
@@ -147,7 +148,6 @@ export default function JobStatusDropdown({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              variant="destructive"
               onClick={() => {
                 setShowDeactivateConfirm(false);
                 if (isSyncing) {

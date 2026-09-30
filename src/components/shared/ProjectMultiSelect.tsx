@@ -108,7 +108,7 @@ export default function ProjectMultiSelect({
                 onClick={() => remove(project.id)}
                 variant="ghost"
                 size="icon-xs"
-                className="hover:bg-muted-foreground/20 ml-0.5 size-5 rounded-full"
+                className="hover:bg-muted-foreground/20 ml-0.5 size-5"
                 aria-label={`Remove ${project.name}`}
               >
                 <X className="size-3" />

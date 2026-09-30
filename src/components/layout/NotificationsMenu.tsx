@@ -371,9 +371,7 @@ export default function NotificationsMenu() {
               <PopoverHeader>
                 <div className="flex items-center gap-2">
                   <PopoverTitle>Notifications</PopoverTitle>
-                  <Badge variant="secondary" className="rounded-full">
-                    {totalCount}
-                  </Badge>
+                  <Badge variant="secondary">{totalCount}</Badge>
                   {isRefreshing && (
                     <RefreshCw
                       className="text-muted-foreground size-3 animate-spin"
@@ -408,11 +406,7 @@ export default function NotificationsMenu() {
                 className="h-9 min-w-max justify-start gap-4 overflow-hidden p-0"
               >
                 {(Object.keys(TAB_LABELS) as FilterTab[]).map((value) => (
-                  <TabsTrigger
-                    key={value}
-                    value={value}
-                    className="after:bg-primary rounded-full py-2 font-semibold after:-bottom-0.5! after:h-1!"
-                  >
+                  <TabsTrigger key={value} value={value} className="py-2">
                     <span>{TAB_LABELS[value]}</span>
                     <span className="text-[11px] tabular-nums">
                       {counts[value]}
