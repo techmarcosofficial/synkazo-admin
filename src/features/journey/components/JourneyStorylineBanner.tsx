@@ -50,7 +50,7 @@ export default function JourneyStorylineBanner({
   return (
     <Card
       className={cn(
-        'border-primary bg-primary/10 relative w-full max-w-[1040px] overflow-hidden rounded-3xl border-dashed p-0 shadow-none',
+        'border-primary bg-primary/10 relative w-full overflow-hidden rounded-3xl border-dashed p-0 shadow-none',
         className,
       )}
     >

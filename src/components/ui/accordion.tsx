@@ -27,7 +27,7 @@ function AccordionItem({
   return (
     <AccordionPrimitive.Item
       data-slot="accordion-item"
-      className={cn('data-open:bg-muted/50 not-last:border-b', className)}
+      className={cn('not-last:border-b border-border/70 dark:border-white/[0.07]', className)}
       {...props}
     />
   );
@@ -43,7 +43,7 @@ function AccordionTrigger({
       <AccordionPrimitive.Trigger
         data-slot="accordion-trigger"
         className={cn(
-          'group/accordion-trigger **:data-[slot=accordion-trigger-icon]:text-muted-foreground relative flex flex-1 items-start justify-between gap-6 border border-transparent p-4 text-left text-sm font-medium transition-all outline-none hover:underline disabled:pointer-events-none disabled:opacity-50 **:data-[slot=accordion-trigger-icon]:ml-auto **:data-[slot=accordion-trigger-icon]:size-4',
+          'group/accordion-trigger **:data-[slot=accordion-trigger-icon]:text-muted-foreground relative flex flex-1 items-start justify-between gap-6 p-4 text-left text-sm font-medium transition-all outline-none hover:bg-muted/30 dark:hover:bg-white/[0.02] data-[state=open]:bg-muted/40 dark:data-[state=open]:bg-white/[0.035] data-[state=open]:border-b data-[state=open]:border-border/70 dark:data-[state=open]:border-white/10 disabled:pointer-events-none disabled:opacity-50 **:data-[slot=accordion-trigger-icon]:ml-auto **:data-[slot=accordion-trigger-icon]:size-4',
           className,
         )}
         {...props}
@@ -70,12 +70,12 @@ function AccordionContent({
   return (
     <AccordionPrimitive.Content
       data-slot="accordion-content"
-      className="data-open:animate-accordion-down data-closed:animate-accordion-up overflow-hidden px-4 text-sm"
+      className="data-open:animate-accordion-down data-closed:animate-accordion-up overflow-hidden text-sm bg-muted/20 dark:bg-black/20"
       {...props}
     >
       <div
         className={cn(
-          '[&_a]:hover:text-foreground h-(--radix-accordion-content-height) pt-0 pb-4 [&_a]:underline [&_a]:underline-offset-3 [&_p:not(:last-child)]:mb-4',
+          '[&_a]:hover:text-foreground h-(--radix-accordion-content-height) px-4 pt-3.5 pb-4 [&_a]:underline [&_a]:underline-offset-3 [&_p:not(:last-child)]:mb-4',
           className,
         )}
       >

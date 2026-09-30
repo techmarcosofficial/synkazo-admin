@@ -9,23 +9,23 @@ import { cn } from '@/lib/utils';
 const STEPS = [
   {
     icon: RefreshCw,
-    heading: 'Welcome to synkazo',
-    body: 'synkazo keeps your ServiceTitan and HubSpot data in sync automatically. No manual exports, no duplicate data entry — just clean, automated sync between your platforms.',
+    heading: 'Welcome to Synkazo',
+    body: 'Synkazo synchronizes your field service software and CRM automatically. No manual exports or duplicate entry — just secure, continuous data synchronization.',
   },
   {
     icon: FolderOpen,
-    heading: 'Projects are your sync workspaces',
-    body: 'A Project represents one data flow between ServiceTitan and HubSpot. Create a project, connect your accounts, and it becomes the home for all your sync jobs and logs.',
+    heading: 'Integration Projects',
+    body: 'Projects represent a dedicated sync channel between your software platforms (e.g. ServiceTitan & HubSpot). Connect your credentials securely to get started.',
   },
   {
     icon: Zap,
-    heading: 'Jobs do the syncing',
-    body: 'Inside a project, Sync Jobs define what gets synced — for example, ServiceTitan Customers → HubSpot Contacts. Map your fields, set a schedule, and synkazo handles the rest.',
+    heading: 'Sync Flows & Field Mappings',
+    body: 'Define exactly what moves between platforms (e.g. Customers → Contacts). Map fields with visual auto-matching, set fallback defaults, and apply filters.',
   },
   {
     icon: CheckCircle,
-    heading: "You're all set",
-    body: 'Head to Projects to create your first project, connect your platforms, and set up a sync job. Everything you need is in the sidebar.',
+    heading: 'Sample Tests & Automation',
+    body: 'Run a 5-record sample test in Sandbox to preview changes safely, then set an automated schedule to sync in real time. Everything is ready in your dashboard.',
   },
 ];
 

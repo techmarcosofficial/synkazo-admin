@@ -160,17 +160,14 @@ export default function Dashboard() {
   });
   const activityLogs = unwrapOrganizationLogs(activityQuery.data);
   const firstName = currentUser?.fullName?.trim().split(/\s+/)[0];
-  const pageClassName =
-    projects.length === 0
-      ? 'w-full max-w-[1040px] space-y-6'
-      : 'w-full space-y-6';
+  const pageClassName = 'w-full animate-fade-in-up space-y-6';
   const greeting = getGreeting();
   const description =
     projects.length === 0
       ? "Let's set up your first integration project."
       : !journey.isGraduated
         ? 'Complete your setup journey to start syncing your data.'
-        : undefined;
+        : 'Overview of integration health, data throughput, and sync activity.';
   const metricsRangeLabel =
     metricsQuery.data?.period === metricsPeriod
       ? formatRangeLabel(
@@ -297,14 +294,17 @@ export default function Dashboard() {
 
           <section aria-label="Sync metrics">
             <Card>
-          <CardHeader visualLevel="section">
-                <CardTitle>
-                  Sync Metrics
-                </CardTitle>
-                <CardDescription>
-                  Organization-wide throughput and run health · {metricsRangeLabel}
-                </CardDescription>
-                <CardAction className="col-span-2 col-start-1 row-start-3 mt-2 flex w-full flex-col gap-2 justify-self-stretch sm:col-span-1 sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:mt-0 sm:w-auto sm:flex-row sm:justify-self-end">
+              <CardHeader
+                visualLevel="section"
+                className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
+              >
+                <div className="space-y-1">
+                  <CardTitle>Sync Metrics</CardTitle>
+                  <CardDescription>
+                    Organization-wide throughput and run health · {metricsRangeLabel}
+                  </CardDescription>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
                   <Select
                     value={metricsPeriod === 'custom' ? '' : metricsPeriod}
                     onValueChange={(value) =>
@@ -354,7 +354,7 @@ export default function Dashboard() {
                         : []),
                     ]}
                   />
-                </CardAction>
+                </div>
               </CardHeader>
               <CardContent>
                 {metricsQuery.data?.retention.limited &&

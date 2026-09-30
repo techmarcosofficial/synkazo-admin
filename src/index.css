@@ -75,6 +75,17 @@
   --color-info: var(--info);
   --color-paused: var(--paused);
 
+  /* Synkazo brand extensions from synkazo-frontend globals.css & auth-login.css */
+  --color-orange: var(--brand-orange);
+  --color-orange-2: #c8412a;
+  --color-orange-soft: rgba(248, 85, 8, 0.14);
+  --color-ink: #06080f;
+  --color-ink-2: #0b0e1a;
+  --color-ink-3: #12162a;
+  --color-ink-4: #1a1f33;
+  --color-ink-nav: #03050b;
+  --color-live: #34d399;
+
   /* Third-party platform brand colors (identity data, theme-independent) */
   --color-hubspot: var(--brand-hubspot);
   --color-servicetitan: var(--brand-servicetitan);
@@ -82,7 +93,7 @@
   --color-dataforma: var(--brand-dataforma);
   --color-texada: var(--brand-texada);
   --color-salesforce: var(--brand-salesforce);
-  --color-synkazo: var(--primary);
+  --color-synkazo: var(--brand-orange);
   /* Typography */
   --text-sm: 0.8225rem; /* 13px */
   --text-sm--line-height: 1.25rem; /* 20px */
@@ -97,6 +108,7 @@
 
 :root {
   /* Brand */
+  --brand-orange: #F85508;
   --brand-hubspot: #ff7a58;
   --brand-servicetitan: #2e3340;
   --brand-servicetitan-tile: #2e3340;
@@ -105,111 +117,78 @@
   --brand-salesforce: #1798c1;
 
   --spacing: 0.26rem;
-  /* Base — Synkazo theme source of truth: Synkazo/Synkazo.dc.html (light --bg/--text) */
-  --background:
-    #f6f7fa;
-  --foreground:
-    #101322;
 
-  --footer: #0b0c11;
-  --footer-foreground:#ffffff;
+  /* Level 0: Canvas Base (Clean Crisp Paper — balanced midpoint, never warm, never blue) */
+  --background: #f6f7f9;
+  --foreground: #131418;
 
-  --card:
-    #ffffff;
-  --card-foreground:
-    #101322;
+  --footer: #0a0a0c;
+  --footer-foreground: #ffffff;
 
-  --popover:
-    #ffffff;
-  --popover-foreground:
-    #101322;
+  /* Level 1: Elevated Card Surfaces (Crisp Pure White) */
+  --card: #ffffff;
+  --card-foreground: #131418;
 
-  /* Primary — rich black in light mode; brand orange is reserved for focused
-     accents and the dark-mode primary. */
-  --primary:
-    #14151b;
-  --primary-foreground:
-    #ffffff;
+  --popover: #ffffff;
+  --popover-foreground: #131418;
 
-  /* Secondary surfaces */
-  --secondary:
-    #f0f1f5;
-  --secondary-foreground:
-    #101322;
+  /* Primary action — rich black in light mode; brand orange is reserved for focused accents and the dark-mode primary */
+  --primary: #131418;
+  --primary-foreground: #ffffff;
 
-  /* Muted */
-  --muted:
-    #f0f1f5;
-  --muted-foreground:
-    #5a6072;
+  /* Level 2: Inset Wells / Secondary / Muted Surfaces */
+  --secondary: #f0f0f3;
+  --secondary-foreground: #131418;
 
-  /* Accent — kept as a neutral hover surface (same as muted), not the vivid
-     brand orange, so existing hover/selected states stay subtle. */
-  --accent:
-    #f0f1f5;
-  --accent-foreground:
-    #101322;
+  --muted: #f0f0f3;
+  --muted-foreground: #636674;
+
+  /* Neutral hover accent */
+  --accent: #f0f0f3;
+  --accent-foreground: #131418;
 
   /* States */
-  --destructive:
-    #db4437;
+  --destructive: #db4437;
   --destructive-foreground: #ffffff;
 
-  /* Lime green — a green/yellow midpoint with enough contrast on light surfaces. */
+  /* Lime green — a green/yellow midpoint with enough contrast on light surfaces */
   --success: #65a30d;
-  /* Vivid fill only — too low-contrast on white for text/thin borders, use for solid blocks/badges. */
+  /* Vivid fill only — solid blocks / badge pills */
   --success-fill: #52d500;
   --warning: #c77a0a;
   --info: #2f74d0;
   --paused: #7c5cd8;
 
-  /* Borders */
-  --border:
-    #e2e4ec;
-  --f-border: #262a37;
-  --input:
-    #e2e4ec;
-  --ring:
-    rgba(248, 85, 8, 0.35);
+  /* Borders & Inputs */
+  --border: #e3e4e9;
+  --f-border: #26272b;
+  --input: #e3e4e9;
+  --ring: rgba(248, 85, 8, 0.35);
 
-  /* Charts — neutral tones derived from the light theme's black primary. */
-  --chart-1:
-    #14151B;
-  --chart-2:
-    #3F4350;
-  --chart-3:
-    #626876;
-  --chart-4:
-    #8F95A3;
-  --chart-5:
-    #B8BDC8;
+  /* Charts */
+  --chart-1: #131418;
+  --chart-2: #3f4048;
+  --chart-3: #656772;
+  --chart-4: #9193a0;
+  --chart-5: #bcbeca;
 
   /* Radius */
-  --radius:
-    0.5rem;
+  --radius: 0.5rem;
 
   /* Sidebar */
-  --sidebar:
-    #ffffff;
-  --sidebar-foreground:
-    #14151b;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #131418;
 
-  --sidebar-primary:
-    #F85508;
-  --sidebar-primary-foreground:
-    #ffffff;
+  --sidebar-primary: #F85508;
+  --sidebar-primary-foreground: #ffffff;
 
-  --sidebar-accent:
-    #f1f2f6;
-  --sidebar-accent-foreground:
-    #14151b;
+  --sidebar-accent: #f0f0f3;
+  --sidebar-accent-foreground: #131418;
 
-  --sidebar-border:
-    #e5e7ee;
-  --sidebar-ring:
-    rgba(248, 85, 8, 0.35);
+  --sidebar-border: #e3e4e9;
+  --sidebar-ring: rgba(248, 85, 8, 0.35);
 
-  /* Extra semantic tokens */
+  /* Extra semantic soft fills */
   --primary-soft: rgba(248, 85, 8, 0.1);
   --primary-soft2: rgba(248, 85, 8, 0.16);
 
@@ -218,104 +197,78 @@
   --info-soft: rgba(47, 116, 208, 0.12);
   --paused-soft: rgba(124, 92, 216, 0.13);
 
-  --shadow-sm: 0 1px 2px rgba(20, 21, 40, 0.05);
-  --shadow-md: 0 4px 14px rgba(20, 21, 40, 0.07);
-  --shadow-lg: 0 14px 40px rgba(20, 21, 40, 0.12);
+  --shadow-sm: 0 1px 2px rgba(18, 18, 20, 0.05);
+  --shadow-md: 0 4px 14px rgba(18, 18, 20, 0.07);
+  --shadow-lg: 0 14px 40px rgba(18, 18, 20, 0.12);
   --layout-surface-shadow: var(--shadow-sm);
 }
 
 .dark {
-  /* Base — Synkazo theme source of truth: Synkazo/Synkazo.dc.html ([data-theme="dark"] --bg/--text) */
-  --background:
-    #090a0f;
-  --foreground:
-    #eceef4;
-  --card:
-    #12141d;
-  --card-foreground:
-    #eceef4;
+  /* Level 0: Deep Crisp Canvas — exact balanced midpoint between neutral and subtle cool (never warm, never blue) */
+  --background: #07080b;
+  --foreground: #eceef1;
 
-  --footer: #090a0f;
-  --footer-foreground:#ffffff;
+  /* Level 1: Elevated Surface Cards */
+  --card: #0f1016;
+  --card-foreground: #eceef1;
 
-  --popover:
-    #12141d;
-  --popover-foreground:
-    #eceef4;
+  --footer: #07080b;
+  --footer-foreground: #ffffff;
 
-  --primary:
-    #F85508;
-  --primary-foreground:
-    #ffffff;
+  --popover: #0f1016;
+  --popover-foreground: #eceef1;
 
-  --secondary:
-    #181a24;
-  --secondary-foreground:
-    #eceef4;
+  /* Primary action — Synkazo Vivid Brand Orange */
+  --primary: #F85508;
+  --primary-foreground: #ffffff;
 
-  --muted:
-    #181a24;
-  --muted-foreground:
-    #939ab0;
+  /* Level 2: Inset Wells / Secondary Surfaces / Table & Collapsible Headers */
+  --secondary: #16171e;
+  --secondary-foreground: #eceef1;
 
-  /* Accent — kept as a neutral hover surface (same as muted), not the vivid
-     brand orange, so existing hover/selected states stay subtle. */
-  --accent:
-    #181a24;
-  --accent-foreground:
-    #eceef4;
+  --muted: #16171e;
+  --muted-foreground: #9598a4;
 
-  --destructive:
-    #f0685c;
+  /* Neutral hover accent */
+  --accent: #16171e;
+  --accent-foreground: #eceef1;
+
+  --destructive: #f0685c;
   --destructive-foreground: #ffffff;
 
-  /* Brighter lime retains contrast against the dark app surfaces. */
+  /* Brighter lime retains contrast against the dark app surfaces */
   --success: #a3e635;
   --success-fill: #52d500;
   --warning: #e0a53c;
   --info: #5b9bf0;
   --paused: #a78bfa;
 
-  --border:
-    #242838;
-  --f-border:#242838;
+  /* Borders & Inputs — Fine translucent crisp borders */
+  --border: rgba(255, 255, 255, 0.08);
+  --f-border: rgba(255, 255, 255, 0.08);
 
-  --input:
-    #242838;
-  --ring:
-    rgba(248, 85, 8, 0.45);
+  --input: rgba(255, 255, 255, 0.10);
+  --ring: rgba(248, 85, 8, 0.45);
 
-  /* Brighter orange tones retain separation against dark chart surfaces. */
-  --chart-1:
-    #FF6B24;
-  --chart-2:
-    #FF9A62;
-  --chart-3:
-    #E85D1C;
-  --chart-4:
-    #FFC09F;
-  --chart-5:
-    #C84A16;
+  /* Charts */
+  --chart-1: #FF6B24;
+  --chart-2: #FF9A62;
+  --chart-3: #E85D1C;
+  --chart-4: #FFC09F;
+  --chart-5: #C84A16;
 
-  --sidebar:
-    #14161f;
-  --sidebar-foreground:
-    #eceef4;
+  /* Sidebar — Crisp Deep Dark */
+  --sidebar: #07080b;
+  --sidebar-foreground: #eceef1;
 
-  --sidebar-primary:
-    #F85508;
-  --sidebar-primary-foreground:
-    #ffffff;
+  --sidebar-primary: #F85508;
+  --sidebar-primary-foreground: #ffffff;
 
-  --sidebar-accent:
-    #1a1d28;
-  --sidebar-accent-foreground:
-    #eceef4;
+  --sidebar-accent: #0f1016;
+  --sidebar-accent-foreground: #eceef1;
 
-  --sidebar-border:
-    #262a37;
-  --sidebar-ring:
-    rgba(248, 85, 8, 0.45);
+  --sidebar-border: rgba(255, 255, 255, 0.07);
+  --sidebar-ring: rgba(248, 85, 8, 0.45);
 
   --primary-soft: rgba(248, 85, 8, 0.16);
   --primary-soft2: rgba(248, 85, 8, 0.24);
@@ -325,9 +278,9 @@
   --info-soft: rgba(91, 155, 240, 0.15);
   --paused-soft: rgba(167, 139, 250, 0.16);
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 4px 20px -2px rgba(0, 0, 0, 0.65), inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
+  --shadow-md: 0 8px 30px -4px rgba(0, 0, 0, 0.75), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+  --shadow-lg: 0 20px 60px -8px rgba(0, 0, 0, 0.85);
   --layout-surface-shadow: var(--shadow-sm);
 }
 
