@@ -9,6 +9,7 @@ import { useHeaderStore } from '@/stores/useHeaderStore';
 
 interface PageHeaderProps {
   title: string;
+  greeting?: string;
   description?: string;
   actions?: ReactNode;
   badge?: ReactNode;
@@ -44,6 +45,7 @@ export function BackLink({
 
 export default function PageHeader({
   title,
+  greeting,
   description,
   actions,
   badge,
@@ -75,6 +77,25 @@ export default function PageHeader({
 
               {description && (
                 <p className="text-muted-foreground mt-1.5 max-w-3xl text-sm leading-5">
+                  {description}
+                </p>
+              )}
+            </div>
+          ) : greeting ? (
+            <div className="min-w-0 max-w-3xl flex-1">
+              <div className="flex min-w-0 items-center gap-3">
+                <h1 className="min-w-0 flex-1">
+                  <span className="text-muted-foreground block text-sm leading-5">
+                    {greeting},
+                  </span>
+                  <span className="text-foreground mt-1 block text-[28px] leading-9 font-bold tracking-tight [overflow-wrap:anywhere]">
+                    {title}
+                  </span>
+                </h1>
+                {badge}
+              </div>
+              {description && (
+                <p className="text-muted-foreground mt-2 text-sm leading-5">
                   {description}
                 </p>
               )}

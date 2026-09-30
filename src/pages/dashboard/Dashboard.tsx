@@ -160,7 +160,17 @@ export default function Dashboard() {
   });
   const activityLogs = unwrapOrganizationLogs(activityQuery.data);
   const firstName = currentUser?.fullName?.trim().split(/\s+/)[0];
-  const greeting = `${getGreeting()}${firstName ? `, ${firstName}` : ''}`;
+  const pageClassName =
+    projects.length === 0
+      ? 'w-full max-w-[1040px] space-y-6'
+      : 'w-full space-y-6';
+  const greeting = getGreeting();
+  const description =
+    projects.length === 0
+      ? "Let's set up your first integration project."
+      : !journey.isGraduated
+        ? 'Complete your setup journey to start syncing your data.'
+        : undefined;
   const metricsRangeLabel =
     metricsQuery.data?.period === metricsPeriod
       ? formatRangeLabel(
@@ -189,15 +199,10 @@ export default function Dashboard() {
 
   const header = (
     <PageHeader
-      title={greeting}
+      title={firstName || 'there'}
+      greeting={greeting}
+      description={description}
       showAccountContextAlert={false}
-      description={
-        projects.length === 0
-          ? "Let's set up your first integration project."
-          : !journey.isGraduated
-            ? 'Complete your setup journey to start syncing your data.'
-            : undefined
-      }
     />
   );
 
@@ -212,7 +217,7 @@ export default function Dashboard() {
 
   if (isLoading) {
     return (
-      <div className="w-full space-y-6">
+      <div className={pageClassName}>
         {header}
         <AccountContextAlert />
         <DashboardSkeleton />
@@ -222,7 +227,7 @@ export default function Dashboard() {
 
   if (isError || !summaryQuery.data) {
     return (
-      <div className="w-full space-y-6">
+      <div className={pageClassName}>
         {header}
         <ErrorState onRetry={refetchAll} />
       </div>
@@ -236,7 +241,7 @@ export default function Dashboard() {
   });
 
   return (
-    <div className="w-full space-y-6">
+    <div className={pageClassName}>
       {header}
       <AccountContextAlert />
       <DraftResumptionBanner />
