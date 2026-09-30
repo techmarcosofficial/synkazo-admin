@@ -1,9 +1,11 @@
-import { ArrowLeftRight, InfoIcon } from 'lucide-react';
+import { ArrowLeftRight, InfoIcon, Sparkles } from 'lucide-react';
 import type { Dispatch, SetStateAction } from 'react';
 
 import PlatformObjectSelector from '../PlatformObjectSelector';
 
+import HeadingPair from '@/components/shared/HeadingPair';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -13,6 +15,85 @@ import { supportsCustomObjects } from '@/lib/platformCapabilities';
 import { cn } from '@/lib/utils';
 import type { ObjectItem } from '@/queries/useConnections';
 import type { Connection } from '@/types';
+
+interface SyncRecipe {
+  id: string;
+  title: string;
+  description: string;
+  sourcePlatform: string;
+  destPlatform: string;
+  sourceObject: string;
+  destObject: string;
+  name: string;
+  badge?: string;
+}
+
+const PRESET_RECIPES: SyncRecipe[] = [
+  {
+    id: 'st-hb-customers-contacts',
+    title: 'Customers → Contacts',
+    description: 'Sync homeowner and commercial client profiles into HubSpot CRM contacts.',
+    sourcePlatform: 'servicetitan',
+    destPlatform: 'hubspot',
+    sourceObject: 'customers',
+    destObject: 'contacts',
+    name: 'Customers → Contacts',
+    badge: 'Most Popular',
+  },
+  {
+    id: 'st-hb-customers-companies',
+    title: 'Customers → Companies',
+    description: 'Sync commercial accounts and business clients into HubSpot CRM companies.',
+    sourcePlatform: 'servicetitan',
+    destPlatform: 'hubspot',
+    sourceObject: 'customers',
+    destObject: 'companies',
+    name: 'Customers → Companies',
+    badge: 'Most Popular',
+  },
+  {
+    id: 'st-hb-jobs-deals',
+    title: 'Jobs → Deals',
+    description: 'Sync booked, active, and completed jobs into HubSpot sales pipeline deals.',
+    sourcePlatform: 'servicetitan',
+    destPlatform: 'hubspot',
+    sourceObject: 'jobs',
+    destObject: 'deals',
+    name: 'Jobs → Deals',
+  },
+  {
+    id: 'st-hb-invoices-deals',
+    title: 'Invoices → Deals',
+    description: 'Track invoice totals, payments, and balances directly inside HubSpot deals.',
+    sourcePlatform: 'servicetitan',
+    destPlatform: 'hubspot',
+    sourceObject: 'invoices',
+    destObject: 'deals',
+    name: 'Invoices → Deals',
+  },
+  {
+    id: 'hb-st-contacts-customers',
+    title: 'Contacts → Customers',
+    description: 'Sync inbound CRM marketing leads and contacts into ServiceTitan customer records.',
+    sourcePlatform: 'hubspot',
+    destPlatform: 'servicetitan',
+    sourceObject: 'contacts',
+    destObject: 'customers',
+    name: 'Contacts → Customers',
+    badge: 'Two-Way Sync',
+  },
+  {
+    id: 'hb-st-companies-customers',
+    title: 'Companies → Customers',
+    description: 'Sync CRM company accounts into ServiceTitan customer records.',
+    sourcePlatform: 'hubspot',
+    destPlatform: 'servicetitan',
+    sourceObject: 'companies',
+    destObject: 'customers',
+    name: 'Companies → Customers',
+    badge: 'Two-Way Sync',
+  },
+];
 
 const DEFAULT_CUSTOM_OBJECT_TOOLTIP = (side: 'source' | 'destination') =>
   `This platform's objects are fixed — custom objects must be created in the ${side} platform`;
@@ -49,6 +130,7 @@ export default function JobDetailsStep({
   projectId,
   projectSyncMode = null,
   compact = false,
+  existingJobs = [],
 }: {
   config: JobConfig;
   setConfig: Dispatch<SetStateAction<JobConfig>>;
@@ -66,7 +148,28 @@ export default function JobDetailsStep({
   projectSyncMode?: 'one_way' | 'two_way' | null;
   /** Uses tighter spacing and concise copy in the standalone create dialog. */
   compact?: boolean;
+  existingJobs?: Array<{
+    sourceObject?: string;
+    destObject?: string;
+    status?: string;
+  }>;
 }) {
+  const relevantRecipes = PRESET_RECIPES.filter((r) => {
+    if (
+      r.sourcePlatform !== config.sourcePlatform ||
+      r.destPlatform !== config.destPlatform
+    ) {
+      return false;
+    }
+    const alreadyExists = existingJobs.some(
+      (job) =>
+        job.sourceObject?.toLowerCase() === r.sourceObject.toLowerCase() &&
+        job.destObject?.toLowerCase() === r.destObject.toLowerCase(),
+    );
+    return !alreadyExists;
+  });
+  const displayedRecipes = relevantRecipes.slice(0, 2);
+
   const sourceGating = customObjectGating(
     config.sourcePlatform,
     sourceConnection,
@@ -102,15 +205,90 @@ export default function JobDetailsStep({
 
   return (
     <div className={cn(compact ? 'space-y-4' : 'space-y-6')}>
+      {/* Recommended Recipes (showing 2 at a time) */}
+      {displayedRecipes.length > 0 && (
+        <section aria-label="Recommended sync recipes" className="space-y-2">
+          <h3 className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+            <Sparkles className="size-3.5 text-primary" />
+            Recommended Sync Recipes (1-Click)
+          </h3>
+          <div className="space-y-1.5">
+            {displayedRecipes.map((recipe) => {
+              const isSelected =
+                config.sourceObject === recipe.sourceObject &&
+                config.destObject === recipe.destObject;
+              return (
+                <button
+                  key={recipe.id}
+                  type="button"
+                  aria-pressed={isSelected}
+                  onClick={() => {
+                    setConfig((c) => ({
+                      ...c,
+                      sourceObject: recipe.sourceObject,
+                      destObject: recipe.destObject,
+                      name: recipe.name,
+                    }));
+                    setErrors((errs) => ({
+                      ...errs,
+                      sourceObject: undefined,
+                      destObject: undefined,
+                      name: undefined,
+                    }));
+                  }}
+                  className={cn(
+                    'group flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left transition-colors',
+                    isSelected
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border/70 bg-card hover:border-primary/40 hover:bg-muted/30',
+                  )}
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                      <span className="text-xs font-semibold text-foreground group-hover:text-primary">
+                        {recipe.title}
+                      </span>
+                      {recipe.badge && (
+                        <Badge
+                          variant="secondary"
+                          className="border-primary/20 bg-primary/10 text-primary shrink-0 px-1.5 py-0 text-[10px] font-medium leading-4"
+                        >
+                          {recipe.badge}
+                        </Badge>
+                      )}
+                    </span>
+                    {recipe.description && (
+                      <span className="text-muted-foreground mt-0.5 block truncate text-xs">
+                        {recipe.description}
+                      </span>
+                    )}
+                  </span>
+                  <span
+                    className={cn(
+                      'shrink-0 text-xs font-medium',
+                      isSelected
+                        ? 'text-primary'
+                        : 'text-muted-foreground group-hover:text-primary',
+                    )}
+                  >
+                    {isSelected ? '✓ Selected' : 'Apply →'}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {/* Connection */}
       <div className={cn(compact ? 'space-y-2' : 'space-y-3')}>
         {!compact && (
-          <div>
-            <h3 className="text-sm font-semibold">Objects to sync</h3>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Choose the source and destination records for this sync.
-            </p>
-          </div>
+          <HeadingPair
+            visualLevel="card"
+            level="h3"
+            title="Objects to sync"
+            subtitle="Choose the source and destination records for this sync."
+          />
         )}
 
         <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-[1fr_auto_1fr]">
@@ -194,12 +372,12 @@ export default function JobDetailsStep({
       {/* Job Details */}
       <div className={cn(!compact && 'space-y-3 border-t pt-6')}>
         {!compact && (
-          <div>
-            <h3 className="text-sm font-semibold">Job details</h3>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Give this sync a clear name so it is easy to identify later.
-            </p>
-          </div>
+          <HeadingPair
+            visualLevel="card"
+            level="h3"
+            title="Job details"
+            subtitle="Give this sync a clear name so it is easy to identify later."
+          />
         )}
         <Field data-invalid={!!errors.name}>
           <FieldLabel htmlFor="job-name" required>
@@ -222,12 +400,12 @@ export default function JobDetailsStep({
       {/* Sync Behaviour */}
       <div className={cn(!compact && 'space-y-3 border-t pt-6')}>
         {!compact && (
-          <div>
-            <h3 className="text-sm font-semibold">Sync settings</h3>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Control which changes are included in this sync.
-            </p>
-          </div>
+          <HeadingPair
+            visualLevel="card"
+            level="h3"
+            title="Sync settings"
+            subtitle="Control which changes are included in this sync."
+          />
         )}
 
         <SyncDirectionFields

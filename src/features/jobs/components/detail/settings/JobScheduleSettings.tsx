@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { useJobDetailContext } from '../context';
 
 import { jobsApi } from '@/api/jobs';
+import HeadingPair from '@/components/shared/HeadingPair';
 import UpgradeRequiredDialog from '@/components/shared/UpgradeRequiredDialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -65,17 +66,12 @@ export function JobScheduleSettingsHeader() {
         <span className="bg-muted text-muted-foreground flex size-10 shrink-0 items-center justify-center rounded-xl">
           <CalendarClock className="size-4.5" aria-hidden="true" />
         </span>
-        <div className="min-w-0">
-          <h2
-            id="job-settings-section-title"
-            className="font-heading text-lg font-semibold tracking-tight"
-          >
-            Schedule
-          </h2>
-          <p className="text-muted-foreground mt-0.5 text-xs">
-            Control when this job runs automatically.
-          </p>
-        </div>
+        <HeadingPair
+          visualLevel="card"
+          titleId="job-settings-section-title"
+          title="Schedule"
+          subtitle="Control when this job runs automatically."
+        />
       </div>
 
       <CardAction>

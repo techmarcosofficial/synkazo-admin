@@ -13,7 +13,7 @@ export default function PlanBadge({
   return (
     <Badge
       className={cn(
-        'rounded-full font-semibold',
+        'font-semibold',
         highlighted
           ? 'bg-accent text-accent-foreground'
           : 'bg-primary/10 text-primary',

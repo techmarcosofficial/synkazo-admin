@@ -21,7 +21,7 @@ interface StickyDetailHeaderProps {
  * box-shadow paints outside its own box, so a card scrolling behind these rows
  * used to leak its shadow into the strip either side of them — the rows' own
  * background only spans the content width. The bleed matches the gutter at each
- * breakpoint (16/24/32px), which covers the shadow's blur without ever
+ * breakpoint (16/20/24px), which covers the shadow's blur without ever
  * exceeding the padding box, so it cannot cause horizontal overflow. It is
  * paint only: absolutely positioned and negatively stacked, so offsets, sizes
  * and sticky behaviour are untouched, and each row's own shadow still paints
@@ -92,7 +92,7 @@ export default function StickyDetailHeader({
     <section
       ref={rootRef}
       className={cn(
-        'relative isolate [--detail-back-row-height:--spacing(11)] [--detail-header-height:0px] [--detail-header-overlap:--spacing(2)] [--detail-sticky-top:var(--app-shell-header-height)]',
+        'relative isolate [--detail-back-row-height:--spacing(14)] [--detail-header-height:0px] [--detail-header-overlap:--spacing(5)] [--detail-sticky-top:var(--app-shell-header-height)]',
         className,
       )}
     >
@@ -103,7 +103,7 @@ export default function StickyDetailHeader({
         <Button
           asChild
           variant="secondary"
-          className="bg-border h-(--detail-back-row-height) rounded-t-3xl rounded-b-none pb-(--detail-header-overlap)"
+          className="bg-secondary text-secondary-foreground hover:bg-secondary/80 border-border/70 h-(--detail-back-row-height) rounded-t-4xl rounded-b-none border-x border-t pb-(--detail-header-overlap)"
         >
           <Link to={backTo}>
             <ChevronLeft aria-hidden="true" data-icon="inline-start" />
@@ -114,12 +114,12 @@ export default function StickyDetailHeader({
 
       <div
         data-slot="sticky-detail-header"
-        className="before:bg-background before:rounded-full sticky top-[calc(var(--detail-sticky-top)+var(--detail-back-row-height)-var(--detail-header-overlap))] z-30 -mt-(--detail-header-overlap) transition-[top] duration-200 ease-out before:pointer-events-none before:absolute before:-inset-x-4 before:inset-y-0 before:-z-10 before:content-[''] data-[stuck=true]:top-(--detail-sticky-top) sm:before:-inset-x-6 lg:before:-inset-x-8"
+        className="before:bg-background sticky top-[calc(var(--detail-sticky-top)+var(--detail-back-row-height)-var(--detail-header-overlap))] z-30 -mt-(--detail-header-overlap) transition-[top] duration-200 ease-out before:pointer-events-none before:absolute before:-inset-x-4 before:inset-y-0 before:-z-10 before:rounded-full before:content-[''] data-[stuck=true]:top-(--detail-sticky-top) sm:before:-inset-x-5 lg:before:-inset-x-6"
       >
         {header}
       </div>
 
-      <div className="space-y-6 pt-6">{children}</div>
+      <div className="space-y-4 pt-4">{children}</div>
     </section>
   );
 }

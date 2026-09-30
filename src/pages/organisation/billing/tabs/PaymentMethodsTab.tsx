@@ -19,7 +19,7 @@ export default function PaymentMethodsTab() {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader visualLevel="section">
         <CardTitle>Payment methods</CardTitle>
         <CardDescription>
           Manage the cards used for your subscription.

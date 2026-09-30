@@ -202,8 +202,13 @@ export default function SyncDirectionFields({
 
           <Field>
             <FieldLabel>
-              {compact ? 'Platform used for conflicts' : 'Source of Truth'}
+              Primary System (Source of Truth)
             </FieldLabel>
+            {!readOnly && (
+              <p className="text-muted-foreground -mt-1 mb-2 text-xs">
+                When a record changes in both systems at the same time, this system wins the conflict.
+              </p>
+            )}
             {readOnly ? (
               <LockedValue>{platformLabel(sourceOfTruth)}</LockedValue>
             ) : (

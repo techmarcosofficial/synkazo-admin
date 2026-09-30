@@ -1,7 +1,9 @@
 import { XIcon } from 'lucide-react';
+import { useContext } from 'react';
 
 import WizardStepHeader from './WizardStepHeader';
 
+import { TenantAdminVisualContext } from '@/components/shared/TenantAdminVisualContext';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -13,6 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { useDialogCloseGuard } from '@/hooks/useDialogCloseGuard';
+import { cn } from '@/lib/utils';
 
 interface FormDialogProps {
   open: boolean;
@@ -20,6 +23,8 @@ interface FormDialogProps {
   title: string;
   description?: string;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
+  /** Tighter spacing without header/footer dividers for brief confirmations. */
+  compact?: boolean;
   children: React.ReactNode;
   // Function form receives requestClose, the same close handler used by the
   // header X button — wire footer Cancel buttons to it (instead of an onClose
@@ -52,6 +57,7 @@ export default function FormDialog({
   title,
   description,
   size = 'md',
+  compact = false,
   children,
   footer,
   currentStep,
@@ -61,6 +67,7 @@ export default function FormDialog({
   preventOutsideClose = true,
   isDirty = false,
 }: FormDialogProps) {
+  const tenantAdminVisuals = useContext(TenantAdminVisualContext);
   const { requestClose } = useDialogCloseGuard({
     isDirty,
     onClose: () => onOpenChange(false),
@@ -69,13 +76,37 @@ export default function FormDialog({
   const isWizard =
     typeof currentStep === 'number' && typeof totalSteps === 'number';
   const hasFullStepper = isWizard && !!stepLabels;
+  const dialogSpacing = tenantAdminVisuals
+    ? compact
+      ? {
+          header: 'px-4 pt-4 pb-1',
+          body: 'px-4 py-2',
+          footer: 'px-4 pt-2 pb-4',
+        }
+      : {
+          header: 'border-b px-4 py-3',
+          body: 'px-4 py-4',
+          footer: 'border-t px-4 py-3',
+        }
+    : compact
+      ? {
+          header: 'px-5 pt-5 pb-1',
+          body: 'px-5 py-2',
+          footer: 'px-5 pt-2 pb-5',
+        }
+      : {
+          header: 'border-b px-6 py-4',
+          body: 'px-6 py-6',
+          footer: 'border-t px-6 py-4',
+        };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         size={size}
+        padding="none"
         showCloseButton={false}
-        className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0"
+        className="flex max-h-[85vh] flex-col gap-0 overflow-hidden"
         onEscapeKeyDown={(e) => {
           if (preventOutsideClose) e.preventDefault();
         }}
@@ -83,7 +114,12 @@ export default function FormDialog({
           if (preventOutsideClose) e.preventDefault();
         }}
       >
-        <DialogHeader className="shrink-0 flex-row items-center justify-between gap-4 border-b px-6 py-4">
+        <DialogHeader
+          className={cn(
+            'shrink-0 flex-row items-center justify-between gap-4',
+            dialogSpacing.header,
+          )}
+        >
           {hasFullStepper ? (
             <WizardStepHeader
               title={title}
@@ -112,7 +148,10 @@ export default function FormDialog({
               <Button
                 variant="ghost"
                 size="icon-sm"
-                className="bg-secondary shrink-0"
+                className={cn(
+                  'shrink-0',
+                  compact ? 'bg-transparent' : 'bg-secondary',
+                )}
                 onClick={requestClose}
               >
                 <XIcon />
@@ -122,12 +161,14 @@ export default function FormDialog({
           )}
         </DialogHeader>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
+        <div
+          className={cn('min-h-0 flex-1 overflow-y-auto', dialogSpacing.body)}
+        >
           {children}
         </div>
 
         {footer && (
-          <DialogFooter className="shrink-0 border-t px-6 py-4">
+          <DialogFooter className={cn('shrink-0', dialogSpacing.footer)}>
             {typeof footer === 'function' ? footer(requestClose) : footer}
           </DialogFooter>
         )}

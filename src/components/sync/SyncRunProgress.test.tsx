@@ -25,6 +25,7 @@ describe('SyncRunProgress', () => {
         startedAt="2026-09-23T10:00:00.000Z"
         triggeredBy="cron"
         etaSeconds={120}
+        defaultOpen={true}
       />,
     );
 
@@ -102,6 +103,7 @@ describe('SyncRunProgress', () => {
       finishedAt: '2026-09-23T10:01:00.000Z',
       durationMs: 60_000,
       triggeredBy: 'cron',
+      defaultOpen: true,
     };
     render(<SyncRunProgress {...props} />);
 
@@ -170,6 +172,7 @@ describe('SyncRunProgress', () => {
         processedRecords={25}
         failedCount={30}
         errorMessage="Authentication failed"
+        defaultOpen={true}
       />,
     );
     expect(screen.getByText('Sync failed')).toBeInTheDocument();
@@ -195,6 +198,7 @@ describe('SyncRunProgress', () => {
         failedCount={2}
         completedBatches={4}
         totalBatches={4}
+        defaultOpen={true}
       />,
     );
     expect(screen.getByText('Sync completed with issues')).toBeInTheDocument();
@@ -206,18 +210,18 @@ describe('SyncRunProgress', () => {
     expect(screen.getAllByRole('progressbar')).toHaveLength(1);
   });
 
-  it('respects defaultOpen={false} by starting collapsed and expanding on header click', () => {
+  it('starts collapsed by default and expands on header click', () => {
     render(
       <SyncRunProgress
         status="running"
         totalRecords={100}
         processedRecords={50}
-        defaultOpen={false}
       />,
     );
 
     const expandBtn = screen.getByRole('button', { name: 'Expand' });
     expect(expandBtn).toBeInTheDocument();
+    expect(screen.queryByLabelText('Record statistics')).not.toBeInTheDocument();
 
     const header = screen.getByText('Sync in progress').closest('[data-slot="sync-summary-header"]');
     expect(header).toBeInTheDocument();
@@ -225,5 +229,70 @@ describe('SyncRunProgress', () => {
 
     expect(screen.getByRole('button', { name: 'Collapse' })).toBeInTheDocument();
     expect(screen.getByLabelText('Record statistics')).toBeInTheDocument();
+  });
+
+  it('triggers onViewHistory when clicking the action link on completed runs', () => {
+    const onViewHistory = vi.fn();
+    render(
+      <SyncRunProgress
+        status="completed"
+        totalRecords={50}
+        processedRecords={50}
+        defaultOpen={true}
+        onViewHistory={onViewHistory}
+      />,
+    );
+
+    const historyLink = screen.getByRole('button', {
+      name: /View in Sync History/i,
+    });
+    expect(historyLink).toBeInTheDocument();
+    fireEvent.click(historyLink);
+    expect(onViewHistory).toHaveBeenCalledOnce();
+  });
+
+  it('renders View Run action in header on completed runs and calls onViewRun with runId', () => {
+    const onViewRun = vi.fn();
+    render(
+      <SyncRunProgress
+        status="completed"
+        runId="run-abc-123"
+        totalRecords={50}
+        processedRecords={50}
+        defaultOpen={true}
+        onViewRun={onViewRun}
+      />,
+    );
+
+    const viewRunButtons = screen.getAllByRole('button', { name: 'View Run' });
+    expect(viewRunButtons.length).toBeGreaterThan(0);
+    fireEvent.click(viewRunButtons[0]);
+    expect(onViewRun).toHaveBeenCalledWith('run-abc-123');
+  });
+
+  it('shows a compact one-line completed state with View Run action when collapsed', () => {
+    const onViewRun = vi.fn();
+    render(
+      <SyncRunProgress
+        status="completed"
+        runId="run-456"
+        totalRecords={100}
+        processedRecords={100}
+        createdCount={80}
+        updatedCount={20}
+        defaultOpen={false}
+        onViewRun={onViewRun}
+      />,
+    );
+
+    // Collapsed bar is visible
+    expect(
+      screen.getByText(/100 records processed · 80 created, 20 updated/),
+    ).toBeInTheDocument();
+
+    const viewRunButtons = screen.getAllByRole('button', { name: 'View Run' });
+    expect(viewRunButtons.length).toBeGreaterThanOrEqual(1);
+    fireEvent.click(viewRunButtons[viewRunButtons.length - 1]);
+    expect(onViewRun).toHaveBeenCalledWith('run-456');
   });
 });

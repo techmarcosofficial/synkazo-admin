@@ -923,13 +923,11 @@ function DiscountRulesCard() {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader visualLevel="section">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
-            <CardTitle className="text-lg font-semibold">
-              Automatic rules
-            </CardTitle>
-            <CardDescription className="text-muted-foreground text-xs">
+            <CardTitle>Automatic rules</CardTitle>
+            <CardDescription>
               Discounts applied with no code entered. A valid promo code always
               takes precedence over these.
             </CardDescription>
@@ -939,7 +937,7 @@ function DiscountRulesCard() {
       </CardHeader>
       <CardContent>
         {rulesQuery.isLoading ? (
-          <div className="overflow-hidden rounded-4xl border">
+          <div className="overflow-hidden rounded-3xl border">
             <SkeletonTable rows={3} columns={7} />
           </div>
         ) : rulesQuery.isError ? (
@@ -952,7 +950,7 @@ function DiscountRulesCard() {
             viewMode="table"
           />
         ) : (
-          <div className="overflow-hidden overflow-x-auto rounded-4xl border">
+          <div className="overflow-hidden overflow-x-auto rounded-3xl border">
             <Table className="min-w-[760px]">
               <TableHeader>
                 <TableRow className="bg-muted hover:bg-muted/50">
@@ -1134,11 +1132,9 @@ function DiscountSettingsCard() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold">
-          Discount settings
-        </CardTitle>
-        <CardDescription className="text-muted-foreground text-sm">
+      <CardHeader visualLevel="section">
+        <CardTitle>Discount settings</CardTitle>
+        <CardDescription>
           How credit is carried across plan changes. The master discounts switch
           lives in the Coupons card above.
         </CardDescription>
@@ -1241,13 +1237,13 @@ export default function DiscountManagementPage() {
       />
 
       <Card>
-        <CardHeader>
+        <CardHeader visualLevel="section">
           <div className="flex items-start justify-between">
-            <div className="space-y-2">
-              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+            <div className="space-y-1">
+              <CardTitle className="flex items-center gap-2">
                 Create & manage coupons.
               </CardTitle>
-              <CardDescription className="text-muted-foreground max-w-4xl text-xs">
+              <CardDescription className="max-w-4xl">
                 Codes customers can enter at checkout. Usage limits are enforced
                 before Stripe is called. Turning discounts off removes the
                 promo-code field from checkout, rejects any code submitted
@@ -1262,7 +1258,7 @@ export default function DiscountManagementPage() {
         </CardHeader>
         <CardContent>
           {couponsQuery.isLoading ? (
-            <div className="overflow-hidden rounded-4xl border">
+            <div className="overflow-hidden rounded-3xl border">
               <SkeletonTable rows={4} columns={8} />
             </div>
           ) : couponsQuery.isError ? (
@@ -1275,7 +1271,7 @@ export default function DiscountManagementPage() {
               viewMode="table"
             />
           ) : (
-            <div className="overflow-hidden overflow-x-auto rounded-4xl border">
+            <div className="overflow-hidden overflow-x-auto rounded-3xl border">
               <Table className="min-w-[860px]">
                 <TableHeader>
                   <TableRow className="bg-muted hover:bg-muted/50">

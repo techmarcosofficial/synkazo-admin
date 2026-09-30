@@ -20,6 +20,7 @@ import { Link } from 'react-router-dom';
 
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
+import HeadingPair from '@/components/shared/HeadingPair';
 import ManagementToolbar from '@/components/shared/ManagementToolbar';
 import PageHeader from '@/components/shared/PageHeader';
 import PaginationBar from '@/components/shared/PaginationBar';
@@ -612,12 +613,11 @@ export default function SchedulerHealth() {
       <Card>
         <CardContent className="space-y-6">
           <div className="flex justify-between">
-            <div className="space-y-1">
-              <h3 className="text-lg font-semibold">Manage scheduled jobs</h3>
-              <p className="text-muted-foreground text-sm">
-                Live view of every job's scheduling state across all projects
-              </p>
-            </div>
+            <HeadingPair
+              level="h3"
+              title="Manage scheduled jobs"
+              subtitle="Live view of every job's scheduling state across all projects"
+            />
             <ManagementToolbar
               searchValue={search}
               onSearchChange={setSearch}

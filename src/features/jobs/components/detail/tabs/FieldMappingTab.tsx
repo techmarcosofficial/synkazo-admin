@@ -1,12 +1,15 @@
 import {
   AlertTriangle,
   Check,
+  ExternalLink,
+  Link2,
   ListFilter,
   Plus,
   RotateCcw,
   Search,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { useJobDetailContext } from '../context';
@@ -14,16 +17,19 @@ import { useJobDetailContext } from '../context';
 import { associationsApi } from '@/api/associations';
 import { connectionsApi } from '@/api/connections';
 import { jobsApi } from '@/api/jobs';
-import ExcludeConditionsEditor, {
-  validateExcludeConditions,
-} from '@/components/fieldmapping/ExcludeConditionsEditor';
+import type { CrossObjectProperty } from '@/api/jobs';
+import CrossObjectPropertiesPanel from '@/components/fieldmapping/CrossObjectPropertiesPanel';
+import { validateExcludeConditions } from '@/components/fieldmapping/ExcludeConditionsEditor';
+import { validateDestinationSkipConditions } from '@/components/fieldmapping/DestinationSkipConditionsEditor';
 import { isValidDefaultValue } from '@/components/fieldmapping/EmptyValuePolicy';
 import FieldMappingCanvas, {
   type FieldDef as CanvasFieldDef,
   type MappingRow as CanvasMappingRow,
 } from '@/components/fieldmapping/FieldMappingCanvas';
 import RequiredFieldDefaults from '@/components/fieldmapping/RequiredFieldDefaults';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import SkipRecordEditor from '@/components/fieldmapping/SkipRecordEditor';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   InputGroup,
@@ -38,6 +44,7 @@ import {
   consolidateMappings,
   type ConsolidatedMapping,
 } from '@/features/jobs/hooks';
+import { useFieldMappingDraftStore } from '@/features/jobs/store/useFieldMappingDraftStore';
 import {
   fmtObject,
   toCanvasField,
@@ -47,7 +54,10 @@ import { recordMatchesExcludeConditions } from '@/lib/excludeConditions';
 import { classifyTypePair } from '@/lib/fieldMatching';
 import { getRequiredFieldItems } from '@/lib/requiredFields';
 import type { Connection, FieldMapping } from '@/types';
-import type { ExcludeCondition } from '@/types/conditions';
+import type {
+  DestinationSkipCondition,
+  ExcludeCondition,
+} from '@/types/conditions';
 
 type ExtConnection = Connection & { connectionType?: string };
 
@@ -60,15 +70,18 @@ function normalizeMappings(
     return dests.map((dk) => ({
       sourceField: m.sourceField,
       destField: dk,
-      transformType: 'direct',
-      transformConfig: m.destRules?.[dk]
-        ? { rules: m.destRules[dk] }
-        : (m.transformConfig ?? null),
+      transformType: m.transformType ?? 'direct',
+      transformConfig:
+        m.transformType === 'combine'
+          ? (m.transformConfig ?? null)
+          : m.destRules?.[dk]
+            ? { rules: m.destRules[dk] }
+            : (m.transformConfig ?? null),
       isRequired: m.isRequired ?? false,
       isMatchField: m.matchDestKey === dk,
       matchPriority: m.matchDestKey === dk ? (m.matchOrder ?? null) : null,
-      updatePolicy: m.destUpdatePolicy?.[dk] ?? 'always',
-      conflictScope: m.destConflictScope?.[dk] ?? 'field',
+      updatePolicy:
+        m.destUpdatePolicy?.[dk] === 'create_only' ? 'create_only' : 'always',
       onEmpty: m.destOnEmpty?.[dk] ?? 'none',
       defaultValue: m.destDefaults?.[dk] ?? null,
       reverseOnEmpty: m.destReverseOnEmpty?.[dk] ?? 'none',
@@ -81,6 +94,11 @@ function normalizeMappings(
 }
 
 /** A constant mapping — one side deliberately empty (see the FieldMapping entity). */
+export const supportsCrossObjectProperties = (platformId: string) =>
+  platformId === 'servicetitan' ||
+  platformId === 'dataforma' ||
+  platformId === 'texada';
+
 const isConstant = (m: { sourceField: string; destField: string }) =>
   !m.sourceField || !m.destField;
 
@@ -89,9 +107,11 @@ const cloneMappings = (mappings: ConsolidatedMapping[]) =>
 
 const cloneConditions = (conditions: ExcludeCondition[]) =>
   JSON.parse(JSON.stringify(conditions)) as ExcludeCondition[];
+const cloneDestinationConditions = (conditions: DestinationSkipCondition[]) =>
+  JSON.parse(JSON.stringify(conditions)) as DestinationSkipCondition[];
 
 export type MappingWorkspaceTab =
-  'field-mapping' | 'default-mapping' | 'skip-record';
+  'field-mapping' | 'default-mapping' | 'skip-record' | 'cross-object';
 
 function FieldMappingSkeleton() {
   return (
@@ -164,7 +184,9 @@ export function getWorkspaceDirtyState(
       ? mappingDirty
       : activeWorkspaceTab === 'default-mapping'
         ? defaultsDirty
-        : conditionsDirty;
+        : activeWorkspaceTab === 'skip-record'
+          ? conditionsDirty
+          : false;
 
   return { anyDirty, activeDirty };
 }
@@ -227,6 +249,11 @@ export const mergeDefaultConfiguration = (
 
 export default function FieldMappingTab() {
   const { projectId, job, refetch, patchJob } = useJobDetailContext();
+  const getDraft = useFieldMappingDraftStore((state) => state.getDraft);
+  const saveDraft = useFieldMappingDraftStore((state) => state.saveDraft);
+  const clearTabDraft = useFieldMappingDraftStore(
+    (state) => state.clearTabDraft,
+  );
   const { state: sidebarState } = useSidebar();
   const workspaceRef = useRef<HTMLDivElement>(null);
   const [activeWorkspaceTab, setActiveWorkspaceTab] =
@@ -257,13 +284,17 @@ export default function FieldMappingTab() {
   const [excludeConditionLogic, setExcludeConditionLogic] = useState<
     'AND' | 'OR'
   >(job.excludeConditionLogic ?? 'AND');
+  const [destinationSkipConditions, setDestinationSkipConditions] = useState<
+    DestinationSkipCondition[]
+  >(job.destinationSkipConditions ?? []);
   const [conditionsDirty, setConditionsDirty] = useState(false);
   const [conditionsError, setConditionsError] = useState<string | null>(null);
   const [previewingConditions, setPreviewingConditions] = useState(false);
   const savedConditionsRef = useRef<{
     conditions: ExcludeCondition[];
     logic: 'AND' | 'OR';
-  }>({ conditions: [], logic: 'AND' });
+    destinationConditions: DestinationSkipCondition[];
+  }>({ conditions: [], logic: 'AND', destinationConditions: [] });
   // Turns a blank "Use a default value" input red once a save was actually
   // attempted and blocked on it — see the missingValue check in
   // persistMappings and RequiredFieldDefaults' forceShowInvalid wiring.
@@ -285,11 +316,13 @@ export default function FieldMappingTab() {
   // new and gets an editable direction regardless of mode.
   const persistedSourceFieldsRef = useRef<Set<string>>(new Set());
   const [sourceFields, setSourceFields] = useState<CanvasField[]>([]);
+  const [crossObjectProperties, setCrossObjectProperties] = useState<
+    CrossObjectProperty[]
+  >([]);
   const [destFields, setDestFields] = useState<CanvasField[]>([]);
   const [fieldsLoading, setFieldsLoading] = useState(true);
   const [srcPlatform, setSrcPlatform] = useState('servicetitan');
   const [dstPlatform, setDstPlatform] = useState('hubspot');
-
 
   const loadFields = useCallback(
     (refresh = false) => {
@@ -328,37 +361,101 @@ export default function FieldMappingTab() {
   useEffect(() => {
     const conditions = cloneConditions(job.excludeConditions ?? []);
     const logic = job.excludeConditionLogic ?? 'AND';
-    setExcludeConditions(conditions);
-    setExcludeConditionLogic(logic);
+    const destinationConditions = cloneDestinationConditions(
+      job.destinationSkipConditions ?? [],
+    );
     savedConditionsRef.current = {
       conditions: cloneConditions(conditions),
       logic,
+      destinationConditions: cloneDestinationConditions(destinationConditions),
     };
-    setConditionsDirty(false);
+
+    const draft = getDraft(job.id);
+    setExcludeConditions(
+      draft?.conditionsDirty && draft.excludeConditions
+        ? cloneConditions(draft.excludeConditions)
+        : conditions,
+    );
+    setExcludeConditionLogic(
+      draft?.conditionsDirty ? (draft.excludeConditionLogic ?? logic) : logic,
+    );
+    setDestinationSkipConditions(
+      draft?.conditionsDirty && draft.destinationSkipConditions
+        ? cloneDestinationConditions(draft.destinationSkipConditions)
+        : destinationConditions,
+    );
+    setConditionsDirty(Boolean(draft?.conditionsDirty));
     setConditionsError(null);
-  }, [job.id]);
+  }, [job.id, getDraft]);
 
   useEffect(() => {
     jobsApi
       .listFieldMappings(projectId, job.id)
       .then((rows) => {
         const consolidated = consolidateMappings(rows);
-        setFieldMappings(consolidated);
-        setDefaultMappings(cloneMappings(consolidated));
         savedMappingsRef.current = cloneMappings(consolidated);
         persistedSourceFieldsRef.current = new Set(
           consolidated.map((m) => m.sourceField),
         );
-        // Nothing existed to protect — treat as fresh setup from the start.
-        if (consolidated.length === 0) setMappingMode('fresh-setup');
+
+        const draft = getDraft(job.id);
+        const hasMappingDraft = Boolean(
+          draft?.mappingDirty && draft.fieldMappings,
+        );
+        const hasDefaultsDraft = Boolean(
+          draft?.defaultsDirty && draft.defaultMappings,
+        );
+
+        if (hasMappingDraft && hasDefaultsDraft) {
+          setFieldMappings(cloneMappings(draft!.fieldMappings!));
+          setDefaultMappings(cloneMappings(draft!.defaultMappings!));
+          setMappingDirty(true);
+          setDefaultsDirty(true);
+          if (draft!.mappingMode) setMappingMode(draft!.mappingMode);
+        } else if (hasMappingDraft) {
+          const draftMappings = cloneMappings(draft!.fieldMappings!);
+          setFieldMappings(draftMappings);
+          setDefaultMappings(
+            mergeDefaultConfiguration(
+              draftMappings,
+              cloneMappings(consolidated),
+            ),
+          );
+          setMappingDirty(true);
+          if (draft!.mappingMode) setMappingMode(draft!.mappingMode);
+        } else if (hasDefaultsDraft) {
+          const draftDefaults = cloneMappings(draft!.defaultMappings!);
+          setDefaultMappings(draftDefaults);
+          setFieldMappings(
+            mergeDefaultConfiguration(
+              cloneMappings(consolidated),
+              draftDefaults,
+            ),
+          );
+          setDefaultsDirty(true);
+        } else {
+          setFieldMappings(consolidated);
+          setDefaultMappings(cloneMappings(consolidated));
+          setMappingDirty(false);
+          setDefaultsDirty(false);
+          // Nothing existed to protect — treat as fresh setup from the start.
+          if (consolidated.length === 0) setMappingMode('fresh-setup');
+        }
       })
       .catch(() => {})
       .finally(() => setLoadingMappings(false));
-  }, [job.id, projectId]);
+  }, [job.id, projectId, getDraft]);
 
   useEffect(() => {
     loadFields(false);
   }, [loadFields]);
+
+  useEffect(() => {
+    jobsApi
+      .listCrossObjectProperties(projectId, job.id)
+      .then(setCrossObjectProperties)
+      .catch(() => setCrossObjectProperties([]));
+  }, [job.id, projectId]);
 
   useEffect(() => {
     const hasUnsavedChanges = mappingDirty || defaultsDirty || conditionsDirty;
@@ -401,14 +498,24 @@ export default function FieldMappingTab() {
     // Keep the defaults tab on the same current structure. Auto Mapping and
     // manual mapping edits otherwise leave it holding the previous snapshot,
     // so its first policy change can be saved as a constant-only payload.
-    setDefaultMappings((currentDefaults) =>
-      mergeDefaultConfiguration(newMappings, currentDefaults),
+    const updatedDefaults = mergeDefaultConfiguration(
+      newMappings,
+      defaultMappings,
     );
+    setDefaultMappings(updatedDefaults);
     setMappingDirty(true);
     setSaved(false);
     // Cleared everything (via "Clear all" or deleting the last row one by one) —
     // whatever gets mapped next (Auto Map or manual Add Mapping) is a fresh setup.
+    const nextMode = newMappings.length === 0 ? 'fresh-setup' : mappingMode;
     if (newMappings.length === 0) setMappingMode('fresh-setup');
+
+    saveDraft(job.id, {
+      fieldMappings: newMappings,
+      defaultMappings: updatedDefaults,
+      mappingDirty: true,
+      mappingMode: nextMode,
+    });
   };
 
   const handleDefaultsChange = (newMappings: ConsolidatedMapping[]) => {
@@ -416,11 +523,19 @@ export default function FieldMappingTab() {
     // Default policies are metadata on the current mapping draft, not a
     // separate structure. Reflect them in the mapping tab without marking a
     // structural mapping edit dirty.
-    setFieldMappings((currentMappings) =>
-      mergeDefaultConfiguration(currentMappings, newMappings),
+    const updatedMappings = mergeDefaultConfiguration(
+      fieldMappings,
+      newMappings,
     );
+    setFieldMappings(updatedMappings);
     setDefaultsDirty(true);
     setSaved(false);
+
+    saveDraft(job.id, {
+      fieldMappings: updatedMappings,
+      defaultMappings: newMappings,
+      defaultsDirty: true,
+    });
   };
 
   // Takes the mapping set to persist explicitly, rather than reading `fieldMappings`
@@ -440,7 +555,7 @@ export default function FieldMappingTab() {
     }
     if (!pairs.some((m) => m.isMatchField)) {
       toast.error(
-        'At least one Match Field is required — toggle the switch on a mapping to set it.',
+        'At least one Identifier is required — toggle the switch on a mapping to set it.',
       );
       return false;
     }
@@ -450,7 +565,7 @@ export default function FieldMappingTab() {
     const unmappedEnums = toSave.flatMap((m) => {
       if (m.dismissed) return [];
       const dests = Array.isArray(m.destField) ? m.destField : [m.destField];
-      const sourceType = sourceFields.find(
+      const sourceType = effectiveSourceFields.find(
         (f) => f.key === m.sourceField,
       )?.type;
       return dests.filter((dk) => {
@@ -493,15 +608,19 @@ export default function FieldMappingTab() {
     // assertRequiredFieldsMapped); this just reports it before the round trip.
     if (job.syncDirection === 'two_way') {
       const unresolved = getRequiredFieldItems(
-        sourceFields,
+        effectiveSourceFields,
         destFields,
         toSave,
         { includeSource: true, includeDest: true },
-      ).filter((i) => i.currentOnEmpty === 'none');
+      ).filter(
+        (i) =>
+          i.currentOnEmpty !== 'default' ||
+          !isValidDefaultValue(i.field.type, i.currentDefaultValue),
+      );
       if (unresolved.length > 0) {
         setActiveWorkspaceTab('default-mapping');
         toast.error(
-          `These required fields need an empty-value rule (a default value, or skip the record): ${unresolved
+          `These required fields need a fallback default value: ${unresolved
             .map((i) => i.field.label || i.field.key)
             .join(', ')}`,
         );
@@ -547,6 +666,24 @@ export default function FieldMappingTab() {
     setExcludeConditionLogic(logic);
     setConditionsDirty(true);
     setConditionsError(null);
+
+    saveDraft(job.id, {
+      excludeConditions: conditions,
+      excludeConditionLogic: logic,
+      conditionsDirty: true,
+    });
+  };
+
+  const handleDestinationConditionsChange = (
+    conditions: DestinationSkipCondition[],
+  ) => {
+    setDestinationSkipConditions(conditions);
+    setConditionsDirty(true);
+    setConditionsError(null);
+    saveDraft(job.id, {
+      destinationSkipConditions: conditions,
+      conditionsDirty: true,
+    });
   };
 
   const handlePreviewConditions = async () => {
@@ -599,7 +736,9 @@ export default function FieldMappingTab() {
   // Own resource (PATCH /jobs/:id), own try/catch/toast — a failure here must
   // never look like the field-mapping save also failed, and vice versa.
   const persistExcludeConditions = async (): Promise<boolean> => {
-    const error = validateExcludeConditions(excludeConditions);
+    const error =
+      validateExcludeConditions(excludeConditions) ??
+      validateDestinationSkipConditions(destinationSkipConditions);
     if (error) {
       setConditionsError(error);
       toast.error(error);
@@ -610,12 +749,19 @@ export default function FieldMappingTab() {
         excludeConditions:
           excludeConditions.length > 0 ? excludeConditions : null,
         excludeConditionLogic,
+        destinationSkipConditions:
+          destinationSkipConditions.length > 0
+            ? destinationSkipConditions
+            : null,
       };
       await jobsApi.updateJob(projectId, job.id, patch);
       patchJob(patch);
       savedConditionsRef.current = {
         conditions: cloneConditions(excludeConditions),
         logic: excludeConditionLogic,
+        destinationConditions: cloneDestinationConditions(
+          destinationSkipConditions,
+        ),
       };
       setConditionsDirty(false);
       setConditionsError(null);
@@ -645,6 +791,7 @@ export default function FieldMappingTab() {
         if (!didSave) return;
         setFieldMappings(cloneMappings(payload));
         setMappingDirty(false);
+        clearTabDraft(job.id, 'field-mapping');
         if (!defaultsDirty) setDefaultMappings(cloneMappings(payload));
         return;
       }
@@ -663,10 +810,14 @@ export default function FieldMappingTab() {
         setDefaultMappings(cloneMappings(payload));
         setMappingDirty(false);
         setDefaultsDirty(false);
+        clearTabDraft(job.id, 'default-mapping');
         return;
       }
 
-      await persistExcludeConditions();
+      const didSaveConditions = await persistExcludeConditions();
+      if (didSaveConditions) {
+        clearTabDraft(job.id, 'skip-record');
+      }
     } finally {
       setSaving(false);
     }
@@ -681,16 +832,25 @@ export default function FieldMappingTab() {
       );
       setMappingMode(mappings.length > 0 ? 'edit' : 'fresh-setup');
       setMappingDirty(false);
+      clearTabDraft(job.id, 'field-mapping');
+      toast.info('Field mappings reset to saved configuration.');
     } else if (activeWorkspaceTab === 'default-mapping') {
       setDefaultMappings(cloneMappings(savedMappingsRef.current));
       setDefaultsDirty(false);
       setShowDefaultsValidation(false);
+      clearTabDraft(job.id, 'default-mapping');
+      toast.info('Default mappings reset to saved configuration.');
     } else {
       const savedConditions = savedConditionsRef.current;
       setExcludeConditions(cloneConditions(savedConditions.conditions));
       setExcludeConditionLogic(savedConditions.logic);
+      setDestinationSkipConditions(
+        cloneDestinationConditions(savedConditions.destinationConditions),
+      );
       setConditionsDirty(false);
       setConditionsError(null);
+      clearTabDraft(job.id, 'skip-record');
+      toast.info('Skip conditions reset to saved configuration.');
     }
     setSaved(false);
   };
@@ -699,8 +859,21 @@ export default function FieldMappingTab() {
     return <FieldMappingSkeleton />;
   }
 
+  const effectiveSourceFields: CanvasField[] = [
+    ...sourceFields,
+    ...crossObjectProperties.map((property) => ({
+      key: property.sourceFieldKey,
+      label: property.displayLabel,
+      type: 'string',
+      required: false,
+      isCustom: false,
+      readOnly: false,
+      crossObject: true,
+    })),
+  ];
+
   const requiredDefaultItems = getRequiredFieldItems(
-    sourceFields,
+    effectiveSourceFields,
     destFields,
     defaultMappings,
     {
@@ -710,7 +883,7 @@ export default function FieldMappingTab() {
   );
   const unresolvedDefaultCount = requiredDefaultItems.filter(
     (item) =>
-      item.currentOnEmpty === 'none' ||
+      item.currentOnEmpty !== 'default' ||
       (item.currentOnEmpty === 'default' &&
         !isValidDefaultValue(item.field.type, item.currentDefaultValue)),
   ).length;
@@ -721,7 +894,10 @@ export default function FieldMappingTab() {
   });
   const displayedConditionsError =
     conditionsError ??
-    (conditionsDirty ? validateExcludeConditions(excludeConditions) : null);
+    (conditionsDirty
+      ? (validateExcludeConditions(excludeConditions) ??
+        validateDestinationSkipConditions(destinationSkipConditions))
+      : null);
   const saveLabel =
     activeWorkspaceTab === 'field-mapping'
       ? 'Save mappings'
@@ -761,7 +937,7 @@ export default function FieldMappingTab() {
             className="gap-0"
           >
             <div className="flex flex-col gap-3 border-b px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
-              <div className="overflow-x-auto">
+              <div className="flex items-center gap-3 overflow-x-auto">
                 <TabsList>
                   <TabsTrigger value="field-mapping">
                     Field Mappings
@@ -781,7 +957,18 @@ export default function FieldMappingTab() {
                       <span className="bg-warning size-1.5 rounded-full" />
                     )}
                   </TabsTrigger>
+                  {supportsCrossObjectProperties(srcPlatform) && (
+                    <TabsTrigger value="cross-object">
+                      Cross-Object Properties
+                    </TabsTrigger>
+                  )}
                 </TabsList>
+                {anyDirty && (
+                  <span className="text-muted-foreground hidden items-center gap-1.5 text-xs sm:inline-flex">
+                    <span className="bg-warning size-1.5 animate-pulse rounded-full" />
+                    Draft saved locally
+                  </span>
+                )}
               </div>
 
               <div
@@ -857,25 +1044,37 @@ export default function FieldMappingTab() {
             <TabsContent value="field-mapping" className="space-y-4 p-5">
               {fieldMappings.length > 0 &&
                 !fieldMappings.some((mapping) => mapping.matchDestKey) && (
-                  <div className="bg-destructive/10 flex items-start gap-3 rounded-4xl px-4 py-3">
-                    <AlertTriangle className="text-destructive mt-0.5 size-4 shrink-0" />
-                    <div>
-                      <p className="text-destructive text-sm font-medium">
-                        Match Field required
-                      </p>
-                      <p className="text-muted-foreground mt-0.5 text-xs">
-                        Toggle the{' '}
-                        <strong className="text-foreground">switch</strong> on
-                        at least one mapped field to mark it as a Match Field.
-                        This tells the sync how to find existing records in
-                        HubSpot. Without it the job cannot be activated.
+                  <div className="border-warning/30 bg-warning/10 flex items-start gap-3 rounded-3xl border px-4 py-3.5">
+                    <AlertTriangle className="text-warning mt-0.5 size-4 shrink-0" />
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-foreground text-xs font-semibold">
+                          How should we identify matching records?
+                        </p>
+                        <Badge
+                          size="xs"
+                          variant="outline"
+                          className="text-muted-foreground bg-background"
+                        >
+                          Unique Identifier
+                        </Badge>
+                      </div>
+                      <p className="text-muted-foreground text-xs leading-relaxed">
+                        Toggle the switch on at least one mapped field (like{' '}
+                        <strong className="text-foreground">Email</strong> or{' '}
+                        <strong className="text-foreground">Record ID</strong>)
+                        to set it as a unique identifier. Synkazo uses this to
+                        identify matching records and update them instead of
+                        creating duplicates.
                       </p>
                     </div>
                   </div>
                 )}
 
               <FieldMappingCanvas
-                sourceFields={sourceFields as unknown as CanvasFieldDef[]}
+                sourceFields={
+                  effectiveSourceFields as unknown as CanvasFieldDef[]
+                }
                 destFields={destFields as unknown as CanvasFieldDef[]}
                 mappings={fieldMappings as unknown as CanvasMappingRow[]}
                 onMappingsChange={
@@ -903,18 +1102,50 @@ export default function FieldMappingTab() {
                 }
                 isFirstTime={isFirstTime}
               />
+
+              <div className="border-border/60 bg-muted/40 mt-4 flex flex-col gap-3 rounded-2xl border p-3.5 text-xs sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-xl">
+                    <Link2 className="size-4" />
+                  </div>
+                  <div>
+                    <p className="text-foreground font-semibold">
+                      Need to link related records together?
+                    </p>
+                    <p className="text-muted-foreground text-xs">
+                      Configure Record Associations to automatically link synced
+                      records (e.g. Contacts to Companies or Jobs to Customers).
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 gap-1.5 text-xs font-medium"
+                >
+                  <Link
+                    to={`/projects/${projectId}?tab=settings&section=associations`}
+                  >
+                    <span>Configure Associations</span>
+                    <ExternalLink className="size-3.5" />
+                  </Link>
+                </Button>
+              </div>
             </TabsContent>
 
             <TabsContent value="default-mapping" className="p-5">
               {showDefaultsValidation && unresolvedDefaultCount > 0 && (
-                <div className="bg-destructive/10 text-destructive mb-4 flex items-start gap-2 rounded-4xl px-3 py-2 text-xs">
+                <div className="bg-destructive/10 text-destructive mb-4 flex items-start gap-2 rounded-2xl px-3 py-2 text-xs">
                   <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
                   {unresolvedDefaultCount} required field
                   {unresolvedDefaultCount === 1 ? '' : 's'} need attention.
                 </div>
               )}
               <RequiredFieldDefaults
-                sourceFields={sourceFields as unknown as CanvasFieldDef[]}
+                sourceFields={
+                  effectiveSourceFields as unknown as CanvasFieldDef[]
+                }
                 destFields={destFields as unknown as CanvasFieldDef[]}
                 sourcePlatform={srcPlatform}
                 destPlatform={dstPlatform}
@@ -938,25 +1169,41 @@ export default function FieldMappingTab() {
             <TabsContent value="skip-record" className="space-y-3 p-5">
               {displayedConditionsError && (
                 <div
-                  className="bg-destructive/10 text-destructive border-destructive/30 flex items-start gap-2 rounded-4xl border px-3 py-2 text-xs"
+                  className="bg-destructive/10 text-destructive border-destructive/30 flex items-start gap-2 rounded-2xl border px-3 py-2 text-xs"
                   role="alert"
                 >
                   <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
                   {displayedConditionsError}
                 </div>
               )}
-              <ExcludeConditionsEditor
-                sourceFields={sourceFields as unknown as CanvasFieldDef[]}
-                conditions={excludeConditions}
-                conditionLogic={excludeConditionLogic}
-                onChange={handleExcludeConditionsChange}
+              <SkipRecordEditor
+                sourceFields={
+                  effectiveSourceFields as unknown as CanvasFieldDef[]
+                }
+                destinationFields={destFields as unknown as CanvasFieldDef[]}
+                sourceConditions={excludeConditions}
+                sourceConditionLogic={excludeConditionLogic}
+                destinationConditions={destinationSkipConditions}
+                onSourceChange={handleExcludeConditionsChange}
+                onDestinationChange={handleDestinationConditionsChange}
                 searchQuery={conditionSearch}
                 addRequestSignal={conditionAddRequest}
-                showAddButton
+                showSourceAddButton
                 isDirty={conditionsDirty}
-                onPreview={handlePreviewConditions}
-                previewing={previewingConditions}
+                onPreviewSource={handlePreviewConditions}
+                previewingSource={previewingConditions}
                 layout="grid"
+              />
+            </TabsContent>
+            <TabsContent value="cross-object" className="p-5">
+              <CrossObjectPropertiesPanel
+                projectId={projectId}
+                jobId={job.id}
+                platformId={srcPlatform}
+                sourceObject={job.sourceObject}
+                sourceFields={sourceFields as unknown as CanvasFieldDef[]}
+                properties={crossObjectProperties}
+                onPropertiesChange={setCrossObjectProperties}
               />
             </TabsContent>
           </Tabs>
@@ -975,10 +1222,10 @@ export default function FieldMappingTab() {
             <div className="flex min-w-0 flex-1 items-start gap-2.5">
               <span className="bg-warning mt-1.5 size-2 shrink-0 rounded-full" />
               <div>
-                <p className="text-sm font-semibold">Unsaved changes</p>
+                <p className="text-sm font-semibold">Unsaved draft</p>
                 <p className="text-muted-foreground text-xs">
-                  Save or discard the changes in this tab before leaving the
-                  page.
+                  Your changes are auto-saved locally. Save to apply them to
+                  your sync job, or discard to restore saved state.
                 </p>
               </div>
             </div>

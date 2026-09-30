@@ -46,6 +46,7 @@ export default function ProjectConnections() {
         destPlatformId={projectQuery.data?.destPlatformId}
         syncMode={projectQuery.data?.syncMode ?? null}
         projectActiveEnv={projectActiveEnv}
+        onSaved={refresh}
       />
     </div>
   );

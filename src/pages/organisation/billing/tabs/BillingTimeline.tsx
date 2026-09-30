@@ -15,7 +15,7 @@ export function BillingHistoryViewToggle({
   onChange: (mode: BillingHistoryViewMode) => void;
 }) {
   return (
-    <div className="bg-muted flex rounded-3xl p-1">
+    <div className="bg-muted flex rounded-xl p-1">
       <Button
         type="button"
         variant="secondary"
@@ -24,7 +24,7 @@ export function BillingHistoryViewToggle({
         aria-pressed={value === 'table'}
         onClick={() => onChange('table')}
         className={cn(
-          'h-7 rounded-3xl p-0',
+          'p-0',
           value === 'table' ? 'bg-primary text-white' : 'bg-muted',
         )}
       >
@@ -38,7 +38,7 @@ export function BillingHistoryViewToggle({
         aria-pressed={value === 'timeline'}
         onClick={() => onChange('timeline')}
         className={cn(
-          'h-7 rounded-3xl p-0',
+          'p-0',
           value === 'timeline' ? 'bg-primary text-white' : 'bg-muted',
         )}
       >

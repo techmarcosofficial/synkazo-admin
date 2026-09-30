@@ -5,6 +5,7 @@ import { useJobDetailContext } from './context';
 import JobStatusDropdown from './JobStatusDropdown';
 
 import { PlatformIcon } from '@/components/platform';
+import HeadingPair from '@/components/shared/HeadingPair';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { formatEntityLabel } from '@/features/projects/lib/syncJobSummary';
 import type { Project, ProjectEnvironment } from '@/types';
@@ -57,7 +58,7 @@ export default function JobHeader() {
       ?.activeEnvironment ?? project?.active_environment;
 
   return (
-    <div className="flex flex-col gap-5 px-6 py-5 lg:flex-row lg:items-start lg:justify-between">
+    <div className="flex flex-col gap-3 px-4 py-4 lg:flex-row lg:items-start lg:justify-between">
       <div className="flex min-w-0 items-center gap-4">
         <div className="flex shrink-0 items-center gap-2">
           <PlatformIcon
@@ -74,11 +75,10 @@ export default function JobHeader() {
             className="size-12 rounded-2xl"
           />
         </div>
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="truncate text-2xl font-bold tracking-tight">
-              {job.name}
-            </h1>
+        <HeadingPair
+          level="h1"
+          title={<span className="block truncate">{job.name}</span>}
+          trailing={
             <JobStatusDropdown
               isActive={isActive}
               canActivate={canActivate}
@@ -90,29 +90,44 @@ export default function JobHeader() {
               onStop={handleStop}
               highlighted={highlightStatusGuide}
             />
-          </div>
-          <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-1.5 text-sm leading-5">
-            <span>{project?.name || 'Project'}</span>
-            <span aria-hidden="true">·</span>
-            <span className="inline-flex min-w-0 items-center gap-1">
-              <span className="truncate">
-                {formatEntityLabel(job.sourceObject)}
+          }
+          subtitle={
+            <>
+              <span>{project?.name || 'Project'}</span>
+              <span aria-hidden="true"> · </span>
+              <span className="inline-flex min-w-0 items-center gap-1">
+                <span className="truncate">
+                  {formatEntityLabel(job.sourceObject)}
+                </span>
+                <DirectionIcon className="size-3 shrink-0" aria-hidden="true" />
+                <span className="truncate">
+                  {formatEntityLabel(job.destObject)}
+                </span>
               </span>
-              <DirectionIcon className="size-3 shrink-0" aria-hidden="true" />
-              <span className="truncate">
-                {formatEntityLabel(job.destObject)}
-              </span>
-            </span>
-            <span aria-hidden="true">·</span>
-            <span>{lastSyncedLabel}</span>
-          </div>
-        </div>
+              <span aria-hidden="true"> · </span>
+              <span>{lastSyncedLabel}</span>
+            </>
+          }
+        />
       </div>
 
       <div className="ml-auto flex flex-wrap items-center justify-end gap-2.5">
         <StatusBadge status={twoWay ? 'two_way' : 'one_way'} size="lg" />
         {activeEnvironment && (
-          <StatusBadge status={activeEnvironment} size="sm" />
+          <StatusBadge
+            status={activeEnvironment}
+            label={
+              activeEnvironment === 'sandbox'
+                ? 'Sandbox (Test Mode)'
+                : 'Production (Live)'
+            }
+            title={
+              activeEnvironment === 'sandbox'
+                ? 'Operating in Sandbox — Live customer data is not affected'
+                : 'Live Production Sync active'
+            }
+            size="sm"
+          />
         )}
         {operationalStatus && (
           <StatusBadge status={operationalStatus} size="sm" />

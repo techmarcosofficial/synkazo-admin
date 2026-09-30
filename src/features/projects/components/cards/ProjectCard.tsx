@@ -4,9 +4,14 @@ import { Link } from 'react-router-dom';
 
 import ProjectPlatformPair from './ProjectPlatformPair';
 
+import {
+  headingSubtitleStyles,
+  headingTitleStyles,
+} from '@/components/shared/headingStyles';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import type { ProjectExtended } from '@/features/projects/types';
+import { cn } from '@/lib/utils';
 
 interface ProjectCardProps {
   project: ProjectExtended;
@@ -30,6 +35,10 @@ export default function ProjectCard({ project, jobCount }: ProjectCardProps) {
     : project.updatedAt
       ? `Updated ${relativeTime(project.updatedAt)}`
       : 'Not synced yet';
+
+  const activeEnv = project.activeEnvironment ?? project.active_environment;
+  const isSandbox = activeEnv === 'sandbox';
+
   return (
     <Card
       size="sm"
@@ -43,32 +52,65 @@ export default function ProjectCard({ project, jobCount }: ProjectCardProps) {
             syncMode={project.syncMode}
             size="2xl"
           />
-          <StatusBadge status={project.status} size="sm" />
+          <div className="flex flex-wrap items-center justify-end gap-1.5">
+            <StatusBadge status={project.status} size="sm" />
+            {activeEnv && (
+              <Link
+                to={`/projects/${project.id}?tab=settings&section=environments`}
+                className="focus-visible:ring-ring inline-flex rounded-full transition-opacity hover:opacity-85 focus-visible:ring-2 focus-visible:outline-none"
+                title={
+                  isSandbox
+                    ? 'Operating in Sandbox (Test Mode) — Click to open Environment Settings'
+                    : 'Operating in Production (Live) — Click to open Environment Settings'
+                }
+              >
+                <StatusBadge
+                  status={activeEnv}
+                  label={isSandbox ? 'Sandbox' : 'Production'}
+                  size="sm"
+                />
+              </Link>
+            )}
+          </div>
         </div>
 
         <div className="space-y-1">
           <Link
             to={`/projects/${project.id}`}
-            className="hover:text-primary focus-visible:ring-ring block truncate rounded-sm text-base font-semibold transition-colors outline-none focus-visible:ring-2"
+            className={cn(
+              'hover:text-primary focus-visible:ring-ring block truncate rounded-sm transition-colors outline-none focus-visible:ring-2',
+              headingTitleStyles.section,
+            )}
           >
             {project.name}
           </Link>
           {project.description && (
-            <p className="text-muted-foreground line-clamp-2 text-xs">
+            <p
+              className={cn(
+                'text-muted-foreground line-clamp-2',
+                headingSubtitleStyles.card,
+              )}
+            >
               {project.description}
             </p>
           )}
         </div>
-        <dl className="bg-muted/50 mt-auto grid grid-cols-2 gap-3 rounded-3xl p-3">
+        <dl className="bg-secondary/40 border-border/60 mt-auto grid grid-cols-2 gap-3 rounded-2xl border p-3.5">
           <div>
-            <dt className="text-muted-foreground text-xs">Records synced</dt>
-            <dd className="mt-1 text-lg font-semibold">
+            <dt className="text-muted-foreground text-xs font-medium">
+              Records synced
+            </dt>
+            <dd className="text-foreground mt-1 text-lg font-bold tracking-tight tabular-nums">
               {formatCompact(project.totalRecordsSynced ?? 0)}
             </dd>
           </div>
           <div>
-            <dt className="text-muted-foreground text-xs">Sync jobs</dt>
-            <dd className="mt-1 text-lg font-semibold">{jobCount}</dd>
+            <dt className="text-muted-foreground text-xs font-medium">
+              Sync jobs
+            </dt>
+            <dd className="text-foreground mt-1 text-lg font-bold tracking-tight tabular-nums">
+              {jobCount}
+            </dd>
           </div>
         </dl>
       </CardContent>

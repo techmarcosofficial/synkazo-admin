@@ -2,6 +2,7 @@ import { RefreshCw, FolderOpen, Zap, CheckCircle } from 'lucide-react';
 import { useState } from 'react';
 
 import FormDialog from '@/components/form/FormDialog';
+import HeadingPair from '@/components/shared/HeadingPair';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -86,10 +87,7 @@ export default function WelcomeGuideModal({ onClose }: WelcomeGuideModalProps) {
         <div className="bg-primary/10 text-primary flex size-14 items-center justify-center rounded-2xl">
           <Icon className="size-7" />
         </div>
-        <div>
-          <h2 className="font-heading text-lg font-medium">{heading}</h2>
-          <p className="text-muted-foreground mt-1.5 leading-relaxed">{body}</p>
-        </div>
+        <HeadingPair title={heading} subtitle={body} className="items-center" />
       </div>
     </FormDialog>
   );

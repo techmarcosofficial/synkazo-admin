@@ -2,6 +2,7 @@ import { Check, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 
 import { jobsApi } from '@/api/jobs';
+import HeadingPair from '@/components/shared/HeadingPair';
 import { Button } from '@/components/ui/button';
 import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -49,15 +50,14 @@ export default function DataformaCustomerCursorCard({
 
   return (
     <section aria-labelledby="dataforma-customer-cursor-title">
-      <h3 id="dataforma-customer-cursor-title" className="font-semibold">
-        Dataforma Customer Sync Cursor
-      </h3>
-      <p className="text-muted-foreground mb-4 text-xs">
-        Dataforma&apos;s Customers API has no date filter — each sync pages
-        through customers newest-first and stops as soon as it reaches this ID,
-        keeping only customers with an ID greater than it. The floor advances
-        automatically to the highest customer ID synced each cycle.
-      </p>
+      <HeadingPair
+        visualLevel="card"
+        level="h3"
+        titleId="dataforma-customer-cursor-title"
+        title="Dataforma Customer Sync Cursor"
+        subtitle="Dataforma's Customers API has no date filter — each sync pages through customers newest-first and stops as soon as it reaches this ID, keeping only customers with an ID greater than it. The floor advances automatically to the highest customer ID synced each cycle."
+        className="mb-4"
+      />
       <div className="space-y-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field>

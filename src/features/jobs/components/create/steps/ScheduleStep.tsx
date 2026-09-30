@@ -270,14 +270,14 @@ export default function ScheduleStep({
             <ChoiceCardItem
               value="true"
               id="start-as-true"
-              title="Active"
-              description="Start syncing immediately"
+              title="Active (Automated)"
+              description="Sync on schedule automatically as soon as setup finishes"
             />
             <ChoiceCardItem
               value="false"
               id="start-as-false"
               title="Paused"
-              description="Activate manually later"
+              description="Activate manually later when you are ready"
             />
           </RadioGroup>
         </div>

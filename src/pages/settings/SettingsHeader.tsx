@@ -1,5 +1,6 @@
 import { Building2, Settings2, UserRound } from 'lucide-react';
 
+import HeadingPair from '@/components/shared/HeadingPair';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -33,7 +34,7 @@ export default function SettingsHeader() {
     (currentUser.isActive === false ? 'suspended' : 'active');
 
   return (
-    <div className="flex flex-col gap-4 px-6 py-5 lg:flex-row lg:items-start lg:justify-between">
+    <div className="flex flex-col gap-4 px-4 py-4 lg:flex-row lg:items-start lg:justify-between">
       <div className="flex min-w-0 items-start gap-4">
         <Avatar className="ring-background size-14 shrink-0 ring-4">
           <AvatarFallback className="bg-primary text-primary-foreground text-lg font-semibold">
@@ -42,16 +43,20 @@ export default function SettingsHeader() {
           </AvatarFallback>
         </Avatar>
 
-        <div className="min-w-0 space-y-2.5">
-          <div>
-            <div className="flex items-center gap-2">
-              <Settings2 className="text-muted-foreground size-4.5" />
-              <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-            </div>
-            <p className="text-muted-foreground mt-0.5 text-sm">
-              Manage your personal account and application preferences.
-            </p>
-          </div>
+        <div className="min-w-0 space-y-2">
+          <HeadingPair
+            level="h1"
+            title={
+              <span className="inline-flex items-center gap-2">
+                <Settings2
+                  className="text-muted-foreground size-4"
+                  aria-hidden="true"
+                />
+                Settings
+              </span>
+            }
+            subtitle="Manage your personal account and application preferences."
+          />
 
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">

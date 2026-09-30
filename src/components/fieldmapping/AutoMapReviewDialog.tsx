@@ -98,7 +98,8 @@ export default function AutoMapReviewDialog({
     <Dialog open onOpenChange={(open) => !open && onCancel()}>
       <DialogContent
         size="md"
-        className="flex h-[85vh] max-h-[85vh] flex-col gap-0 p-0"
+        padding="none"
+        className="flex h-[85vh] max-h-[85vh] flex-col gap-0"
       >
         <DialogHeader className="gap-0 border-b px-6 py-5">
           <div className="flex items-center gap-3">
@@ -120,7 +121,10 @@ export default function AutoMapReviewDialog({
         <ScrollArea className="min-h-0 flex-1">
           <div className="flex flex-col gap-6 px-6 py-4">
             <div className="grid grid-cols-3 gap-2.5">
-              <Card className="ring-border gap-4 py-4 shadow-none ring-1">
+              <Card
+                surface="inner"
+                className="ring-border gap-4 py-4 shadow-none ring-1"
+              >
                 <CardContent className="px-4">
                   <div className="flex items-baseline gap-1.5">
                     <span className="text-2xl font-extrabold">
@@ -133,7 +137,10 @@ export default function AutoMapReviewDialog({
                   </div>
                 </CardContent>
               </Card>
-              <Card className="ring-border gap-4 py-4 shadow-none ring-1">
+              <Card
+                surface="inner"
+                className="ring-border gap-4 py-4 shadow-none ring-1"
+              >
                 <CardContent className="px-4">
                   <div className="flex items-baseline gap-1.5">
                     <span className="text-2xl font-extrabold">
@@ -146,7 +153,10 @@ export default function AutoMapReviewDialog({
                   </div>
                 </CardContent>
               </Card>
-              <Card className="ring-border gap-4 py-4 shadow-none ring-1">
+              <Card
+                surface="inner"
+                className="ring-border gap-4 py-4 shadow-none ring-1"
+              >
                 <CardContent className="px-4">
                   <div className="flex items-baseline gap-1.5">
                     <span className="text-2xl font-extrabold">
@@ -172,7 +182,7 @@ export default function AutoMapReviewDialog({
                     high confidence — applied
                   </span>
                 </div>
-                <div className="divide-y overflow-hidden rounded-4xl border">
+                <div className="divide-y overflow-hidden rounded-3xl border">
                   {preview.matched.map((m) => (
                     <div
                       key={m.source.key}
@@ -222,6 +232,7 @@ export default function AutoMapReviewDialog({
 
                     return (
                       <Card
+                        surface="inner"
                         key={r.source.key}
                         className="ring-border gap-4 py-4 shadow-none ring-1"
                       >
@@ -246,10 +257,7 @@ export default function AutoMapReviewDialog({
                                     }))
                                   }
                                 >
-                                  <SelectTrigger
-                                    size="sm"
-                                    className="h-8 flex-1"
-                                  >
+                                  <SelectTrigger size="sm" className="flex-1">
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -414,7 +422,7 @@ export default function AutoMapReviewDialog({
                     map manually after applying
                   </span>
                 </div>
-                <div className="divide-y overflow-hidden rounded-4xl border">
+                <div className="divide-y overflow-hidden rounded-3xl border">
                   {preview.unmatched.map((f) => (
                     <div
                       key={f.key}

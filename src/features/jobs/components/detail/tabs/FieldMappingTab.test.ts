@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   getWorkspaceDirtyState,
   mergeDefaultConfiguration,
+  supportsCrossObjectProperties,
 } from './FieldMappingTab';
 
 import type { ConsolidatedMapping } from '@/features/jobs/hooks';
@@ -113,5 +114,16 @@ describe('getWorkspaceDirtyState', () => {
         conditionsDirty: true,
       }),
     ).toEqual({ anyDirty: true, activeDirty: true });
+  });
+});
+
+describe('cross-object tab availability', () => {
+  it('includes Texada with the existing source integrations', () => {
+    expect(
+      ['servicetitan', 'dataforma', 'texada'].every(
+        supportsCrossObjectProperties,
+      ),
+    ).toBe(true);
+    expect(supportsCrossObjectProperties('hubspot')).toBe(false);
   });
 });

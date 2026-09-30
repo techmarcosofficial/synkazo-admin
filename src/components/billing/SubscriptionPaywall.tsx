@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { BillingToggle } from '@/components/common/BillingToggle';
+import HeadingPair from '@/components/shared/HeadingPair';
 import { PricingCard, type PricingCta } from '@/components/common/PricingCard';
 import { Button } from '@/components/ui/button';
 import { usePricingPlans } from '@/hooks/usePricingPlans';
@@ -68,15 +69,12 @@ export default function SubscriptionPaywall() {
           <div className="bg-sidebar-primary text-sidebar-primary-foreground flex size-12 items-center justify-center rounded-2xl">
             <RefreshCw className="size-6" />
           </div>
-          <div className="space-y-2">
-            <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
-              Choose a plan to continue
-            </h1>
-            <p className="text-muted-foreground mx-auto max-w-xl text-sm sm:text-base">
-              Your synkazo dashboard is locked until you start a plan. Pick one
-              below to unlock syncing.
-            </p>
-          </div>
+          <HeadingPair
+            level="h1"
+            title="Choose a plan to continue"
+            subtitle="Your synkazo dashboard is locked until you start a plan. Pick one below to unlock syncing."
+            className="items-center"
+          />
         </header>
 
         {plansLoading ? (

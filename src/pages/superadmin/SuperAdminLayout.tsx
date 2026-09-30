@@ -3,6 +3,7 @@ import { ArrowLeft, Shield } from 'lucide-react';
 import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 
 import GlobalLoader, { PageLoader } from '@/components/shared/GlobalLoader';
+import HeadingPair from '@/components/shared/HeadingPair';
 import { SynkazoWordmark } from '@/components/branding/SynkazoMark';
 import { NavMain } from '@/components/layout/nav-main';
 import { NavUser } from '@/components/layout/nav-user';
@@ -45,14 +46,15 @@ class SuperAdminErrorBoundary extends Component<
   render() {
     if (this.state.error) {
       return (
-        <div className="flex flex-col gap-4 rounded-lg border border-red-200 bg-red-50 p-6">
-          <div className="text-lg font-semibold text-red-900">
-            This platform admin page failed to render
-          </div>
-          <p className="text-sm text-red-800">
-            {this.state.error.message ||
-              'An unexpected error occurred. Reload the page or return to the workspace overview.'}
-          </p>
+        <div className="border-destructive/20 bg-destructive/5 flex flex-col gap-4 rounded-4xl border p-4">
+          <HeadingPair
+            tone="danger"
+            title="This platform admin page failed to render"
+            subtitle={
+              this.state.error.message ||
+              'An unexpected error occurred. Reload the page or return to the workspace overview.'
+            }
+          />
           <div className="flex gap-2">
             <Button
               variant="outline"

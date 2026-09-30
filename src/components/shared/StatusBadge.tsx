@@ -7,7 +7,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
+import { Badge, badgeVariants } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 export const statusDot = cva('shrink-0 rounded-full', {
@@ -49,10 +49,10 @@ export const statusBadge = cva('', {
       muted: '',
     },
     size: {
-      xs: 'h-4 px-1.5 text-[10px] gap-1',
-      sm: 'h-5 px-2 text-xs gap-1.5',
-      md: 'h-6 px-2.5 text-sm gap-1.5',
-      lg: 'h-7 px-3 text-sm gap-2',
+      xs: 'gap-1',
+      sm: 'gap-1.5',
+      md: 'gap-1.5',
+      lg: 'gap-2',
       default: '',
     },
   },
@@ -92,6 +92,16 @@ const STATUS_CONFIG: Record<
     tone: 'warning',
     label: 'Draft',
     description: 'Not ready for syncing',
+  },
+  needs_mapping: {
+    tone: 'warning',
+    label: 'Needs Mapping',
+    description: 'Field mapping required before syncing',
+  },
+  ready_to_test: {
+    tone: 'info',
+    label: 'Ready to Test',
+    description: 'Initial test run pending',
   },
   paused: {
     tone: 'paused',
@@ -172,28 +182,72 @@ const STATUS_CONFIG: Record<
 
 interface StatusBadgeProps {
   status: string;
+  label?: string;
+  title?: string;
   size?: Size;
   variant?: Variant;
   showDescription?: boolean;
   className?: string;
+  action?: {
+    label: string;
+    onClick: () => void;
+  };
 }
 
 export default function StatusBadge({
   status,
+  label: customLabel,
+  title,
   size = 'default',
   variant = 'default',
   showDescription = false,
   className,
+  action,
 }: StatusBadgeProps) {
   const cfg = STATUS_CONFIG[status] ?? {
     tone: 'muted' as Tone,
     label: status,
   };
+  const label = customLabel ?? cfg.label;
   const Icon = cfg.icon;
+
+  if (action) {
+    return (
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          action.onClick();
+        }}
+        title={title ?? `${label} - Click to ${action.label.toLowerCase()}`}
+        className={cn(
+          badgeVariants({ variant: 'secondary', size: size === 'default' ? 'sm' : size }),
+          'cursor-pointer font-semibold hover:bg-muted/80',
+          statusBadge({ variant: 'default', tone: cfg.tone, size }),
+          className,
+        )}
+      >
+        {Icon ? (
+          <Icon aria-hidden="true" />
+        ) : (
+          <span
+            className={statusDot({
+              tone: cfg.tone,
+              size,
+            })}
+          />
+        )}
+        <span>{label}</span>
+        <span className="lowercase text-destructive underline underline-offset-2 font-semibold hover:opacity-80">
+          {action.label}
+        </span>
+      </button>
+    );
+  }
 
   if (variant === 'menu') {
     return (
-      <div className={cn('flex flex-col', className)}>
+      <div className={cn('flex flex-col', className)} title={title}>
         <div className="flex items-center gap-2 font-medium">
           {Icon ? (
             <Icon className="size-3.5" aria-hidden="true" />
@@ -205,7 +259,7 @@ export default function StatusBadge({
               })}
             />
           )}
-          {cfg.label}
+          {label}
         </div>
 
         {showDescription && cfg.description && (
@@ -219,6 +273,8 @@ export default function StatusBadge({
 
   return (
     <Badge
+      title={title}
+      size={size === 'default' ? 'sm' : size}
       className={cn(
         'font-semibold',
         statusBadge({
@@ -239,8 +295,7 @@ export default function StatusBadge({
           })}
         />
       )}
-      {cfg.label}
+      {label}
     </Badge>
   );
 }
-

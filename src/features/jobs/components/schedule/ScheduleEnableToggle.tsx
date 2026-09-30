@@ -1,9 +1,8 @@
-import { Play, Square } from 'lucide-react';
 import { useState } from 'react';
 
 import RunConfirmModal from '@/components/sync/RunConfirmModal';
-import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
+import { Switch } from '@/components/ui/switch';
 import type { ExtJob, ScheduleTogglePayload } from '@/features/jobs/hooks';
 import { cn } from '@/lib/utils';
 import { usePriorityQueueQuery } from '@/queries/usePriorityQueue';
@@ -32,9 +31,7 @@ interface ScheduleEnableToggleProps {
  * The enable/disable control for a job's independent schedule — shared so the
  * Start Sync modal's "Schedule Sync" tab and the job's Schedule tab's inline
  * quick-toggle stay pixel- and behavior-identical instead of drifting apart.
- * Individual schedules are ignored while Priority Scheduling governs the
- * project, so this hides itself behind a notice in that case rather than
- * offering a control that would silently do nothing.
+ * Rendered as a Switch/toggle since it represents an enabled/disabled state.
  */
 export default function ScheduleEnableToggle({
   className,
@@ -70,26 +67,9 @@ export default function ScheduleEnableToggle({
       job.scheduleState === 'retry_pending' ||
       job.scheduleState === 'resume_pending');
 
-  if (schedActive) {
-    return (
-      <Button
-        variant="outline"
-        onClick={() => onScheduleToggle()}
-        disabled={scheduleToggling}
-        className={cn(
-          'border-warning/30 bg-warning/5 text-warning w-full',
-          className,
-        )}
-      >
-        {scheduleToggling ? <Spinner /> : <Square className="fill-current" />}
-        {scheduleToggling ? 'Pausing…' : 'Pause schedule'}
-      </Button>
-    );
-  }
-
   const mode = schedPaused || schedLimitPaused ? 'resume' : 'run';
 
-  if (confirmPresentation === 'inline') {
+  if (confirmPresentation === 'inline' && !schedActive) {
     return (
       <RunConfirmModal
         embedded
@@ -107,10 +87,35 @@ export default function ScheduleEnableToggle({
   }
 
   return (
-    <>
-      <Button className={className} onClick={() => setShowConfirm(true)}>
-        <Play /> {mode === 'resume' ? 'Resume schedule' : 'Enable schedule'}
-      </Button>
+    <div className={cn('flex items-center gap-2.5', className)}>
+      <label
+        htmlFor={`schedule-switch-${jobId}`}
+        className="text-xs font-medium text-foreground cursor-pointer select-none flex items-center gap-1.5"
+      >
+        {scheduleToggling && <Spinner className="size-3" />}
+        <span>
+          {scheduleToggling
+            ? schedActive
+              ? 'Pausing…'
+              : 'Enabling…'
+            : schedActive
+              ? 'Schedule active'
+              : 'Schedule paused'}
+        </span>
+      </label>
+      <Switch
+        id={`schedule-switch-${jobId}`}
+        checked={Boolean(schedActive)}
+        disabled={scheduleToggling}
+        onCheckedChange={(checked) => {
+          if (!checked) {
+            onScheduleToggle();
+          } else {
+            setShowConfirm(true);
+          }
+        }}
+        aria-label={schedActive ? 'Pause schedule' : 'Enable schedule'}
+      />
       {showConfirm && (
         <RunConfirmModal
           mode={mode}
@@ -127,6 +132,6 @@ export default function ScheduleEnableToggle({
           onGoToPipeline={onGoToPipeline}
         />
       )}
-    </>
+    </div>
   );
 }

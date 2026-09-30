@@ -142,7 +142,7 @@ describe('NotificationsMenu', () => {
     );
     expect(statusIcon).not.toHaveClass('bg-success/10', 'rounded-full');
     expect(statusIcon?.querySelector('svg')).toHaveClass(
-      'size-5',
+      'size-4',
       'stroke-[1.75]',
       'text-success',
     );

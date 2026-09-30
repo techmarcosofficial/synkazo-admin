@@ -2,6 +2,7 @@ import { Check, Loader2, X } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -125,7 +126,7 @@ function CouponInput({
     return (
       <div className="border-border mt-6 border-t pt-4">
         <div className="flex items-center justify-between gap-2">
-          <span className="bg-primary/10 text-primary inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold">
+          <Badge size="md" className="bg-primary/10 text-primary gap-2">
             {appliedCode}
             <Button
               type="button"
@@ -136,11 +137,11 @@ function CouponInput({
               }}
               variant="ghost"
               size="icon-xs"
-              className="size-5 rounded-full"
+              className="size-5"
             >
               <X className="size-3" />
             </Button>
-          </span>
+          </Badge>
           <span className="text-muted-foreground text-xs">
             Promo code applied
           </span>
@@ -169,7 +170,7 @@ function CouponInput({
             }
           }}
           placeholder="SAVE10"
-          className="h-9 uppercase"
+          className="uppercase"
         />
         <Button
           type="button"

@@ -78,7 +78,7 @@ export default function ManageAuthPagesCard() {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader visualLevel="section">
         <CardTitle className="flex items-center gap-2 font-semibold">
           <Lock className="size-4" />
           Manage Auth Pages
@@ -105,7 +105,7 @@ export default function ManageAuthPagesCard() {
               return (
                 <div
                   key={page.id}
-                  className="bg-card flex items-center justify-between gap-4 rounded-4xl border p-4"
+                  className="bg-card flex items-center justify-between gap-4 rounded-3xl border p-4"
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2">

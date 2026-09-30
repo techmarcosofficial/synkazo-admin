@@ -49,7 +49,7 @@ export default function PaymentHistoryTab() {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader visualLevel="section">
         <CardTitle>Payment history</CardTitle>
         <CardDescription>
           Every payment attempt — succeeded or failed — with its ID and reason.
@@ -88,7 +88,7 @@ export default function PaymentHistoryTab() {
             }))}
           />
         ) : (
-          <div className="overflow-hidden rounded-4xl border">
+          <div className="overflow-hidden rounded-3xl border">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted hover:bg-muted/50">

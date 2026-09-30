@@ -2,6 +2,7 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { CalendarClock, ChevronRight, Repeat2 } from 'lucide-react';
 
 import EmptyState from '@/components/shared/EmptyState';
+import HeadingPair from '@/components/shared/HeadingPair';
 import ListPanel from '@/components/shared/list/ListPanel';
 import ListRow from '@/components/shared/list/ListRow';
 import StatusBadge from '@/components/shared/StatusBadge';
@@ -32,16 +33,14 @@ export default function ProjectUpcomingEvents({
 
   return (
     <Card className="h-full">
-      <CardContent className="flex h-full flex-col gap-5">
+      <CardContent className="flex h-full flex-col gap-4">
         <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1">
-            <h3 className="font-heading text-base font-medium">
-              Upcoming Events
-            </h3>
-            <p className="text-muted-foreground text-sm">
-              Next scheduled sync runs.
-            </p>
-          </div>
+          <HeadingPair
+            visualLevel="card"
+            level="h3"
+            title="Upcoming Events"
+            subtitle="Next scheduled sync runs."
+          />
           <Button
             variant="link"
             size="sm"

@@ -31,3 +31,14 @@ export interface ExcludeCondition {
   value?: string | number | boolean | string[] | null;
   normalization?: ConditionNormalization;
 }
+
+export type DestinationSkipOperator =
+  'different_from_destination' | 'exists_in_destination';
+
+export interface DestinationSkipCondition {
+  sourceField: string;
+  destinationField: string;
+  operator: DestinationSkipOperator;
+  direction?: 'forward_only' | 'reverse_only' | 'bidirectional';
+  origin?: 'user' | 'migrated_update_policy';
+}

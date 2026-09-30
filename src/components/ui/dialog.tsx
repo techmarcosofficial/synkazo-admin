@@ -4,6 +4,10 @@ import * as React from 'react';
 import { Dialog as DialogPrimitive } from 'radix-ui';
 
 import { cn } from '@/lib/utils';
+import {
+  headingSubtitleStyles,
+  headingTitleStyles,
+} from '@/components/shared/headingStyles';
 import { Button } from '@/components/ui/button';
 import { XIcon } from 'lucide-react';
 
@@ -52,10 +56,12 @@ function DialogContent({
   children,
   showCloseButton = true,
   size = 'md',
+  padding = 'default',
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
+  padding?: 'default' | 'none';
 }) {
   return (
     <DialogPortal>
@@ -65,7 +71,8 @@ function DialogContent({
         data-size={size}
         data-layout-surface="outer"
         className={cn(
-          'bg-popover text-popover-foreground border-border data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-6 rounded-4xl border p-6 text-sm shadow-none duration-100 outline-none sm:max-w-md data-[size=2xl]:sm:max-w-350 data-[size=3xl]:sm:max-w-400 data-[size=lg]:sm:max-w-225 data-[size=md]:sm:max-w-175 data-[size=sm]:sm:max-w-130 data-[size=xl]:sm:max-w-275 data-[size=xs]:sm:max-w-100',
+          'bg-popover text-popover-foreground border-border data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-4xl border text-sm shadow-none duration-100 outline-none sm:max-w-md data-[size=2xl]:sm:max-w-350 data-[size=3xl]:sm:max-w-400 data-[size=lg]:sm:max-w-225 data-[size=md]:sm:max-w-175 data-[size=sm]:sm:max-w-130 data-[size=xl]:sm:max-w-275 data-[size=xs]:sm:max-w-100',
+          padding === 'none' ? 'p-0' : 'p-4 sm:p-5',
           className,
         )}
         {...props}
@@ -92,7 +99,7 @@ function DialogHeader({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="dialog-header"
-      className={cn('flex flex-col gap-1.5', className)}
+      className={cn('flex flex-col gap-1', className)}
       {...props}
     />
   );
@@ -132,10 +139,7 @@ function DialogTitle({
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn(
-        'font-heading text-base leading-none font-semibold',
-        className,
-      )}
+      className={cn('font-heading', headingTitleStyles.section, className)}
       {...props}
     />
   );
@@ -149,7 +153,8 @@ function DialogDescription({
     <DialogPrimitive.Description
       data-slot="dialog-description"
       className={cn(
-        'text-muted-foreground *:[a]:hover:text-foreground text-sm *:[a]:underline *:[a]:underline-offset-3',
+        'text-muted-foreground *:[a]:hover:text-foreground *:[a]:underline *:[a]:underline-offset-3',
+        headingSubtitleStyles.section,
         className,
       )}
       {...props}

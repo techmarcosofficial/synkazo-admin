@@ -197,6 +197,7 @@ export default function MigrationHistoryCard({
   loading,
   error,
   latestRunId,
+  isProductionReady = true,
   onRetry,
   onLoadRunItems,
 }: {
@@ -204,17 +205,21 @@ export default function MigrationHistoryCard({
   loading: boolean;
   error: string | null;
   latestRunId?: string;
+  isProductionReady?: boolean;
   onRetry: () => void;
   onLoadRunItems: (runId: string) => Promise<MigrationRunItem[]>;
 }) {
   return (
     <Card>
-      <CardHeader className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+      <CardHeader
+        visualLevel="section"
+        className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start"
+      >
         <div>
           <CardTitle className="flex items-center gap-2">
             <Clock className="text-muted-foreground size-4" /> Transfer history
           </CardTitle>
-          <CardDescription className="mt-1">
+          <CardDescription>
             Recent configuration transfers and item-level outcomes.
           </CardDescription>
         </div>
@@ -222,7 +227,12 @@ export default function MigrationHistoryCard({
           variant="outline"
           size="sm"
           onClick={onRetry}
-          disabled={loading}
+          disabled={loading || !isProductionReady}
+          title={
+            !isProductionReady
+              ? 'Connect Production environment to refresh transfer history'
+              : undefined
+          }
         >
           <RefreshCw className={cn(loading && 'animate-spin')} /> Refresh
           history
@@ -250,7 +260,7 @@ export default function MigrationHistoryCard({
           <div className="px-6 pb-6">
             <EmptyState
               icon={Clock}
-              title="No transfer history"
+              title="No transfer history available"
               description="Completed configuration transfers will appear here with created, skipped, and failed item counts."
             />
           </div>

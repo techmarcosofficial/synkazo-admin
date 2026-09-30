@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import { jobsApi } from '@/api/jobs';
+import HeadingPair from '@/components/shared/HeadingPair';
 import { Button } from '@/components/ui/button';
 import {
   Field,
@@ -79,9 +80,13 @@ export default function JobGeneralCard({
 
   return (
     <section aria-labelledby="job-general-title">
-      <h3 id="job-general-title" className="mb-4 font-semibold">
-        Job details
-      </h3>
+      <HeadingPair
+        level="h3"
+        visualLevel="card"
+        titleId="job-general-title"
+        title="Job details"
+        className="mb-4"
+      />
       <form onSubmit={onSubmit} className="space-y-4">
         <Field>
           <FieldLabel htmlFor="job-name" required>

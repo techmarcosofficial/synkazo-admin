@@ -2,6 +2,7 @@ import { CircleHelp, Plus, SlidersHorizontal, Trash2 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { formControlSurface } from '@/components/ui/form-control-styles';
 import { Input } from '@/components/ui/input';
 import {
   Popover,
@@ -16,6 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { cn } from '@/lib/utils';
 import {
   Tooltip,
   TooltipContent,
@@ -217,7 +219,7 @@ export default function AssociationConditionsEditor({
                   value={cond.field}
                   onValueChange={(v) => update(i, { field: v })}
                 >
-                  <SelectTrigger className="h-9 w-full font-mono text-xs">
+                  <SelectTrigger className="w-full font-mono">
                     <SelectValue placeholder="Select field…" />
                   </SelectTrigger>
                   <SelectContent>
@@ -233,7 +235,7 @@ export default function AssociationConditionsEditor({
                   value={cond.field}
                   onChange={(e) => update(i, { field: e.target.value })}
                   placeholder="Field name"
-                  className="h-9 font-mono text-xs"
+                  className="font-mono"
                 />
               )}
             </div>
@@ -248,7 +250,7 @@ export default function AssociationConditionsEditor({
                   update(i, { operator: v as ConditionOperator })
                 }
               >
-                <SelectTrigger className="h-9 w-full text-xs">
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -283,10 +285,15 @@ export default function AssociationConditionsEditor({
                     isMulti ? 'value1, value2, …' : 'Comparison value'
                   }
                   aria-invalid={missingValue}
-                  className="h-9 font-mono text-xs"
+                  className="font-mono"
                 />
               ) : (
-                <div className="bg-muted/30 text-muted-foreground flex h-9 items-center rounded-3xl border px-3 text-xs">
+                <div
+                  className={cn(
+                    formControlSurface,
+                    'text-muted-foreground flex h-9 items-center px-3 text-sm',
+                  )}
+                >
                   Not required
                 </div>
               )}

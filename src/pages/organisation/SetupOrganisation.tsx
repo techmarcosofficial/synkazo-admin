@@ -2,6 +2,7 @@ import { ArrowRight, Building2, Check } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import HeadingPair from '@/components/shared/HeadingPair';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -59,12 +60,12 @@ export default function SetupOrganisation() {
         <div className="bg-primary/10 mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl">
           <Building2 className="text-primary size-6" />
         </div>
-        <h1 className="mb-2 text-2xl font-bold tracking-tight">
-          {existing.name}
-        </h1>
-        <p className="text-muted-foreground mb-6 text-sm">
-          You already have an organisation set up.
-        </p>
+        <HeadingPair
+          level="h1"
+          title={existing.name}
+          subtitle="You already have an organisation set up."
+          className="mb-4 items-center"
+        />
         <Button onClick={() => navigate('/org-admin')}>
           Go to Dashboard <ArrowRight />
         </Button>
@@ -78,12 +79,12 @@ export default function SetupOrganisation() {
         <div className="bg-primary text-primary-foreground mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl">
           <Building2 className="size-6" />
         </div>
-        <h1 className="mb-2 text-2xl font-bold tracking-tight">
-          Set Up Your Organisation
-        </h1>
-        <p className="text-muted-foreground text-sm">
-          Create your organisation to manage projects and invite your team.
-        </p>
+        <HeadingPair
+          level="h1"
+          title="Set Up Your Organisation"
+          subtitle="Create your organisation to manage projects and invite your team."
+          className="items-center"
+        />
       </div>
 
       <Card>

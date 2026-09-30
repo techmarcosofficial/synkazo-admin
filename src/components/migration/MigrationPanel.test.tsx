@@ -97,12 +97,16 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-function renderPanel(onGoToConnections = vi.fn()) {
+function renderPanel(
+  props: Partial<React.ComponentProps<typeof MigrationPanel>> = {},
+) {
+  const onGoToConnections = vi.fn();
   render(
     <MigrationPanel
       projectId="project-1"
       connections={[]}
       onGoToConnections={onGoToConnections}
+      {...props}
     />,
   );
   return onGoToConnections;
@@ -270,5 +274,11 @@ describe('MigrationPanel', () => {
       0,
     );
     expect(checkbox).toBeChecked();
+  });
+
+  it('hides the comparison card when Production is not connected', () => {
+    renderPanel({ isProductionReady: false });
+    expect(screen.queryByText('Compare configuration')).not.toBeInTheDocument();
+    expect(screen.getByText('Transfer history')).toBeInTheDocument();
   });
 });

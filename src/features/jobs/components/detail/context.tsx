@@ -17,14 +17,19 @@ export interface JobDetailContextValue {
   runLogs: ExtSyncRun[];
   jobFieldMappings: ConsolidatedMapping[];
   hasConnection: boolean;
+  isProductionReady?: boolean;
   pipelineRequired: boolean;
   pipelineConfigured: boolean;
+
   activeTab: JobDetailTabId;
   patchJob: (patch: Partial<ExtJob>) => void;
   refetch: () => void;
   handleTabChange: (
     id: JobDetailTabId,
-    options?: { replace?: boolean },
+    options?: {
+      replace?: boolean;
+      searchParams?: Record<string, string | undefined | null>;
+    },
   ) => void;
 
   // Run/schedule state — see useJobRunState.

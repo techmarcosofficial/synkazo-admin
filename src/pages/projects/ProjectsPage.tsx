@@ -1,9 +1,10 @@
 import { formatDistanceToNow } from 'date-fns';
 import { ArrowRight } from 'lucide-react';
 import { useEffect, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 import ErrorState from '@/components/shared/ErrorState';
+import HeadingPair from '@/components/shared/HeadingPair';
 import ManagementToolbar from '@/components/shared/ManagementToolbar';
 import PageHeader from '@/components/shared/PageHeader';
 import PaginationBar from '@/components/shared/PaginationBar';
@@ -32,6 +33,7 @@ import {
   ProjectEmptyState,
   ProjectGrid,
 } from '@/features/projects';
+import { useCreateProjectStore } from '@/features/projects/store/useCreateProjectStore';
 import { ProjectPlatformPair } from '@/features/projects/components/cards';
 import { useProjectFilters } from '@/features/projects/hooks';
 import { PROJECT_STATUS_OPTIONS } from '@/features/projects/types';
@@ -115,8 +117,24 @@ function compareProjects(a: ProjectWithMeta, b: ProjectWithMeta, key: SortKey) {
 
 export default function ProjectsPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { hasPermission } = useSynkazoAuth();
   const canCreateProject = hasPermission('project.create');
+  const openCreateProjectDialog = useCreateProjectStore((s) => s.open);
+
+  useEffect(() => {
+    if (searchParams.get('new') === '1' && canCreateProject) {
+      openCreateProjectDialog();
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete('new');
+          return next;
+        },
+        { replace: true },
+      );
+    }
+  }, [searchParams, canCreateProject, openCreateProjectDialog, setSearchParams]);
 
   const projectsQuery = useProjectsQuery();
   const jobsQuery = useJobsQuery();
@@ -198,12 +216,10 @@ export default function ProjectsPage() {
       <Card>
         <CardContent className="space-y-6">
           <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
-            <div className="space-y-1">
-              <h2 className="text-xl font-semibold">Manage projects</h2>
-              <p className="text-muted-foreground text-sm">
-                Find a project, review its status, or open it to manage syncs.
-              </p>
-            </div>
+            <HeadingPair
+              title="Manage projects"
+              subtitle="Find a project, review its status, or open it to manage syncs."
+            />
             <ManagementToolbar
               searchValue={filters.search}
               onSearchChange={(search) => setFilters({ ...filters, search })}
@@ -266,7 +282,7 @@ export default function ProjectsPage() {
           {isLoading ? (
             viewMode === 'table' ? (
               <Card className="overflow-hidden py-0">
-                <SkeletonTable rows={6} columns={6} />
+                <SkeletonTable rows={6} columns={7} />
               </Card>
             ) : (
               <SkeletonCardGrid count={6} />
@@ -287,7 +303,7 @@ export default function ProjectsPage() {
               viewMode={viewMode}
             />
           ) : viewMode === 'table' ? (
-            <div className="border-border overflow-x-auto rounded-4xl border">
+            <div className="border-border overflow-x-auto rounded-3xl border">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted hover:bg-muted/50">
@@ -326,64 +342,98 @@ export default function ProjectsPage() {
                     >
                       Status
                     </SortableTableHead>
+                    <TableHead>Environment</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {pageItems.map((project) => (
-                    <TableRow key={project.id}>
-                      <TableCell className="min-w-72">
-                        <div className="flex items-center gap-3">
-                          <ProjectPlatformPair
-                            sourcePlatformId={project.sourcePlatformId}
-                            destPlatformId={project.destPlatformId}
-                            syncMode={project.syncMode}
-                          />
-                          <div className="min-w-0">
-                            <Link
-                              to={`/projects/${project.id}`}
-                              className="hover:text-primary focus-visible:ring-ring block truncate rounded-sm text-sm font-medium transition-colors outline-none focus-visible:ring-2"
-                            >
-                              {project.name}
-                            </Link>
-                            {project.description && (
-                              <p className="text-muted-foreground max-w-72 truncate text-xs">
-                                {project.description}
-                              </p>
-                            )}
+                  {pageItems.map((project) => {
+                    const activeEnv =
+                      project.activeEnvironment ?? project.active_environment;
+                    const isSandbox = activeEnv === 'sandbox';
+
+                    return (
+                      <TableRow key={project.id}>
+                        <TableCell className="min-w-72">
+                          <div className="flex items-center gap-3">
+                            <ProjectPlatformPair
+                              sourcePlatformId={project.sourcePlatformId}
+                              destPlatformId={project.destPlatformId}
+                              syncMode={project.syncMode}
+                            />
+                            <div className="min-w-0">
+                              <Link
+                                to={`/projects/${project.id}`}
+                                className="hover:text-primary focus-visible:ring-ring block truncate rounded-sm text-sm font-medium transition-colors outline-none focus-visible:ring-2"
+                              >
+                                {project.name}
+                              </Link>
+                              {project.description && (
+                                <p className="text-muted-foreground max-w-72 truncate text-xs">
+                                  {project.description}
+                                </p>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {project.jobCount}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {(project.totalRecordsSynced ?? 0).toLocaleString()}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
-                        {project.lastSyncedAt
-                          ? formatDistanceToNow(
-                              new Date(project.lastSyncedAt),
-                              {
-                                addSuffix: true,
-                              },
-                            )
-                          : 'Never'}
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={project.status} size="sm" />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Link
-                          to={`/projects/${project.id}`}
-                          className="text-primary focus-visible:ring-ring inline-flex items-center gap-1 rounded-sm text-sm font-medium outline-none hover:underline focus-visible:ring-2"
-                        >
-                          View
-                          <ArrowRight className="size-3.5" aria-hidden="true" />
-                        </Link>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {project.jobCount}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {(project.totalRecordsSynced ?? 0).toLocaleString()}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                          {project.lastSyncedAt
+                            ? formatDistanceToNow(
+                                new Date(project.lastSyncedAt),
+                                {
+                                  addSuffix: true,
+                                },
+                              )
+                            : 'Never'}
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge status={project.status} size="sm" />
+                        </TableCell>
+                        <TableCell>
+                          {activeEnv ? (
+                            <Link
+                              to={`/projects/${project.id}?tab=settings&section=environments`}
+                              className="focus-visible:ring-ring inline-flex rounded-full transition-opacity hover:opacity-85 focus-visible:ring-2 focus-visible:outline-none"
+                              title={
+                                isSandbox
+                                  ? 'Operating in Sandbox (Test Mode) — Click to open Environment Settings'
+                                  : 'Operating in Production (Live) — Click to open Environment Settings'
+                              }
+                            >
+                              <StatusBadge
+                                status={activeEnv}
+                                label={
+                                  isSandbox
+                                    ? 'Sandbox (Test Mode)'
+                                    : 'Production (Live)'
+                                }
+                                size="sm"
+                              />
+                            </Link>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">
+                              —
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Link
+                            to={`/projects/${project.id}`}
+                            className="text-primary focus-visible:ring-ring inline-flex items-center gap-1 rounded-sm text-sm font-medium outline-none hover:underline focus-visible:ring-2"
+                          >
+                            View
+                            <ArrowRight className="size-3.5" aria-hidden="true" />
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>

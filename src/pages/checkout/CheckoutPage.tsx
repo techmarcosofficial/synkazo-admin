@@ -8,6 +8,7 @@ import { CheckoutForm } from './CheckoutForm';
 import { OrderSummary } from './OrderSummary';
 
 import { useTheme } from '@/components/theme-provider';
+import HeadingPair from '@/components/shared/HeadingPair';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { clearPendingPlan, savePendingPlan } from '@/lib/pendingPlan';
@@ -220,11 +221,15 @@ export default function CheckoutPage() {
       >
         <Card>
           <CardContent>
-            <h1 className="text-card-foreground mb-6 text-2xl font-bold tracking-tight">
-              {showChangePlanForm
-                ? 'Confirm your plan change'
-                : 'Complete your subscription'}
-            </h1>
+            <HeadingPair
+              level="h1"
+              className="mb-4"
+              title={
+                showChangePlanForm
+                  ? 'Confirm your plan change'
+                  : 'Complete your subscription'
+              }
+            />
             {showChangePlanForm ? (
               <ChangePlanUpgradeForm
                 plan={plan}

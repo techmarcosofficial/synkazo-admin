@@ -280,16 +280,17 @@ export default function CompanyOwnerSection({
   return (
     <div className="space-y-4">
       <Card className="gap-0 py-0 shadow-none">
-        <CardHeader className="flex items-start justify-between gap-4 p-5">
+        <CardHeader
+          visualLevel="section"
+          className="flex items-start justify-between gap-4 p-4"
+        >
           <div className="flex min-w-0 items-start gap-3">
             <div className="bg-primary/10 flex size-9 shrink-0 items-center justify-center rounded-xl">
               <Users className="text-primary size-4" />
             </div>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <CardTitle className="text-sm font-semibold">
-                  Company owner association
-                </CardTitle>
+                <CardTitle>Company owner association</CardTitle>
                 <Badge variant="outline" className="capitalize">
                   {sourcePlatform}
                 </Badge>
@@ -297,7 +298,7 @@ export default function CompanyOwnerSection({
                   <StatusBadge status={latestLog.status} size="sm" />
                 )}
               </div>
-              <CardDescription className="mt-1 max-w-2xl text-xs">
+              <CardDescription className="max-w-2xl">
                 Match company ownership data from{' '}
                 {isDataforma ? 'Dataforma' : 'ServiceTitan'} to active HubSpot
                 owners and assign them to synced companies. Priority execution
@@ -493,7 +494,8 @@ export default function CompanyOwnerSection({
                     setPage(1);
                   }}
                   placeholder="Search companies…"
-                  className="h-8 w-full text-sm sm:w-52"
+                  uiSize="sm"
+                  className="w-full sm:w-52"
                 />
                 <Select
                   value={statusFilter}
@@ -502,7 +504,7 @@ export default function CompanyOwnerSection({
                     setPage(1);
                   }}
                 >
-                  <SelectTrigger size="sm" className="h-8 w-full sm:w-36">
+                  <SelectTrigger size="sm" className="w-full sm:w-36">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -531,7 +533,7 @@ export default function CompanyOwnerSection({
               />
             ) : (
               <>
-                <div className="overflow-x-auto rounded-4xl border">
+                <div className="overflow-x-auto rounded-3xl border">
                   <Table>
                     <TableHeader>
                       <TableRow>

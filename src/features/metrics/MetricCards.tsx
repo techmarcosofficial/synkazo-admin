@@ -63,7 +63,7 @@ function MetricEmpty({
   description: string;
 }) {
   return (
-    <Empty className="min-h-[260px] p-6">
+    <Empty className="min-h-[260px]">
       <EmptyHeader>
         <EmptyMedia variant="icon">
           <Activity />

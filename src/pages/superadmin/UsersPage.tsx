@@ -12,6 +12,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
+import HeadingPair from '@/components/shared/HeadingPair';
 import ManagementToolbar from '@/components/shared/ManagementToolbar';
 import PageHeader from '@/components/shared/PageHeader';
 import PaginationBar from '@/components/shared/PaginationBar';
@@ -398,12 +399,11 @@ export default function UsersPage() {
       <Card>
         <CardContent className="space-y-6">
           <div className="flex justify-between">
-            <div className="space-y-1">
-              <h3 className="text-xl font-semibold">Manage your users</h3>
-              <p className="text-muted-foreground text-sm">
-                Manage platform-wide user accounts and roles
-              </p>
-            </div>
+            <HeadingPair
+              level="h3"
+              title="Manage your users"
+              subtitle="Manage platform-wide user accounts and roles"
+            />
             <ManagementToolbar
               searchValue={search}
               onSearchChange={setSearch}
@@ -453,7 +453,7 @@ export default function UsersPage() {
           ) : (
             viewMode === 'table' && (
               <>
-                <div className="users-here overflow-hidden rounded-4xl border">
+                <div className="users-here overflow-hidden rounded-3xl border">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted hover:bg-muted/50">

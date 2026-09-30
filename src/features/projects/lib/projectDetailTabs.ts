@@ -19,7 +19,7 @@ export const TAB_DEFS: ProjectDetailTabDef[] = [
   { id: 'connections', label: 'Connections' },
   {
     id: 'sync-rules',
-    label: 'Sync Jobs',
+    label: 'Sync Flows',
     requires: { connections: true, jobs: false },
   },
   {
