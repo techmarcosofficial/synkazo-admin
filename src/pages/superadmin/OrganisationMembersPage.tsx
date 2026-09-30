@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import InviteMemberDialog from './members/InviteMemberDialog';
+import LifecycleConfirmDialog from './lifecycle/LifecycleConfirmDialog';
 
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
@@ -20,7 +21,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { showToast } from '@/lib/toast';
 import {
   useInviteSuperAdminMemberMutation,
@@ -55,7 +55,6 @@ export default function OrganisationMembersPage() {
   const [memberPage, setMemberPage] = useState(1);
   const [memberPageSize, setMemberPageSize] = useState(10);
   const [inviteOpen, setInviteOpen] = useState(false);
-  const { confirm } = useConfirmDialog();
 
   const membersQuery = useSuperAdminMembersQuery(organisationId ?? '', {
     page: memberPage,
@@ -97,22 +96,13 @@ export default function OrganisationMembersPage() {
 
   const openInvite = () => setInviteOpen(true);
 
+  const [revokeTarget, setRevokeTarget] = useState<{
+    invitationId: string;
+    email: string;
+  } | null>(null);
+
   const handleRevoke = (invitationId: string, email: string) => {
-    confirm({
-      variant: 'danger',
-      title: `Revoke invite for ${email}?`,
-      description:
-        'The signed link stops working immediately. The invitee will not see any error message — the URL just returns "invalid invitation".',
-      confirmLabel: 'Revoke invite',
-      onConfirm: async () => {
-        try {
-          await revokeMutation.mutateAsync(invitationId);
-          showToast.success('Invite revoked.');
-        } catch (err) {
-          showToast.error(extractErrorMessage(err));
-        }
-      },
-    });
+    setRevokeTarget({ invitationId, email });
   };
 
   // GAP-006 — resend a pending invite with a fresh token and 7-day expiry.
@@ -352,6 +342,44 @@ export default function OrganisationMembersPage() {
               setInviteOpen(false);
             },
           });
+        }}
+      />
+
+      <LifecycleConfirmDialog
+        open={revokeTarget !== null}
+        onOpenChange={(o) => (o ? undefined : setRevokeTarget(null))}
+        title="Revoke invitation"
+        description={
+          revokeTarget
+            ? `The signed link for ${revokeTarget.email} stops working immediately. Type the email + a reason to confirm.`
+            : 'Revoke invitation'
+        }
+        actionLabel="Revoke invite"
+        tone="danger"
+        organisationName={revokeTarget?.email ?? ''}
+        requiresNameConfirm={true}
+        minReasonLength={10}
+        reasonPlaceholder="Why is this invitation being revoked?"
+        isSubmitting={revokeMutation.isPending}
+        errorMessage={
+          revokeMutation.isError
+            ? extractErrorMessage(revokeMutation.error)
+            : null
+        }
+        onSubmit={({ reason }) => {
+          if (!revokeTarget) return;
+          revokeMutation.mutate(
+            {
+              invitationId: revokeTarget.invitationId,
+              dto: { reason, confirmEmail: revokeTarget.email },
+            },
+            {
+              onSuccess: () => {
+                showToast.success('Invite revoked.');
+                setRevokeTarget(null);
+              },
+            },
+          );
         }}
       />
     </div>

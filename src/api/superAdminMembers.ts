@@ -7,6 +7,7 @@ import type {
   SuperAdminInvitationListItem,
   SuperAdminInviteMemberDto,
   SuperAdminMemberListItem,
+  SuperAdminRevokeInvitationDto,
 } from '@/types';
 
 interface PaginatedEnvelope<T> {
@@ -78,10 +79,12 @@ export const superAdminMembersApi = {
   revokeInvitation: (
     organisationId: string,
     invitationId: string,
+    dto: SuperAdminRevokeInvitationDto,
   ): Promise<void> =>
     apiClient
       .delete<{ data: void }>(
         `/super-admin/organisations/${organisationId}/invitations/${invitationId}`,
+        { data: dto },
       )
       .then(d),
 

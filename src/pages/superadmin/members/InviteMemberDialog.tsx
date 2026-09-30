@@ -22,6 +22,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MIN_REASON = 10;
 
 export type InviteMemberRole = 'editor' | 'org_admin';
 
@@ -34,13 +35,14 @@ interface InviteMemberDialogProps {
     email: string;
     role: InviteMemberRole;
     message?: string;
+    reason: string;
   }) => void;
 }
 
 // Separate from LifecycleConfirmDialog because the fields are different
-// (email + role) and the intent is not a typed-name confirmation. Kept
-// small — every invariant lives server-side (role allowlist, email
-// uniqueness, suspended-org rejection).
+// (email + role + reason) and the intent is not a typed-name
+// confirmation. Reason (SA-504) is recorded on the audit row for every
+// SA-triggered invite; server enforces the min length.
 export default function InviteMemberDialog({
   open,
   onOpenChange,
@@ -51,17 +53,20 @@ export default function InviteMemberDialog({
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<InviteMemberRole>('editor');
   const [message, setMessage] = useState('');
+  const [reason, setReason] = useState('');
 
   useEffect(() => {
     if (!open) {
       setEmail('');
       setRole('editor');
       setMessage('');
+      setReason('');
     }
   }, [open]);
 
   const emailValid = EMAIL_PATTERN.test(email.trim());
-  const canSubmit = emailValid && !isSubmitting;
+  const reasonOk = reason.trim().length >= MIN_REASON;
+  const canSubmit = emailValid && reasonOk && !isSubmitting;
 
   const submit = () => {
     if (!canSubmit) return;
@@ -69,6 +74,7 @@ export default function InviteMemberDialog({
       email: email.trim().toLowerCase(),
       role,
       message: message.trim() || undefined,
+      reason: reason.trim(),
     });
   };
 
@@ -129,6 +135,26 @@ export default function InviteMemberDialog({
               rows={3}
               placeholder="Add any context the invitee should see"
             />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="invite-reason">
+              Reason
+              <span className="text-muted-foreground ml-1 text-xs">
+                (min {MIN_REASON} characters; recorded on the audit row)
+              </span>
+            </Label>
+            <Textarea
+              id="invite-reason"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={2}
+              placeholder="Why is this invitation being sent by the operator?"
+              aria-invalid={reason.length > 0 && !reasonOk}
+            />
+            <div className="text-muted-foreground text-xs">
+              {reason.trim().length}/{MIN_REASON} characters
+            </div>
           </div>
 
           {errorMessage ? (
