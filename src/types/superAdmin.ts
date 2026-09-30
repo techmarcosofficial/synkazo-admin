@@ -247,6 +247,17 @@ export interface SuperAdminInviteMemberDto {
   email: string;
   role: 'editor' | 'org_admin';
   message?: string;
+  // SA-504 — mandatory operator rationale (≥10 chars). Server bumps the
+  // audit row severity to WARNING when this is present.
+  reason: string;
+}
+
+// SA-504 — typed-email confirmation on revoke matches the SA-411
+// destructive-action contract used by lifecycle transitions + rule
+// deletes.
+export interface SuperAdminRevokeInvitationDto {
+  reason: string;
+  confirmEmail: string;
 }
 
 export interface SuperAdminRunJobDto {

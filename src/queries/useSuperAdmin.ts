@@ -43,6 +43,7 @@ import type {
   SuperAdminCreateAssociationRuleDto,
   SuperAdminDeleteAssociationRuleDto,
   SuperAdminInviteMemberDto,
+  SuperAdminRevokeInvitationDto,
   SuperAdminRunJobDto,
   SuperAdminRunMigrationDto,
   SuperAdminUpdateAssociationRuleDto,
@@ -372,8 +373,15 @@ export function useInviteSuperAdminMemberMutation(organisationId: string) {
 export function useRevokeSuperAdminInvitationMutation(organisationId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (invitationId: string) =>
-      superAdminMembersApi.revokeInvitation(organisationId, invitationId),
+    mutationFn: (payload: {
+      invitationId: string;
+      dto: SuperAdminRevokeInvitationDto;
+    }) =>
+      superAdminMembersApi.revokeInvitation(
+        organisationId,
+        payload.invitationId,
+        payload.dto,
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['superAdmin', organisationId, 'invitations'],
