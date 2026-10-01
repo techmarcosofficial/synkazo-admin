@@ -1,34 +1,49 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
-@import "@fontsource-variable/plus-jakarta-sans";
-@import "@fontsource-variable/inter";
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+@import '@fontsource-variable/plus-jakarta-sans';
+@import '@fontsource-variable/inter';
 
 @custom-variant dark (&:is(.dark *));
 
 /* Square grid / dot backdrop textures used behind marketing hero & CTA sections. */
 @utility bg-grid {
   background-image:
-    linear-gradient(to right, color-mix(in oklch, var(--foreground) 11%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in oklch, var(--foreground) 11%, transparent) 1px, transparent 1px);
+    linear-gradient(
+      to right,
+      color-mix(in oklch, var(--foreground) 11%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in oklch, var(--foreground) 11%, transparent) 1px,
+      transparent 1px
+    );
   background-size: 64px 64px;
 }
 
 @utility bg-dots {
-  background-image: radial-gradient(color-mix(in oklch, var(--foreground) 12%, transparent) 1px, transparent 1px);
+  background-image: radial-gradient(
+    color-mix(in oklch, var(--foreground) 12%, transparent) 1px,
+    transparent 1px
+  );
   background-size: 22px 22px;
 }
 
 @utility ring-0.5 {
-  --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(0.5px + var(--tw-ring-offset-width, 0px)) var(--tw-ring-color, currentColor);
-  box-shadow: var(--tw-inset-shadow, 0 0 #0000), var(--tw-inset-ring-shadow, 0 0 #0000), var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow, 0 0 #0000);
+  --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0
+    calc(0.5px + var(--tw-ring-offset-width, 0px))
+    var(--tw-ring-color, currentColor);
+  box-shadow:
+    var(--tw-inset-shadow, 0 0 #0000), var(--tw-inset-ring-shadow, 0 0 #0000),
+    var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000),
+    var(--tw-shadow, 0 0 #0000);
 }
 
 @theme inline {
-  --font-sans: "Plus Jakarta Sans Variable", sans-serif;
+  --font-sans: 'Plus Jakarta Sans Variable', sans-serif;
 
-  --font-heading:
-    var(--font-sans);
+  --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -61,6 +76,9 @@
   --color-foreground: var(--foreground);
   --color-background: var(--background);
   --radius-sm: calc(var(--radius) * 0.5);
+  --color-surface-inner: var(--surface-inner);
+  --color-surface-inset: var(--surface-inset);
+  --color-surface-overlay: var(--surface-overlay);
   --radius-md: calc(var(--radius) * 0.75);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) * 1.25);
@@ -101,18 +119,17 @@
   --color-footer: var(--footer);
   --color-footer-foreground: var(--footer-foreground);
   --color-f-border: var(--f-border);
-
 }
 /* Platform brand palette — constant across light/dark, referenced by
    PlatformBadge / PlatformIcon only. Not part of the design theme. */
 
 :root {
   /* Brand */
-  --brand-orange: #F85508;
+  --brand-orange: #f85508;
   --brand-hubspot: #ff7a58;
   --brand-servicetitan: #2e3340;
   --brand-servicetitan-tile: #2e3340;
-  --brand-dataforma: #FF123F;
+  --brand-dataforma: #ff123f;
   --brand-texada: #cdcbc3;
   --brand-salesforce: #1798c1;
 
@@ -179,7 +196,7 @@
   --sidebar: #ffffff;
   --sidebar-foreground: #131418;
 
-  --sidebar-primary: #F85508;
+  --sidebar-primary: #f85508;
   --sidebar-primary-foreground: #ffffff;
 
   --sidebar-accent: #f0f0f3;
@@ -201,51 +218,42 @@
   --shadow-md: 0 4px 14px rgba(18, 18, 20, 0.07);
   --shadow-lg: 0 14px 40px rgba(18, 18, 20, 0.12);
   --layout-surface-shadow: var(--shadow-sm);
+
+  /* Structural surfaces. Keep hierarchy semantic so parent/child surfaces do
+     not depend on one-off opacity utilities throughout the application. */
+  --surface-inner: #f1f2f5;
+  --surface-inset: #e9ebf0;
+  --surface-overlay: #ffffff;
 }
 
 .dark {
   /* Base — Synkazo theme source of truth: Synkazo/Synkazo.dc.html ([data-theme="dark"] --bg/--text) */
-  --background:
-    #090a0f;
-  --foreground:
-    #eceef4;
-  --card:
-    #12141d;
-  --card-foreground:
-    #eceef4;
+  --background: #090a0f;
+  --foreground: #eceef4;
+  --card: #12141d;
+  --card-foreground: #eceef4;
 
   --footer: #090a0f;
-  --footer-foreground:#ffffff;
+  --footer-foreground: #ffffff;
 
-  --popover:
-    #12141d;
-  --popover-foreground:
-    #eceef4;
+  --popover: #12141d;
+  --popover-foreground: #eceef4;
 
-  --primary:
-    #F85508;
-  --primary-foreground:
-    #ffffff;
+  --primary: #f85508;
+  --primary-foreground: #ffffff;
 
-  --secondary:
-    #181a24;
-  --secondary-foreground:
-    #eceef4;
+  --secondary: #181a24;
+  --secondary-foreground: #eceef4;
 
-  --muted:
-    #181a24;
-  --muted-foreground:
-    #939ab0;
+  --muted: #181a24;
+  --muted-foreground: #939ab0;
 
   /* Accent — kept as a neutral hover surface (same as muted), not the vivid
      brand orange, so existing hover/selected states stay subtle. */
-  --accent:
-    #181a24;
-  --accent-foreground:
-    #eceef4;
+  --accent: #181a24;
+  --accent-foreground: #eceef4;
 
-  --destructive:
-    #f0685c;
+  --destructive: #f0685c;
   --destructive-foreground: #ffffff;
 
   /* Brighter lime retains contrast against the dark app surfaces. */
@@ -255,46 +263,30 @@
   --info: #5b9bf0;
   --paused: #a78bfa;
 
-  --border:
-    #242838;
-  --f-border:#242838;
+  --border: #242838;
+  --f-border: #242838;
 
-  --input:
-    #242838;
-  --ring:
-    rgba(248, 85, 8, 0.45);
+  --input: #242838;
+  --ring: rgba(248, 85, 8, 0.45);
 
   /* Brighter orange tones retain separation against dark chart surfaces. */
-  --chart-1:
-    #FF6B24;
-  --chart-2:
-    #FF9A62;
-  --chart-3:
-    #E85D1C;
-  --chart-4:
-    #FFC09F;
-  --chart-5:
-    #C84A16;
+  --chart-1: #ff6b24;
+  --chart-2: #ff9a62;
+  --chart-3: #e85d1c;
+  --chart-4: #ffc09f;
+  --chart-5: #c84a16;
 
-  --sidebar:
-    #14161f;
-  --sidebar-foreground:
-    #eceef4;
+  --sidebar: #14161f;
+  --sidebar-foreground: #eceef4;
 
-  --sidebar-primary:
-    #F85508;
-  --sidebar-primary-foreground:
-    #ffffff;
+  --sidebar-primary: #f85508;
+  --sidebar-primary-foreground: #ffffff;
 
-  --sidebar-accent:
-    #1a1d28;
-  --sidebar-accent-foreground:
-    #eceef4;
+  --sidebar-accent: #1a1d28;
+  --sidebar-accent-foreground: #eceef4;
 
-  --sidebar-border:
-    #262a37;
-  --sidebar-ring:
-    rgba(248, 85, 8, 0.45);
+  --sidebar-border: #262a37;
+  --sidebar-ring: rgba(248, 85, 8, 0.45);
 
   --primary-soft: rgba(248, 85, 8, 0.16);
   --primary-soft2: rgba(248, 85, 8, 0.24);
@@ -308,8 +300,63 @@
   --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.35);
   --shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.5);
   --layout-surface-shadow: var(--shadow-sm);
+
+  --surface-inner: #181a24;
+  --surface-inset: #0e1017;
+  --surface-overlay: #171a24;
 }
 
+/* Large admin surfaces use a tighter radius progression than compact controls:
+   controls (12px) < grouped surfaces (14px) < outer surfaces (17px). */
+html:has([data-admin-shell]) {
+  --accent: #e9eaef;
+  --sidebar-accent: #e9eaef;
+  --radius-3xl: calc(var(--radius) * 1.75);
+  --radius-4xl: calc(var(--radius) * 2.125);
+}
+
+/* The authentication experience owns a separate visual system in
+   auth-login.css. These refinements are intentionally activated only while an
+   authenticated admin shell is mounted, including portalled dialogs. */
+.dark:has([data-admin-shell]) {
+  color-scheme: dark;
+
+  --background: #0f1219;
+  --foreground: #f0f2f7;
+  --card: #141821;
+  --card-foreground: #f0f2f7;
+  --popover: #1e2430;
+  --popover-foreground: #f0f2f7;
+  --secondary: #1b202c;
+  --secondary-foreground: #f0f2f7;
+  --muted: #1b202c;
+  --muted-foreground: #a6aec1;
+  --accent: #30384a;
+  --accent-foreground: #f0f2f7;
+
+  --surface-inner: #1b202c;
+  --surface-inset: #0f1219;
+  --surface-overlay: #1e2430;
+
+  /* Separators stay quieter than controls. The control token maintains 3:1
+     contrast against primary cards so unchecked controls remain perceivable. */
+  --border: #343b4f;
+  --f-border: #343b4f;
+  --input: #5d657e;
+
+  --sidebar: #141821;
+  --sidebar-foreground: #f0f2f7;
+  --sidebar-accent: #30384a;
+  --sidebar-accent-foreground: #f0f2f7;
+  --sidebar-border: #2d3445;
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.34);
+  --shadow-md:
+    0 2px 8px rgba(0, 0, 0, 0.34), 0 18px 42px -18px rgba(0, 0, 0, 0.88);
+  --shadow-lg:
+    0 4px 14px rgba(0, 0, 0, 0.42), 0 28px 64px -20px rgba(0, 0, 0, 0.94);
+  --layout-surface-shadow: var(--shadow-md);
+}
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -321,25 +368,55 @@
     @apply font-sans;
   }
 
-  html[data-layout-style='shadow'] [data-layout-surface='outer'] {
+  /* Layout Style is an admin-display preference. Border mode has no outer
+     elevation—even when a feature supplies a local shadow utility. */
+  html:has([data-admin-shell])[data-layout-style='contrast']
+    [data-layout-surface='outer'] {
+    box-shadow: none !important;
+  }
+
+  html:has([data-admin-shell])[data-layout-style='shadow']
+    [data-layout-surface='outer'] {
     border-color: transparent !important;
     box-shadow: var(--layout-surface-shadow) !important;
   }
 
+  html:has([data-admin-shell])[data-layout-style='shadow']
+    :is(
+      [data-slot='dialog-content'],
+      [data-slot='alert-dialog-content'],
+      [data-slot='sheet-content']
+    ) {
+    --layout-surface-shadow: var(--shadow-lg);
+  }
+
   /* These two compact cards sit on a transparent portaled surface, so the
      standard outer-card shadow is too subtle to keep them visually distinct. */
-  html[data-layout-style='shadow'] [data-notification-surface] {
+  html:has([data-admin-shell])[data-layout-style='shadow']
+    [data-notification-surface] {
     --layout-surface-shadow: var(--shadow-lg);
   }
 
   /* Project connection states use their border as a status indicator. Keep that
      indicator visible when the global shadow layout hides ordinary card borders. */
-  html[data-layout-style='shadow'] [data-project-connections-tab] [data-layout-surface='outer'][data-connection-state='connected'] {
-    border-color: color-mix(in oklab, var(--primary) 20%, transparent) !important;
+  html:has([data-admin-shell])[data-layout-style='shadow']
+    [data-project-connections-tab]
+    [data-layout-surface='outer'][data-connection-state='connected'] {
+    border-color: color-mix(
+      in oklab,
+      var(--primary) 20%,
+      transparent
+    ) !important;
   }
 
-  html[data-layout-style='shadow'] [data-project-connections-tab] [data-layout-surface='outer'][data-connection-state='pending'] {
-    border-color: color-mix(in oklab, var(--primary) 20%, transparent) !important;
+  html:has([data-admin-shell])[data-layout-style='shadow']
+    [data-project-connections-tab]
+    [data-layout-surface='outer'][data-connection-state='pending'] {
+    border-color: color-mix(
+      in oklab,
+      var(--primary) 20%,
+      transparent
+    ) !important;
   }
   /* Tailwind v4 dropped the default `cursor: pointer` on <button>; restore it
      for every interactive surface so buttons/menus/links behave like the app
@@ -501,7 +578,9 @@
   }
 }
 
-.animate-fade-in-up  { animation: fadeInUp 0.4s ease-out forwards; }
+.animate-fade-in-up {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
 /* .animate-gradient    { background-size: 400% 400%; animation: gradientShift 8s ease infinite; }
 .animate-sb-pulse    { animation: sbpulse 2s ease-in-out infinite; } */
 
@@ -588,13 +667,16 @@
 
 /* Alert focus shake animation for guiding user to setup blockers */
 @keyframes alert-focus-shake {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateX(0);
   }
-  20%, 60% {
+  20%,
+  60% {
     transform: translateX(-5px);
   }
-  40%, 80% {
+  40%,
+  80% {
     transform: translateX(5px);
   }
 }
@@ -605,7 +687,8 @@
 
 /* Gentle pointer nudge to draw attention to interactive controls like status switch */
 @keyframes pointer-nudge {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0);
   }
   50% {
@@ -637,33 +720,43 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [class*="border-beam-spin"],
-  [style*="border-beam-dash"] {
+  [class*='border-beam-spin'],
+  [style*='border-beam-dash'] {
     animation: none !important;
   }
 }
 
 /* Point from the project setup step to the actions already on the flow list. */
-.project-flow-guidance:has([data-project-configure-step="true"]:is(:hover, :focus-visible))
-  [data-flow-next-action="true"],
-.project-flow-guidance:has([data-step-guides-action="true"]:is(:hover, :focus-visible))
-  [data-flow-next-action="true"] {
+.project-flow-guidance:has(
+    [data-project-configure-step='true']:is(:hover, :focus-visible)
+  )
+  [data-flow-next-action='true'],
+.project-flow-guidance:has(
+    [data-step-guides-action='true']:is(:hover, :focus-visible)
+  )
+  [data-flow-next-action='true'] {
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 40%, transparent);
 }
 
-.project-flow-guidance:has([data-project-configure-step="true"]:is(:hover, :focus-visible))
-  [data-flow-next-action="true"] [data-icon="inline-end"],
-.project-flow-guidance:has([data-step-guides-action="true"]:is(:hover, :focus-visible))
-  [data-flow-next-action="true"] [data-icon="inline-end"] {
+.project-flow-guidance:has(
+    [data-project-configure-step='true']:is(:hover, :focus-visible)
+  )
+  [data-flow-next-action='true']
+  [data-icon='inline-end'],
+.project-flow-guidance:has(
+    [data-step-guides-action='true']:is(:hover, :focus-visible)
+  )
+  [data-flow-next-action='true']
+  [data-icon='inline-end'] {
   transform: translateX(3px);
 }
 
-[data-flow-next-action="true"] [data-icon="inline-end"] {
+[data-flow-next-action='true'] [data-icon='inline-end'] {
   transition: transform 180ms ease-out;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [data-flow-next-action="true"] [data-icon="inline-end"] {
+  [data-flow-next-action='true'] [data-icon='inline-end'] {
     transition: none;
   }
 }

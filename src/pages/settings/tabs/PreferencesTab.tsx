@@ -70,14 +70,14 @@ const VIEW_OPTIONS = [
 const LAYOUT_OPTIONS = [
   {
     id: 'contrast',
-    label: 'Contrast / Border',
-    description: 'Defined surfaces with clear boundaries',
+    label: 'Border',
+    description: 'Crisp boundaries with no outer shadows',
     icon: PanelTop,
   },
   {
     id: 'shadow',
-    label: 'Normal / Shadow',
-    description: 'Softer separation with subtle depth',
+    label: 'Shadow',
+    description: 'Borderless surfaces with visible depth',
     icon: Layers3,
   },
 ] as const;

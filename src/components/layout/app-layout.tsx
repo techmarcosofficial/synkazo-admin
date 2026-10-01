@@ -63,7 +63,7 @@ export default function AppLayout() {
 
   return (
     <TenantAdminVisualContext.Provider value={true}>
-      <SidebarProvider>
+      <SidebarProvider data-admin-shell="workspace">
         {showWelcome && (
           <WelcomeGuideModal onClose={() => setShowWelcome(false)} />
         )}

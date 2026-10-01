@@ -144,7 +144,7 @@ export default function SuperAdminLayout() {
   if (!currentUser) return <Navigate to="/login" replace />;
 
   return (
-    <SidebarProvider>
+    <SidebarProvider data-admin-shell="platform">
       <SuperAdminSidebar />
       <SidebarInset className="[--app-shell-header-height:--spacing(16)]">
         <SuperAdminHeader />
