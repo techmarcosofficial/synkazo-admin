@@ -911,3 +911,244 @@ export function useRunSuperAdminMigrationMutation(
     },
   });
 }
+
+// ── SA directory (CAP-006 / CAP-007) ─────────────────────────────────
+
+import { superAdminDirectoryApi } from '@/api/superAdminDirectory';
+import { superAdminNotesApi } from '@/api/superAdminNotes';
+import { superAdminPlanDefaultsApi } from '@/api/superAdminPlanDefaults';
+import type {
+  CreateOrganisationNoteDto,
+  CreateSuperAdminDto,
+  DeactivateSuperAdminDto,
+  OrganisationNoteCategory,
+  ReactivateSuperAdminDto,
+  SuperAdminChangeMemberRoleDto,
+  SuperAdminDeactivateMemberDto,
+  SuperAdminReactivateMemberDto,
+  SuperAdminTransferOwnershipDto,
+  UpsertPlanDefaultsDto,
+} from '@/types';
+
+const SUPER_ADMINS_KEY = ['superAdmin', 'platform', 'superAdmins'] as const;
+
+export function useSuperAdminDirectoryQuery() {
+  return useQuery({
+    queryKey: SUPER_ADMINS_KEY,
+    queryFn: () => superAdminDirectoryApi.list(),
+  });
+}
+
+export function useCreateSuperAdminMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { dto: CreateSuperAdminDto; idempotencyKey: string }) =>
+      superAdminDirectoryApi.create(payload.dto, payload.idempotencyKey),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: SUPER_ADMINS_KEY });
+    },
+  });
+}
+
+export function useDeactivateSuperAdminMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      userId: string;
+      dto: DeactivateSuperAdminDto;
+      idempotencyKey: string;
+    }) =>
+      superAdminDirectoryApi.deactivate(payload.userId, payload.dto, payload.idempotencyKey),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: SUPER_ADMINS_KEY });
+    },
+  });
+}
+
+export function useReactivateSuperAdminMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      userId: string;
+      dto: ReactivateSuperAdminDto;
+      idempotencyKey: string;
+    }) =>
+      superAdminDirectoryApi.reactivate(payload.userId, payload.dto, payload.idempotencyKey),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: SUPER_ADMINS_KEY });
+    },
+  });
+}
+
+// ── Member mutations (GAP-003/4/5) ───────────────────────────────────
+
+function invalidateMembers(
+  queryClient: ReturnType<typeof useQueryClient>,
+  organisationId: string,
+) {
+  queryClient.invalidateQueries({
+    queryKey: ['superAdmin', organisationId, 'members'],
+  });
+  queryClient.invalidateQueries({
+    queryKey: queryKeys.superAdmin.organisations.detail(organisationId),
+  });
+}
+
+export function useDeactivateSuperAdminMemberMutation(organisationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      userId: string;
+      dto: SuperAdminDeactivateMemberDto;
+      idempotencyKey: string;
+    }) =>
+      superAdminMembersApi.deactivateMember(
+        organisationId,
+        payload.userId,
+        payload.dto,
+        payload.idempotencyKey,
+      ),
+    onSuccess: () => invalidateMembers(queryClient, organisationId),
+  });
+}
+
+export function useReactivateSuperAdminMemberMutation(organisationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      userId: string;
+      dto: SuperAdminReactivateMemberDto;
+      idempotencyKey: string;
+    }) =>
+      superAdminMembersApi.reactivateMember(
+        organisationId,
+        payload.userId,
+        payload.dto,
+        payload.idempotencyKey,
+      ),
+    onSuccess: () => invalidateMembers(queryClient, organisationId),
+  });
+}
+
+export function useChangeSuperAdminMemberRoleMutation(organisationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      userId: string;
+      dto: SuperAdminChangeMemberRoleDto;
+      idempotencyKey: string;
+    }) =>
+      superAdminMembersApi.changeMemberRole(
+        organisationId,
+        payload.userId,
+        payload.dto,
+        payload.idempotencyKey,
+      ),
+    onSuccess: () => invalidateMembers(queryClient, organisationId),
+  });
+}
+
+export function useTransferOrganisationOwnershipMutation(organisationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      dto: SuperAdminTransferOwnershipDto;
+      idempotencyKey: string;
+    }) =>
+      superAdminMembersApi.transferOwnership(
+        organisationId,
+        payload.dto,
+        payload.idempotencyKey,
+      ),
+    onSuccess: () => invalidateMembers(queryClient, organisationId),
+  });
+}
+
+// ── Organisation notes (CAP-029 / CAP-093..097) ─────────────────────
+
+const notesKey = (organisationId: string, category?: OrganisationNoteCategory) =>
+  ['superAdmin', organisationId, 'notes', category ?? 'all'] as const;
+
+export function useSuperAdminNotesQuery(
+  organisationId: string,
+  category?: OrganisationNoteCategory,
+) {
+  return useQuery({
+    queryKey: notesKey(organisationId, category),
+    queryFn: () => superAdminNotesApi.list(organisationId, category),
+    enabled: !!organisationId,
+  });
+}
+
+export function useCreateSuperAdminNoteMutation(organisationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      dto: CreateOrganisationNoteDto;
+      idempotencyKey: string;
+    }) =>
+      superAdminNotesApi.create(organisationId, payload.dto, payload.idempotencyKey),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['superAdmin', organisationId, 'notes'],
+      });
+    },
+  });
+}
+
+export function useDeleteSuperAdminNoteMutation(organisationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (noteId: string) =>
+      superAdminNotesApi.delete(organisationId, noteId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['superAdmin', organisationId, 'notes'],
+      });
+    },
+  });
+}
+
+// ── Plan defaults (CAP-039) ──────────────────────────────────────────
+
+const PLAN_DEFAULTS_KEY = ['superAdmin', 'platform', 'planDefaults'] as const;
+
+export function useSuperAdminPlanDefaultsQuery() {
+  return useQuery({
+    queryKey: PLAN_DEFAULTS_KEY,
+    queryFn: () => superAdminPlanDefaultsApi.get(),
+  });
+}
+
+export function useUpsertSuperAdminPlanDefaultsMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: {
+      dto: UpsertPlanDefaultsDto;
+      idempotencyKey: string;
+    }) => superAdminPlanDefaultsApi.upsert(payload.dto, payload.idempotencyKey),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: PLAN_DEFAULTS_KEY });
+    },
+  });
+}
+
+// ── Project connections (CAP-060 / CAP-061) ─────────────────────────
+
+export function useSuperAdminProjectConnectionsQuery(
+  organisationId: string,
+  projectId: string,
+) {
+  return useQuery({
+    queryKey: [
+      'superAdmin',
+      organisationId,
+      'projects',
+      projectId,
+      'connections',
+    ],
+    queryFn: () =>
+      superAdminOperationsApi.listProjectConnections(organisationId, projectId),
+    enabled: !!organisationId && !!projectId,
+  });
+}

@@ -77,6 +77,10 @@ export interface SuperAdminMemberListItem {
   fullName: string | null;
   role: 'editor' | 'org_admin' | 'super_admin';
   isActive: boolean;
+  // Returned by the API when the row matches organisation.ownerId.
+  // Optional for forward-compat with older cached responses that
+  // predate the flag.
+  isOwner?: boolean;
   lastLoginAt: string | null;
   createdAt: string;
 }
@@ -144,6 +148,8 @@ export interface SuperAdminJobDetail extends SuperAdminJobListItem {
   sourceObjectId: string | null;
   destObjectId: string | null;
   dependsOnJobId: string | null;
+  // GAP-050 / SA-602 — last 5 failed sync runs; omitted on list.
+  recentFailures?: SuperAdminJobRecentFailure[];
 }
 
 export interface SuperAdminRunStatus {
@@ -422,6 +428,11 @@ export interface PlatformOverviewResponse {
     // null when the Redis PING failed.
     redisPingMs: number | null;
   };
+  // CAP-108 — platform sync success/failure rate over a 24h window.
+  syncHealth?: PlatformSyncHealth;
+  // GAP-041 — in-process alias hit counter so operators can see when
+  // the legacy prefixes are safe to delete.
+  legacyAliases?: PlatformLegacyAliases;
   // GAP-043 / SA-302 — per-section error surface. Populated only when
   // at least one aggregate query on the API's Promise.allSettled path
   // rejected. Absent on a fully-successful load.
@@ -431,6 +442,7 @@ export interface PlatformOverviewResponse {
     queue?: string;
     recentAlerts?: string;
     systemHealth?: string;
+    syncHealth?: string;
   };
 }
 
@@ -473,6 +485,127 @@ export interface UpsertMarketplaceCatalogEntryDto {
   visible?: boolean;
   sortOrder?: number;
   reason: string;
+}
+
+// CAP-006 / CAP-007 — Super Admin directory.
+export interface SuperAdminDirectoryEntry {
+  id: string;
+  email: string;
+  fullName: string;
+  role: 'super_admin';
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateSuperAdminDto {
+  email: string;
+  fullName: string;
+  initialPassword: string;
+  reason: string;
+}
+
+export interface DeactivateSuperAdminDto {
+  reason: string;
+  confirmEmail: string;
+}
+
+export interface ReactivateSuperAdminDto {
+  reason: string;
+}
+
+// GAP-003/4/5 — SA member mutations.
+export interface SuperAdminDeactivateMemberDto {
+  reason: string;
+  confirmEmail: string;
+}
+
+export interface SuperAdminReactivateMemberDto {
+  reason: string;
+}
+
+export interface SuperAdminChangeMemberRoleDto {
+  role: 'org_admin' | 'editor';
+  reason: string;
+}
+
+// CAP-016 — ownership transfer.
+export interface SuperAdminTransferOwnershipDto {
+  newOwnerUserId: string;
+  reason: string;
+  confirmName: string;
+}
+
+// CAP-029 / CAP-093..097 — operator notes.
+export type OrganisationNoteCategory = 'general' | 'billing' | 'support';
+
+export interface OrganisationNote {
+  id: string;
+  organisationId: string;
+  category: OrganisationNoteCategory;
+  body: string;
+  createdByUserId: string | null;
+  createdByEmail: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateOrganisationNoteDto {
+  category?: OrganisationNoteCategory;
+  body: string;
+}
+
+// CAP-039 — platform plan defaults.
+export interface PlanDefaults {
+  defaultPlanId: string | null;
+  trialPlanId: string | null;
+  trialLengthDays: number | null;
+}
+
+export interface UpsertPlanDefaultsDto {
+  defaultPlanId?: string | null;
+  trialPlanId?: string | null;
+  trialLengthDays?: number | null;
+  reason: string;
+}
+
+// CAP-060 / CAP-061 — masked project connections.
+export interface SuperAdminProjectConnection {
+  id: string;
+  platformId: string;
+  connectionType: string;
+  environment: string;
+  status: string;
+  accountName: string | null;
+  connectedAt: string | null;
+  lastCheckedAt: string | null;
+}
+
+// CAP-108 — platform sync health block + legacy aliases.
+export interface PlatformSyncHealth {
+  windowHours: number;
+  totalRuns: number;
+  successRate: number | null;
+  failureRate: number | null;
+  recentFailures: number;
+}
+
+export interface PlatformLegacyAliases {
+  firstHitAt: string | null;
+  lastHitAt: string | null;
+  counts: Record<string, number>;
+  canonicals: Record<string, string>;
+}
+
+// GAP-050 — enriched job detail.
+export interface SuperAdminJobRecentFailure {
+  id: string;
+  startedAt: string;
+  completedAt: string | null;
+  durationMs: number | null;
+  totalFetched: number;
+  failedCount: number;
+  status: string;
 }
 
 // GAP-022 — SA association rules + env-migration.
