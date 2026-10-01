@@ -7,6 +7,7 @@ import {
   Megaphone,
   Percent,
   Settings2,
+  Shield,
   Tag,
   Users,
 } from 'lucide-react';
@@ -40,6 +41,12 @@ export const SUPER_ADMIN_NAV: NavGroup[] = [
         title: 'Users',
         url: '/super-admin/users',
         icon: Users,
+        minRole: 'super_admin',
+      },
+      {
+        title: 'Super Admins',
+        url: '/super-admin/super-admins',
+        icon: Shield,
         minRole: 'super_admin',
       },
       {

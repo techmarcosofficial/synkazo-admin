@@ -55,6 +55,13 @@ const overviewFixture: PlatformOverviewResponse = {
     memoryHeapTotalMb: 256,
     redisPingMs: 3,
   },
+  syncHealth: {
+    windowHours: 24,
+    totalRuns: 100,
+    successRate: 0.95,
+    failureRate: 0.05,
+    recentFailures: 5,
+  },
 };
 
 const mocks = vi.hoisted(() => ({

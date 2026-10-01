@@ -3,12 +3,19 @@ import type { AxiosResponse } from 'axios';
 import apiClient from './apiClient';
 
 import type {
+  SuperAdminChangeMemberRoleDto,
+  SuperAdminDeactivateMemberDto,
   SuperAdminPage,
   SuperAdminInvitationListItem,
   SuperAdminInviteMemberDto,
   SuperAdminMemberListItem,
+  SuperAdminReactivateMemberDto,
   SuperAdminRevokeInvitationDto,
+  SuperAdminTransferOwnershipDto,
 } from '@/types';
+
+const withKey = (idempotencyKey?: string) =>
+  idempotencyKey ? { headers: { 'Idempotency-Key': idempotencyKey } } : undefined;
 
 interface PaginatedEnvelope<T> {
   data: T[];
@@ -98,6 +105,67 @@ export const superAdminMembersApi = {
     apiClient
       .post<{ data: SuperAdminInvitationListItem }>(
         `/super-admin/organisations/${organisationId}/invitations/${invitationId}/resend`,
+      )
+      .then(d),
+
+  // GAP-003 / CAP-051 — deactivate a member.
+  deactivateMember: (
+    organisationId: string,
+    userId: string,
+    dto: SuperAdminDeactivateMemberDto,
+    idempotencyKey?: string,
+  ): Promise<SuperAdminMemberListItem> =>
+    apiClient
+      .post<{ data: SuperAdminMemberListItem }>(
+        `/super-admin/organisations/${organisationId}/members/${userId}/deactivate`,
+        dto,
+        withKey(idempotencyKey),
+      )
+      .then(d),
+
+  // GAP-004 / CAP-052 — reactivate.
+  reactivateMember: (
+    organisationId: string,
+    userId: string,
+    dto: SuperAdminReactivateMemberDto,
+    idempotencyKey?: string,
+  ): Promise<SuperAdminMemberListItem> =>
+    apiClient
+      .post<{ data: SuperAdminMemberListItem }>(
+        `/super-admin/organisations/${organisationId}/members/${userId}/reactivate`,
+        dto,
+        withKey(idempotencyKey),
+      )
+      .then(d),
+
+  // GAP-005 / CAP-053 — change role.
+  changeMemberRole: (
+    organisationId: string,
+    userId: string,
+    dto: SuperAdminChangeMemberRoleDto,
+    idempotencyKey?: string,
+  ): Promise<SuperAdminMemberListItem> =>
+    apiClient
+      .patch<{ data: SuperAdminMemberListItem }>(
+        `/super-admin/organisations/${organisationId}/members/${userId}/role`,
+        dto,
+        withKey(idempotencyKey),
+      )
+      .then(d),
+
+  // CAP-016 — transfer organisation ownership.
+  transferOwnership: (
+    organisationId: string,
+    dto: SuperAdminTransferOwnershipDto,
+    idempotencyKey?: string,
+  ): Promise<{ organisationId: string; ownerId: string; ownerEmail: string }> =>
+    apiClient
+      .post<{
+        data: { organisationId: string; ownerId: string; ownerEmail: string };
+      }>(
+        `/super-admin/organisations/${organisationId}/members/transfer-ownership`,
+        dto,
+        withKey(idempotencyKey),
       )
       .then(d),
 };
