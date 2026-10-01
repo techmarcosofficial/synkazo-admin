@@ -186,6 +186,50 @@ function SectionErrorBanner({ label, error }: { label: string; error: string }) 
   );
 }
 
+// CAP-108 — platform sync success/failure rate over the last 24h.
+// Renders fractions as percentages; null (empty window / query failed)
+// falls back to "—".
+function SyncHealthCard({
+  health,
+}: {
+  health: NonNullable<PlatformOverviewResponse['syncHealth']>;
+}) {
+  const pct = (v: number | null) =>
+    v == null ? '—' : `${Math.round(v * 100)}%`;
+  return (
+    <div className="bg-card rounded-4xl border border-border">
+      <div className="border-b px-4 py-3 text-base font-semibold">
+        Sync health
+        <span className="text-muted-foreground ml-2 text-xs font-normal">
+          last {health.windowHours}h
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-4">
+        <div>
+          <div className="text-muted-foreground text-xs">Total runs</div>
+          <div className="text-lg font-semibold">{health.totalRuns}</div>
+        </div>
+        <div>
+          <div className="text-muted-foreground text-xs">Success rate</div>
+          <div className="text-lg font-semibold text-emerald-700">
+            {pct(health.successRate)}
+          </div>
+        </div>
+        <div>
+          <div className="text-muted-foreground text-xs">Failure rate</div>
+          <div className="text-lg font-semibold text-red-700">
+            {pct(health.failureRate)}
+          </div>
+        </div>
+        <div>
+          <div className="text-muted-foreground text-xs">Recent failures</div>
+          <div className="text-lg font-semibold">{health.recentFailures}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // GAP-023 / CAP-091 — process-local health snapshot. Renders four
 // compact metrics side-by-side; anything null (e.g. Redis ping failed)
 // falls back to "—" without a special-case cell.
@@ -406,6 +450,14 @@ export default function OverviewPage() {
         />
       ) : null}
       <SystemHealthCard health={data.systemHealth} />
+
+      {errors?.syncHealth ? (
+        <SectionErrorBanner
+          label="Sync health unavailable"
+          error={errors.syncHealth}
+        />
+      ) : null}
+      {data.syncHealth ? <SyncHealthCard health={data.syncHealth} /> : null}
 
       {errors?.recentAlerts ? (
         <SectionErrorBanner

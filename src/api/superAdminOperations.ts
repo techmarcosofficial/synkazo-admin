@@ -6,6 +6,7 @@ import type {
   SuperAdminPage,
   SuperAdminJobDetail,
   SuperAdminJobListItem,
+  SuperAdminProjectConnection,
   SuperAdminProjectDetail,
   SuperAdminProjectListItem,
   SuperAdminRunJobDto,
@@ -145,6 +146,17 @@ export const superAdminOperationsApi = {
     apiClient
       .post<{ data: { bullJobId: string; retried: true } }>(
         `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs/${jobId}/runs/${bullJobId}/retry`,
+      )
+      .then(d),
+
+  // CAP-060 / CAP-061 — list masked platform connections for a project.
+  listProjectConnections: (
+    organisationId: string,
+    projectId: string,
+  ): Promise<SuperAdminProjectConnection[]> =>
+    apiClient
+      .get<{ data: SuperAdminProjectConnection[] }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}/connections`,
       )
       .then(d),
 

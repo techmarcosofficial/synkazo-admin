@@ -28,6 +28,7 @@ import {
   useRunSuperAdminJobMutation,
   useSuperAdminJobsQuery,
   useSuperAdminOrganisationQuery,
+  useSuperAdminProjectConnectionsQuery,
   useSuperAdminProjectQuery,
 } from '@/queries/useSuperAdmin';
 
@@ -148,6 +149,10 @@ export default function OrganisationProjectDetailPage() {
     projectId,
   );
   const jobsQuery = useSuperAdminJobsQuery(
+    organisationId ?? '',
+    projectId ?? '',
+  );
+  const connectionsQuery = useSuperAdminProjectConnectionsQuery(
     organisationId ?? '',
     projectId ?? '',
   );
@@ -341,6 +346,79 @@ export default function OrganisationProjectDetailPage() {
             </Table>
           </div>
         )}
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="text-sm font-semibold">Platform connections</h2>
+        {connectionsQuery.isLoading ? (
+          <SkeletonList count={2} />
+        ) : connectionsQuery.isError ? (
+          <ErrorState
+            title="Could not load connections"
+            description={extractErrorMessage(connectionsQuery.error)}
+            onRetry={() => connectionsQuery.refetch()}
+          />
+        ) : (connectionsQuery.data?.length ?? 0) === 0 ? (
+          <EmptyState
+            icon={FolderOpen}
+            title="No connections"
+            description="This project has not connected any platforms yet."
+          />
+        ) : (
+          <div className="bg-card overflow-hidden rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Platform</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Environment</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Account</TableHead>
+                  <TableHead>Last checked</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {connectionsQuery.data!.map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell className="font-medium">{c.platformId}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{c.connectionType}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{c.environment}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        className={
+                          c.status === 'connected'
+                            ? 'bg-emerald-100 text-emerald-900'
+                            : c.status === 'error'
+                              ? 'bg-red-100 text-red-900'
+                              : 'bg-muted text-muted-foreground'
+                        }
+                      >
+                        {c.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {c.accountName ?? '—'}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {c.lastCheckedAt
+                        ? formatDistanceToNow(new Date(c.lastCheckedAt), {
+                            addSuffix: true,
+                          })
+                        : '—'}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+        <div className="text-muted-foreground text-xs">
+          Credentials are never shown. Only platform identity + health state.
+        </div>
       </section>
 
       <RunJobDialog
