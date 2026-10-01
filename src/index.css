@@ -204,71 +204,97 @@
 }
 
 .dark {
-  /* Level 0: Deep Crisp Canvas — exact balanced midpoint between neutral and subtle cool (never warm, never blue) */
-  --background: #07080b;
-  --foreground: #eceef1;
+  /* Base — Synkazo theme source of truth: Synkazo/Synkazo.dc.html ([data-theme="dark"] --bg/--text) */
+  --background:
+    #090a0f;
+  --foreground:
+    #eceef4;
+  --card:
+    #12141d;
+  --card-foreground:
+    #eceef4;
 
-  /* Level 1: Elevated Surface Cards */
-  --card: #0f1016;
-  --card-foreground: #eceef1;
+  --footer: #090a0f;
+  --footer-foreground:#ffffff;
 
-  --footer: #07080b;
-  --footer-foreground: #ffffff;
+  --popover:
+    #12141d;
+  --popover-foreground:
+    #eceef4;
 
-  --popover: #0f1016;
-  --popover-foreground: #eceef1;
+  --primary:
+    #F85508;
+  --primary-foreground:
+    #ffffff;
 
-  /* Primary action — Synkazo Vivid Brand Orange */
-  --primary: #F85508;
-  --primary-foreground: #ffffff;
+  --secondary:
+    #181a24;
+  --secondary-foreground:
+    #eceef4;
 
-  /* Level 2: Inset Wells / Secondary Surfaces / Table & Collapsible Headers */
-  --secondary: #16171e;
-  --secondary-foreground: #eceef1;
+  --muted:
+    #181a24;
+  --muted-foreground:
+    #939ab0;
 
-  --muted: #16171e;
-  --muted-foreground: #9598a4;
+  /* Accent — kept as a neutral hover surface (same as muted), not the vivid
+     brand orange, so existing hover/selected states stay subtle. */
+  --accent:
+    #181a24;
+  --accent-foreground:
+    #eceef4;
 
-  /* Neutral hover accent */
-  --accent: #16171e;
-  --accent-foreground: #eceef1;
-
-  --destructive: #f0685c;
+  --destructive:
+    #f0685c;
   --destructive-foreground: #ffffff;
 
-  /* Brighter lime retains contrast against the dark app surfaces */
+  /* Brighter lime retains contrast against the dark app surfaces. */
   --success: #a3e635;
   --success-fill: #52d500;
   --warning: #e0a53c;
   --info: #5b9bf0;
   --paused: #a78bfa;
 
-  /* Borders & Inputs — Fine translucent crisp borders */
-  --border: rgba(255, 255, 255, 0.08);
-  --f-border: rgba(255, 255, 255, 0.08);
+  --border:
+    #242838;
+  --f-border:#242838;
 
-  --input: rgba(255, 255, 255, 0.10);
-  --ring: rgba(248, 85, 8, 0.45);
+  --input:
+    #242838;
+  --ring:
+    rgba(248, 85, 8, 0.45);
 
-  /* Charts */
-  --chart-1: #FF6B24;
-  --chart-2: #FF9A62;
-  --chart-3: #E85D1C;
-  --chart-4: #FFC09F;
-  --chart-5: #C84A16;
+  /* Brighter orange tones retain separation against dark chart surfaces. */
+  --chart-1:
+    #FF6B24;
+  --chart-2:
+    #FF9A62;
+  --chart-3:
+    #E85D1C;
+  --chart-4:
+    #FFC09F;
+  --chart-5:
+    #C84A16;
 
-  /* Sidebar — Crisp Deep Dark */
-  --sidebar: #07080b;
-  --sidebar-foreground: #eceef1;
+  --sidebar:
+    #14161f;
+  --sidebar-foreground:
+    #eceef4;
 
-  --sidebar-primary: #F85508;
-  --sidebar-primary-foreground: #ffffff;
+  --sidebar-primary:
+    #F85508;
+  --sidebar-primary-foreground:
+    #ffffff;
 
-  --sidebar-accent: #0f1016;
-  --sidebar-accent-foreground: #eceef1;
+  --sidebar-accent:
+    #1a1d28;
+  --sidebar-accent-foreground:
+    #eceef4;
 
-  --sidebar-border: rgba(255, 255, 255, 0.07);
-  --sidebar-ring: rgba(248, 85, 8, 0.45);
+  --sidebar-border:
+    #262a37;
+  --sidebar-ring:
+    rgba(248, 85, 8, 0.45);
 
   --primary-soft: rgba(248, 85, 8, 0.16);
   --primary-soft2: rgba(248, 85, 8, 0.24);
@@ -278,9 +304,9 @@
   --info-soft: rgba(91, 155, 240, 0.15);
   --paused-soft: rgba(167, 139, 250, 0.16);
 
-  --shadow-sm: 0 4px 20px -2px rgba(0, 0, 0, 0.65), inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
-  --shadow-md: 0 8px 30px -4px rgba(0, 0, 0, 0.75), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
-  --shadow-lg: 0 20px 60px -8px rgba(0, 0, 0, 0.85);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.5);
   --layout-surface-shadow: var(--shadow-sm);
 }
 
