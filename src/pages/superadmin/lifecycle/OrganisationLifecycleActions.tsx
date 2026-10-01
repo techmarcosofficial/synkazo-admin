@@ -30,6 +30,7 @@ type ActionKey =
   | 'suspend'
   | 'reactivate'
   | 'archive'
+  | 'restore'
   | 'hold'
   | 'resume'
   | 'impose-payment-hold'
@@ -112,6 +113,7 @@ export default function OrganisationLifecycleActions({
   const canSuspend = organisation.status === 'active';
   const canReactivate = organisation.status === 'suspended';
   const canArchive = organisation.status === 'suspended';
+  const canRestore = organisation.status === 'archived';
   const canHold = organisation.status === 'active';
 
   return (
@@ -145,6 +147,16 @@ export default function OrganisationLifecycleActions({
           >
             <Archive className="size-4" aria-hidden />
             Archive
+          </Button>
+        ) : null}
+        {canRestore ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setOpenAction('restore')}
+          >
+            <PlayCircle className="size-4" aria-hidden />
+            Restore from archive
           </Button>
         ) : null}
         {canHold ? (
@@ -242,6 +254,27 @@ export default function OrganisationLifecycleActions({
             : null
         }
         onSubmit={({ reason }) => handleTransition('archived', reason)}
+      />
+
+      <LifecycleConfirmDialog
+        open={openAction === 'restore'}
+        onOpenChange={(o) => (o ? setOpenAction('restore') : closeDialog())}
+        title="Restore from archive"
+        description="Moves the organisation back to suspended within the retention window. From suspended you can then Reactivate."
+        bodyWarning="Direct archive→active is not permitted. This step restores the row to suspended; a separate reactivate action brings it back online."
+        actionLabel="Restore"
+        tone="warning"
+        organisationName={organisation.name}
+        requiresNameConfirm={false}
+        minReasonLength={10}
+        reasonPlaceholder="Why is this archived org being restored?"
+        isSubmitting={transitionMutation.isPending}
+        errorMessage={
+          transitionMutation.isError
+            ? extractErrorMessage(transitionMutation.error)
+            : null
+        }
+        onSubmit={({ reason }) => handleTransition('suspended', reason)}
       />
 
       <LifecycleConfirmDialog

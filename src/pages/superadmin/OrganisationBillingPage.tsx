@@ -29,6 +29,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import AssignPlanDialog from '@/pages/superadmin/billing/AssignPlanDialog';
+import BillingNotesCard from '@/pages/superadmin/billing/BillingNotesCard';
 import SubscriptionActions from '@/pages/superadmin/billing/SubscriptionActions';
 import { showToast } from '@/lib/toast';
 import { useAdminPlansQuery } from '@/queries/useBilling';
@@ -423,6 +424,10 @@ export default function OrganisationBillingPage() {
           alongside the payment-recovery queue in a follow-up.
         </AlertDescription>
       </Alert>
+
+      {organisationId ? (
+        <BillingNotesCard organisationId={organisationId} />
+      ) : null}
     </div>
   );
 }

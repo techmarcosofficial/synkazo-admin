@@ -21,15 +21,21 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { createIdempotencyKey } from '@/lib/idempotency';
 import { showToast } from '@/lib/toast';
 import {
+  useChangeSuperAdminMemberRoleMutation,
+  useDeactivateSuperAdminMemberMutation,
   useInviteSuperAdminMemberMutation,
+  useReactivateSuperAdminMemberMutation,
   useResendSuperAdminInvitationMutation,
   useRevokeSuperAdminInvitationMutation,
   useSuperAdminInvitationsQuery,
   useSuperAdminMembersQuery,
   useSuperAdminOrganisationQuery,
+  useTransferOrganisationOwnershipMutation,
 } from '@/queries/useSuperAdmin';
+import type { SuperAdminMemberListItem } from '@/types';
 
 // SA-500 / SA-501 — members list + invitation list/create/revoke. No
 // role edits here (SA-502 needs a scoped backend contract that does not
@@ -74,6 +80,29 @@ export default function OrganisationMembersPage() {
   const resendMutation = useResendSuperAdminInvitationMutation(
     organisationId ?? '',
   );
+  const deactivateMemberMutation = useDeactivateSuperAdminMemberMutation(
+    organisationId ?? '',
+  );
+  const reactivateMemberMutation = useReactivateSuperAdminMemberMutation(
+    organisationId ?? '',
+  );
+  const changeRoleMutation = useChangeSuperAdminMemberRoleMutation(
+    organisationId ?? '',
+  );
+  const transferOwnershipMutation = useTransferOrganisationOwnershipMutation(
+    organisationId ?? '',
+  );
+
+  const [deactivateMember, setDeactivateMember] =
+    useState<SuperAdminMemberListItem | null>(null);
+  const [reactivateMember, setReactivateMember] =
+    useState<SuperAdminMemberListItem | null>(null);
+  const [roleTarget, setRoleTarget] = useState<{
+    member: SuperAdminMemberListItem;
+    nextRole: 'org_admin' | 'editor';
+  } | null>(null);
+  const [ownershipTarget, setOwnershipTarget] =
+    useState<SuperAdminMemberListItem | null>(null);
 
   if (!organisationId) {
     return (
@@ -179,6 +208,7 @@ export default function OrganisationMembersPage() {
                   <TableHead>Status</TableHead>
                   <TableHead>Last login</TableHead>
                   <TableHead>Joined</TableHead>
+                  <TableHead className="w-48 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -186,6 +216,11 @@ export default function OrganisationMembersPage() {
                   <TableRow key={member.id}>
                     <TableCell className="font-medium">
                       {member.email}
+                      {member.isOwner ? (
+                        <Badge className="ml-1 bg-amber-100 text-amber-900">
+                          Owner
+                        </Badge>
+                      ) : null}
                     </TableCell>
                     <TableCell>{member.fullName ?? '—'}</TableCell>
                     <TableCell>
@@ -213,6 +248,58 @@ export default function OrganisationMembersPage() {
                       {formatDistanceToNow(new Date(member.createdAt), {
                         addSuffix: true,
                       })}
+                    </TableCell>
+                    <TableCell className="space-x-1 text-right">
+                      {member.role !== 'super_admin' && !member.isOwner ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            setRoleTarget({
+                              member,
+                              nextRole:
+                                member.role === 'org_admin'
+                                  ? 'editor'
+                                  : 'org_admin',
+                            })
+                          }
+                        >
+                          {member.role === 'org_admin'
+                            ? 'Demote'
+                            : 'Promote'}
+                        </Button>
+                      ) : null}
+                      {!member.isOwner &&
+                      member.role === 'org_admin' &&
+                      member.isActive ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setOwnershipTarget(member)}
+                        >
+                          Make owner
+                        </Button>
+                      ) : null}
+                      {member.role !== 'super_admin' && !member.isOwner ? (
+                        member.isActive ? (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive"
+                            onClick={() => setDeactivateMember(member)}
+                          >
+                            Deactivate
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setReactivateMember(member)}
+                          >
+                            Reactivate
+                          </Button>
+                        )
+                      ) : null}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -377,6 +464,169 @@ export default function OrganisationMembersPage() {
               onSuccess: () => {
                 showToast.success('Invite revoked.');
                 setRevokeTarget(null);
+              },
+            },
+          );
+        }}
+      />
+
+      <LifecycleConfirmDialog
+        open={deactivateMember !== null}
+        onOpenChange={(o) => (o ? undefined : setDeactivateMember(null))}
+        title="Deactivate member"
+        description={
+          deactivateMember
+            ? `Blocks ${deactivateMember.email} from signing in. Owner + last-active-admin are protected server-side.`
+            : ''
+        }
+        actionLabel="Deactivate"
+        tone="danger"
+        organisationName={deactivateMember?.email ?? ''}
+        requiresNameConfirm={true}
+        minReasonLength={10}
+        reasonPlaceholder="Why is this member being deactivated?"
+        isSubmitting={deactivateMemberMutation.isPending}
+        errorMessage={
+          deactivateMemberMutation.isError
+            ? extractErrorMessage(deactivateMemberMutation.error)
+            : null
+        }
+        onSubmit={({ reason }) => {
+          if (!deactivateMember) return;
+          deactivateMemberMutation.mutate(
+            {
+              userId: deactivateMember.id,
+              dto: { reason, confirmEmail: deactivateMember.email },
+              idempotencyKey: createIdempotencyKey(),
+            },
+            {
+              onSuccess: () => {
+                showToast.success('Member deactivated.');
+                setDeactivateMember(null);
+              },
+            },
+          );
+        }}
+      />
+
+      <LifecycleConfirmDialog
+        open={reactivateMember !== null}
+        onOpenChange={(o) => (o ? undefined : setReactivateMember(null))}
+        title="Reactivate member"
+        description={
+          reactivateMember
+            ? `Restores sign-in for ${reactivateMember.email}.`
+            : ''
+        }
+        actionLabel="Reactivate"
+        tone="warning"
+        organisationName=""
+        requiresNameConfirm={false}
+        minReasonLength={10}
+        reasonPlaceholder="Why is this member being reactivated?"
+        isSubmitting={reactivateMemberMutation.isPending}
+        errorMessage={
+          reactivateMemberMutation.isError
+            ? extractErrorMessage(reactivateMemberMutation.error)
+            : null
+        }
+        onSubmit={({ reason }) => {
+          if (!reactivateMember) return;
+          reactivateMemberMutation.mutate(
+            {
+              userId: reactivateMember.id,
+              dto: { reason },
+              idempotencyKey: createIdempotencyKey(),
+            },
+            {
+              onSuccess: () => {
+                showToast.success('Member reactivated.');
+                setReactivateMember(null);
+              },
+            },
+          );
+        }}
+      />
+
+      <LifecycleConfirmDialog
+        open={roleTarget !== null}
+        onOpenChange={(o) => (o ? undefined : setRoleTarget(null))}
+        title={roleTarget?.nextRole === 'org_admin' ? 'Promote to org admin' : 'Demote to editor'}
+        description={
+          roleTarget
+            ? `${roleTarget.member.email} will become ${
+                roleTarget.nextRole === 'org_admin' ? 'an org admin' : 'an editor'
+              }. Owner demotion and last-admin demotion are blocked server-side.`
+            : ''
+        }
+        actionLabel={
+          roleTarget?.nextRole === 'org_admin' ? 'Promote' : 'Demote'
+        }
+        tone="warning"
+        organisationName=""
+        requiresNameConfirm={false}
+        minReasonLength={10}
+        reasonPlaceholder="Why is this role change being made?"
+        isSubmitting={changeRoleMutation.isPending}
+        errorMessage={
+          changeRoleMutation.isError
+            ? extractErrorMessage(changeRoleMutation.error)
+            : null
+        }
+        onSubmit={({ reason }) => {
+          if (!roleTarget) return;
+          changeRoleMutation.mutate(
+            {
+              userId: roleTarget.member.id,
+              dto: { role: roleTarget.nextRole, reason },
+              idempotencyKey: createIdempotencyKey(),
+            },
+            {
+              onSuccess: () => {
+                showToast.success('Member role changed.');
+                setRoleTarget(null);
+              },
+            },
+          );
+        }}
+      />
+
+      <LifecycleConfirmDialog
+        open={ownershipTarget !== null}
+        onOpenChange={(o) => (o ? undefined : setOwnershipTarget(null))}
+        title="Transfer organisation ownership"
+        description={
+          ownershipTarget && orgQuery.data
+            ? `Moves ownership of ${orgQuery.data.name} to ${ownershipTarget.email}. The target is promoted to org_admin if needed.`
+            : ''
+        }
+        actionLabel="Transfer"
+        tone="danger"
+        organisationName={orgQuery.data?.name ?? ''}
+        requiresNameConfirm={true}
+        minReasonLength={10}
+        reasonPlaceholder="Why is ownership being transferred?"
+        isSubmitting={transferOwnershipMutation.isPending}
+        errorMessage={
+          transferOwnershipMutation.isError
+            ? extractErrorMessage(transferOwnershipMutation.error)
+            : null
+        }
+        onSubmit={({ reason }) => {
+          if (!ownershipTarget) return;
+          transferOwnershipMutation.mutate(
+            {
+              dto: {
+                newOwnerUserId: ownershipTarget.id,
+                reason,
+                confirmName: orgQuery.data?.name ?? '',
+              },
+              idempotencyKey: createIdempotencyKey(),
+            },
+            {
+              onSuccess: () => {
+                showToast.success('Ownership transferred.');
+                setOwnershipTarget(null);
               },
             },
           );

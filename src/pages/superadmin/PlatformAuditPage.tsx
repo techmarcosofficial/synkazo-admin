@@ -3,6 +3,7 @@ import {
   Building2,
   ClipboardList,
   Clock,
+  Download,
   Info,
   type LucideIcon,
   RefreshCw,
@@ -41,6 +42,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import apiClient from '@/api/apiClient';
 import { cn } from '@/lib/utils';
 import { usePlatformAuditLogsQuery } from '@/queries/useAudit';
 import { useOrgsQuery } from '@/queries/useOrganisations';
@@ -234,22 +236,46 @@ export default function PlatformAuditPage() {
       title="Platform Audit"
       description="Platform-wide administrative, security, and organization activity across synkazo"
       actions={
-        <Button
-          variant="outline"
-          onClick={() => {
-            auditQuery.refetch();
-            systemQuery.refetch();
-          }}
-          disabled={auditQuery.isFetching || systemQuery.isFetching}
-        >
-          <RefreshCw
-            className={cn(
-              (auditQuery.isFetching || systemQuery.isFetching) &&
-                'animate-spin',
-            )}
-          />
-          Refresh
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={async () => {
+              // CAP-103 — stream CSV via the existing SA audit export
+              // endpoint. Reuses the same filter params as the list.
+              const response = await apiClient.get('/audit-logs/platform/export.csv', {
+                params: auditFilters,
+                responseType: 'blob',
+              });
+              const url = URL.createObjectURL(response.data as Blob);
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              URL.revokeObjectURL(url);
+            }}
+          >
+            <Download />
+            Export CSV
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              auditQuery.refetch();
+              systemQuery.refetch();
+            }}
+            disabled={auditQuery.isFetching || systemQuery.isFetching}
+          >
+            <RefreshCw
+              className={cn(
+                (auditQuery.isFetching || systemQuery.isFetching) &&
+                  'animate-spin',
+              )}
+            />
+            Refresh
+          </Button>
+        </div>
       }
     />
   );

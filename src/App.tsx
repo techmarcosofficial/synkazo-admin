@@ -70,6 +70,7 @@ import PlatformAuditPage from '@/pages/superadmin/PlatformAuditPage';
 import SuperAdminLayout from '@/pages/superadmin/SuperAdminLayout';
 import SuperAdminProjectsPage from '@/pages/superadmin/ProjectsPage';
 import SystemSettingsPage from '@/pages/superadmin/SystemSettingsPage';
+import SuperAdminsPage from '@/pages/superadmin/SuperAdminsPage';
 import UsersPage from '@/pages/superadmin/UsersPage';
 
 // App pages
@@ -256,6 +257,7 @@ function App() {
                   element={<OrganisationBillingPage />}
                 />
                 <Route path="users" element={<UsersPage />} />
+                <Route path="super-admins" element={<SuperAdminsPage />} />
                 <Route path="marketing" element={<MarketingPage />} />
                 <Route path="projects" element={<SuperAdminProjectsPage />} />
                 <Route path="plans" element={<PlanManagementPage />} />
