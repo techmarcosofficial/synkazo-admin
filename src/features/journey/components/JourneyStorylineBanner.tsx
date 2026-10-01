@@ -1,11 +1,10 @@
-import { ArrowRight, Compass, Lock, Sparkles } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import type { NextActionResolution } from '../types';
 import ActionTooltip from './ActionTooltip';
 
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import HeadingPair from '@/components/shared/HeadingPair';
 import { Card, CardContent } from '@/components/ui/card';
 import { useCreateProjectStore } from '@/features/projects/store/useCreateProjectStore';
@@ -28,6 +27,7 @@ export default function JourneyStorylineBanner({
 }: JourneyStorylineBannerProps) {
   const navigate = useNavigate();
   const openCreateProjectDialog = useCreateProjectStore((s) => s.open);
+  const isCreateProject = nextAction.triggerKey === 'create_project';
 
   const handleAction = () => {
     if (nextAction.isBlocked) return;
@@ -50,45 +50,39 @@ export default function JourneyStorylineBanner({
   return (
     <Card
       className={cn(
-        'border-primary/20 bg-primary/5 relative overflow-hidden rounded-3xl p-0 shadow-xs',
+        'border-primary bg-primary/10 relative w-full overflow-hidden rounded-3xl border-dashed p-0 shadow-none',
         className,
       )}
     >
-      <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-        <div className="flex items-start gap-3.5">
-          <div className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-2xl">
-            <Sparkles className="size-5" />
-          </div>
-
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="text-primary text-[11px] font-semibold tracking-wide uppercase">
-                Setup Storyline · Step {stepNumber} of {totalSteps}
-              </span>
-              {nextAction.estimatedTime && (
-                <Badge
-                  size="xs"
-                  variant="secondary"
-                  className="bg-background/80 text-muted-foreground"
-                >
-                  {nextAction.estimatedTime}
-                </Badge>
-              )}
-            </div>
-
-            <HeadingPair
-              visualLevel="card"
-              level="h3"
-              title={nextAction.title}
-              subtitle={nextAction.description}
-            />
-
-            {nextAction.isBlocked && nextAction.blockerReason && (
-              <p className="text-warning text-xs font-medium">
-                Prerequisite: {nextAction.blockerReason}
-              </p>
+      <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <div className="min-w-0 space-y-1">
+          <p className="text-muted-foreground text-sm">
+            Step {stepNumber} of {totalSteps}
+            {nextAction.estimatedTime && (
+              <>
+                {' '}
+                ·{' '}
+                {isCreateProject ? 'About 1 minute' : nextAction.estimatedTime}
+              </>
             )}
-          </div>
+          </p>
+
+          <HeadingPair
+            visualLevel="section"
+            level="h3"
+            title={<span className="font-bold">{nextAction.title}</span>}
+            subtitle={
+              isCreateProject
+                ? 'Choose your software platforms to set up a secure sync.'
+                : nextAction.description
+            }
+          />
+
+          {nextAction.isBlocked && nextAction.blockerReason && (
+            <p className="text-warning text-xs font-medium">
+              Prerequisite: {nextAction.blockerReason}
+            </p>
+          )}
         </div>
 
         <div className="flex shrink-0 items-center gap-2 sm:self-center">
@@ -97,14 +91,15 @@ export default function JourneyStorylineBanner({
             disabled={nextAction.isBlocked}
           >
             <Button
-              size="sm"
+              size="default"
               disabled={nextAction.isBlocked}
               onClick={handleAction}
-              className="gap-2 text-xs font-semibold shadow-xs"
+              className="gap-2 text-sm"
             >
               {nextAction.isBlocked && <Lock className="size-3.5" />}
-              <span>{nextAction.actionLabel}</span>
-              {!nextAction.isBlocked && <ArrowRight className="size-3.5" />}
+              <span>
+                {isCreateProject ? 'Create project' : nextAction.actionLabel}
+              </span>
             </Button>
           </ActionTooltip>
         </div>

@@ -255,7 +255,7 @@ function ActivityRow({ log }: { log: OrgSyncLog }) {
           </Tooltip>
         )}
         {duration && (
-          <span className="text-muted-foreground flex flex-column justify-end items-center gap-1 text-xs whitespace-nowrap xl:mt-1">
+          <span className="text-muted-foreground flex items-center justify-end gap-1 text-xs whitespace-nowrap xl:mt-1">
             <Clock className="size-3" /> {duration}
           </span>
         )}
@@ -365,8 +365,8 @@ export default function RecentActivityCard({
             </EmptyHeader>
           </Empty>
         ) : (
-          <div className="overflow-hidden rounded-3xl border">
-            <div className="bg-muted text-muted-foreground hidden grid-cols-[110px_minmax(220px,1.45fr)_minmax(190px,1.1fr)_130px_110px_24px] items-center gap-x-5 px-5 py-2 text-xs font-medium xl:grid">
+          <div className="overflow-hidden rounded-3xl border border-border/80 dark:border-white/10">
+            <div className="bg-muted/70 dark:bg-white/[0.04] border-b border-border/80 dark:border-white/10 text-muted-foreground hidden grid-cols-[110px_minmax(220px,1.45fr)_minmax(190px,1.1fr)_130px_110px_24px] items-center gap-x-5 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider xl:grid">
               <span>Status</span>
               <span>Sync Job</span>
               <span>Data flow</span>
