@@ -36,11 +36,18 @@ export default function ProjectDetailPage() {
   const location = useLocation();
   const locationState = location.state as { from?: string; fromLabel?: string } | null;
   const fromParam = searchParams.get('from');
-  const fromPath = locationState?.from || fromParam;
+  const rawFrom = locationState?.from || fromParam;
   const isFromDashboard = Boolean(
-    fromPath && (fromPath === '/dashboard' || fromPath.startsWith('/dashboard')),
+    rawFrom &&
+      (rawFrom === 'dashboard' ||
+        rawFrom === '/dashboard' ||
+        rawFrom.startsWith('/dashboard')),
   );
-  const backTo = fromPath || '/projects';
+  const backTo = isFromDashboard
+    ? '/dashboard'
+    : rawFrom && rawFrom.startsWith('/') && !rawFrom.startsWith('//')
+      ? rawFrom
+      : '/projects';
   const backLabel =
     locationState?.fromLabel ||
     (isFromDashboard ? 'Back to Dashboard' : 'Back to Projects');

@@ -47,6 +47,7 @@ interface LimitSyncModalProps {
   onStarted?: () => void;
   onDone?: () => void;
   onClose: () => void;
+  onStepChange?: (step: 'config' | 'running' | 'done') => void;
   pipelineRequired?: boolean;
   pipelineConfigured?: boolean;
   onGoToPipeline?: () => void;
@@ -122,6 +123,7 @@ export default function LimitSyncModal({
   onStarted,
   onDone,
   onClose,
+  onStepChange,
   pipelineRequired = false,
   pipelineConfigured = true,
   onGoToPipeline,
@@ -132,7 +134,14 @@ export default function LimitSyncModal({
 }: LimitSyncModalProps) {
   const isSandbox = environment === 'sandbox';
   const isSandboxTest = isSandbox && !job?.lastSyncedAt;
-  const runButtonLabel = isSandboxTest ? 'Run Test Sync' : 'Start Limited Sync';
+  const isInactive = !job?.isEnabled;
+  const runButtonLabel = isInactive
+    ? isSandboxTest
+      ? 'Activate & Run Test Sync'
+      : 'Activate & Start Sync'
+    : isSandboxTest
+      ? 'Run Test Sync'
+      : 'Start Limited Sync';
   const destinationLabel =
     environment === 'sandbox'
       ? 'the Sandbox destination'
@@ -141,6 +150,10 @@ export default function LimitSyncModal({
         : 'the destination';
   const pipelineBlocked = pipelineRequired && !pipelineConfigured;
   const [step, setStep] = useState('config');
+
+  useEffect(() => {
+    onStepChange?.(step as 'config' | 'running' | 'done');
+  }, [step, onStepChange]);
 
   const [limit, setLimit] = useState<number>(!job?.lastSyncedAt ? 5 : 100);
   const [startPage, setStartPage] = useState<number>(1);
@@ -256,7 +269,6 @@ export default function LimitSyncModal({
         pollRef.current = setTimeout(() => pollRun(runLogId), 2000);
       } else {
         onDone?.();
-        onClose();
       }
     } catch {
       stuckCount.current += 1;
@@ -286,7 +298,6 @@ export default function LimitSyncModal({
               pollRef.current = setTimeout(() => pollRun(latest.id), 2000);
             } else {
               onDone?.();
-              onClose();
             }
             return;
           }
@@ -310,7 +321,6 @@ export default function LimitSyncModal({
       /* ignore */
     }
     onDone?.();
-    onClose();
   };
 
   const handleStart = async () => {
@@ -326,6 +336,14 @@ export default function LimitSyncModal({
     activeRunId.current = null;
     const triggerTime = Date.now();
     try {
+      if (!job?.isEnabled) {
+        try {
+          await jobsApi.toggleJob(projectId, jobId);
+          toast.success('Job activated.');
+        } catch {
+          // Proceed with sync attempt
+        }
+      }
       const resp = (await jobsApi.limitSync(projectId, jobId, {
         limit: safeLimit,
         startPage: safeStart,
@@ -382,26 +400,50 @@ export default function LimitSyncModal({
     }
     setStopping(false);
     onDone?.();
-    onClose();
   };
+
+  const isFinished = step === 'running' && !!runLog && runLog.status !== 'running';
 
   const footerNode = (
     <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end w-full">
-      <Button
-        onClick={handleStart}
-        disabled={pipelineBlocked || disabled}
-      >
-        <Play /> {runButtonLabel}
-      </Button>
+      {step === 'config' ? (
+        <Button
+          onClick={handleStart}
+          disabled={pipelineBlocked || disabled}
+        >
+          <Play /> {runButtonLabel}
+        </Button>
+      ) : isFinished ? (
+        <>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setStep('config');
+              setRunLog(null);
+              setLiveProgress(null);
+            }}
+          >
+            Run another sync
+          </Button>
+          <Button onClick={onClose}>
+            Close
+          </Button>
+        </>
+      ) : (
+        <Button variant="outline" onClick={onClose}>
+          Close
+        </Button>
+      )}
     </div>
   );
 
   useEffect(() => {
-    if (onFooterChange && step === 'config') {
+    if (onFooterChange) {
       onFooterChange(footerNode);
     }
   }, [
     step,
+    isFinished,
     safeLimit,
     safeStart,
     safeBatch,
@@ -409,6 +451,7 @@ export default function LimitSyncModal({
     disabled,
     runButtonLabel,
     onFooterChange,
+    onClose,
   ]);
 
   return (
@@ -441,14 +484,14 @@ export default function LimitSyncModal({
 
             <div
               className={cn(
-                'flex-1 min-h-0 space-y-3 overflow-y-auto',
-                !embedded && 'px-6 py-4',
+                'flex-1 min-h-0 space-y-2.5 overflow-y-auto',
+                !embedded && 'px-5 py-3.5',
               )}
             >
               {pipelineBlocked && (
-                <Alert variant="destructive" className="py-2.5">
-                  <AlertTriangle />
-                  <AlertDescription className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between [&_p:not(:last-child)]:mb-0">
+                <Alert variant="destructive" className="py-2 px-3">
+                  <AlertTriangle className="size-4 shrink-0" />
+                  <AlertDescription className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between text-xs [&_p:not(:last-child)]:mb-0">
                     <div className="space-y-0.5">
                       <p className="text-foreground font-semibold">
                         Pipeline not configured
@@ -461,20 +504,20 @@ export default function LimitSyncModal({
                     </div>
                     {onGoToPipeline && (
                       <Button
-                        size="sm"
+                        size="xs"
                         onClick={onGoToPipeline}
                         className="shrink-0 self-start sm:self-center"
                       >
-                        <ArrowRight /> Go to Pipeline tab
+                        <ArrowRight /> Go to Pipeline
                       </Button>
                     )}
                   </AlertDescription>
                 </Alert>
               )}
 
-              <Alert className="bg-primary/5 border-primary/20 py-2.5">
-                <Info className="text-primary" />
-                <AlertDescription className="space-y-0.5 [&_p:not(:last-child)]:mb-0">
+              <Alert className="bg-primary/5 border-primary/20 py-2 px-3">
+                <Info className="text-primary size-4 shrink-0" />
+                <AlertDescription className="space-y-0.5 text-xs [&_p:not(:last-child)]:mb-0">
                   <p className="text-foreground font-semibold">
                     {isSandboxTest
                       ? 'Sandbox Testing (Recommended)'
@@ -488,11 +531,11 @@ export default function LimitSyncModal({
                 </AlertDescription>
               </Alert>
 
-              <div className="space-y-1.5">
-                <p className="text-foreground text-xs font-medium">
+              <div className="space-y-1">
+                <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
                   Quick Record Limits
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5">
                   <Button
                     type="button"
                     variant={limit === 5 ? 'default' : 'outline'}
@@ -501,7 +544,7 @@ export default function LimitSyncModal({
                       setLimit(5);
                       setErrors((e) => ({ ...e, limit: '' }));
                     }}
-                    className="h-7 text-xs"
+                    className="h-6.5 text-[11px] px-2.5"
                   >
                     {isSandboxTest
                       ? '5 Records (Recommended Test)'
@@ -515,7 +558,7 @@ export default function LimitSyncModal({
                       setLimit(50);
                       setErrors((e) => ({ ...e, limit: '' }));
                     }}
-                    className="h-7 text-xs"
+                    className="h-6.5 text-[11px] px-2.5"
                   >
                     50 Records
                   </Button>
@@ -527,16 +570,16 @@ export default function LimitSyncModal({
                       setLimit(100);
                       setErrors((e) => ({ ...e, limit: '' }));
                     }}
-                    className="h-7 text-xs"
+                    className="h-6.5 text-[11px] px-2.5"
                   >
                     100 Records
                   </Button>
                 </div>
               </div>
 
-              <FieldGroup className="grid gap-3 sm:grid-cols-3">
+              <FieldGroup className="grid gap-2 sm:grid-cols-3">
                 <Field data-invalid={!!errors.limit}>
-                  <FieldLabel htmlFor="limit-count">
+                  <FieldLabel htmlFor="limit-count" className="text-xs">
                     Number of records
                   </FieldLabel>
                   <Input
@@ -548,17 +591,20 @@ export default function LimitSyncModal({
                     onChange={(e) => setLimit(parseInt(e.target.value) || 0)}
                     placeholder="e.g. 100"
                     aria-invalid={!!errors.limit}
+                    className="h-8 text-xs"
                   />
                   {errors.limit && (
                     <p className="text-destructive text-xs">{errors.limit}</p>
                   )}
-                  <p className="text-muted-foreground text-[10px]">
+                  <p className="text-muted-foreground text-[10px] leading-tight">
                     Max 50,000 per run
                   </p>
                 </Field>
 
                 <Field data-invalid={!!errors.startPage}>
-                  <FieldLabel htmlFor="start-page">Starting page</FieldLabel>
+                  <FieldLabel htmlFor="start-page" className="text-xs">
+                    Starting page
+                  </FieldLabel>
                   <Input
                     id="start-page"
                     type="number"
@@ -569,18 +615,19 @@ export default function LimitSyncModal({
                     }
                     placeholder="1"
                     aria-invalid={!!errors.startPage}
+                    className="h-8 text-xs"
                   />
                   {errors.startPage && (
                     <p className="text-destructive text-xs">
                       {errors.startPage}
                     </p>
                   )}
-                  <p className="text-muted-foreground text-[10px]">
+                  <p className="text-muted-foreground text-[10px] leading-tight">
                     Source API page to start from
                   </p>
                 </Field>
                 <Field data-invalid={!!errors.batchSize}>
-                  <FieldLabel htmlFor="batch-size">
+                  <FieldLabel htmlFor="batch-size" className="text-xs">
                     Records per batch
                   </FieldLabel>
                   <Input
@@ -594,62 +641,63 @@ export default function LimitSyncModal({
                     }
                     placeholder="100"
                     aria-invalid={!!errors.batchSize}
+                    className="h-8 text-xs"
                   />
                   {errors.batchSize && (
                     <p className="text-destructive text-xs">
                       {errors.batchSize}
                     </p>
                   )}
-                  <p className="text-muted-foreground text-[10px]">
+                  <p className="text-muted-foreground text-[10px] leading-tight">
                     Between 10 and 500 records
                   </p>
                 </Field>
               </FieldGroup>
 
               <Card className="bg-muted/30 border-muted py-0">
-                <CardContent className="space-y-3 p-4">
-                  <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+                <CardContent className="space-y-1.5 p-3">
+                  <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
                     Run summary
                   </p>
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-                    <div className="flex items-center gap-2">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                    <div className="flex items-center gap-1.5">
                       <span className="text-muted-foreground text-xs">
                         Records
                       </span>
                       <ChevronRight className="text-muted-foreground size-3" />
-                      <span className="text-sm font-semibold">
+                      <span className="text-xs font-semibold">
                         up to {safeLimit.toLocaleString()}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       <span className="text-muted-foreground text-xs">
                         Batches
                       </span>
                       <ChevronRight className="text-muted-foreground size-3" />
-                      <span className="text-sm font-semibold">
+                      <span className="text-xs font-semibold">
                         {estBatches}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       <span className="text-muted-foreground text-xs">
                         Source pages
                       </span>
                       <ChevronRight className="text-muted-foreground size-3" />
-                      <span className="text-sm font-semibold">
+                      <span className="text-xs font-semibold">
                         {safeStart === srcPageEnd
-                          ? safeStart
-                          : `${safeStart}–${srcPageEnd}`}
+                           ? safeStart
+                           : `${safeStart}–${srcPageEnd}`}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       <span className="text-muted-foreground text-xs">
                         Records per batch
                       </span>
                       <ChevronRight className="text-muted-foreground size-3" />
-                      <span className="text-sm font-semibold">{safeBatch}</span>
+                      <span className="text-xs font-semibold">{safeBatch}</span>
                     </div>
                   </div>
-                  <p className="text-muted-foreground text-[10px]">
+                  <p className="text-muted-foreground text-[10px] leading-tight">
                     Source page estimates assume ~500 records per page. Actual
                     counts depend on the API response.
                   </p>
@@ -688,7 +736,7 @@ export default function LimitSyncModal({
             <SyncRunProgress
               runId={runLog?.id}
               jobId={jobId}
-              status="running"
+              status={runLog?.status ? runLog.status : 'running'}
               variant="compact"
               defaultOpen={false}
               totalRecords={progress?.totalRecords ?? safeLimit}
@@ -703,14 +751,21 @@ export default function LimitSyncModal({
               skippedCount={skipped}
               failedCount={failed}
               startedAt={runLog?.startedAt}
+              finishedAt={runLog?.finishedAt}
+              durationMs={runLog?.durationMs}
               triggeredBy={runLog?.triggeredBy ?? 'limit_sync'}
               sourceLabel={runLog?.sourceObject ?? job?.sourceObject}
               destinationLabel={runLog?.destObject ?? job?.destObject}
-              onStop={() => void handleStop()}
+              errorMessage={runLog?.errorMessage}
+              onStop={
+                !runLog || runLog.status === 'running'
+                  ? () => void handleStop()
+                  : undefined
+              }
               stopping={stopping}
             />
 
-            {stuckWarning && !timedOut && (
+            {stuckWarning && !timedOut && (!runLog || runLog.status === 'running') && (
               <Alert className="bg-warning/10 border-warning/25 py-2">
                 <AlertTriangle className="text-warning size-3.5" />
                 <AlertDescription className="text-warning text-xs">
@@ -718,6 +773,30 @@ export default function LimitSyncModal({
                   can stop it below.
                 </AlertDescription>
               </Alert>
+            )}
+
+            {!compact && !embedded && (
+              <DialogFooter className="shrink-0 border-t bg-muted/20 px-6 py-4">
+                {isFinished && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setStep('config');
+                      setRunLog(null);
+                      setLiveProgress(null);
+                    }}
+                    className="flex-1"
+                  >
+                    Run another sync
+                  </Button>
+                )}
+                <Button
+                  onClick={onClose}
+                  className="flex-1"
+                >
+                  Close
+                </Button>
+              </DialogFooter>
             )}
           </div>
         )}

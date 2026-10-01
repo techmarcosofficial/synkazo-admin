@@ -183,7 +183,7 @@ describe('ConnectionBoard credential journey', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
 
     expect(
-      await screen.findByText('Sandbox connections ready'),
+      await screen.findByText(/sandbox connections ready/i),
     ).toBeInTheDocument();
     await waitFor(() =>
       expect(destinationCard()).toHaveAttribute('data-border-state', 'success'),
@@ -249,8 +249,9 @@ describe('ConnectionBoard credential journey', () => {
     fillServiceTitanCredentials();
     fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
 
-    await screen.findByRole('button', { name: /verifying with server/i });
-    expect(sourceCard()).toHaveAttribute('data-border-state', 'testing');
+    await waitFor(() =>
+      expect(sourceCard()).toHaveAttribute('data-border-state', 'testing'),
+    );
     expect(
       sourceCard()!.querySelector('[data-slot="border-beam"]'),
     ).not.toBeNull();

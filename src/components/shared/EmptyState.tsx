@@ -26,6 +26,7 @@ export interface ActionButton {
   timeEstimate?: string;
   disabled?: boolean;
   tooltip?: string;
+  dataFlowNextAction?: boolean;
 }
 
 export interface EmptyStateProps {
@@ -56,10 +57,16 @@ function renderAction(
     timeEstimate,
     disabled,
     tooltip,
+    dataFlowNextAction,
   } = action as ActionButton;
 
   const button = (
-    <Button onClick={onClick} variant={variant} disabled={disabled}>
+    <Button
+      onClick={onClick}
+      variant={variant}
+      disabled={disabled}
+      data-flow-next-action={dataFlowNextAction ? 'true' : undefined}
+    >
       {ActionIcon && <ActionIcon />}
       <span>{label}</span>
       {timeEstimate && (

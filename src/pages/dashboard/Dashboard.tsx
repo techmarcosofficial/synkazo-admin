@@ -7,6 +7,7 @@ import DateRangePicker from '@/components/shared/DateRangePicker';
 import type { DateRangeValue } from '@/components/shared/DateRangePicker';
 import ErrorState from '@/components/shared/ErrorState';
 import PageHeader from '@/components/shared/PageHeader';
+import { cn } from '@/lib/utils';
 import {
   Card,
   CardAction,
@@ -160,7 +161,10 @@ export default function Dashboard() {
   });
   const activityLogs = unwrapOrganizationLogs(activityQuery.data);
   const firstName = currentUser?.fullName?.trim().split(/\s+/)[0];
-  const pageClassName = 'w-full animate-fade-in-up space-y-6';
+  const pageClassName =
+    projects.length === 0
+      ? 'w-full flex-1 flex flex-col justify-between min-h-[calc(100vh-8.5rem)] animate-fade-in-up space-y-6 sm:space-y-7 pb-4'
+      : 'w-full animate-fade-in-up space-y-4 sm:space-y-5';
   const greeting = getGreeting();
   const description =
     projects.length === 0
@@ -243,42 +247,55 @@ export default function Dashboard() {
       <AccountContextAlert />
       <DraftResumptionBanner />
 
-      {!journey.isGraduated && (
-        <JourneyStorylineBanner
-          nextAction={journey.nextAction}
-          onTriggerModal={(key) => {
-            if (key === 'create_project') {
-              openCreateProjectDialog();
-            }
-          }}
-          stepNumber={
-            journey.currentState === 'S03_NO_PROJECT'
-              ? 1
-              : journey.currentState === 'S04_PROJECT_NO_CONNECTIONS' ||
-                  journey.currentState === 'S05_ONE_CONNECTION_MISSING'
-                ? 2
-                : journey.currentState === 'S06_CONNECTIONS_READY' ||
-                    journey.currentState === 'S07_SYNC_RECIPE_SELECTED' ||
-                    journey.currentState === 'S08_MAPPING_INCOMPLETE'
-                  ? 3
-                  : 4
-          }
-          totalSteps={4}
-        />
+      {/* State 1: Zero Projects -> Primary Action Hero Banner & Visual Blueprint */}
+      {projects.length === 0 && (
+        <>
+          <JourneyStorylineBanner
+            nextAction={journey.nextAction}
+            onTriggerModal={(key) => {
+              if (key === 'create_project') {
+                openCreateProjectDialog();
+              }
+            }}
+            stepNumber={1}
+            totalSteps={4}
+          />
+          <ZeroStateIntegrationValueCard className="flex-1" />
+        </>
       )}
 
-      {/* State 1: Zero Projects -> Show Value Proposition & Visual Pipeline */}
-      {projects.length === 0 && <ZeroStateIntegrationValueCard />}
-
-      {/* State 2: Projects exist, but account not graduated -> Show Active Setup Pipeline Tracker */}
+      {/* State 2: Projects exist, but account not graduated -> Show Active Setup Pipeline Tracker & Storyline */}
       {projects.length > 0 && !journey.isGraduated && targetProject && (
-        <ActiveProjectPipelineCard
-          project={targetProject}
-          connections={connections}
-          jobs={jobs}
-          canManage={hasRole('org_admin')}
-          totalProjects={projects.length}
-        />
+        <>
+          <JourneyStorylineBanner
+            nextAction={journey.nextAction}
+            onTriggerModal={(key) => {
+              if (key === 'create_project') {
+                openCreateProjectDialog();
+              }
+            }}
+            stepNumber={
+              journey.currentState === 'S03_NO_PROJECT'
+                ? 1
+                : journey.currentState === 'S04_PROJECT_NO_CONNECTIONS' ||
+                    journey.currentState === 'S05_ONE_CONNECTION_MISSING'
+                  ? 2
+                  : journey.currentState === 'S06_CONNECTIONS_READY' ||
+                      journey.currentState === 'S07_SYNC_RECIPE_SELECTED' ||
+                      journey.currentState === 'S08_MAPPING_INCOMPLETE'
+                    ? 3
+                    : 4
+            }
+            totalSteps={4}
+          />
+          <ActiveProjectPipelineCard
+            project={targetProject}
+            connections={connections}
+            jobs={jobs}
+            canManage={hasRole('org_admin')}
+            totalProjects={projects.length}
+          />
+        </>
       )}
 
       {/* State 3: Graduated -> Reveal full operational analytics cockpit */}

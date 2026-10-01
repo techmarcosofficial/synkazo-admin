@@ -400,13 +400,13 @@ describe('JobOnboardingJourney - Step Gating & Activation Flow', () => {
     );
 
     expect(screen.getByText('Field Mapping')).toBeInTheDocument();
-    expect(screen.getAllByText('Configure Pipeline')).toHaveLength(2);
+    expect(screen.getByText('Configure Pipeline')).toBeInTheDocument();
     expect(screen.getByText('Test & Review')).toBeInTheDocument();
     expect(screen.getByText('Automate (optional)')).toBeInTheDocument();
   });
 
-  it('offers direct inline activation without tab redirection when job is inactive', () => {
-    const handleToggle = vi.fn();
+  it('opens test sync dialog directly in 1 click even when job is inactive (Option 1 auto-activation flow)', () => {
+    const setManualDialogOpen = vi.fn();
     const handleTabChange = vi.fn();
 
     vi.mocked(useJobDetailContext).mockReturnValue({
@@ -417,10 +417,10 @@ describe('JobOnboardingJourney - Step Gating & Activation Flow', () => {
       jobFieldMappings: mappingWithMatch,
       pipelineRequired: false,
       pipelineConfigured: true,
-      activeTab: 'field-mapping',
+      activeTab: 'overview',
       handleTabChange,
-      setManualDialogOpen: vi.fn(),
-      handleToggle,
+      setManualDialogOpen,
+      handleToggle: vi.fn(),
       toggling: false,
     } as any);
 
@@ -430,21 +430,26 @@ describe('JobOnboardingJourney - Step Gating & Activation Flow', () => {
       </MemoryRouter>,
     );
 
-    // Shows informative activation title and button
+    // Shows informative title encouraging first test sync
     expect(
-      screen.getByRole('heading', { name: 'Activate your sync job' }),
+      screen.getByRole('heading', { name: 'Run your first test sync' }),
     ).toBeInTheDocument();
-    const activateBtn = screen.getByRole('button', { name: /^activate job/i });
-    expect(activateBtn).toBeInTheDocument();
 
-    fireEvent.click(activateBtn);
+    // Verify hover hint on Test & Review step
+    const testStep = screen.getByRole('button', { name: /test & review/i });
+    expect(testStep).toHaveAttribute(
+      'data-step-hint',
+      "Click 'Run Test Sync' to verify records",
+    );
+    expect(testStep).not.toHaveAttribute('title');
 
-    // Activates directly without switching tabs away!
-    expect(handleToggle).toHaveBeenCalledOnce();
+    // 1-Click Action: Clicking step card directly opens test sync dialog without double-clicking
+    fireEvent.click(testStep);
+    expect(setManualDialogOpen).toHaveBeenCalledWith(true);
     expect(handleTabChange).not.toHaveBeenCalled();
   });
 
-  it('displays active state and opens test sync dialog when job is active', () => {
+  it('displays active state and opens test sync dialog when job is active on overview tab', () => {
     const setManualDialogOpen = vi.fn();
     const handleTabChange = vi.fn();
 
@@ -456,7 +461,7 @@ describe('JobOnboardingJourney - Step Gating & Activation Flow', () => {
       jobFieldMappings: mappingWithMatch,
       pipelineRequired: false,
       pipelineConfigured: true,
-      activeTab: 'field-mapping',
+      activeTab: 'overview',
       handleTabChange,
       setManualDialogOpen,
       handleToggle: vi.fn(),
@@ -477,14 +482,69 @@ describe('JobOnboardingJourney - Step Gating & Activation Flow', () => {
       }),
     ).toBeInTheDocument();
 
-    const runSyncBtn = screen.getByRole('button', { name: /^run test sync/i });
-    expect(runSyncBtn).toBeInTheDocument();
+    // Verify hover hint on Test & Review step when active
+    const testStep = screen.getByRole('button', { name: /test & review/i });
+    expect(testStep).toHaveAttribute(
+      'data-step-hint',
+      "Click 'Run Test Sync' to verify records",
+    );
+    expect(testStep).not.toHaveAttribute('title');
 
-    fireEvent.click(runSyncBtn);
+    // Redundant trailing button is removed; clicking active step card triggers test sync directly (One Click, One Action)
+    expect(
+      screen.queryByRole('button', { name: /^run test sync/i }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(testStep);
 
-    // Switches to overview to see progress and opens dialog
-    expect(handleTabChange).toHaveBeenCalledWith('overview');
+    // Opens test sync dialog directly
     expect(setManualDialogOpen).toHaveBeenCalledWith(true);
+  });
+
+  it('guides step navigation with hover hints and one-click tab switching when on a different tab', () => {
+    const handleTabChange = vi.fn();
+
+    vi.mocked(useJobDetailContext).mockReturnValue({
+      projectId: 'proj-123',
+      job: { ...mockJob, isEnabled: true },
+      project: mockProject,
+      runLogs: [],
+      jobFieldMappings: mappingWithMatch,
+      pipelineRequired: false,
+      pipelineConfigured: true,
+      activeTab: 'field-mapping',
+      handleTabChange,
+      setManualDialogOpen: vi.fn(),
+      handleToggle: vi.fn(),
+      toggling: false,
+    } as any);
+
+    render(
+      <MemoryRouter>
+        <JobOnboardingJourney />
+      </MemoryRouter>,
+    );
+
+    // Step 1: Field Mapping (current tab)
+    const step1 = screen.getByRole('button', { name: /field mapping/i });
+    expect(step1).toHaveAttribute(
+      'data-step-hint',
+      'Map source and destination fields, and select a match field',
+    );
+    expect(step1).not.toHaveAttribute('title');
+
+    // Step 2: Test & Review (different tab -> Go to Overview tab)
+    const step2 = screen.getByRole('button', { name: /test & review/i });
+    expect(step2).toHaveAttribute('data-step-hint', 'Go to Overview tab');
+    expect(step2).not.toHaveAttribute('title');
+
+    // Clicking step 2 strictly switches to overview tab without dialog
+    fireEvent.click(step2);
+    expect(handleTabChange).toHaveBeenCalledWith('overview');
+
+    // Step 3: Automate (different tab -> Go to Schedule tab)
+    const step3 = screen.getByRole('button', { name: /automate/i });
+    expect(step3).toHaveAttribute('data-step-hint', 'Go to Schedule tab');
+    expect(step3).not.toHaveAttribute('title');
   });
 
   it('selects the Schedule tab when clicking the Automate step pill', () => {

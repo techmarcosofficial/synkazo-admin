@@ -457,6 +457,7 @@ export default function SyncRulesTab() {
               className="shrink-0 self-start sm:self-auto"
               disabled={isBlockedByRole}
               onClick={startCreateJob}
+              data-flow-next-action={jobs.length === 0 ? 'true' : undefined}
             >
               {canManage && canAddJob ? <Plus /> : <Lock />}
               Create Sync Flow
@@ -470,14 +471,15 @@ export default function SyncRulesTab() {
               icon={ArrowLeftRight}
               title="No sync flows configured yet"
               description="Create your first sync flow to automatically sync data between your connected platforms."
-              action={{
-                label: 'Create Sync Flow',
-                onClick: startCreateJob,
-                disabled: isBlockedByRole,
-                tooltip: tooltipExplanation,
-                timeEstimate: 'Takes ~2 mins',
-                icon: Plus,
-              }}
+              // action={{
+              //   label: 'Create Sync Flow',
+              //   onClick: startCreateJob,
+              //   disabled: isBlockedByRole,
+              //   tooltip: tooltipExplanation,
+              //   timeEstimate: 'Takes ~2 mins',
+              //   icon: Plus,
+              //   dataFlowNextAction: true,
+              // }}
               helpLink={{
                 label: 'Learn how sync flows work',
                 href: 'https://docs.synkazo.com/sync-flows',

@@ -144,6 +144,14 @@ export function useJobRunState({
   const handleRunNow = async () => {
     setRunning(true);
     try {
+      if (!job?.isEnabled) {
+        try {
+          const updated = (await jobsApi.toggleJob(projectId, jobId)) as ExtJob;
+          patchJob(updated);
+        } catch {
+          // continue
+        }
+      }
       const resp = (await jobsApi.runJob(projectId, jobId)) as {
         alreadyRunning?: boolean;
       } | null;
@@ -182,6 +190,14 @@ export function useJobRunState({
   ) => {
     setFullResyncing(true);
     try {
+      if (!job?.isEnabled) {
+        try {
+          const updated = (await jobsApi.toggleJob(projectId, jobId)) as ExtJob;
+          patchJob(updated);
+        } catch {
+          // continue
+        }
+      }
       // A syncAllPage left over from an interrupted previous Sync All means resume from
       // there instead of restarting at page 1 (item 36) — the same button just picks up
       // where it left off, mirroring how the incremental "Run" button already resumes from

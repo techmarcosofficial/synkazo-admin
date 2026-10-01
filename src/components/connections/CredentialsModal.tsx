@@ -56,6 +56,11 @@ interface CredentialsModalProps {
   onContinue?: () => void;
   willCompleteBoth?: boolean;
   initialError?: string | null;
+  initialForm?: Record<string, string> | null;
+  onSubmitCredentials?: (
+    credentials: Record<string, string>,
+    existingConnId?: string,
+  ) => void | Promise<void>;
   onVerificationError?: (message: string) => void;
   onTestingChange?: (testing: boolean) => void;
 }
@@ -72,6 +77,8 @@ export default function CredentialsModal({
   onContinue,
   willCompleteBoth = false,
   initialError = null,
+  initialForm = null,
+  onSubmitCredentials,
   onVerificationError,
   onTestingChange,
 }: CredentialsModalProps) {
@@ -82,12 +89,14 @@ export default function CredentialsModal({
   const manualDisabled = platformId === 'hubspot' && syncMode === 'two_way';
   const manualEnabled = !manualDisabled;
 
-  const initialPhase: ModalPhase = !isEdit && supportsOAuth ? 'method' : 'form';
+  const initialPhase: ModalPhase =
+    initialError || !supportsOAuth || isEdit ? 'form' : 'method';
   const [phase, setPhase] = useState<ModalPhase>(initialPhase);
   const [verifyStep, setVerifyStep] = useState<VerifyStep>('idle');
-  const [form, setForm] = useState<Record<string, string>>(() =>
-    Object.fromEntries(schema.fields.map((f) => [f.key, ''])),
-  );
+  const [form, setForm] = useState<Record<string, string>>(() => {
+    const defaults = Object.fromEntries(schema.fields.map((f) => [f.key, '']));
+    return initialForm ? { ...defaults, ...initialForm } : defaults;
+  });
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [loading, setLoading] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(isEdit);
@@ -211,6 +220,18 @@ export default function CredentialsModal({
 
   const handleVerify = async () => {
     if (loading || !validate()) return;
+
+    if (onSubmitCredentials) {
+      const credentials: Record<string, string> = {};
+      schema.fields.forEach((f) => {
+        const val = form[f.key]?.trim();
+        if (val || f.requiredAlways) credentials[f.key] = val;
+      });
+      onClose();
+      onSubmitCredentials(credentials, currentConnId);
+      return;
+    }
+
     setLoading(true);
     setVerifyError(null);
     setVerifyStep('validating');

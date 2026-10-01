@@ -1,13 +1,15 @@
-import { LogOut, RefreshCw } from 'lucide-react';
-import { useState } from 'react';
+import { ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { BillingToggle } from '@/components/common/BillingToggle';
 import HeadingPair from '@/components/shared/HeadingPair';
 import { PricingCard, type PricingCta } from '@/components/common/PricingCard';
+import { SynkazoMark } from '@/components/branding/SynkazoMark';
 import { Button } from '@/components/ui/button';
 import { usePricingPlans } from '@/hooks/usePricingPlans';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
+import { cn } from '@/lib/utils';
 import type { PricingPlan, PublicBillingInterval } from '@/types/pricing';
 
 // Kept local rather than a shared "site" module — the dashboard only ever needs this one
@@ -28,6 +30,54 @@ export default function SubscriptionPaywall() {
   const { logout } = useSynkazoAuth();
   const { plans, isLoading: plansLoading } = usePricingPlans();
   const [interval, setInterval] = useState<PublicBillingInterval>('month');
+  const planViewportRef = useRef<HTMLDivElement>(null);
+  const [canScrollBack, setCanScrollBack] = useState(false);
+  const [canScrollForward, setCanScrollForward] = useState(false);
+
+  const updateScrollControls = useCallback(() => {
+    const viewport = planViewportRef.current;
+    if (!viewport) return;
+    setCanScrollBack(viewport.scrollLeft > 2);
+    setCanScrollForward(
+      viewport.scrollLeft + viewport.clientWidth < viewport.scrollWidth - 2,
+    );
+  }, []);
+
+  useEffect(() => {
+    const viewport = planViewportRef.current;
+    if (!viewport) return;
+    viewport.scrollLeft = 0;
+    updateScrollControls();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(updateScrollControls);
+    observer.observe(viewport);
+    return () => observer.disconnect();
+  }, [plans.length, updateScrollControls]);
+
+  const scrollOnePlan = (direction: -1 | 1) => {
+    const viewport = planViewportRef.current;
+    if (!viewport) return;
+    const cards = Array.from(
+      viewport.querySelectorAll<HTMLElement>('[data-plan-slide]'),
+    );
+    if (cards.length < 2) return;
+    const positions = cards.map(
+      (card) => card.offsetLeft - cards[0].offsetLeft,
+    );
+    const currentIndex = positions.reduce(
+      (nearest, position, index) =>
+        Math.abs(position - viewport.scrollLeft) <
+        Math.abs(positions[nearest] - viewport.scrollLeft)
+          ? index
+          : nearest,
+      0,
+    );
+    const nextIndex = Math.max(
+      0,
+      Math.min(cards.length - 1, currentIndex + direction),
+    );
+    viewport.scrollTo({ left: positions[nextIndex], behavior: 'smooth' });
+  };
 
   // Mirrors PricingPage's buy CTA: admin-configured label wins, else "Subscribe".
   const buyLabel = (plan: PricingPlan): string => plan.ctaLabel ?? 'Subscribe';
@@ -62,13 +112,21 @@ export default function SubscriptionPaywall() {
           },
         };
 
+  const planCards = plans.map((plan) => (
+    <PricingCard
+      key={plan.id}
+      plan={plan}
+      interval={interval}
+      features={plan.features}
+      cta={ctaFor(plan)}
+    />
+  ));
+
   return (
     <div className="bg-background fixed inset-0 z-[70] flex flex-col overflow-y-auto">
-      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-10 px-4 py-10 sm:px-6 sm:py-14">
+      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-4 py-10 sm:px-6 sm:py-14">
         <header className="flex flex-col items-center gap-4 text-center">
-          <div className="bg-sidebar-primary text-sidebar-primary-foreground flex size-12 items-center justify-center rounded-2xl">
-            <RefreshCw className="size-6" />
-          </div>
+          <SynkazoMark className="size-12" />
           <HeadingPair
             level="h1"
             title="Choose a plan to continue"
@@ -94,23 +152,75 @@ export default function SubscriptionPaywall() {
           </p>
         ) : (
           <>
-            <BillingToggle value={interval} onChange={setInterval} />
-
-            <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-3">
-              {plans.map((plan) => (
-                <PricingCard
-                  key={plan.id}
-                  plan={plan}
-                  interval={interval}
-                  features={plan.features}
-                  cta={ctaFor(plan)}
-                />
-              ))}
+            <div className="relative flex flex-col items-center gap-4 sm:justify-center">
+              <BillingToggle value={interval} onChange={setInterval} />
+              {plans.length > 3 && (
+                <div className="flex items-center gap-2 sm:absolute sm:right-0">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="rounded-full"
+                    aria-label="Previous plan"
+                    aria-controls="available-plan-cards"
+                    disabled={!canScrollBack}
+                    onClick={() => scrollOnePlan(-1)}
+                  >
+                    <ChevronLeft />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="rounded-full"
+                    aria-label="Next plan"
+                    aria-controls="available-plan-cards"
+                    disabled={!canScrollForward}
+                    onClick={() => scrollOnePlan(1)}
+                  >
+                    <ChevronRight />
+                  </Button>
+                </div>
+              )}
             </div>
+
+            {plans.length > 3 ? (
+              <div
+                id="available-plan-cards"
+                ref={planViewportRef}
+                role="region"
+                aria-label="Available plans"
+                tabIndex={0}
+                onScroll={updateScrollControls}
+                className="grid snap-x snap-mandatory [scrollbar-width:none] auto-cols-[100%] grid-flow-col items-stretch gap-6 overflow-x-auto pt-4 pb-2 sm:auto-cols-[calc((100%_-_1.5rem)/2)] lg:auto-cols-[calc((100%_-_3rem)/3)] [&::-webkit-scrollbar]:hidden"
+              >
+                {planCards.map((card) => (
+                  <div
+                    key={card.key}
+                    data-plan-slide
+                    className="min-w-0 snap-start"
+                  >
+                    {card}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div
+                className={cn(
+                  'grid grid-cols-1 items-stretch gap-6',
+                  plans.length === 1 && 'mx-auto w-full max-w-sm',
+                  plans.length === 2 &&
+                    'mx-auto w-full max-w-3xl md:grid-cols-2',
+                  plans.length === 3 && 'md:grid-cols-3',
+                )}
+              >
+                {planCards}
+              </div>
+            )}
           </>
         )}
 
-        <footer className="text-muted-foreground flex flex-col items-center justify-center gap-4 text-sm sm:flex-row">
+        <footer className="text-muted-foreground border-border/70 flex flex-col items-center justify-center gap-4 border-t pt-6 text-sm sm:flex-row">
           <Button asChild variant="ghost" size="sm">
             <a href={import.meta.env.VITE_FRONTEND_URL}>Return to homepage</a>
           </Button>

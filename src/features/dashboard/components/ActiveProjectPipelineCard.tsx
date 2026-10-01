@@ -169,7 +169,7 @@ export default function ActiveProjectPipelineCard({
             aria-label="Configure platform connections"
             data-testid="step-connections"
             onClick={() =>
-              navigate(`/projects/${project.id}?tab=connections`, {
+              navigate(`/projects/${project.id}?tab=connections&from=dashboard`, {
                 state: { from: '/dashboard', fromLabel: 'Back to Dashboard' },
               })
             }
@@ -227,7 +227,7 @@ export default function ActiveProjectPipelineCard({
             data-testid="step-sync-flows"
             disabled={step3State === 'pending' || !canManage}
             onClick={() =>
-              navigate(`/projects/${project.id}?tab=sync-rules`, {
+              navigate(`/projects/${project.id}?tab=sync-rules&from=dashboard`, {
                 state: { from: '/dashboard', fromLabel: 'Back to Dashboard' },
               })
             }
@@ -300,7 +300,7 @@ export default function ActiveProjectPipelineCard({
             data-testid="step-sample-test"
             disabled={step4State === 'pending' || !canManage}
             onClick={() =>
-              navigate(`/projects/${project.id}?tab=sync-rules`, {
+              navigate(`/projects/${project.id}?tab=sync-rules&from=dashboard`, {
                 state: { from: '/dashboard', fromLabel: 'Back to Dashboard' },
               })
             }

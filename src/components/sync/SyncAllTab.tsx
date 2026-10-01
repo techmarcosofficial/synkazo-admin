@@ -4,6 +4,7 @@ import {
   Calendar as CalendarIcon,
   Clock,
   GitBranch,
+  Info,
   RotateCcw,
   Search,
 } from 'lucide-react';
@@ -54,8 +55,8 @@ function fmtDate(d?: string | Date | null): string {
 
 function Row({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="flex items-center gap-2 text-sm">
-      <span className="text-muted-foreground text-xs">{label}</span>
+    <div className="flex items-center gap-2 text-xs">
+      <span className="text-muted-foreground text-[11px]">{label}</span>
       <span className="font-semibold">{value}</span>
     </div>
   );
@@ -68,6 +69,7 @@ interface SyncAllTabProps {
   /** Optional manual-run content shown directly above the final action row. */
   children?: ReactNode;
   onConfirm: (range: { startDate?: string; endDate?: string }) => void;
+  onClose?: () => void;
   pipelineRequired?: boolean;
   pipelineConfigured?: boolean;
   onGoToPipeline?: () => void;
@@ -81,6 +83,7 @@ export default function SyncAllTab({
   job,
   children,
   onConfirm,
+  onClose,
   pipelineRequired = false,
   pipelineConfigured = true,
   onGoToPipeline,
@@ -108,6 +111,7 @@ export default function SyncAllTab({
   const [checking, setChecking] = useState(false);
   const [checkError, setCheckError] = useState(false);
   const [attempted, setAttempted] = useState(false);
+  const [syncTriggered, setSyncTriggered] = useState(false);
 
   // Keep these values stable while the parent renders the action footer.
   const startDateTime = useMemo(
@@ -155,19 +159,28 @@ export default function SyncAllTab({
     }
   };
 
-  const footerNode = (
+  const handleRunSync = () => {
+    setSyncTriggered(true);
+    onConfirm({
+      startDate: startDateTime?.toISOString(),
+      endDate: endDateTime?.toISOString(),
+    });
+  };
+
+  const footerNode = syncTriggered ? (
+    <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end w-full">
+      <Button onClick={onClose}>
+        Close
+      </Button>
+    </div>
+  ) : (
     <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end w-full">
       <Button variant="outline" onClick={handleCheck} disabled={checking}>
         {checking ? <Spinner /> : <Search />}
         {checking ? 'Checking…' : 'Check records'}
       </Button>
       <Button
-        onClick={() =>
-          onConfirm({
-            startDate: startDateTime?.toISOString(),
-            endDate: endDateTime?.toISOString(),
-          })
-        }
+        onClick={handleRunSync}
         disabled={pipelineBlocked || disabled}
       >
         <RotateCcw /> Run sync now
@@ -186,12 +199,27 @@ export default function SyncAllTab({
     pipelineBlocked,
     disabled,
     isTwoWay,
+    syncTriggered,
     onFooterChange,
+    onClose,
   ]);
 
   if (isTwoWay) {
     return (
       <div className="space-y-4">
+        {syncTriggered && (
+          <Alert className="bg-primary/5 border-primary/20 py-2 px-3">
+            <Info className="text-primary size-4 shrink-0" />
+            <AlertDescription className="space-y-0.5 text-xs [&_p:not(:last-child)]:mb-0">
+              <p className="text-foreground font-semibold">
+                Sync started in background
+              </p>
+              <p>
+                The sync run has started. You can close this window to monitor progress live on the Overview dashboard.
+              </p>
+            </AlertDescription>
+          </Alert>
+        )}
         <Alert>
           <AlertTriangle />
           <AlertDescription>
@@ -199,13 +227,22 @@ export default function SyncAllTab({
             will sync all historical records from scratch, same as before.
           </AlertDescription>
         </Alert>
-        <Button
-          onClick={() => onConfirm({})}
-          disabled={pipelineBlocked || disabled}
-          className="w-full sm:w-auto"
-        >
-          <RotateCcw /> Start Full Sync
-        </Button>
+        {syncTriggered ? (
+          <Button onClick={onClose} className="w-full sm:w-auto">
+            Close
+          </Button>
+        ) : (
+          <Button
+            onClick={() => {
+              setSyncTriggered(true);
+              onConfirm({});
+            }}
+            disabled={pipelineBlocked || disabled}
+            className="w-full sm:w-auto"
+          >
+            <RotateCcw /> Start Full Sync
+          </Button>
+        )}
       </div>
     );
   }
@@ -213,11 +250,25 @@ export default function SyncAllTab({
   const countAvailable = estimate?.countAvailable;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
+      {syncTriggered && (
+        <Alert className="bg-primary/5 border-primary/20 py-2.5 px-3">
+          <Info className="text-primary size-4 shrink-0" />
+          <AlertDescription className="space-y-0.5 text-xs [&_p:not(:last-child)]:mb-0">
+            <p className="text-foreground font-semibold">
+              Sync started in background
+            </p>
+            <p>
+              The sync run has started. You can close this window to monitor progress live on the Overview dashboard.
+            </p>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {pipelineBlocked && (
-        <Alert variant="destructive" className="py-2.5">
-          <AlertTriangle />
-          <AlertDescription className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between [&_p:not(:last-child)]:mb-0">
+        <Alert variant="destructive" className="py-2 px-3">
+          <AlertTriangle className="size-4 shrink-0" />
+          <AlertDescription className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between text-xs [&_p:not(:last-child)]:mb-0">
             <div className="space-y-0.5">
               <p className="text-foreground font-semibold">
                 Pipeline not configured
@@ -230,11 +281,11 @@ export default function SyncAllTab({
             </div>
             {onGoToPipeline && (
               <Button
-                size="sm"
+                size="xs"
                 onClick={onGoToPipeline}
                 className="shrink-0 self-start sm:self-center"
               >
-                <GitBranch /> Go to Pipeline tab
+                <GitBranch className="size-3.5" /> Go to Pipeline tab
               </Button>
             )}
           </AlertDescription>
@@ -242,9 +293,9 @@ export default function SyncAllTab({
       )}
 
       {hasInterruptedRange && (
-        <Alert className="bg-warning/10 border-warning/20">
-          <RotateCcw className="text-warning" />
-          <AlertDescription className="space-y-1.5 text-xs sm:text-sm">
+        <Alert className="bg-warning/10 border-warning/20 py-2 px-3">
+          <RotateCcw className="text-warning size-4 shrink-0" />
+          <AlertDescription className="space-y-1 text-xs [&_p:not(:last-child)]:mb-0">
             <p>
               A previous Sync All ran from{' '}
               <strong className="text-foreground">
@@ -282,173 +333,177 @@ export default function SyncAllTab({
         </Alert>
       )}
 
-      <FieldGroup className="gap-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field>
-                <FieldLabel>Start Date</FieldLabel>
-                <div className="flex gap-2">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          'min-w-0 flex-1 shrink justify-start overflow-hidden font-normal',
-                          !startDate && 'text-muted-foreground',
-                        )}
-                      >
-                        <CalendarIcon className="shrink-0" />
-                        <span className="truncate">
-                          {startDate
-                            ? format(startDate, 'MMM d, yyyy')
-                            : 'Start date'}
-                        </span>
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={startDate}
-                        onSelect={handleStartDateChange}
-                        disabled={(d) =>
-                          d > new Date() || (!!endDate && d > endDate)
-                        }
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <Input
-                    type="time"
-                    className="w-28 shrink-0"
-                    value={startTime}
-                    onChange={(e) => handleStartTimeChange(e.target.value)}
-                    disabled={!startDate}
+      <FieldGroup className="gap-2.5">
+        <div className="grid gap-2.5 md:grid-cols-2">
+          <Field className="space-y-1">
+            <FieldLabel className="text-xs">Start Date</FieldLabel>
+            <div className="flex gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      'h-8 min-w-0 flex-1 shrink justify-start overflow-hidden text-xs font-normal',
+                      !startDate && 'text-muted-foreground',
+                    )}
+                  >
+                    <CalendarIcon className="size-3.5 shrink-0" />
+                    <span className="truncate">
+                      {startDate
+                        ? format(startDate, 'MMM d, yyyy')
+                        : 'Start date'}
+                    </span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={handleStartDateChange}
+                    disabled={(d) =>
+                      d > new Date() || (!!endDate && d > endDate)
+                    }
                   />
-                </div>
-                <p className="text-muted-foreground text-[10px]">
-                  Leave empty to include all earlier records
-                </p>
-              </Field>
-
-              <Field>
-                <FieldLabel>End Date</FieldLabel>
-                <div className="flex gap-2">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          'min-w-0 flex-1 shrink justify-start overflow-hidden font-normal',
-                          !endDate && 'text-muted-foreground',
-                        )}
-                      >
-                        <CalendarIcon className="shrink-0" />
-                        <span className="truncate">
-                          {endDate
-                            ? format(endDate, 'MMM d, yyyy')
-                            : 'End date'}
-                        </span>
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={endDate}
-                        onSelect={handleEndDateChange}
-                        disabled={(d) =>
-                          d > new Date() || (!!startDate && d < startDate)
-                        }
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <Input
-                    type="time"
-                    className="w-28 shrink-0"
-                    value={endTime}
-                    onChange={(e) => handleEndTimeChange(e.target.value)}
-                    disabled={!endDate}
-                  />
-                </div>
-                <p className="text-muted-foreground text-[10px]">
-                  Leave unset to sync through the current moment
-                </p>
-              </Field>
+                </PopoverContent>
+              </Popover>
+              <Input
+                type="time"
+                className="h-8 w-24 shrink-0 text-xs"
+                value={startTime}
+                onChange={(e) => handleStartTimeChange(e.target.value)}
+                disabled={!startDate}
+              />
             </div>
-          </FieldGroup>
+            <p className="text-muted-foreground text-[10px] leading-tight">
+              Leave empty to include all earlier records
+            </p>
+          </Field>
 
-          {attempted && (
-            <>
-              {checkError ? (
-                <Alert className="bg-warning/10 border-warning/20">
-                  <AlertTriangle className="text-warning" />
-                  <AlertDescription>
-                    Couldn't estimate the run size. You can still start the sync
-                    — it will sync all records in range.
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                <Card className="bg-muted/30 border-muted py-0">
-                  <CardContent className="space-y-3 p-4">
-                    <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
-                      This run will sync
-                    </p>
-                    {countAvailable ? (
-                      <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-                        <Row
-                          label="Records"
-                          value={(estimate!.totalRecords ?? 0).toLocaleString()}
-                        />
-                        <Row
-                          label="Estimated Time"
-                          value={fmtDuration(estimate!.estimatedSeconds)}
-                        />
-                      </div>
-                    ) : (
-                      <div className="text-muted-foreground flex items-start gap-2.5 text-sm">
-                        <AlertTriangle className="text-warning mt-0.5 size-3.5 shrink-0" />
-                        <span>
-                          Exact count unavailable for this source — the run will
-                          sync{' '}
-                          <strong className="text-foreground">
-                            all records in range
-                          </strong>
-                          .
-                        </span>
-                      </div>
+          <Field className="space-y-1">
+            <FieldLabel className="text-xs">End Date</FieldLabel>
+            <div className="flex gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      'h-8 min-w-0 flex-1 shrink justify-start overflow-hidden text-xs font-normal',
+                      !endDate && 'text-muted-foreground',
                     )}
-                    {countAvailable && estimate!.estimatedSeconds != null && (
-                      <p className="text-muted-foreground flex items-center gap-1 text-[10px]">
-                        <Clock className="size-2.5" />
-                        Time estimated from{' '}
-                        {estimate!.basis === 'history'
-                          ? "this job's recent run speed"
-                          : 'a default rate'}{' '}
-                        ({estimate!.ratePerSec} rec/s).
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-            </>
+                  >
+                    <CalendarIcon className="size-3.5 shrink-0" />
+                    <span className="truncate">
+                      {endDate
+                        ? format(endDate, 'MMM d, yyyy')
+                        : 'End date'}
+                    </span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={handleEndDateChange}
+                    disabled={(d) =>
+                      d > new Date() || (!!startDate && d < startDate)
+                    }
+                  />
+                </PopoverContent>
+              </Popover>
+              <Input
+                type="time"
+                className="h-8 w-24 shrink-0 text-xs"
+                value={endTime}
+                onChange={(e) => handleEndTimeChange(e.target.value)}
+                disabled={!endDate}
+              />
+            </div>
+            <p className="text-muted-foreground text-[10px] leading-tight">
+              Leave unset to sync through the current moment
+            </p>
+          </Field>
+        </div>
+      </FieldGroup>
+
+      {attempted && (
+        <>
+          {checkError ? (
+            <Alert className="bg-warning/10 border-warning/20 py-2 px-3 text-xs">
+              <AlertTriangle className="text-warning size-4 shrink-0" />
+              <AlertDescription className="text-xs">
+                Couldn't estimate the run size. You can still start the sync
+                — it will sync all records in range.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <Card className="bg-muted/30 border-muted py-0">
+              <CardContent className="space-y-2 p-3">
+                <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
+                  This run will sync
+                </p>
+                {countAvailable ? (
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                    <Row
+                      label="Records"
+                      value={(estimate!.totalRecords ?? 0).toLocaleString()}
+                    />
+                    <Row
+                      label="Estimated Time"
+                      value={fmtDuration(estimate!.estimatedSeconds)}
+                    />
+                  </div>
+                ) : (
+                  <div className="text-muted-foreground flex items-start gap-2 text-xs">
+                    <AlertTriangle className="text-warning mt-0.5 size-3.5 shrink-0" />
+                    <span>
+                      Exact count unavailable for this source — the run will
+                      sync{' '}
+                      <strong className="text-foreground">
+                        all records in range
+                      </strong>
+                      .
+                    </span>
+                  </div>
+                )}
+                {countAvailable && estimate!.estimatedSeconds != null && (
+                  <p className="text-muted-foreground flex items-center gap-1 text-[10px] leading-tight">
+                    <Clock className="size-2.5" />
+                    Time estimated from{' '}
+                    {estimate!.basis === 'history'
+                      ? "this job's recent run speed"
+                      : 'a default rate'}{' '}
+                    ({estimate!.ratePerSec} rec/s).
+                  </p>
+                )}
+              </CardContent>
+            </Card>
           )}
+        </>
+      )}
 
-          {!onFooterChange && (
-            <div className="border-t border-border/60 -mx-6 -mb-6 mt-6 px-6 py-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end bg-muted/20">
-              <Button variant="outline" onClick={handleCheck} disabled={checking}>
+      {!onFooterChange && (
+        <div className="border-t border-border/60 -mx-6 -mb-6 mt-4 px-5 py-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end bg-muted/20">
+          {syncTriggered ? (
+            <Button size="sm" onClick={onClose}>
+              Close
+            </Button>
+          ) : (
+            <>
+              <Button variant="outline" size="sm" onClick={handleCheck} disabled={checking}>
                 {checking ? <Spinner /> : <Search />}
                 {checking ? 'Checking…' : 'Check records'}
               </Button>
               <Button
-                onClick={() =>
-                  onConfirm({
-                    startDate: startDateTime?.toISOString(),
-                    endDate: endDateTime?.toISOString(),
-                  })
-                }
+                size="sm"
+                onClick={handleRunSync}
                 disabled={pipelineBlocked || disabled}
               >
                 <RotateCcw /> Run sync now
               </Button>
-            </div>
+            </>
           )}
+        </div>
+      )}
     </div>
   );
 }

@@ -129,21 +129,41 @@ export default function ProjectOnboardingJourney() {
       title: 'Connect Platforms',
       description: step1Desc,
       status: step1Status,
+      isCurrentTab: activeTab === 'connections',
+      hoverHint:
+        activeTab !== 'connections'
+          ? 'Go to Connections tab'
+          : 'Connect both Source and Destination platforms below',
+      guidesFlowAction: activeTab === 'connections' && !hasBothConnections,
       onSelect: () => handleTabChange('connections'),
     },
     {
       title: step2Title,
       description: step2Desc,
       status: step2Status,
+      isCurrentTab: activeTab === 'sync-rules',
+      hoverHint:
+        activeTab !== 'sync-rules'
+          ? 'Go to Sync Flows tab'
+          : hasDraft
+            ? 'Click to resume sync flow configuration'
+            : "Click '+ Create sync flow' to configure rules",
+      guidesFlowAction:
+        activeTab === 'sync-rules' &&
+        (stage === 'create_first_job' || hasDraft),
       onSelect: !hasBothConnections
         ? undefined
-        : hasDraft || stage === 'create_first_job'
-          ? onCreateSyncRule
-          : () => handleTabChange('sync-rules'),
+        : activeTab !== 'sync-rules'
+          ? () => handleTabChange('sync-rules')
+          : hasDraft || stage === 'create_first_job'
+            ? onCreateSyncRule
+            : () => handleTabChange('sync-rules'),
     },
     {
       title: 'Configure & Test',
       guidesFlowAction: stage === 'configure_job',
+      isCurrentTab: false,
+      hoverHint: 'Open sync flow to configure & test',
       description:
         stage === 'complete'
           ? 'A sync flow has completed its first run.'
@@ -222,6 +242,14 @@ export default function ProjectOnboardingJourney() {
             : 'Choose a flow in Sync Flows to finish its setup and run a test sync.'
         }
         steps={steps}
+        actionLabel={
+          activeTab === 'sync-rules' ? undefined : 'Go to Sync Flows'
+        }
+        onContinue={
+          activeTab === 'sync-rules'
+            ? undefined
+            : () => handleTabChange('sync-rules')
+        }
       />
     );
   }
@@ -235,8 +263,14 @@ export default function ProjectOnboardingJourney() {
         title="Unfinished sync flow in progress"
         description={`Your configuration for "${draftFlowName}" (${draftStepLabel}) was safely preserved. Continue setup to finish creating your sync flow.`}
         steps={steps}
-        actionLabel={activeTab === 'sync-rules' ? undefined : 'Resume Setup'}
-        onContinue={activeTab === 'sync-rules' ? undefined : onCreateSyncRule}
+        actionLabel={
+          activeTab === 'sync-rules' ? 'Resume Setup' : 'Go to Sync Flows'
+        }
+        onContinue={
+          activeTab === 'sync-rules'
+            ? onCreateSyncRule
+            : () => handleTabChange('sync-rules')
+        }
         secondaryAction={{
           label: 'Discard',
           onClick: handleDiscardDraft,
@@ -254,9 +288,13 @@ export default function ProjectOnboardingJourney() {
       description="Both platforms are connected and verified. Next, choose what data you want to sync."
       steps={steps}
       actionLabel={
-        activeTab === 'sync-rules' ? undefined : 'Create First Sync Flow'
+        activeTab === 'sync-rules' ? undefined : 'Go to Sync Flows'
       }
-      onContinue={activeTab === 'sync-rules' ? undefined : onCreateSyncRule}
+      onContinue={
+        activeTab === 'sync-rules'
+          ? undefined
+          : () => handleTabChange('sync-rules')
+      }
     />
   );
 }

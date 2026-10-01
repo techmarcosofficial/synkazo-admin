@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation, useParams, useSearchParams } from 'react-router-dom';
 
 import type { JobDetailContextValue } from './context';
 import { JobDetailProvider } from './context';
@@ -31,22 +31,42 @@ export default function JobDetailPage() {
   const projectId = projectIdParam!;
   const jobId = jobIdParam!;
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const navigationState = location.state as {
     jobBackTo?: unknown;
     jobBackLabel?: unknown;
+    from?: string;
+    fromLabel?: string;
   } | null;
-  const fallbackBackTo = `/projects/${projectId}?tab=sync-rules`;
+  const fromParam = searchParams.get('from');
+  const rawFrom = (typeof navigationState?.jobBackTo === 'string' ? navigationState.jobBackTo : null) ||
+    navigationState?.from ||
+    fromParam;
+  const isFromDashboard = Boolean(
+    rawFrom &&
+      (rawFrom === 'dashboard' ||
+        rawFrom === '/dashboard' ||
+        rawFrom.startsWith('/dashboard')),
+  );
+  const fallbackBackTo = isFromDashboard
+    ? '/dashboard'
+    : `/projects/${projectId}?tab=sync-rules`;
   const stateBackTo = navigationState?.jobBackTo;
   const backTo =
     typeof stateBackTo === 'string' &&
     stateBackTo.startsWith('/') &&
     !stateBackTo.startsWith('//')
       ? stateBackTo
-      : fallbackBackTo;
+      : isFromDashboard
+        ? '/dashboard'
+        : rawFrom && rawFrom.startsWith('/') && !rawFrom.startsWith('//')
+          ? rawFrom
+          : fallbackBackTo;
   const backLabel =
     typeof navigationState?.jobBackLabel === 'string'
       ? navigationState.jobBackLabel
-      : 'Back to Sync Jobs';
+      : navigationState?.fromLabel ||
+        (isFromDashboard ? 'Back to Dashboard' : 'Back to Sync Jobs');
 
   const detailQuery = useJobDetailQuery(projectId, jobId);
   const { patchJob } = useJobDetailCacheHelpers(projectId, jobId);
@@ -174,7 +194,7 @@ export default function JobDetailPage() {
       <Tabs
         value={activeTab}
         onValueChange={(v) => handleTabChange(v as typeof activeTab)}
-        className="gap-0"
+        className="project-flow-guidance gap-0"
       >
         <StickyDetailHeader
           backLabel={backLabel}

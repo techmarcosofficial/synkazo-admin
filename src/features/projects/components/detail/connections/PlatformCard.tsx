@@ -37,6 +37,7 @@ interface PlatformCardProps {
   onUpdated: (updated: ExtConnection | null) => void;
   nextRequired?: boolean;
   connectDisabled?: boolean;
+  isTesting?: boolean;
   onTestingChange?: (testing: boolean) => void;
   onTestError?: (message: string) => void;
 }
@@ -47,21 +48,23 @@ export default function PlatformCard({
   onUpdated,
   nextRequired = false,
   connectDisabled = false,
+  isTesting = false,
   onTestingChange,
   onTestError,
 }: PlatformCardProps) {
   const meta = PLATFORM_META[conn.platformId] ?? { label: conn.platformId };
   const envLabel = conn.environment === 'sandbox' ? 'Sandbox' : 'Production';
-  const isSlot = !conn.id;
-  const isConnected = conn.status === 'connected';
-  const isError = !isSlot && !isConnected;
-
   const { hasRole } = useSynkazoAuth();
   const canManage = hasRole('org_admin');
   const { confirm } = useConfirmDialog();
   const { testing, testResult, handleTest, handleDisconnect } =
     useConnectionTestAndDisconnect(conn, onUpdated, onTestError);
   const [showPermissions, setShowPermissions] = useState(false);
+
+  const activeTesting = isTesting || testing;
+  const isSlot = !conn.id;
+  const isConnected = conn.status === 'connected';
+  const isError = !activeTesting && !isSlot && !isConnected;
 
   useEffect(() => {
     onTestingChange?.(testing);
@@ -89,12 +92,26 @@ export default function PlatformCard({
               <p className="text-muted-foreground truncate text-xs">
                 {envLabel}
                 {!isSlot && conn.accountName ? ` · ${conn.accountName}` : ''}
-                {isError ? ' · Action Required' : ''}
+                {activeTesting
+                  ? ' · Verifying credentials…'
+                  : isError
+                    ? ' · Action Required'
+                    : ''}
               </p>
             </div>
           </div>
 
-          {isSlot ? (
+          {activeTesting ? (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled
+              className="w-full md:ml-auto md:w-auto gap-1.5"
+            >
+              <RefreshCw className="animate-spin size-3.5" />
+              Verifying…
+            </Button>
+          ) : isSlot ? (
             <ActionTooltip
               tooltip={
                 !canManage
@@ -107,6 +124,7 @@ export default function PlatformCard({
               <Button
                 variant={nextRequired ? 'default' : 'secondary'}
                 size="sm"
+                data-flow-next-action={nextRequired ? 'true' : undefined}
                 className="w-full md:ml-auto md:w-auto"
                 onClick={() => canManage && onConnect(conn)}
                 disabled={!canManage || connectDisabled}
@@ -264,7 +282,7 @@ export default function PlatformCard({
           )}
         </div>
 
-        {isError && (
+        {!activeTesting && isError && (
           <div className="bg-destructive/10 text-destructive flex items-center gap-2 rounded-2xl px-3 py-1.5 text-xs">
             <AlertCircle className="size-3.5 shrink-0" />
             <span>Connection verification failed or credentials expired. Update credentials to restore sync.</span>

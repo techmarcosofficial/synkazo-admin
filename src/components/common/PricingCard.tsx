@@ -2,6 +2,7 @@ import { Check } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import HeadingPair from '@/components/shared/HeadingPair';
+import { PlanIcon, PLAN_ICON_FEATURE_KEY } from '@/components/common/PlanIcon';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -40,6 +41,12 @@ export function PricingCard({
         </Badge>
       )}
       <CardContent className="flex flex-1 flex-col">
+        <div className="bg-primary/10 text-primary mb-4 flex size-11 items-center justify-center rounded-2xl">
+          <PlanIcon
+            iconKey={plan.rawFeatures[PLAN_ICON_FEATURE_KEY]}
+            planName={plan.name}
+          />
+        </div>
         <HeadingPair
           visualLevel="card"
           level="h3"
@@ -77,6 +84,7 @@ export function PricingCard({
               asChild
               size="lg"
               variant={plan.highlighted ? 'default' : 'outline'}
+              className="rounded-2xl"
             >
               <Link to={cta.to}>{cta.label}</Link>
             </Button>
@@ -84,6 +92,7 @@ export function PricingCard({
             <Button
               size="lg"
               variant={plan.highlighted ? 'default' : 'outline'}
+              className="rounded-2xl"
               onClick={cta.onClick}
               disabled={cta.disabled || cta.loading}
             >

@@ -218,7 +218,9 @@ export default function OverviewTab() {
   });
   const hasRunHistory = onboarding.testComplete;
   const canStartSync =
-    canActivate && onboarding.configurationReady && job.isEnabled;
+    canActivate &&
+    onboarding.configurationReady &&
+    (job.isEnabled || !hasRunHistory);
 
   const syncBlocked = queued || isSyncing || !canStartSync;
   const summaryRun =
@@ -474,15 +476,12 @@ export default function OverviewTab() {
             void handleRunNow();
           }}
           onLimitSyncStarted={() => {
-            setManualDialogOpen(false);
             void beginTracking();
           }}
           onLimitSyncDone={() => {
-            setManualDialogOpen(false);
             void refetch();
           }}
           onSyncAll={(range) => {
-            setManualDialogOpen(false);
             void handleSyncAll(undefined, range);
           }}
         />

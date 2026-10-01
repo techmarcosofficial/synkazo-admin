@@ -1,22 +1,21 @@
-import {
-  AlertCircle,
-  ArrowRight,
-  CheckCircle,
-  UserRound,
-} from 'lucide-react';
+import { AlertCircle, ArrowRight, CheckCircle, UserRound } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { invitationsApi } from '@/api/invitations';
 import AuthInput from '@/components/auth/AuthInput';
 import AuthStatus from '@/components/auth/AuthStatus';
-import BrandMark from '@/components/auth/BrandMark';
 import PasswordInput from '@/components/auth/PasswordInput';
 import PasswordStrength from '@/components/auth/PasswordStrength';
 import SplitAuthLayout from '@/components/auth/SplitAuthLayout';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from '@/components/ui/field';
 import { Spinner } from '@/components/ui/spinner';
 import { getPasswordError } from '@/lib/passwordValidation';
 import { roleLabel } from '@/lib/permissions';
@@ -28,6 +27,9 @@ interface AcceptResult {
 }
 
 type Status = 'form' | 'submitting' | 'success' | 'error';
+type InviteFieldErrors = Partial<
+  Record<'fullName' | 'password' | 'confirmPassword', string>
+>;
 
 export default function AcceptInvite() {
   const token = new URLSearchParams(window.location.search).get('token');
@@ -36,6 +38,7 @@ export default function AcceptInvite() {
   const [fullName, setFullName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<InviteFieldErrors>({});
   const [data, setData] = useState<AcceptResult | null>(null);
   const [errorMsg, setErrorMsg] = useState(
     token ? '' : 'No invitation token found.',
@@ -43,17 +46,19 @@ export default function AcceptInvite() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const nextErrors: InviteFieldErrors = {};
     if (!fullName.trim()) {
-      setErrorMsg('Full name is required.');
-      return;
+      nextErrors.fullName = 'Full name is required.';
     }
     const passwordError = getPasswordError(password);
     if (passwordError) {
-      setErrorMsg(passwordError);
-      return;
+      nextErrors.password = passwordError;
     }
     if (password !== confirmPassword) {
-      setErrorMsg('Passwords do not match.');
+      nextErrors.confirmPassword = 'Passwords do not match.';
+    }
+    setFieldErrors(nextErrors);
+    if (Object.values(nextErrors).some(Boolean)) {
       return;
     }
     setErrorMsg('');
@@ -77,29 +82,29 @@ export default function AcceptInvite() {
   };
 
   return (
-    <SplitAuthLayout>
-      <BrandMark />
-
+    <SplitAuthLayout variant="immersive" showBackToHome={false}>
       {(status === 'form' || status === 'submitting') && (
         <>
-          <div className="mt-9 space-y-1.5">
-            <h1 className="text-2xl font-bold tracking-tight">
-              Accept Invitation
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              Set up your account to join your organisation.
-            </p>
+          <div className="synkazo-login-heading">
+            <p className="synkazo-login-eyebrow">YOU'RE INVITED.</p>
+            <h1>Accept your invitation</h1>
+            <p>Set up your account to join your organisation.</p>
           </div>
 
           {errorMsg && (
-            <Alert variant="destructive" className="mt-6">
+            <Alert variant="destructive" className="synkazo-register-alert">
               <AlertDescription>{errorMsg}</AlertDescription>
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit} className="mt-8">
-            <FieldGroup>
-              <Field>
+          <form
+            onSubmit={handleSubmit}
+            className="synkazo-login-form synkazo-register-form"
+            aria-busy={status === 'submitting'}
+            noValidate
+          >
+            <FieldGroup className="synkazo-login-fields synkazo-register-fields">
+              <Field data-invalid={!!fieldErrors.fullName}>
                 <FieldLabel htmlFor="invite-name" required>
                   Full Name
                 </FieldLabel>
@@ -107,52 +112,111 @@ export default function AcceptInvite() {
                   icon={UserRound}
                   id="invite-name"
                   value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
+                  onChange={(e) => {
+                    setFullName(e.target.value);
+                    setFieldErrors((current) => ({
+                      ...current,
+                      fullName: undefined,
+                    }));
+                  }}
                   placeholder="Jane Smith"
+                  autoComplete="name"
+                  aria-invalid={!!fieldErrors.fullName}
+                  aria-describedby={
+                    fieldErrors.fullName ? 'invite-name-error' : undefined
+                  }
                   required
                   autoFocus
                 />
+                <FieldError id="invite-name-error">
+                  {fieldErrors.fullName}
+                </FieldError>
               </Field>
-              <Field>
+              <Field data-invalid={!!fieldErrors.password}>
                 <FieldLabel htmlFor="invite-password" required>
                   Password
                 </FieldLabel>
                 <PasswordInput
                   id="invite-password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setFieldErrors((current) => ({
+                      ...current,
+                      password: undefined,
+                    }));
+                  }}
                   placeholder="Min. 8 characters"
+                  autoComplete="new-password"
+                  aria-invalid={!!fieldErrors.password}
+                  aria-describedby={
+                    fieldErrors.password ? 'invite-password-error' : undefined
+                  }
                   required
                   minLength={8}
                 />
                 <PasswordStrength password={password} />
+                <FieldError id="invite-password-error">
+                  {fieldErrors.password}
+                </FieldError>
               </Field>
-              <Field>
+              <Field data-invalid={!!fieldErrors.confirmPassword}>
                 <FieldLabel htmlFor="invite-confirm" required>
                   Confirm Password
                 </FieldLabel>
                 <PasswordInput
                   id="invite-confirm"
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    setFieldErrors((current) => ({
+                      ...current,
+                      confirmPassword: undefined,
+                    }));
+                  }}
                   placeholder="Repeat password"
+                  autoComplete="new-password"
+                  aria-invalid={!!fieldErrors.confirmPassword}
+                  aria-describedby={
+                    fieldErrors.confirmPassword
+                      ? 'invite-confirm-error'
+                      : undefined
+                  }
                   required
                 />
+                <FieldError id="invite-confirm-error">
+                  {fieldErrors.confirmPassword}
+                </FieldError>
               </Field>
               <Button
                 type="submit"
+                size="lg"
                 disabled={status === 'submitting'}
-                className="w-full"
+                className="synkazo-login-submit"
               >
-                {status === 'submitting' ? <Spinner /> : 'Create Account'}
+                {status === 'submitting' ? (
+                  <>
+                    <Spinner /> Creating account…
+                  </>
+                ) : (
+                  <>
+                    Create Account <ArrowRight />
+                  </>
+                )}
               </Button>
             </FieldGroup>
           </form>
+          <p className="synkazo-register-signin">
+            Already have an account?{' '}
+            <Link to="/login" className="synkazo-register-link">
+              Sign in
+            </Link>
+          </p>
         </>
       )}
 
       {status === 'success' && (
-        <div className="mt-9">
+        <div className="synkazo-invite-status">
           <AuthStatus
             icon={CheckCircle}
             tone="success"
@@ -171,7 +235,7 @@ export default function AcceptInvite() {
               </>
             }
           >
-            <Button asChild>
+            <Button asChild size="lg" className="synkazo-login-submit">
               <Link to="/login">
                 Go to Login <ArrowRight />
               </Link>
@@ -181,7 +245,7 @@ export default function AcceptInvite() {
       )}
 
       {status === 'error' && (
-        <div className="mt-9">
+        <div className="synkazo-invite-status">
           <AuthStatus
             icon={AlertCircle}
             tone="danger"
@@ -190,7 +254,12 @@ export default function AcceptInvite() {
               errorMsg || 'This invitation is invalid or has expired.'
             }
           >
-            <Button asChild variant="outline">
+            <Button
+              asChild
+              variant="outline"
+              size="lg"
+              className="synkazo-login-submit"
+            >
               <Link to="/login">Back to Login</Link>
             </Button>
           </AuthStatus>

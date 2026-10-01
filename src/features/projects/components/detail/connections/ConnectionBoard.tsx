@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
+import ConnectionsReadyDialog from './ConnectionsReadyDialog';
 import PlatformCard from './PlatformCard';
 import SourcePlatformPicker from './SourcePlatformPicker';
 
+import { connectionsApi } from '@/api/connections';
 import ConnectionEnvDropdown from '@/components/connections/ConnectionEnvToggle';
+import { PLATFORM_META } from '@/components/connections/platformMeta';
 import HeadingPair from '@/components/shared/HeadingPair';
 import CredentialsModal from '@/components/connections/CredentialsModal';
-import type { ExtConnection } from '@/components/connections/types';
+import type { ExtConnection, ConnectionPayload } from '@/components/connections/types';
 import { useConnectionsManager } from '@/components/connections/useConnectionsManager';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { BorderBeam } from '@/components/ui/border-beam';
@@ -100,7 +103,7 @@ function ConnectionStep({
   onFix,
   children,
 }: ConnectionStepProps) {
-  const isError = hasVerificationError || (!complete && hasConnection);
+  const isError = !isTesting && (hasVerificationError || (!complete && hasConnection));
   const borderState = isTesting
     ? 'testing'
     : isError
@@ -110,13 +113,15 @@ function ConnectionStep({
         : complete
           ? 'connected'
           : 'pending';
-  const status = isError
-    ? 'error'
-    : complete
-      ? 'connected'
-      : nextRequired
-        ? 'ready_to_connect'
-        : 'awaiting_connection';
+  const status = isTesting
+    ? 'in_progress'
+    : isError
+      ? 'error'
+      : complete
+        ? 'connected'
+        : nextRequired
+          ? 'ready_to_connect'
+          : 'awaiting_connection';
 
   return (
     <div className="grid grid-cols-[2.25rem_minmax(0,1fr)] gap-3">
@@ -151,7 +156,7 @@ function ConnectionStep({
 
       <Card
         surface="inner"
-        data-connection-state={isError ? 'error' : complete ? 'connected' : 'pending'}
+        data-connection-state={isTesting ? 'testing' : isError ? 'error' : complete ? 'connected' : 'pending'}
         data-border-state={borderState}
         data-testing={isTesting ? 'true' : undefined}
         className={cn(
@@ -229,6 +234,8 @@ export default function ConnectionBoard({
   const [testingDest, setTestingDest] = useState(false);
   const [successBorders, setSuccessBorders] = useState<Record<string, boolean>>({});
   const [verificationErrors, setVerificationErrors] = useState<Record<string, boolean>>({});
+  const [cachedForms, setCachedForms] = useState<Record<string, Record<string, string>>>({});
+  const [showReadyDialog, setShowReadyDialog] = useState(false);
   const successTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   useEffect(() => () => {
@@ -320,6 +327,95 @@ export default function ConnectionBoard({
       'Destination connected. Connect your source to enable data sync.';
   }
 
+  const handleSubmitCredentials = async (
+    conn: ExtConnection,
+    credentials: Record<string, string>,
+    existingConnId?: string,
+  ) => {
+    const key = borderFeedbackKey(projectId, conn);
+    setCachedForms((prev) => ({ ...prev, [key]: credentials }));
+    clearVerificationError(projectId, conn);
+    setVerificationErrors((current) => ({ ...current, [key]: false }));
+    resetModals();
+
+    const isSource = conn.connectionType === 'source';
+    if (isSource) {
+      setTestingSource(true);
+    } else {
+      setTestingDest(true);
+    }
+
+    try {
+      let connId = existingConnId || conn.id;
+      const payload: ConnectionPayload = {
+        credentials,
+        status: 'disconnected',
+      };
+
+      if (connId) {
+        await connectionsApi.updateConnection(
+          projectId,
+          connId,
+          payload as Partial<Connection>,
+        );
+      } else {
+        const saved = await connectionsApi.createConnection(projectId, {
+          ...payload,
+          platformId: conn.platformId,
+          connectionType: conn.connectionType,
+          environment: conn.environment ?? activeEnv,
+        } as Partial<Connection>);
+        connId = saved?.id;
+      }
+
+      if (!connId) {
+        throw new Error('Connection could not be saved. Please try again.');
+      }
+
+      const result = await connectionsApi.testConnection(projectId, connId);
+
+      if (result?.success) {
+        clearVerificationError(projectId, conn);
+        await refreshConnections();
+        await onSaved?.();
+        showSuccessFor(conn);
+
+        const isPairComplete =
+          (isSource && destinationComplete) || (!isSource && sourceComplete);
+        if (isPairComplete) {
+          setShowReadyDialog(true);
+        }
+      } else {
+        const errorMsg =
+          result?.message ||
+          'Invalid credentials — please check the values and try again.';
+        showErrorFor(conn, errorMsg);
+        await refreshConnections();
+
+        openConnect({ ...conn, id: connId });
+      }
+    } catch (err) {
+      const e = err as {
+        message?: string;
+        response?: { data?: { message?: string } };
+      };
+      const errorMsg =
+        e?.response?.data?.message ||
+        e?.message ||
+        'Failed to save credentials. Please check your values and try again.';
+      showErrorFor(conn, errorMsg);
+      await refreshConnections();
+
+      openConnect(conn);
+    } finally {
+      if (isSource) {
+        setTestingSource(false);
+      } else {
+        setTestingDest(false);
+      }
+    }
+  };
+
   return (
     <>
       <Card className={cn('w-full', className)}>
@@ -382,6 +478,7 @@ export default function ConnectionBoard({
                   }
                   onTestError={(message) => showErrorFor(sourceSlot, message)}
                   nextRequired={nextRequired === 'source'}
+                  isTesting={testingSource}
                   onTestingChange={setTestingSource}
                 />
               ) : (
@@ -414,6 +511,7 @@ export default function ConnectionBoard({
                   onTestError={(message) => showErrorFor(destinationSlot, message)}
                   nextRequired={nextRequired === 'destination'}
                   connectDisabled={!sourceComplete && !destConn}
+                  isTesting={testingDest}
                   onTestingChange={setTestingDest}
                 />
               ) : (
@@ -435,6 +533,10 @@ export default function ConnectionBoard({
           onOAuth={
             activeConn.platformId === 'hubspot' ? handleOAuth : undefined
           }
+          initialForm={cachedForms[borderFeedbackKey(projectId, activeConn)]}
+          onSubmitCredentials={(creds, existingId) =>
+            handleSubmitCredentials(activeConn, creds, existingId)
+          }
           onSaved={async () => {
             clearVerificationError(projectId, activeConn);
             await refreshConnections();
@@ -451,13 +553,31 @@ export default function ConnectionBoard({
             activeConn.connectionType === 'source' ? setTestingSource : setTestingDest
           }
           initialError={readVerificationError(projectId, activeConn)}
-          willCompleteBoth={
-            activeConn.status !== 'connected' &&
-            ((activeConn.connectionType === 'source' && destinationComplete) ||
-              (activeConn.connectionType === 'destination' && sourceComplete))
-          }
+          willCompleteBoth={false}
         />
       )}
+
+      <ConnectionsReadyDialog
+        open={showReadyDialog}
+        onOpenChange={setShowReadyDialog}
+        sourcePlatformId={sourceSlot?.platformId ?? sourcePlatformId}
+        sourcePlatformLabel={
+          PLATFORM_META[sourceSlot?.platformId ?? sourcePlatformId ?? '']?.label ??
+          'Source'
+        }
+        destPlatformId={destinationSlot?.platformId ?? destPlatformId}
+        destPlatformLabel={
+          PLATFORM_META[
+            destinationSlot?.platformId ?? destPlatformId ?? ''
+          ]?.label ?? 'Destination'
+        }
+        environment={activeEnv}
+        onDismiss={() => setShowReadyDialog(false)}
+        onContinue={() => {
+          setShowReadyDialog(false);
+          onContinue?.();
+        }}
+      />
     </>
   );
 }

@@ -179,4 +179,39 @@ describe('PlatformCard Progressive Disclosure', () => {
 
     expect(onTestingChangeMock).toHaveBeenCalledWith(false);
   });
+
+  it('hides error notice and displays verifying state when isTesting is true', () => {
+    const errorConn: ExtConnection = {
+      id: 'conn-1',
+      projectId: 'proj-1',
+      platformId: 'servicetitan',
+      connectionType: 'source',
+      environment: 'production',
+      status: 'error',
+      accountName: 'Acme HVAC',
+    };
+
+    render(
+      <MemoryRouter>
+        <PlatformCard
+          conn={errorConn}
+          onConnect={onConnectMock}
+          onUpdated={onUpdatedMock}
+          isTesting={true}
+        />
+      </MemoryRouter>,
+    );
+
+    // Error banner and Action Required MUST NOT appear while verifying
+    expect(
+      screen.queryByText(/connection verification failed or credentials expired/i),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/action required/i),
+    ).not.toBeInTheDocument();
+
+    // Verifying state should be visible in subtitle and action button
+    expect(screen.getByText(/verifying credentials…/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /verifying…/i })).toBeDisabled();
+  });
 });

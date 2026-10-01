@@ -288,6 +288,32 @@ describe('ProjectDetailPage - Self-Healing Status Management', () => {
       expect(backLinks[0]).toHaveAttribute('href', '/dashboard');
     });
 
+    it('renders "Back to Dashboard" when navigated with ?from=dashboard query param', () => {
+      vi.mocked(useProjectDetailQuery).mockReturnValue({
+        isLoading: false,
+        data: {
+          project: { id: 'proj-123', name: 'Test Proj', status: 'draft' },
+          jobs: [],
+          connections: [],
+          logs: [],
+        },
+        error: null,
+        refetch: vi.fn(),
+      } as any);
+
+      render(
+        <MemoryRouter initialEntries={['/projects/proj-123?from=dashboard']}>
+          <Routes>
+            <Route path="/projects/:id" element={<ProjectDetailPage />} />
+          </Routes>
+        </MemoryRouter>,
+      );
+
+      const backLinks = screen.getAllByRole('link', { name: /back to dashboard/i });
+      expect(backLinks.length).toBeGreaterThan(0);
+      expect(backLinks[0]).toHaveAttribute('href', '/dashboard');
+    });
+
     it('defaults to "Back to Projects" when no navigation state is present', () => {
       vi.mocked(useProjectDetailQuery).mockReturnValue({
         isLoading: false,

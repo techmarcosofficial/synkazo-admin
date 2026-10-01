@@ -63,6 +63,11 @@ export default function JobOnboardingJourney() {
       title: 'Field Mapping',
       description: 'Match source fields to their destination fields.',
       status: stepStatus(state.mappingReady, 'field_mapping'),
+      isCurrentTab: activeTab === 'field-mapping',
+      hoverHint:
+        activeTab !== 'field-mapping'
+          ? 'Go to Field Mapping tab'
+          : 'Map source and destination fields, and select a match field',
       onSelect: () => handleTabChange('field-mapping'),
     },
     ...(pipelineRequired
@@ -72,6 +77,11 @@ export default function JobOnboardingJourney() {
             description:
               'Choose the destination pipeline required by this job.',
             status: stepStatus(state.configurationReady, 'configure'),
+            isCurrentTab: activeTab === 'pipeline',
+            hoverHint:
+              activeTab !== 'pipeline'
+                ? 'Go to Pipeline tab'
+                : 'Select the destination pipeline',
             onSelect: () => handleTabChange('pipeline'),
           },
         ]
@@ -82,9 +92,16 @@ export default function JobOnboardingJourney() {
         ? 'Run a limited sync in Sandbox and review the result before automating it.'
         : 'Run a limited sync and review the result before automating it.',
       status: stepStatus(state.testComplete, 'test'),
+      isCurrentTab: activeTab === 'overview',
+      hoverHint:
+        activeTab !== 'overview'
+          ? 'Go to Overview tab'
+          : isSandbox
+            ? "Click 'Run Test Sync' to verify records"
+            : "Click 'Run Sync' to verify records",
       onSelect: () => {
-        if (!isJobActive) {
-          void handleToggle();
+        if (activeTab !== 'overview') {
+          handleTabChange('overview');
         } else {
           handleOpenTestSync();
         }
@@ -95,6 +112,11 @@ export default function JobOnboardingJourney() {
       description: 'Add a schedule later if this job should run automatically.',
       status: 'upcoming',
       optional: true,
+      isCurrentTab: activeTab === 'schedule',
+      hoverHint:
+        activeTab !== 'schedule'
+          ? 'Go to Schedule tab'
+          : 'Set an automated sync schedule',
       onSelect: () => handleTabChange('schedule'),
     },
   ];
@@ -177,18 +199,21 @@ export default function JobOnboardingJourney() {
             }
           : {
               eyebrow: 'Job setup',
-              title: 'Activate your sync job',
-              description:
-                'Field mapping is complete. Activate this job to enable synchronization and review data transfer.',
+              title: isSandbox
+                ? 'Run your first test sync'
+                : 'Run your first sync',
+              description: isSandbox
+                ? 'Field mapping is configured. Run a test sync in Sandbox to verify records move cleanly between platforms.'
+                : 'Field mapping is configured. Run a sync to verify records move cleanly between platforms.',
             };
 
   let actionLabel: string | undefined;
   let onContinue: (() => void) | undefined;
 
   if (state.stage === 'test') {
-    if (!isJobActive) {
-      actionLabel = toggling ? 'Activating…' : 'Activate Job';
-      onContinue = () => void handleToggle();
+    if (activeTab !== 'overview') {
+      actionLabel = 'Go to Overview';
+      onContinue = () => handleTabChange('overview');
     } else {
       actionLabel = isSandbox ? 'Run Test Sync' : 'Run Limited Sync';
       onContinue = handleOpenTestSync;
@@ -207,6 +232,7 @@ export default function JobOnboardingJourney() {
 
   return (
     <SetupJourneyCard
+      compact
       eyebrow={content.eyebrow}
       title={content.title}
       description={content.description}

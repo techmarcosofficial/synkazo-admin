@@ -55,9 +55,12 @@ export default function CreateProjectDialog() {
             onSuccess={(project) => {
               close();
               const isFromDashboard = location.pathname.includes('/dashboard');
-              navigate(`/projects/${project.id}?tab=connections`, {
+              const targetUrl = isFromDashboard
+                ? `/projects/${project.id}?tab=connections&from=dashboard`
+                : `/projects/${project.id}?tab=connections`;
+              navigate(targetUrl, {
                 state: {
-                  from: location.pathname,
+                  from: isFromDashboard ? '/dashboard' : '/projects',
                   fromLabel: isFromDashboard
                     ? 'Back to Dashboard'
                     : 'Back to Projects',

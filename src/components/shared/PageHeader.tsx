@@ -61,12 +61,7 @@ export default function PageHeader({
       <header className={cn('w-full', backTo ? 'space-y-4' : 'space-y-3')}>
         {backTo && <BackLink label={backTo.label} to={backTo.to} />}
 
-        <div
-          className={cn(
-            'flex gap-4 md:flex-row md:items-start md:justify-between',
-            !backTo && 'flex-col',
-          )}
-        >
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6 lg:gap-8">
           {/* Left */}
           {backTo ? (
             <div className="min-w-0 flex-1">
@@ -82,20 +77,25 @@ export default function PageHeader({
               )}
             </div>
           ) : greeting ? (
-            <div className="min-w-0 max-w-3xl flex-1">
+            <div
+              className={cn(
+                'min-w-0',
+                hasActions ? 'max-w-md shrink-0' : 'max-w-2xl flex-1',
+              )}
+            >
               <div className="flex min-w-0 items-center gap-3">
                 <h1 className="min-w-0 flex-1">
-                  <span className="text-muted-foreground block text-sm leading-5">
+                  <span className="text-muted-foreground block text-xs sm:text-sm leading-5">
                     {greeting},
                   </span>
-                  <span className="text-foreground mt-1 block text-[28px] leading-9 font-bold tracking-tight [overflow-wrap:anywhere]">
+                  <span className="text-foreground mt-0.5 block text-2xl sm:text-[28px] leading-tight font-bold tracking-tight [overflow-wrap:anywhere]">
                     {title}
                   </span>
                 </h1>
                 {badge}
               </div>
               {description && (
-                <p className="text-muted-foreground mt-2 text-sm leading-5">
+                <p className="text-muted-foreground mt-1 text-xs sm:text-sm leading-5">
                   {description}
                 </p>
               )}
@@ -112,7 +112,7 @@ export default function PageHeader({
 
           {/* Right */}
           {hasActions && (
-            <div className="flex shrink-0 flex-wrap items-center justify-start gap-2 md:justify-end">
+            <div className="flex w-full flex-1 items-center justify-start md:justify-end">
               {actions}
               {storeActions}
             </div>

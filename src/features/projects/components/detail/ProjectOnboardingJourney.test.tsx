@@ -61,26 +61,64 @@ describe('ProjectOnboardingJourney', () => {
       ),
     ).toBeInTheDocument();
 
-    // Step 1: Connect Platforms - Complete
-    expect(screen.getByText('Connect Platforms')).toBeInTheDocument();
+    // Step 1: Connect Platforms - Complete with hover hint
+    const step1Btn = screen.getByRole('button', { name: /connect platforms/i });
+    expect(step1Btn).toBeInTheDocument();
+    expect(step1Btn).toHaveAttribute(
+      'data-step-hint',
+      'Connect both Source and Destination platforms below',
+    );
+    expect(step1Btn).not.toHaveAttribute('title');
     expect(screen.getByText('Complete')).toBeInTheDocument();
 
-    // Step 2: Create First Sync Flow - Action needed
-    expect(
-      screen.getAllByText('Create First Sync Flow').length,
-    ).toBeGreaterThanOrEqual(1);
+    // Step 2: Create First Sync Flow - Action needed with hover hint to go to Sync Flows tab
+    const step2Btn = screen.getByRole('button', {
+      name: /create first sync flow/i,
+    });
+    expect(step2Btn).toBeInTheDocument();
+    expect(step2Btn).toHaveAttribute('data-step-hint', 'Go to Sync Flows tab');
+    expect(step2Btn).not.toHaveAttribute('title');
     expect(screen.getByText('Action needed')).toBeInTheDocument();
 
     // Counter
     expect(screen.getByText('Configure & Test')).toBeInTheDocument();
     expect(screen.getByText('1/3 complete')).toBeInTheDocument();
 
-    // Primary CTA: Create First Sync Flow -> directly triggers onCreateSyncRule
-    const primaryButton = screen.getByRole('button', {
-      name: /^create first sync flow$/i,
+    // Redundant trailing button is removed; clicking Step 2 card triggers the action (One Click, One Action)
+    expect(
+      screen.queryByRole('button', { name: /^go to sync flows$/i }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(step2Btn);
+    expect(mockHandleTabChange).toHaveBeenCalledWith('sync-rules');
+    expect(mockOnCreateSyncRule).not.toHaveBeenCalled();
+  });
+
+  it('triggers create modal from step 2 when on sync-rules tab', () => {
+    vi.mocked(useProjectDetailContext).mockReturnValue({
+      projectId: 'proj-1',
+      jobs: [],
+      hasBothConnections: true,
+      hasJobs: false,
+      activeTab: 'sync-rules',
+      handleTabChange: mockHandleTabChange,
+      onCreateSyncRule: mockOnCreateSyncRule,
+    } as any);
+
+    render(
+      <MemoryRouter>
+        <ProjectOnboardingJourney />
+      </MemoryRouter>,
+    );
+
+    const step2Btn = screen.getByRole('button', {
+      name: /create first sync flow/i,
     });
-    expect(primaryButton).toBeInTheDocument();
-    fireEvent.click(primaryButton);
+    expect(step2Btn).toHaveAttribute(
+      'data-step-hint',
+      "Click '+ Create sync flow' to configure rules",
+    );
+    expect(step2Btn).not.toHaveAttribute('title');
+    fireEvent.click(step2Btn);
     expect(mockOnCreateSyncRule).toHaveBeenCalledOnce();
   });
 
@@ -99,7 +137,7 @@ describe('ProjectOnboardingJourney', () => {
       jobs: [],
       hasBothConnections: true,
       hasJobs: false,
-      activeTab: 'connections',
+      activeTab: 'sync-rules',
       handleTabChange: mockHandleTabChange,
       onCreateSyncRule: mockOnCreateSyncRule,
     } as any);
@@ -115,9 +153,11 @@ describe('ProjectOnboardingJourney', () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/Customer to Contact Sync/i)).toBeInTheDocument();
 
-    const resumeBtn = screen.getByRole('button', { name: /resume setup/i });
-    expect(resumeBtn).toBeInTheDocument();
-    fireEvent.click(resumeBtn);
+    const step2Btn = screen.getByRole('button', {
+      name: /create first sync flow/i,
+    });
+    expect(step2Btn).toBeInTheDocument();
+    fireEvent.click(step2Btn);
     expect(mockOnCreateSyncRule).toHaveBeenCalledOnce();
 
     // Discard action
