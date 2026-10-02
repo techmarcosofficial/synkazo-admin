@@ -39,10 +39,7 @@ export default function BlockerNotice({
 
   return (
     <Card
-      className={cn(
-        'border-warning/40 bg-warning/5 rounded-3xl shadow-xs',
-        className,
-      )}
+      className={cn('border-warning/40 bg-warning/5 rounded-3xl', className)}
     >
       <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">

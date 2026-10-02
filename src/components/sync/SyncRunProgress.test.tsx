@@ -225,6 +225,7 @@ describe('SyncRunProgress', () => {
 
     const header = screen.getByText('Sync in progress').closest('[data-slot="sync-summary-header"]');
     expect(header).toBeInTheDocument();
+    expect(header).toHaveClass('bg-card', 'hover:bg-muted/20');
     fireEvent.click(header!);
 
     expect(screen.getByRole('button', { name: 'Collapse' })).toBeInTheDocument();

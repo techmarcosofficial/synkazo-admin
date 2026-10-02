@@ -660,7 +660,7 @@ export default function SyncRunProgress({
           data-slot="sync-summary-header"
           onClick={handleHeaderClick}
           className={cn(
-            'group/header hover:bg-muted/20 flex cursor-pointer flex-col gap-3 transition-colors',
+            'group/header bg-card hover:bg-muted/20 flex cursor-pointer flex-col gap-3 transition-colors',
             isCompact
               ? 'p-3 gap-2.5'
               : 'p-3.5 px-4 py-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4',

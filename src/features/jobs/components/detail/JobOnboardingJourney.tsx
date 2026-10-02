@@ -109,15 +109,20 @@ export default function JobOnboardingJourney() {
     },
     {
       title: 'Automate (optional)',
-      description: 'Add a schedule later if this job should run automatically.',
+      description:
+        'Configure an automated schedule on Overview if this job should run automatically.',
       status: 'upcoming',
       optional: true,
-      isCurrentTab: activeTab === 'schedule',
+      isCurrentTab: activeTab === 'overview',
       hoverHint:
-        activeTab !== 'schedule'
-          ? 'Go to Schedule tab'
-          : 'Set an automated sync schedule',
-      onSelect: () => handleTabChange('schedule'),
+        activeTab !== 'overview'
+          ? 'Go to Overview tab to view schedule options'
+          : 'Configure an automated sync schedule',
+      onSelect: () => {
+        if (activeTab !== 'overview') {
+          handleTabChange('overview');
+        }
+      },
     },
   ];
 

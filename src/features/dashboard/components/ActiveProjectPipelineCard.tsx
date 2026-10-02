@@ -169,15 +169,18 @@ export default function ActiveProjectPipelineCard({
             aria-label="Configure platform connections"
             data-testid="step-connections"
             onClick={() =>
-              navigate(`/projects/${project.id}?tab=connections&from=dashboard`, {
-                state: { from: '/dashboard', fromLabel: 'Back to Dashboard' },
-              })
+              navigate(
+                `/projects/${project.id}?tab=connections&from=dashboard`,
+                {
+                  state: { from: '/dashboard', fromLabel: 'Back to Dashboard' },
+                },
+              )
             }
             disabled={!canManage}
             className={cn(
               'group bg-card border-border/80 flex flex-col justify-between space-y-3 rounded-2xl border p-4 text-left transition-all duration-200',
               canManage
-                ? 'hover:border-foreground/20 hover:bg-muted/30 cursor-pointer hover:-translate-y-0.5 hover:shadow-xs'
+                ? 'hover:border-foreground/20 hover:bg-accent/20 cursor-pointer'
                 : 'cursor-not-allowed opacity-60',
             )}
           >
@@ -227,14 +230,17 @@ export default function ActiveProjectPipelineCard({
             data-testid="step-sync-flows"
             disabled={step3State === 'pending' || !canManage}
             onClick={() =>
-              navigate(`/projects/${project.id}?tab=sync-rules&from=dashboard`, {
-                state: { from: '/dashboard', fromLabel: 'Back to Dashboard' },
-              })
+              navigate(
+                `/projects/${project.id}?tab=sync-rules&from=dashboard`,
+                {
+                  state: { from: '/dashboard', fromLabel: 'Back to Dashboard' },
+                },
+              )
             }
             className={cn(
               'group flex flex-col justify-between space-y-3 rounded-2xl border p-4 text-left transition-all duration-200',
               step3State !== 'pending' && canManage
-                ? 'bg-card border-border/80 hover:border-foreground/20 hover:bg-muted/30 cursor-pointer hover:-translate-y-0.5 hover:shadow-xs'
+                ? 'bg-card border-border/80 hover:border-foreground/20 hover:bg-accent/20 cursor-pointer'
                 : 'bg-muted/20 border-border/40 cursor-not-allowed opacity-50',
             )}
           >
@@ -300,14 +306,17 @@ export default function ActiveProjectPipelineCard({
             data-testid="step-sample-test"
             disabled={step4State === 'pending' || !canManage}
             onClick={() =>
-              navigate(`/projects/${project.id}?tab=sync-rules&from=dashboard`, {
-                state: { from: '/dashboard', fromLabel: 'Back to Dashboard' },
-              })
+              navigate(
+                `/projects/${project.id}?tab=sync-rules&from=dashboard`,
+                {
+                  state: { from: '/dashboard', fromLabel: 'Back to Dashboard' },
+                },
+              )
             }
             className={cn(
               'group flex flex-col justify-between space-y-3 rounded-2xl border p-4 text-left transition-all duration-200',
               step4State !== 'pending' && canManage
-                ? 'bg-card border-border/80 hover:border-foreground/20 hover:bg-muted/30 cursor-pointer hover:-translate-y-0.5 hover:shadow-xs'
+                ? 'bg-card border-border/80 hover:border-foreground/20 hover:bg-accent/20 cursor-pointer'
                 : 'bg-muted/20 border-border/40 cursor-not-allowed opacity-50',
             )}
           >

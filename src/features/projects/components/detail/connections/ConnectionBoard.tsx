@@ -9,7 +9,10 @@ import ConnectionEnvDropdown from '@/components/connections/ConnectionEnvToggle'
 import { PLATFORM_META } from '@/components/connections/platformMeta';
 import HeadingPair from '@/components/shared/HeadingPair';
 import CredentialsModal from '@/components/connections/CredentialsModal';
-import type { ExtConnection, ConnectionPayload } from '@/components/connections/types';
+import type {
+  ExtConnection,
+  ConnectionPayload,
+} from '@/components/connections/types';
 import { useConnectionsManager } from '@/components/connections/useConnectionsManager';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { BorderBeam } from '@/components/ui/border-beam';
@@ -50,7 +53,10 @@ function borderFeedbackKey(projectId: string, conn: ExtConnection): string {
   return `${projectId}:${conn.environment ?? 'production'}:${conn.connectionType}:${conn.platformId}`;
 }
 
-function readVerificationError(projectId: string, conn: ExtConnection): string | null {
+function readVerificationError(
+  projectId: string,
+  conn: ExtConnection,
+): string | null {
   try {
     return sessionStorage.getItem(verificationErrorKey(projectId, conn));
   } catch {
@@ -58,7 +64,11 @@ function readVerificationError(projectId: string, conn: ExtConnection): string |
   }
 }
 
-function saveVerificationError(projectId: string, conn: ExtConnection, message: string) {
+function saveVerificationError(
+  projectId: string,
+  conn: ExtConnection,
+  message: string,
+) {
   try {
     sessionStorage.setItem(verificationErrorKey(projectId, conn), message);
   } catch {
@@ -103,7 +113,8 @@ function ConnectionStep({
   onFix,
   children,
 }: ConnectionStepProps) {
-  const isError = !isTesting && (hasVerificationError || (!complete && hasConnection));
+  const isError =
+    !isTesting && (hasVerificationError || (!complete && hasConnection));
   const borderState = isTesting
     ? 'testing'
     : isError
@@ -156,24 +167,34 @@ function ConnectionStep({
 
       <Card
         surface="inner"
-        data-connection-state={isTesting ? 'testing' : isError ? 'error' : complete ? 'connected' : 'pending'}
+        data-connection-state={
+          isTesting
+            ? 'testing'
+            : isError
+              ? 'error'
+              : complete
+                ? 'connected'
+                : 'pending'
+        }
         data-border-state={borderState}
         data-testing={isTesting ? 'true' : undefined}
         className={cn(
-          'relative gap-0 border py-0 overflow-hidden transition-all duration-300',
-          borderState === 'testing' &&
-            'border-primary/30 shadow-lg shadow-primary/5',
-          borderState === 'error' &&
-            'border-destructive/70 shadow-sm shadow-destructive/10',
-          borderState === 'success' &&
-            'border-success shadow-sm shadow-success/15',
+          'relative gap-0 overflow-hidden border py-0 transition-all duration-300',
+          borderState === 'testing' && 'border-primary/50',
+          borderState === 'error' && 'border-destructive/70',
+          borderState === 'success' && 'border-success',
           borderState === 'connected' && 'border-primary/20',
-          borderState === 'pending' && 'border-dashed border-border/80',
+          borderState === 'pending' && 'border-border/80 border-dashed',
         )}
       >
         {isTesting && <BorderBeam />}
         <div className="flex flex-col justify-between gap-2 px-4 py-3 sm:flex-row sm:items-center">
-          <HeadingPair level="h3" visualLevel="card" title={title} subtitle={description} />
+          <HeadingPair
+            level="h3"
+            visualLevel="card"
+            title={title}
+            subtitle={description}
+          />
           <StatusBadge
             status={isTesting ? 'in_progress' : status}
             action={
@@ -232,15 +253,26 @@ export default function ConnectionBoard({
 
   const [testingSource, setTestingSource] = useState(false);
   const [testingDest, setTestingDest] = useState(false);
-  const [successBorders, setSuccessBorders] = useState<Record<string, boolean>>({});
-  const [verificationErrors, setVerificationErrors] = useState<Record<string, boolean>>({});
-  const [cachedForms, setCachedForms] = useState<Record<string, Record<string, string>>>({});
+  const [successBorders, setSuccessBorders] = useState<Record<string, boolean>>(
+    {},
+  );
+  const [verificationErrors, setVerificationErrors] = useState<
+    Record<string, boolean>
+  >({});
+  const [cachedForms, setCachedForms] = useState<
+    Record<string, Record<string, string>>
+  >({});
   const [showReadyDialog, setShowReadyDialog] = useState(false);
-  const successTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const successTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>(
+    {},
+  );
 
-  useEffect(() => () => {
-    Object.values(successTimers.current).forEach(clearTimeout);
-  }, []);
+  useEffect(
+    () => () => {
+      Object.values(successTimers.current).forEach(clearTimeout);
+    },
+    [],
+  );
 
   const showSuccessFor = (conn: ExtConnection) => {
     const key = borderFeedbackKey(projectId, conn);
@@ -295,10 +327,10 @@ export default function ConnectionBoard({
   const sourceComplete = sourceConn?.status === 'connected';
   const destinationComplete = destConn?.status === 'connected';
   const sourceSlot = sourcePlatformId
-    ? sourceConn ?? makeSlotConn(sourcePlatformId, 'source')
+    ? (sourceConn ?? makeSlotConn(sourcePlatformId, 'source'))
     : null;
   const destinationSlot = destPlatformId
-    ? destConn ?? makeSlotConn(destPlatformId, 'destination')
+    ? (destConn ?? makeSlotConn(destPlatformId, 'destination'))
     : null;
   const sourceError = sourceSlot
     ? verificationErrors[borderFeedbackKey(projectId, sourceSlot)] ||
@@ -419,7 +451,7 @@ export default function ConnectionBoard({
   return (
     <>
       <Card className={cn('w-full', className)}>
-      <CardHeader visualLevel="section" className="gap-1">
+        <CardHeader visualLevel="section" className="gap-1">
           <div className="flex items-center gap-2">
             <CardTitle>Connections</CardTitle>
             <StatusBadge
@@ -437,9 +469,7 @@ export default function ConnectionBoard({
               size="sm"
             />
           </div>
-          <CardDescription>
-            {boardDescription}
-          </CardDescription>
+          <CardDescription>{boardDescription}</CardDescription>
           {!hideEnvironmentToggle && (
             <CardAction>
               <ConnectionEnvDropdown
@@ -463,7 +493,8 @@ export default function ConnectionBoard({
               hasConnection={Boolean(sourceConn)}
               hasVerificationError={Boolean(sourceError)}
               showSuccessBorder={Boolean(
-                sourceSlot && successBorders[borderFeedbackKey(projectId, sourceSlot)],
+                sourceSlot &&
+                successBorders[borderFeedbackKey(projectId, sourceSlot)],
               )}
               nextRequired={nextRequired === 'source'}
               isTesting={testingSource}
@@ -494,11 +525,14 @@ export default function ConnectionBoard({
               hasConnection={Boolean(destConn)}
               hasVerificationError={Boolean(destinationError)}
               showSuccessBorder={Boolean(
-                destinationSlot && successBorders[borderFeedbackKey(projectId, destinationSlot)],
+                destinationSlot &&
+                successBorders[borderFeedbackKey(projectId, destinationSlot)],
               )}
               nextRequired={nextRequired === 'destination'}
               isTesting={testingDest}
-              onFix={destinationSlot ? () => openConnect(destinationSlot) : undefined}
+              onFix={
+                destinationSlot ? () => openConnect(destinationSlot) : undefined
+              }
               last
             >
               {destinationSlot ? (
@@ -508,7 +542,9 @@ export default function ConnectionBoard({
                   onUpdated={(updated) =>
                     handleConnectionUpdated(destinationSlot, updated)
                   }
-                  onTestError={(message) => showErrorFor(destinationSlot, message)}
+                  onTestError={(message) =>
+                    showErrorFor(destinationSlot, message)
+                  }
                   nextRequired={nextRequired === 'destination'}
                   connectDisabled={!sourceComplete && !destConn}
                   isTesting={testingDest}
@@ -521,7 +557,6 @@ export default function ConnectionBoard({
               )}
             </ConnectionStep>
           </div>
-
         </CardContent>
       </Card>
 
@@ -550,7 +585,9 @@ export default function ConnectionBoard({
             void refreshConnections();
           }}
           onTestingChange={
-            activeConn.connectionType === 'source' ? setTestingSource : setTestingDest
+            activeConn.connectionType === 'source'
+              ? setTestingSource
+              : setTestingDest
           }
           initialError={readVerificationError(projectId, activeConn)}
           willCompleteBoth={false}
@@ -562,14 +599,13 @@ export default function ConnectionBoard({
         onOpenChange={setShowReadyDialog}
         sourcePlatformId={sourceSlot?.platformId ?? sourcePlatformId}
         sourcePlatformLabel={
-          PLATFORM_META[sourceSlot?.platformId ?? sourcePlatformId ?? '']?.label ??
-          'Source'
+          PLATFORM_META[sourceSlot?.platformId ?? sourcePlatformId ?? '']
+            ?.label ?? 'Source'
         }
         destPlatformId={destinationSlot?.platformId ?? destPlatformId}
         destPlatformLabel={
-          PLATFORM_META[
-            destinationSlot?.platformId ?? destPlatformId ?? ''
-          ]?.label ?? 'Destination'
+          PLATFORM_META[destinationSlot?.platformId ?? destPlatformId ?? '']
+            ?.label ?? 'Destination'
         }
         environment={activeEnv}
         onDismiss={() => setShowReadyDialog(false)}

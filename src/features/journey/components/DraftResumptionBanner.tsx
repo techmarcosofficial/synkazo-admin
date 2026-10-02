@@ -4,7 +4,10 @@ import { useNavigate } from 'react-router-dom';
 
 import ActionTooltip from './ActionTooltip';
 import { clearDraftSyncJob } from '../draftSyncJob';
-import { resolveActiveDraft, type ActiveDraftResolution } from '../journeySelectors';
+import {
+  resolveActiveDraft,
+  type ActiveDraftResolution,
+} from '../journeySelectors';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -69,7 +72,7 @@ export default function DraftResumptionBanner({
 
   return (
     <Card
-      className={`border-info/30 bg-info/5 rounded-3xl p-4 shadow-xs transition-all ${className ?? ''}`}
+      className={`border-info/30 bg-info/5 rounded-3xl p-4 transition-colors ${className ?? ''}`}
       data-testid="draft-resumption-banner"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

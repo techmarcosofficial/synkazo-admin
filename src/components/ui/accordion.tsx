@@ -27,7 +27,10 @@ function AccordionItem({
   return (
     <AccordionPrimitive.Item
       data-slot="accordion-item"
-      className={cn('not-last:border-b border-border/70 dark:border-white/[0.07]', className)}
+      className={cn(
+        'border-border/70 dark:border-border/70 not-last:border-b',
+        className,
+      )}
       {...props}
     />
   );
@@ -43,7 +46,7 @@ function AccordionTrigger({
       <AccordionPrimitive.Trigger
         data-slot="accordion-trigger"
         className={cn(
-          'group/accordion-trigger **:data-[slot=accordion-trigger-icon]:text-muted-foreground relative flex flex-1 items-start justify-between gap-6 p-4 text-left text-sm font-medium transition-all outline-none hover:bg-muted/30 dark:hover:bg-white/[0.02] data-[state=open]:bg-muted/40 dark:data-[state=open]:bg-white/[0.035] data-[state=open]:border-b data-[state=open]:border-border/70 dark:data-[state=open]:border-white/10 disabled:pointer-events-none disabled:opacity-50 **:data-[slot=accordion-trigger-icon]:ml-auto **:data-[slot=accordion-trigger-icon]:size-4',
+          'group/accordion-trigger **:data-[slot=accordion-trigger-icon]:text-muted-foreground hover:bg-muted/30 dark:hover:bg-accent data-[state=open]:bg-muted/40 dark:data-[state=open]:bg-secondary data-[state=open]:border-border/70 dark:data-[state=open]:border-border relative flex flex-1 items-start justify-between gap-6 p-4 text-left text-sm font-medium transition-all outline-none disabled:pointer-events-none disabled:opacity-50 **:data-[slot=accordion-trigger-icon]:ml-auto **:data-[slot=accordion-trigger-icon]:size-4 data-[state=open]:border-b',
           className,
         )}
         {...props}
@@ -70,7 +73,7 @@ function AccordionContent({
   return (
     <AccordionPrimitive.Content
       data-slot="accordion-content"
-      className="data-open:animate-accordion-down data-closed:animate-accordion-up overflow-hidden text-sm bg-muted/20 dark:bg-black/20"
+      className="data-open:animate-accordion-down data-closed:animate-accordion-up bg-muted/20 dark:bg-surface-inset overflow-hidden text-sm"
       {...props}
     >
       <div

@@ -35,10 +35,10 @@ function Card({
         className={cn(
           'group/card text-card-foreground flex flex-col gap-(--card-spacing) overflow-hidden border py-(--card-spacing) text-sm [--card-spacing:--spacing(4)] has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)]',
           resolvedSurface === 'inset'
-            ? 'bg-surface-inset border-border/70 rounded-2xl dark:border-white/[0.08] *:[img:first-child]:rounded-t-2xl *:[img:last-child]:rounded-b-2xl'
+            ? 'bg-surface-inset border-border/70 dark:border-border/70 rounded-2xl *:[img:first-child]:rounded-t-2xl *:[img:last-child]:rounded-b-2xl'
             : resolvedSurface === 'inner'
-              ? 'bg-surface-inner border-border/70 rounded-3xl dark:border-white/[0.1] *:[img:first-child]:rounded-t-3xl *:[img:last-child]:rounded-b-3xl'
-              : 'bg-card border-border/80 rounded-4xl dark:border-white/[0.12] *:[img:first-child]:rounded-t-4xl *:[img:last-child]:rounded-b-4xl',
+              ? 'bg-surface-inner border-border/70 dark:border-border/70 rounded-3xl *:[img:first-child]:rounded-t-3xl *:[img:last-child]:rounded-b-3xl'
+              : 'bg-card border-border/80 dark:border-border/80 rounded-4xl *:[img:first-child]:rounded-t-4xl *:[img:last-child]:rounded-b-4xl',
           className,
         )}
         {...props}

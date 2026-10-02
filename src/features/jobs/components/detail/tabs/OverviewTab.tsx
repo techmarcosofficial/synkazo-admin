@@ -10,10 +10,12 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 
 import { useJobDetailContext } from '../context';
 
+import StatusBadge from '@/components/shared/StatusBadge';
 import UpgradeRequiredDialog from '@/components/shared/UpgradeRequiredDialog';
 import StartSyncModal from '@/components/sync/StartSyncModal';
 import SyncRunProgress from '@/components/sync/SyncRunProgress';
@@ -27,6 +29,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import JobScheduleModal from '@/features/jobs/components/schedule/JobScheduleModal';
+import ScheduleEnableToggle from '@/features/jobs/components/schedule/ScheduleEnableToggle';
 import {
   capitalizeFirst,
   formatScheduledAt,
@@ -102,7 +106,25 @@ export default function OverviewTab() {
     handleTabChange,
     manualDialogOpen,
     setManualDialogOpen,
+    scheduleToggling,
+    handleScheduleToggle,
   } = useJobDetailContext();
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (
+      searchParams.get('openSchedule') === 'true' ||
+      searchParams.get('section') === 'schedule'
+    ) {
+      setScheduleModalOpen(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete('openSchedule');
+      next.delete('section');
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const priorityQueueQuery = usePriorityQueueQuery(projectId);
   const priorityModeActive =
@@ -381,6 +403,14 @@ export default function OverviewTab() {
                 </Button>
               )}
               <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setScheduleModalOpen(true)}
+              >
+                <CalendarClock /> Schedule
+              </Button>
+              <Button
+                size="sm"
                 onClick={() => setManualDialogOpen(true)}
                 disabled={syncBlocked}
               >
@@ -389,9 +419,58 @@ export default function OverviewTab() {
             </CardAction>
           </CardHeader>
 
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-5">
             {/* Sync progress — appears right after header on sync */}
             {!manualDialogOpen && progress}
+
+            {/* Embedded Automated Schedule Card */}
+            <div className="bg-secondary/30 border-border/70 flex flex-col gap-3 rounded-2xl border p-3.5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <span className="bg-background text-muted-foreground border-border/50 flex size-8 shrink-0 items-center justify-center rounded-xl border">
+                  <CalendarClock className="size-4" aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-foreground text-sm font-semibold">
+                      Automated Schedule
+                    </h4>
+                    <StatusBadge
+                      status={schedulePaused ? 'paused' : 'active'}
+                      label={schedulePaused ? 'Paused' : 'Active'}
+                    />
+                  </div>
+                  <p className="text-muted-foreground mt-0.5 text-xs">
+                    {scheduleConfigured
+                      ? `Runs ${capitalizeFirst(scheduleSummary)} (${effectiveTimezone})`
+                      : 'No automated schedule configured.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {!priorityModeActive && !isTwoWay && (
+                  <ScheduleEnableToggle
+                    projectId={projectId}
+                    jobId={job.id}
+                    job={job}
+                    scheduleToggling={scheduleToggling}
+                    pipelineRequired={pipelineRequired}
+                    pipelineConfigured={pipelineConfigured}
+                    onGoToPipeline={() => handleTabChange('pipeline')}
+                    onScheduleToggle={handleScheduleToggle}
+                    className="w-auto"
+                  />
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setScheduleModalOpen(true)}
+                >
+                  <CalendarClock className="size-3.5" />
+                  Configure schedule
+                </Button>
+              </div>
+            </div>
 
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
               {summaryCards.map((card) => (
@@ -486,6 +565,15 @@ export default function OverviewTab() {
           }}
         />
       )}
+
+      <JobScheduleModal
+        projectId={projectId}
+        jobId={job.id}
+        job={job}
+        open={scheduleModalOpen}
+        onOpenChange={setScheduleModalOpen}
+        onSaved={refetch}
+      />
 
       <UpgradeRequiredDialog
         open={upgradeDialog.open}

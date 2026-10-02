@@ -62,7 +62,7 @@ export default function JourneyStorylineBanner({
     <section
       aria-label="Setup Journey Action"
       className={cn(
-        'border-primary/50 bg-primary/5 hover:border-primary/70 relative flex w-full flex-col justify-between gap-5 rounded-2xl border border-dashed p-5 transition-all shadow-xs sm:flex-row sm:items-center sm:gap-6 sm:p-6',
+        'border-primary/50 bg-primary/5 hover:border-primary/70 relative flex w-full flex-col justify-between gap-5 rounded-2xl border border-dashed p-5 transition-colors sm:flex-row sm:items-center sm:gap-6 sm:p-6',
         className,
       )}
     >
@@ -80,7 +80,7 @@ export default function JourneyStorylineBanner({
           ))}
         </div>
 
-        <p className="text-primary text-xs font-semibold uppercase tracking-wider">
+        <p className="text-primary text-xs font-semibold tracking-wider uppercase">
           Step {stepNumber} of {totalSteps}
           {nextAction.estimatedTime && (
             <span className="text-muted-foreground font-normal lowercase">
@@ -119,9 +119,7 @@ export default function JourneyStorylineBanner({
             onClick={handleAction}
             className="h-10 gap-2 px-5 text-sm font-semibold shadow-xs"
           >
-            {nextAction.isBlocked ? (
-              <Lock className="size-4" />
-            ) : null}
+            {nextAction.isBlocked ? <Lock className="size-4" /> : null}
             <span>
               {isCreateProject ? 'Create project' : nextAction.actionLabel}
             </span>

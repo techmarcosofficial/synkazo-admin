@@ -164,7 +164,7 @@ export default function EnvironmentOverviewCards({
       )}
 
       {/* Unified Active Sync Environment Card */}
-      <Card className="bg-card gap-0 rounded-3xl border py-0 shadow-xs">
+      <Card className="bg-card gap-0 rounded-3xl border py-0">
         {/* Card Header (White / bg-card) */}
         <CardHeader className="bg-card border-b px-4 py-3.5 sm:px-5">
           <div className="flex flex-wrap items-center justify-between gap-2.5">

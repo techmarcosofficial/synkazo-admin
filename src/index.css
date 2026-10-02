@@ -52,6 +52,9 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
+  --color-sidebar-icon: var(--sidebar-icon);
+  --color-sidebar-icon-active: var(--sidebar-icon-active);
+  --color-sidebar-icon-surface: var(--sidebar-icon-surface);
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
@@ -78,7 +81,6 @@
   --radius-sm: calc(var(--radius) * 0.5);
   --color-surface-inner: var(--surface-inner);
   --color-surface-inset: var(--surface-inset);
-  --color-surface-overlay: var(--surface-overlay);
   --radius-md: calc(var(--radius) * 0.75);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) * 1.25);
@@ -88,37 +90,19 @@
 
   /* Synkazo semantic extensions: sync/job status colors */
   --color-success: var(--success);
-  --color-success-fill: var(--success-fill);
   --color-warning: var(--warning);
   --color-info: var(--info);
   --color-paused: var(--paused);
 
-  /* Synkazo brand extensions from synkazo-frontend globals.css & auth-login.css */
-  --color-orange: var(--brand-orange);
-  --color-orange-2: #c8412a;
-  --color-orange-soft: rgba(248, 85, 8, 0.14);
-  --color-ink: #06080f;
-  --color-ink-2: #0b0e1a;
-  --color-ink-3: #12162a;
-  --color-ink-4: #1a1f33;
-  --color-ink-nav: #03050b;
-  --color-live: #34d399;
-
   /* Third-party platform brand colors (identity data, theme-independent) */
   --color-hubspot: var(--brand-hubspot);
-  --color-servicetitan: var(--brand-servicetitan);
   --color-servicetitan-tile: var(--brand-servicetitan-tile);
   --color-dataforma: var(--brand-dataforma);
-  --color-texada: var(--brand-texada);
-  --color-salesforce: var(--brand-salesforce);
-  --color-synkazo: var(--brand-orange);
   /* Typography */
   --text-sm: 0.8225rem; /* 13px */
   --text-sm--line-height: 1.25rem; /* 20px */
 
-  --color-footer: var(--footer);
   --color-footer-foreground: var(--footer-foreground);
-  --color-f-border: var(--f-border);
 }
 /* Platform brand palette — constant across light/dark, referenced by
    PlatformBadge / PlatformIcon only. Not part of the design theme. */
@@ -127,11 +111,8 @@
   /* Brand */
   --brand-orange: #f85508;
   --brand-hubspot: #ff7a58;
-  --brand-servicetitan: #2e3340;
   --brand-servicetitan-tile: #2e3340;
   --brand-dataforma: #ff123f;
-  --brand-texada: #cdcbc3;
-  --brand-salesforce: #1798c1;
 
   --spacing: 0.26rem;
 
@@ -139,7 +120,6 @@
   --background: #f6f7f9;
   --foreground: #131418;
 
-  --footer: #0a0a0c;
   --footer-foreground: #ffffff;
 
   /* Level 1: Elevated Card Surfaces (Crisp Pure White) */
@@ -161,7 +141,7 @@
   --muted-foreground: #636674;
 
   /* Neutral hover accent */
-  --accent: #f0f0f3;
+  --accent: #e9eaef;
   --accent-foreground: #131418;
 
   /* States */
@@ -170,15 +150,12 @@
 
   /* Lime green — a green/yellow midpoint with enough contrast on light surfaces */
   --success: #65a30d;
-  /* Vivid fill only — solid blocks / badge pills */
-  --success-fill: #52d500;
   --warning: #c77a0a;
   --info: #2f74d0;
   --paused: #7c5cd8;
 
   /* Borders & Inputs */
   --border: #e3e4e9;
-  --f-border: #26272b;
   --input: #e3e4e9;
   --ring: rgba(248, 85, 8, 0.35);
 
@@ -199,163 +176,101 @@
   --sidebar-primary: #f85508;
   --sidebar-primary-foreground: #ffffff;
 
-  --sidebar-accent: #f0f0f3;
+  --sidebar-accent: #e9eaef;
   --sidebar-accent-foreground: #131418;
 
   --sidebar-border: #e3e4e9;
   --sidebar-ring: rgba(248, 85, 8, 0.35);
+  --sidebar-icon: #737783;
+  --sidebar-icon-active: #131418;
+  --sidebar-icon-surface: #f0f0f3;
 
-  /* Extra semantic soft fills */
-  --primary-soft: rgba(248, 85, 8, 0.1);
-  --primary-soft2: rgba(248, 85, 8, 0.16);
-
-  --success-soft: rgba(101, 163, 13, 0.12);
-  --warning-soft: rgba(199, 122, 10, 0.13);
-  --info-soft: rgba(47, 116, 208, 0.12);
-  --paused-soft: rgba(124, 92, 216, 0.13);
-
-  --shadow-sm: 0 1px 2px rgba(18, 18, 20, 0.05);
-  --shadow-md: 0 4px 14px rgba(18, 18, 20, 0.07);
-  --shadow-lg: 0 14px 40px rgba(18, 18, 20, 0.12);
-  --layout-surface-shadow: var(--shadow-sm);
+  --layout-surface-shadow: 0 2px 8px rgba(18, 18, 20, 0.07);
+  --layout-surface-shadow-strong: 0 6px 18px rgba(18, 18, 20, 0.11);
 
   /* Structural surfaces. Keep hierarchy semantic so parent/child surfaces do
      not depend on one-off opacity utilities throughout the application. */
   --surface-inner: #f1f2f5;
   --surface-inset: #e9ebf0;
-  --surface-overlay: #ffffff;
 }
 
 .dark {
-  /* Base — Synkazo theme source of truth: Synkazo/Synkazo.dc.html ([data-theme="dark"] --bg/--text) */
-  --background: #090a0f;
-  --foreground: #eceef4;
-  --card: #12141d;
-  --card-foreground: #eceef4;
+  color-scheme: dark;
 
-  --footer: #090a0f;
+  /* VS Code editor canvas and workbench panel hierarchy. */
+  --background: #090c10;
+  --foreground: #c9d1d9;
+  --card: #0d1117;
+  --card-foreground: #c9d1d9;
+
   --footer-foreground: #ffffff;
 
-  --popover: #12141d;
-  --popover-foreground: #eceef4;
+  --popover: #161b22;
+  --popover-foreground: #c9d1d9;
 
   --primary: #f85508;
   --primary-foreground: #ffffff;
 
-  --secondary: #181a24;
-  --secondary-foreground: #eceef4;
+  --secondary: #151b22;
+  --secondary-foreground: #c9d1d9;
 
-  --muted: #181a24;
-  --muted-foreground: #939ab0;
+  --muted: #151b22;
+  --muted-foreground: #8b949e;
 
   /* Accent — kept as a neutral hover surface (same as muted), not the vivid
      brand orange, so existing hover/selected states stay subtle. */
-  --accent: #181a24;
-  --accent-foreground: #eceef4;
+  --accent: #21262d;
+  --accent-foreground: #c9d1d9;
 
-  --destructive: #f0685c;
+  --destructive: #f97583;
   --destructive-foreground: #ffffff;
 
   /* Brighter lime retains contrast against the dark app surfaces. */
   --success: #a3e635;
-  --success-fill: #52d500;
-  --warning: #e0a53c;
-  --info: #5b9bf0;
-  --paused: #a78bfa;
+  --warning: #ffab70;
+  --info: #58a6ff;
+  --paused: #d2a8ff;
 
-  --border: #242838;
-  --f-border: #242838;
-
-  --input: #242838;
+  /* Separators stay quiet; interactive control boundaries use the stronger
+     input token so they remain distinct without making every surface boxy. */
+  --border: #30363d;
+  --input: #444d56;
   --ring: rgba(248, 85, 8, 0.45);
 
   /* Brighter orange tones retain separation against dark chart surfaces. */
   --chart-1: #ff6b24;
-  --chart-2: #ff9a62;
-  --chart-3: #e85d1c;
-  --chart-4: #ffc09f;
-  --chart-5: #c84a16;
+  --chart-2: #a3e635;
+  --chart-3: #58a6ff;
+  --chart-4: #ffab70;
+  --chart-5: #d2a8ff;
 
-  --sidebar: #14161f;
-  --sidebar-foreground: #eceef4;
+  --sidebar: #0d1117;
+  --sidebar-foreground: #8b949e;
 
   --sidebar-primary: #f85508;
   --sidebar-primary-foreground: #ffffff;
 
-  --sidebar-accent: #1a1d28;
-  --sidebar-accent-foreground: #eceef4;
+  --sidebar-accent: #151b22;
+  --sidebar-accent-foreground: #c9d1d9;
 
-  --sidebar-border: #262a37;
+  --sidebar-border: #30363d;
   --sidebar-ring: rgba(248, 85, 8, 0.45);
+  --sidebar-icon: #6a737d;
+  --sidebar-icon-active: #c9d1d9;
+  --sidebar-icon-surface: #151b22;
 
-  --primary-soft: rgba(248, 85, 8, 0.16);
-  --primary-soft2: rgba(248, 85, 8, 0.24);
+  --layout-surface-shadow: 0 1px 6px rgba(0, 0, 0, 0.22);
+  --layout-surface-shadow-strong: 0 3px 12px rgba(0, 0, 0, 0.3);
 
-  --success-soft: rgba(163, 230, 53, 0.15);
-  --warning-soft: rgba(224, 165, 60, 0.15);
-  --info-soft: rgba(91, 155, 240, 0.15);
-  --paused-soft: rgba(167, 139, 250, 0.16);
-
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.5);
-  --layout-surface-shadow: var(--shadow-sm);
-
-  --surface-inner: #181a24;
-  --surface-inset: #0e1017;
-  --surface-overlay: #171a24;
+  --surface-inner: #151b22;
+  --surface-inset: #090c10;
 }
 
 /* Large admin surfaces use a tighter radius progression than compact controls:
    controls (12px) < grouped surfaces (14px) < outer surfaces (17px). */
 html:has([data-admin-shell]) {
-  --accent: #e9eaef;
-  --sidebar-accent: #e9eaef;
   --radius-3xl: calc(var(--radius) * 1.75);
   --radius-4xl: calc(var(--radius) * 2.125);
-}
-
-/* The authentication experience owns a separate visual system in
-   auth-login.css. These refinements are intentionally activated only while an
-   authenticated admin shell is mounted, including portalled dialogs. */
-.dark:has([data-admin-shell]) {
-  color-scheme: dark;
-
-  --background: #0f1219;
-  --foreground: #f0f2f7;
-  --card: #141821;
-  --card-foreground: #f0f2f7;
-  --popover: #1e2430;
-  --popover-foreground: #f0f2f7;
-  --secondary: #1b202c;
-  --secondary-foreground: #f0f2f7;
-  --muted: #1b202c;
-  --muted-foreground: #a6aec1;
-  --accent: #30384a;
-  --accent-foreground: #f0f2f7;
-
-  --surface-inner: #1b202c;
-  --surface-inset: #0f1219;
-  --surface-overlay: #1e2430;
-
-  /* Separators stay quieter than controls. The control token maintains 3:1
-     contrast against primary cards so unchecked controls remain perceivable. */
-  --border: #343b4f;
-  --f-border: #343b4f;
-  --input: #5d657e;
-
-  --sidebar: #141821;
-  --sidebar-foreground: #f0f2f7;
-  --sidebar-accent: #30384a;
-  --sidebar-accent-foreground: #f0f2f7;
-  --sidebar-border: #2d3445;
-
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.34);
-  --shadow-md:
-    0 2px 8px rgba(0, 0, 0, 0.34), 0 18px 42px -18px rgba(0, 0, 0, 0.88);
-  --shadow-lg:
-    0 4px 14px rgba(0, 0, 0, 0.42), 0 28px 64px -20px rgba(0, 0, 0, 0.94);
-  --layout-surface-shadow: var(--shadow-md);
 }
 @layer base {
   * {
@@ -387,14 +302,14 @@ html:has([data-admin-shell]) {
       [data-slot='alert-dialog-content'],
       [data-slot='sheet-content']
     ) {
-    --layout-surface-shadow: var(--shadow-lg);
+    --layout-surface-shadow: var(--layout-surface-shadow-strong);
   }
 
   /* These two compact cards sit on a transparent portaled surface, so the
      standard outer-card shadow is too subtle to keep them visually distinct. */
   html:has([data-admin-shell])[data-layout-style='shadow']
     [data-notification-surface] {
-    --layout-surface-shadow: var(--shadow-lg);
+    --layout-surface-shadow: var(--layout-surface-shadow-strong);
   }
 
   /* Project connection states use their border as a status indicator. Keep that

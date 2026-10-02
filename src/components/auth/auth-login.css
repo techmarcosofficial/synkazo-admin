@@ -2,6 +2,7 @@
   --login-orange: #ff6232;
   --login-orange-bright: #ff7448;
   --login-ink: #090b0f;
+  --login-panel: #090a0f;
   display: grid;
   width: 100%;
   max-width: 100%;
@@ -25,9 +26,13 @@
   overflow: hidden;
   border-right: 1px solid rgba(255, 255, 255, 0.075);
   background:
-    radial-gradient(circle at 14% 8%, rgba(255, 98, 50, 0.075), transparent 30%),
+    radial-gradient(
+      circle at 14% 8%,
+      rgba(255, 98, 50, 0.075),
+      transparent 30%
+    ),
     radial-gradient(circle at 82% 54%, rgba(57, 68, 84, 0.13), transparent 38%),
-    var(--background);
+    var(--login-panel);
 }
 
 .synkazo-login-form-panel::after {
@@ -726,7 +731,8 @@
 .synkazo-sync-sources:hover .synkazo-sync-source-card,
 .synkazo-sync-sources:hover .synkazo-sync-source-face,
 .synkazo-showcase-content:has(.synkazo-sync-sources:hover)
-  .synkazo-showcase-source-name > strong {
+  .synkazo-showcase-source-name
+  > strong {
   animation-play-state: paused;
 }
 
@@ -949,7 +955,11 @@
   border-right-color: rgba(39, 49, 66, 0.11);
   background:
     radial-gradient(circle at 14% 8%, rgba(255, 98, 50, 0.02), transparent 20%),
-    radial-gradient(circle at 82% 54%, rgba(255, 116, 72, 0.035), transparent 30%),
+    radial-gradient(
+      circle at 82% 54%,
+      rgba(255, 116, 72, 0.035),
+      transparent 30%
+    ),
     #fff;
 }
 
@@ -1312,7 +1322,6 @@
   .synkazo-showcase-content {
     padding-block: 28px 30px;
   }
-
 }
 
 @media (max-width: 1420px) {

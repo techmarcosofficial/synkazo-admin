@@ -37,14 +37,16 @@ export function useJobDetailTabs(ctx: JobDetailTabContext) {
     label: tab.label,
   }));
 
-  // Automatically migrate legacy ?tab=settings&section=schedule links to the top-level Schedule tab.
+  // Automatically migrate legacy ?tab=schedule or ?tab=settings&section=schedule links to Overview tab with modal auto-open.
   useEffect(() => {
     if (
-      rawRequestedTab === 'settings' &&
-      searchParams.get('section') === 'schedule'
+      rawRequestedTab === 'schedule' ||
+      (rawRequestedTab === 'settings' &&
+        searchParams.get('section') === 'schedule')
     ) {
       const next = new URLSearchParams(searchParams);
-      next.set('tab', 'schedule');
+      next.set('tab', 'overview');
+      next.set('openSchedule', 'true');
       next.delete('section');
       setSearchParams(next, { replace: true });
     }
