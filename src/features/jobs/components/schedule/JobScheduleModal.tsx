@@ -56,6 +56,16 @@ interface JobScheduleModalProps {
   onSaved?: () => void;
 }
 
+const DISPLAY_WEEKDAYS = [
+  { label: 'Mon', value: 1 },
+  { label: 'Tue', value: 2 },
+  { label: 'Wed', value: 3 },
+  { label: 'Thu', value: 4 },
+  { label: 'Fri', value: 5 },
+  { label: 'Sat', value: 6 },
+  { label: 'Sun', value: 0 },
+];
+
 const INTERVAL_PRESETS = [
   { label: '15 min', minutes: 15, amount: 15, unit: 'minutes' as const },
   { label: '30 min', minutes: 30, amount: 30, unit: 'minutes' as const },
@@ -500,21 +510,21 @@ export default function JobScheduleModal({
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-1.5">
-                      {WEEKDAYS.map((wd) => {
+                    <div className="grid grid-cols-7 gap-1.5 sm:gap-2 w-full">
+                      {DISPLAY_WEEKDAYS.map((wd) => {
                         const active = days.includes(wd.value);
                         return (
                           <button
                             key={wd.value}
                             type="button"
                             onClick={() => toggleDay(wd.value)}
-                            className={`size-8 rounded-xl text-xs font-semibold transition-all ${
+                            className={`flex h-9 w-full items-center justify-center rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
                               active
-                                ? 'bg-primary text-primary-foreground shadow-xs'
-                                : 'border border-border bg-background text-muted-foreground hover:bg-muted'
+                                ? 'border-primary bg-primary text-primary-foreground shadow-xs'
+                                : 'border-border/80 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground hover:border-border'
                             }`}
                           >
-                            {wd.label.slice(0, 3)}
+                            {wd.label}
                           </button>
                         );
                       })}

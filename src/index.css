@@ -197,73 +197,72 @@
 .dark {
   color-scheme: dark;
 
-  /* VS Code editor canvas and workbench panel hierarchy. */
-  --background: #090c10;
-  --foreground: #c9d1d9;
-  --card: #0d1117;
-  --card-foreground: #c9d1d9;
+  /* Production dashboard surface hierarchy. */
+  --background: #0b0c11;
+  --foreground: #eceef4;
+  --card: #14161f;
+  --card-foreground: #eceef4;
 
   --footer-foreground: #ffffff;
 
-  --popover: #161b22;
-  --popover-foreground: #c9d1d9;
+  --popover: #14161f;
+  --popover-foreground: #eceef4;
 
   --primary: #f85508;
   --primary-foreground: #ffffff;
 
-  --secondary: #151b22;
-  --secondary-foreground: #c9d1d9;
+  --secondary: #1a1d28;
+  --secondary-foreground: #eceef4;
 
-  --muted: #151b22;
-  --muted-foreground: #8b949e;
+  --muted: #1a1d28;
+  --muted-foreground: #99a0b2;
 
   /* Accent — kept as a neutral hover surface (same as muted), not the vivid
      brand orange, so existing hover/selected states stay subtle. */
-  --accent: #21262d;
-  --accent-foreground: #c9d1d9;
+  --accent: #1a1d28;
+  --accent-foreground: #eceef4;
 
-  --destructive: #f97583;
+  --destructive: #f0685c;
   --destructive-foreground: #ffffff;
 
   /* Brighter lime retains contrast against the dark app surfaces. */
   --success: #a3e635;
-  --warning: #ffab70;
-  --info: #58a6ff;
-  --paused: #d2a8ff;
+  --warning: #e0a53c;
+  --info: #5b9bf0;
+  --paused: #a78bfa;
 
-  /* Separators stay quiet; interactive control boundaries use the stronger
-     input token so they remain distinct without making every surface boxy. */
-  --border: #30363d;
-  --input: #444d56;
+  /* Production keeps separators and control boundaries equally restrained. */
+  --border: #262a37;
+  --input: #262a37;
   --ring: rgba(248, 85, 8, 0.45);
 
   /* Brighter orange tones retain separation against dark chart surfaces. */
   --chart-1: #ff6b24;
-  --chart-2: #a3e635;
-  --chart-3: #58a6ff;
-  --chart-4: #ffab70;
-  --chart-5: #d2a8ff;
+  --chart-2: #ff9a62;
+  --chart-3: #e85d1c;
+  --chart-4: #ffc09f;
+  --chart-5: #c84a16;
 
-  --sidebar: #0d1117;
-  --sidebar-foreground: #8b949e;
+  --sidebar: #14161f;
+  --sidebar-foreground: #eceef4;
 
   --sidebar-primary: #f85508;
   --sidebar-primary-foreground: #ffffff;
 
-  --sidebar-accent: #151b22;
-  --sidebar-accent-foreground: #c9d1d9;
+  --sidebar-accent: #1a1d28;
+  --sidebar-accent-foreground: #eceef4;
 
-  --sidebar-border: #30363d;
+  --sidebar-border: #262a37;
   --sidebar-ring: rgba(248, 85, 8, 0.45);
-  --sidebar-icon: #6a737d;
-  --sidebar-icon-active: #c9d1d9;
-  --sidebar-icon-surface: #151b22;
+  --sidebar-icon: #99a0b2;
+  --sidebar-icon-active: #eceef4;
+  --sidebar-icon-surface: #14161f;
 
   --layout-surface-shadow: 0 1px 6px rgba(0, 0, 0, 0.22);
   --layout-surface-shadow-strong: 0 3px 12px rgba(0, 0, 0, 0.3);
 
-  --surface-inner: #151b22;
-  --surface-inset: #090c10;
+  --surface-inner: #1a1d28;
+  --surface-inset: #0b0c11;
 }
 
 /* Large admin surfaces use a tighter radius progression than compact controls:
