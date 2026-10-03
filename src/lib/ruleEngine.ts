@@ -244,13 +244,6 @@ export const RULE_DEFINITIONS: RuleDefinition[] = [
   },
   // Conditional
   {
-    type: 'default_if_empty',
-    category: 'conditional',
-    label: 'Default If Empty',
-    description: 'Set a default if value is empty',
-    params: ['value'],
-  },
-  {
     type: 'replace_if_contains',
     category: 'conditional',
     label: 'Replace If Contains',

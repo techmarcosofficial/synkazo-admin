@@ -1,4 +1,4 @@
-import { AlertCircle, Lock, Plus, X } from 'lucide-react';
+import { AlertCircle, Boxes, Lock, Plus, X } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -207,6 +207,9 @@ export default function CustomObjectModal({
       <FormDialog
         open
         onOpenChange={(open) => !open && onClose()}
+        category="Custom Object"
+        badge={side}
+        icon={Boxes}
         title={`Add Custom ${side} Object`}
         size="lg"
         footer={(requestClose) => (
@@ -239,6 +242,9 @@ export default function CustomObjectModal({
       <FormDialog
         open
         onOpenChange={(open) => !open && onClose()}
+        category="Custom Object"
+        badge={side}
+        icon={Lock}
         title={`Add Custom ${side} Object`}
         size="lg"
         footer={(requestClose) => (
@@ -276,6 +282,9 @@ export default function CustomObjectModal({
       <FormDialog
         open
         onOpenChange={(open) => !open && onClose()}
+        category="Custom Object"
+        badge={side}
+        icon={Lock}
         title={`Add Custom ${side} Object`}
         size="lg"
         footer={(requestClose) => (
@@ -310,7 +319,11 @@ export default function CustomObjectModal({
     <FormDialog
       open
       onOpenChange={(open) => !open && onClose()}
+      category="Custom Object"
+      badge={side}
+      icon={Boxes}
       title={`Add Custom ${side} Object`}
+      description={`Define a custom ${side.toLowerCase()} object schema.`}
       size="lg"
       footer={(requestClose) => (
         <>

@@ -155,8 +155,8 @@
   --paused: #7c5cd8;
 
   /* Borders & Inputs */
-  --border: #e3e4e9;
-  --input: #e3e4e9;
+  --border: #d4d6de;
+  --input: #d4d6de;
   --ring: rgba(248, 85, 8, 0.35);
 
   /* Charts */
@@ -179,7 +179,7 @@
   --sidebar-accent: #e9eaef;
   --sidebar-accent-foreground: #131418;
 
-  --sidebar-border: #e3e4e9;
+  --sidebar-border: #d4d6de;
   --sidebar-ring: rgba(248, 85, 8, 0.35);
   --sidebar-icon: #737783;
   --sidebar-icon-active: #131418;
@@ -190,8 +190,8 @@
 
   /* Structural surfaces. Keep hierarchy semantic so parent/child surfaces do
      not depend on one-off opacity utilities throughout the application. */
-  --surface-inner: #f1f2f5;
-  --surface-inset: #e9ebf0;
+  --surface-inner: #eceef3;
+  --surface-inset: #e4e6ed;
 }
 
 .dark {
@@ -232,8 +232,8 @@
   --paused: #a78bfa;
 
   /* Production keeps separators and control boundaries equally restrained. */
-  --border: #262a37;
-  --input: #262a37;
+  --border: #2d3242;
+  --input: #2d3242;
   --ring: rgba(248, 85, 8, 0.45);
 
   /* Brighter orange tones retain separation against dark chart surfaces. */
@@ -252,7 +252,7 @@
   --sidebar-accent: #1a1d28;
   --sidebar-accent-foreground: #eceef4;
 
-  --sidebar-border: #262a37;
+  --sidebar-border: #2d3242;
   --sidebar-ring: rgba(248, 85, 8, 0.45);
   --sidebar-icon: #99a0b2;
   --sidebar-icon-active: #eceef4;
@@ -261,7 +261,7 @@
   --layout-surface-shadow: 0 1px 6px rgba(0, 0, 0, 0.22);
   --layout-surface-shadow-strong: 0 3px 12px rgba(0, 0, 0, 0.3);
 
-  --surface-inner: #1a1d28;
+  --surface-inner: #1c202d;
   --surface-inset: #0b0c11;
 }
 

@@ -1,4 +1,4 @@
-import { ArrowRight, CheckCircle2, Wand2, X } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Sparkles, Wand2, X } from 'lucide-react';
 import { useState } from 'react';
 
 import type { FieldDef } from './FieldMappingCanvas';
@@ -99,23 +99,36 @@ export default function AutoMapReviewDialog({
       <DialogContent
         size="md"
         padding="none"
-        className="flex h-[85vh] max-h-[85vh] flex-col gap-0"
+        className="flex h-[85vh] max-h-[85vh] flex-col gap-0 overflow-hidden"
       >
-        <DialogHeader className="gap-0 border-b px-6 py-5">
-          <div className="flex items-center gap-3">
-            <div className="bg-primary text-primary-foreground flex size-9 shrink-0 items-center justify-center rounded-lg">
-              <Wand2 className="size-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <DialogTitle>Auto-map results</DialogTitle>
-              <DialogDescription>
-                We scanned {totalScanned} field{totalScanned !== 1 ? 's' : ''}.
-                {preview.existingCount > 0
-                  ? ` ${preview.existingCount} existing mapping${preview.existingCount !== 1 ? 's' : ''} left untouched.`
-                  : ''}
-              </DialogDescription>
-            </div>
+        <DialogHeader className="bg-background shrink-0 border-b px-6 py-4">
+          <div className="flex items-center gap-2">
+            <Badge
+              variant="outline"
+              className="text-muted-foreground text-[11px] font-medium"
+            >
+              Field Matching
+            </Badge>
+            {applyCount > 0 && (
+              <Badge
+                variant="secondary"
+                className="bg-primary/10 text-primary border-primary/20 text-[11px]"
+              >
+                <Sparkles className="mr-1 size-3" />
+                {applyCount} Mapping{applyCount !== 1 ? 's' : ''} Ready
+              </Badge>
+            )}
           </div>
+          <DialogTitle className="text-foreground mt-1 flex items-center gap-2 text-base font-semibold">
+            <Wand2 className="text-primary size-5" />
+            Auto-Map Results
+          </DialogTitle>
+          <DialogDescription className="text-muted-foreground text-xs">
+            We scanned {totalScanned} field{totalScanned !== 1 ? 's' : ''}.
+            {preview.existingCount > 0
+              ? ` ${preview.existingCount} existing mapping${preview.existingCount !== 1 ? 's' : ''} left untouched.`
+              : ''}
+          </DialogDescription>
         </DialogHeader>
 
         <ScrollArea className="min-h-0 flex-1">
@@ -440,15 +453,15 @@ export default function AutoMapReviewDialog({
           </div>
         </ScrollArea>
 
-        <DialogFooter className="flex-row items-center justify-between gap-3 border-t px-6 py-4 sm:justify-between">
+        <DialogFooter className="bg-muted/20 shrink-0 flex-row items-center justify-between gap-3 border-t px-6 py-3 sm:justify-between">
           <span className="text-muted-foreground text-xs">
             Matched by name, known aliases &amp; field type
           </span>
           <div className="flex gap-2.5">
-            <Button variant="outline" onClick={onCancel}>
+            <Button variant="outline" size="sm" onClick={onCancel}>
               Cancel
             </Button>
-            <Button onClick={handleApply} disabled={applyCount === 0}>
+            <Button size="sm" onClick={handleApply} disabled={applyCount === 0}>
               Apply {applyCount} Mapping{applyCount !== 1 ? 's' : ''}
             </Button>
           </div>

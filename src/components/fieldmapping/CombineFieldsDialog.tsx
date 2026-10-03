@@ -1,8 +1,9 @@
-import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Layers, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import type { FieldDef } from './FieldMappingCanvas';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -110,16 +111,38 @@ export default function CombineFieldsDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        size="lg"
-        className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-3xl"
+        padding="none"
+        className="flex max-h-[85vh] w-full flex-col gap-0 p-0 overflow-hidden sm:max-w-3xl"
       >
-        <DialogHeader>
-          <DialogTitle>Combine multiple fields</DialogTitle>
-          <DialogDescription>
+        {/* Fixed Header */}
+        <DialogHeader className="bg-background shrink-0 border-b px-6 py-4">
+          <div className="flex items-center gap-2">
+            <Badge
+              variant="outline"
+              className="text-muted-foreground text-[11px] font-medium"
+            >
+              Field Transform
+            </Badge>
+            {components.length > 0 && (
+              <Badge
+                variant="secondary"
+                className="bg-primary/10 text-primary border-primary/20 text-[11px]"
+              >
+                {components.length} Source Part{components.length !== 1 ? 's' : ''}
+              </Badge>
+            )}
+          </div>
+          <DialogTitle className="text-foreground mt-1 flex items-center gap-2 text-base font-semibold">
+            <Layers className="text-primary size-5" />
+            Combine Multiple Fields
+          </DialogTitle>
+          <DialogDescription className="text-muted-foreground text-xs">
             Build a destination value from ordered fields and optional text.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-5">
+
+        {/* Scrollable Body */}
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-6">
           <section className="space-y-3" aria-labelledby="combine-sources">
             <h3 id="combine-sources" className="text-sm font-semibold">
               Source parts
@@ -361,16 +384,20 @@ export default function CombineFieldsDialog({
             </p>
           </section>
         </div>
-        <DialogFooter>
+
+        {/* Fixed Footer */}
+        <DialogFooter className="bg-muted/20 shrink-0 border-t px-6 py-3">
           <Button
             type="button"
             variant="outline"
+            size="sm"
             onClick={() => onOpenChange(false)}
           >
             Cancel
           </Button>
           <Button
             type="button"
+            size="sm"
             disabled={!valid}
             onClick={() => {
               onApply(destinationField, config);

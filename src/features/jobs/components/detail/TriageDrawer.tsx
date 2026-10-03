@@ -286,7 +286,7 @@ export function TriageDrawer({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="flex w-full flex-col p-0 sm:max-w-[540px]"
+        className="flex flex-col p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-[540px]"
       >
         {/* Drawer Header */}
         <SheetHeader className="shrink-0 border-b px-5 py-4">

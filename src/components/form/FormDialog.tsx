@@ -1,9 +1,11 @@
+import type { LucideIcon } from 'lucide-react';
 import { XIcon } from 'lucide-react';
 import { useContext } from 'react';
 
 import WizardStepHeader from './WizardStepHeader';
 
 import { TenantAdminVisualContext } from '@/components/shared/TenantAdminVisualContext';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -23,6 +25,12 @@ interface FormDialogProps {
   title: string;
   description?: string;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
+  /** Domain category badge shown above title (e.g. 'Related Objects', 'Custom Schema') */
+  category?: string;
+  /** Context or count badge shown next to category (string or custom ReactNode) */
+  badge?: React.ReactNode;
+  /** Primary icon rendered next to dialog title */
+  icon?: LucideIcon | React.ComponentType<{ className?: string }>;
   /** Tighter spacing without header/footer dividers for brief confirmations. */
   compact?: boolean;
   children: React.ReactNode;
@@ -57,6 +65,9 @@ export default function FormDialog({
   title,
   description,
   size = 'md',
+  category,
+  badge,
+  icon: Icon,
   compact = false,
   children,
   footer,
@@ -84,9 +95,9 @@ export default function FormDialog({
           footer: 'px-4 pt-2 pb-4',
         }
       : {
-          header: 'border-b px-4 py-3',
+          header: 'bg-background border-b px-4 py-3',
           body: 'px-4 py-4',
-          footer: 'border-t px-4 py-3',
+          footer: 'bg-muted/20 border-t px-4 py-3',
         }
     : compact
       ? {
@@ -95,9 +106,9 @@ export default function FormDialog({
           footer: 'px-5 pt-2 pb-5',
         }
       : {
-          header: 'border-b px-6 py-4',
+          header: 'bg-background border-b px-6 py-4',
           body: 'px-6 py-6',
-          footer: 'border-t px-6 py-4',
+          footer: 'bg-muted/20 border-t px-6 py-3',
         };
 
   return (
@@ -116,7 +127,7 @@ export default function FormDialog({
       >
         <DialogHeader
           className={cn(
-            'shrink-0 flex-row items-center justify-between gap-4',
+            'shrink-0 flex-row items-start justify-between gap-4',
             dialogSpacing.header,
           )}
         >
@@ -134,9 +145,42 @@ export default function FormDialog({
           ) : (
             <>
               <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <DialogTitle>{title}</DialogTitle>
+                {(category || badge) && (
+                  <div className="flex items-center gap-2 mb-0.5">
+                    {category && (
+                      <Badge
+                        variant="outline"
+                        className="text-muted-foreground text-[11px] font-medium"
+                      >
+                        {category}
+                      </Badge>
+                    )}
+                    {badge &&
+                      (typeof badge === 'string' ? (
+                        <Badge
+                          variant="secondary"
+                          className="bg-primary/10 text-primary border-primary/20 text-[11px]"
+                        >
+                          {badge}
+                        </Badge>
+                      ) : (
+                        badge
+                      ))}
+                  </div>
+                )}
+                <DialogTitle
+                  className={cn(
+                    'text-foreground flex items-center gap-2 text-base font-semibold',
+                    (category || badge) && 'mt-0.5',
+                  )}
+                >
+                  {Icon && <Icon className="text-primary size-5 shrink-0" />}
+                  <span>{title}</span>
+                </DialogTitle>
                 {description && (
-                  <DialogDescription>{description}</DialogDescription>
+                  <DialogDescription className="text-muted-foreground text-xs">
+                    {description}
+                  </DialogDescription>
                 )}
                 {isWizard && (
                   <Progress

@@ -91,7 +91,6 @@ const REQUIRED_PARAMS: Record<string, string[]> = {
   word_limit: ['value'],
   min_length: ['value'],
   max_length: ['value'],
-  default_if_empty: ['value'],
   replace_if_contains: ['find'],
   if_starts_with: ['value'],
   if_ends_with: ['value'],
