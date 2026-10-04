@@ -652,7 +652,7 @@ export default function FieldSettingsDrawer({
                       onWheelCapture={(e) => {
                         e.stopPropagation();
                       }}
-                      className="w-[min(calc(100vw-2rem),620px)] sm:w-[620px] max-h-[var(--radix-popover-content-available-height,calc(100vh-6rem))] p-0 gap-0 shadow-2xl border border-border rounded-2xl overflow-hidden bg-popover text-popover-foreground z-60 flex flex-col"
+                      className="w-[min(calc(100vw-2rem),620px)] sm:w-[490px] max-h-[var(--radix-popover-content-available-height,calc(100vh-6rem))] p-0 gap-0 shadow-2xl border border-border rounded-2xl overflow-hidden bg-popover text-popover-foreground z-60 flex flex-col"
                     >
                       <RuleLibraryPopover
                         currentRules={rules}

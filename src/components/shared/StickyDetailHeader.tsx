@@ -98,7 +98,7 @@ export default function StickyDetailHeader({
     >
       <div
         data-slot="sticky-detail-back"
-        className="bg-background before:bg-background after:bg-background sticky top-(--detail-sticky-top) z-20 flex h-(--detail-back-row-height) items-start before:pointer-events-none before:absolute before:-inset-x-4 before:bottom-full before:hidden before:h-[calc(var(--detail-sticky-top)-var(--app-shell-header-height))] before:content-[''] after:pointer-events-none after:absolute after:-inset-x-4 after:inset-y-0 after:-z-10 after:content-[''] data-[stuck=true]:before:block sm:before:-inset-x-6 sm:after:-inset-x-6 lg:before:-inset-x-8 lg:after:-inset-x-8"
+        className="bg-background before:bg-background after:bg-background sticky top-(--detail-sticky-top) z-20 flex h-(--detail-back-row-height) items-start before:pointer-events-none before:absolute before:-inset-x-4 before:bottom-full before:hidden before:h-[calc(var(--detail-sticky-top)-var(--app-shell-header-height))] before:content-[''] after:pointer-events-none after:absolute after:-inset-x-4 after:inset-y-0 after:-z-10 after:content-[''] data-[stuck=true]:before:block sm:before:-inset-x-5 sm:after:-inset-x-5 lg:before:-inset-x-6 lg:after:-inset-x-6"
       >
         <Button
           asChild

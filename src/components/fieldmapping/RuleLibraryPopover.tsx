@@ -110,7 +110,7 @@ export default function RuleLibraryPopover({
       )}
     >
       {/* Fixed Header with Search & Flex-Wrap Category Pills */}
-      <div className="shrink-0 p-3.5 border-b border-border/70 space-y-2.5 bg-muted/40 dark:bg-muted/20">
+      <div className="shrink-0 p-2.5 space-y-2.5 bg-muted/40 dark:bg-muted/20">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <Sparkles className="size-3.5 text-primary" />
@@ -242,8 +242,7 @@ export default function RuleLibraryPopover({
             }
           }
         }}
-        className="flex-1 min-h-[140px] max-h-[360px] overflow-y-auto p-2.5 space-y-1.5 overscroll-contain focus:outline-none"
-        style={{ scrollbarWidth: 'thin' }}
+        className="flex-1 overflow-y-auto px-2 focus:outline-none"
       >
         {isSearchingEmptyPolicy && (
           <div className="bg-primary/5 border border-primary/20 rounded-xl p-2.5 text-[11px] text-muted-foreground flex items-start gap-2 mb-2">
@@ -277,15 +276,15 @@ export default function RuleLibraryPopover({
                     if (!isAdded) onAddRule(def);
                   }}
                   className={cn(
-                    'flex items-center justify-between gap-2.5 rounded-xl px-2.5 py-2 transition-all border outline-none',
+                    'flex items-center justify-between gap-2.5 rounded-xl px-2.5 mt-1.5 last:mb-1.5 py-1 transition-all border outline-none',
                     isAdded
                       ? 'border-border/40 bg-muted/30 dark:bg-muted/15 text-muted-foreground opacity-65 cursor-default'
                       : 'border-border/70 bg-card hover:bg-accent/40 dark:hover:bg-secondary/50 hover:border-primary/50 text-foreground cursor-pointer group shadow-2xs',
                   )}
                 >
                   <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                    <div className="size-6.5 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors border-0">
-                      <Icon aria-hidden="true" className="size-3.5" />
+                    <div className="size-6 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors border-0">
+                      <Icon aria-hidden="true" className="size-3" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">

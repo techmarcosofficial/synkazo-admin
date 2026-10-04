@@ -70,9 +70,9 @@ export default function AppLayout() {
         <SourceSetupDialog />
         <CreateProjectDialog />
         <AppSidebar />
-        <SidebarInset className="[--app-shell-header-height:--spacing(16)]">
+        <SidebarInset className="min-w-0 max-w-full overflow-x-clip [--app-shell-header-height:--spacing(16)]">
           <SiteHeader />
-          <main className="container mx-auto flex w-full flex-1 flex-col gap-4 px-4 py-4 sm:px-5 sm:py-6 lg:px-6">
+          <main className="container mx-auto flex w-full min-w-0 max-w-full flex-1 flex-col gap-4 px-4 py-4 sm:px-5 sm:py-6 lg:px-6">
             <Outlet />
           </main>
         </SidebarInset>

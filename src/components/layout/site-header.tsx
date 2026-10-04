@@ -24,7 +24,7 @@ export default function SiteHeader() {
       <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
         <SidebarTrigger className="h-9 w-9 rounded-3xl" />
 
-        <div className="max-w-xl flex-1">
+        <div className="max-w-xs sm:max-w-sm flex-1">
           <GlobalSearch />
         </div>
       </div>

@@ -1025,38 +1025,43 @@ export default function FieldMappingTab() {
       {/* Floating Save Draft Bar */}
       {anyDirty && (
         <div
-          className={`bg-card fixed right-0 bottom-0 left-0 z-40 border-t shadow-lg backdrop-blur ${
+          className={`fixed right-0 bottom-0 left-0 z-40 max-w-full overflow-x-clip border-t border-border/60 dark:border-white/10 bg-card/35 dark:bg-card/40 backdrop-blur-md shadow-[0_-4px_20px_rgba(0,0,0,0.05)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)] transition-all duration-200 ${
             sidebarState === 'collapsed'
               ? 'md:left-(--sidebar-width-icon)'
               : 'md:left-(--sidebar-width)'
           }`}
         >
-          <div className="container mx-auto flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:px-6 lg:px-8">
-            <div className="flex min-w-0 flex-1 items-start gap-2.5">
-              <span className="bg-warning mt-1.5 size-2 shrink-0 rounded-full" />
-              <div>
-                <p className="text-sm font-semibold">Unsaved draft</p>
-                <p className="text-muted-foreground text-xs">
+          <div className="container mx-auto flex min-w-0 max-w-full flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:px-5 lg:px-6">
+            <div className="flex min-w-0 flex-1 items-start gap-3">
+              <div className="relative mt-1 flex size-2.5 shrink-0 items-center justify-center">
+                <span className="bg-warning/75 absolute inline-flex size-full animate-ping rounded-full opacity-75" />
+                <span className="bg-warning relative inline-flex size-2 rounded-full shadow-xs" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-foreground leading-snug">Unsaved draft</p>
+                <p className="text-muted-foreground text-xs leading-normal mt-0.5">
                   Your changes are auto-saved locally. Save to apply them to
                   your sync job, or discard to restore saved state.
                 </p>
               </div>
             </div>
-            <div className="flex items-center justify-end gap-2">
+            <div className="flex items-center justify-end gap-2.5">
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleDiscard}
                 disabled={saving}
+                className="bg-background/60 hover:bg-background border-border/80 dark:bg-background/30 dark:hover:bg-background/60 shadow-2xs cursor-pointer"
               >
-                <RotateCcw /> Discard changes
+                <RotateCcw className="size-3.5" /> Discard changes
               </Button>
               <Button
                 onClick={handleSave}
                 disabled={!anyDirty || saving}
                 variant={anyDirty ? 'default' : 'outline'}
+                className="shadow-xs cursor-pointer"
               >
-                {saving ? <Spinner /> : <Check />}
+                {saving ? <Spinner /> : <Check className="size-3.5" />}
                 {saving ? 'Saving...' : saved ? 'Saved!' : 'Save changes'}
               </Button>
             </div>

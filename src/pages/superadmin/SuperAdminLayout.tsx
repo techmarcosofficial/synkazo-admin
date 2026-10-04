@@ -4,7 +4,7 @@ import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 
 import GlobalLoader, { PageLoader } from '@/components/shared/GlobalLoader';
 import HeadingPair from '@/components/shared/HeadingPair';
-import { SynkazoWordmark } from '@/components/branding/SynkazoMark';
+import { SynkazoMark } from '@/components/branding/SynkazoMark';
 import { NavMain } from '@/components/layout/nav-main';
 import { NavUser } from '@/components/layout/nav-user';
 import NotificationsMenu from '@/components/layout/NotificationsMenu';
@@ -79,12 +79,28 @@ function SuperAdminSidebar() {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild size="lg" tooltip="Platform admin">
-              <Link to="/super-admin/overview">
-                <SynkazoWordmark
-                  className="text-foreground h-7! w-auto!"
-                  tone="auto"
+            <SidebarMenuButton
+              size="lg"
+              asChild
+              tooltip="Platform Admin"
+              className="h-12 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-0! [&_svg]:size-auto"
+            >
+              <Link
+                to="/super-admin/overview"
+                className="flex items-center gap-2.5 group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:justify-center"
+              >
+                <SynkazoMark
+                  variant="badge"
+                  className="size-8! rounded-lg shadow-xs shrink-0 drop-shadow-[0_2px_8px_rgba(255,107,57,0.25)]"
                 />
+                <div className="flex items-center gap-1.5 group-data-[collapsible=icon]:hidden">
+                  <span className="text-lg font-bold tracking-tight text-foreground">
+                    synkazo
+                  </span>
+                  <span className="text-[10px] font-semibold tracking-wider uppercase text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">
+                    Admin
+                  </span>
+                </div>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -146,7 +162,7 @@ export default function SuperAdminLayout() {
   return (
     <SidebarProvider data-admin-shell="platform">
       <SuperAdminSidebar />
-      <SidebarInset className="[--app-shell-header-height:--spacing(16)]">
+      <SidebarInset className="min-w-0 max-w-full overflow-x-clip [--app-shell-header-height:--spacing(16)]">
         <SuperAdminHeader />
 
         {/* Recognisable visual context (SA-107) so an operator never confuses a
@@ -161,7 +177,7 @@ export default function SuperAdminLayout() {
           </div>
         </div>
 
-        <main className="container mx-auto flex w-full flex-1 flex-col gap-6 px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
+        <main className="container mx-auto flex w-full min-w-0 max-w-full flex-1 flex-col gap-6 px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
           <SuperAdminErrorBoundary>
             <PageSuspense>
               <Outlet />

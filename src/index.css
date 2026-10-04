@@ -275,11 +275,21 @@ html:has([data-admin-shell]) {
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
   html {
     @apply font-sans;
+    overflow-x: clip;
+    max-width: 100%;
+  }
+  body {
+    @apply bg-background text-foreground;
+    overflow-x: clip;
+    max-width: 100%;
+    min-height: 100vh;
+  }
+  #root {
+    min-height: 100vh;
+    max-width: 100%;
+    overflow-x: clip;
   }
 
   /* Layout Style is an admin-display preference. Border mode has no outer
@@ -510,6 +520,12 @@ html:has([data-admin-shell]) {
   height: 8px;
 }
 
+::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
@@ -533,6 +549,19 @@ html:has([data-admin-shell]) {
 
 .dark ::-webkit-scrollbar-thumb:hover {
   background: oklch(1 0 0 / 35%);
+}
+
+/* Firefox & standard CSS scrollbar fallback (prevents default OS scrollbars with arrows) */
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: oklch(0.55 0.01 265 / 35%) transparent;
+  }
+
+  .dark,
+  .dark * {
+    scrollbar-color: oklch(1 0 0 / 18%) transparent;
+  }
 }
 
 /* Per-table horizontal scrollbars are hidden when a shared monday-style
