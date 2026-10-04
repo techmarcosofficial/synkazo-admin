@@ -2,12 +2,13 @@ import {
   AlertTriangle,
   Check,
   ExternalLink,
+  Filter,
   Link2,
   RotateCcw,
   ShieldCheck,
 } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { useJobDetailContext } from '../context';
@@ -101,10 +102,7 @@ const cloneDestinationConditions = (conditions: DestinationSkipCondition[]) =>
   JSON.parse(JSON.stringify(conditions)) as DestinationSkipCondition[];
 
 export type MappingWorkspaceTab =
-  | 'field-mapping'
-  | 'default-mapping'
-  | 'skip-record'
-  | 'cross-object';
+  'field-mapping' | 'default-mapping' | 'skip-record' | 'cross-object';
 
 function FieldMappingSkeleton() {
   return (
@@ -245,12 +243,55 @@ export default function FieldMappingTab() {
     (state) => state.clearTabDraft,
   );
   const { state: sidebarState } = useSidebar();
+  const [searchParams, setSearchParams] = useSearchParams();
   const workspaceRef = useRef<HTMLDivElement>(null);
   const [mappingToolbarContainer, setMappingToolbarContainer] =
     useState<HTMLDivElement | null>(null);
 
+  const targetField =
+    searchParams.get('field') ||
+    searchParams.get('highlightField') ||
+    undefined;
+  const targetSection = (searchParams.get('action') || undefined) as
+    | import('@/components/fieldmapping/FieldSettingsDrawer').TargetDrawerSection
+    | undefined;
+
+  const handleClearTarget = useCallback(() => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('field');
+    nextParams.delete('highlightField');
+    nextParams.delete('action');
+    setSearchParams(nextParams, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   // Mappings State
   const [fieldMappings, setFieldMappings] = useState<ConsolidatedMapping[]>([]);
+  const mappedSourceKeys = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          fieldMappings
+            .map((mapping) => mapping.sourceField)
+            .filter((field): field is string => Boolean(field)),
+        ),
+      ),
+    [fieldMappings],
+  );
+  const mappedDestKeys = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          fieldMappings
+            .flatMap((mapping) =>
+              Array.isArray(mapping.destField)
+                ? mapping.destField
+                : [mapping.destField],
+            )
+            .filter((field): field is string => Boolean(field)),
+        ),
+      ),
+    [fieldMappings],
+  );
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [mappingDirty, setMappingDirty] = useState(false);
@@ -258,9 +299,9 @@ export default function FieldMappingTab() {
   const savedMappingsRef = useRef<ConsolidatedMapping[]>([]);
 
   // Exclude Conditions State
-  const [excludeConditions, setExcludeConditions] = useState<ExcludeCondition[]>(
-    job.excludeConditions ?? [],
-  );
+  const [excludeConditions, setExcludeConditions] = useState<
+    ExcludeCondition[]
+  >(job.excludeConditions ?? []);
   const [excludeConditionLogic, setExcludeConditionLogic] = useState<
     'AND' | 'OR'
   >(job.excludeConditionLogic ?? 'AND');
@@ -281,7 +322,9 @@ export default function FieldMappingTab() {
   const [showCrossObjectDialog, setShowCrossObjectDialog] = useState(false);
 
   const [loadingMappings, setLoadingMappings] = useState(true);
-  const [mappingMode, setMappingMode] = useState<'edit' | 'fresh-setup'>('edit');
+  const [mappingMode, setMappingMode] = useState<'edit' | 'fresh-setup'>(
+    'edit',
+  );
   const persistedSourceFieldsRef = useRef<Set<string>>(new Set());
   const [sourceFields, setSourceFields] = useState<CanvasField[]>([]);
   const [crossObjectProperties, setCrossObjectProperties] = useState<
@@ -404,31 +447,9 @@ export default function FieldMappingTab() {
     const preventUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
     };
-    const confirmInAppNavigation = (event: MouseEvent) => {
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-      const navigationTarget = target.closest('a[href], [role="tab"]');
-      if (
-        !navigationTarget ||
-        workspaceRef.current?.contains(navigationTarget)
-      ) {
-        return;
-      }
-      if (
-        window.confirm(
-          'You have unsaved changes in Field Mapping. Leave this page without saving them?',
-        )
-      ) {
-        return;
-      }
-      event.preventDefault();
-      event.stopImmediatePropagation();
-    };
     window.addEventListener('beforeunload', preventUnload);
-    document.addEventListener('click', confirmInAppNavigation, true);
     return () => {
       window.removeEventListener('beforeunload', preventUnload);
-      document.removeEventListener('click', confirmInAppNavigation, true);
     };
   }, [anyDirty]);
 
@@ -754,13 +775,13 @@ export default function FieldMappingTab() {
         </div>
       )}
 
-      <Card className="gap-0 py-0 border-border bg-card shadow-xs">
+      <Card className="border-border bg-card gap-0 py-0 shadow-xs">
         <CardContent className="p-0">
           {/* Unified Workspace Header matching Dialog Header & Content design */}
-          <div className="bg-muted/30 dark:bg-card/90 border-b border-border px-5 py-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="bg-muted/30 dark:bg-card/90 border-border flex flex-col gap-4 border-b px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 flex-col gap-1">
               <div className="flex flex-wrap items-center gap-2">
-                <h3 className="font-heading text-base font-semibold tracking-tight text-foreground">
+                <h3 className="font-heading text-foreground text-base font-semibold tracking-tight">
                   Field Mappings
                 </h3>
                 <IconLegend size="icon-xs" variant="ghost" />
@@ -768,14 +789,15 @@ export default function FieldMappingTab() {
                   {fieldMappings.length} mapped
                 </Badge>
                 {anyDirty && (
-                  <span className="text-muted-foreground hidden items-center gap-1.5 text-xs sm:inline-flex font-normal">
+                  <span className="text-muted-foreground hidden items-center gap-1.5 text-xs font-normal sm:inline-flex">
                     <span className="bg-warning size-1.5 animate-pulse rounded-full" />
                     Draft saved locally
                   </span>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Map fields between your connected platforms to synchronize record data accurately.
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                Map fields between your connected platforms to synchronize
+                record data accurately.
               </p>
             </div>
 
@@ -785,7 +807,7 @@ export default function FieldMappingTab() {
                 variant="outline"
                 size="sm"
                 onClick={() => setShowJobFiltersDialog(true)}
-                className="gap-1.5 text-xs font-medium h-8"
+                className="h-8 gap-1.5 text-xs font-medium"
               >
                 <ShieldCheck className="text-primary size-3.5" />
                 <span>Job Filters</span>
@@ -806,7 +828,7 @@ export default function FieldMappingTab() {
                   variant="outline"
                   size="sm"
                   onClick={() => setShowCrossObjectDialog(true)}
-                  className="gap-1.5 text-xs font-medium h-8"
+                  className="h-8 gap-1.5 text-xs font-medium"
                 >
                   <Link2 className="text-primary size-3.5" />
                   <span>Cross-Object</span>
@@ -843,7 +865,7 @@ export default function FieldMappingTab() {
                       <Badge
                         size="xs"
                         variant="secondary"
-                        className="bg-primary/10 text-primary border border-primary/20"
+                        className="bg-primary/10 text-primary border-primary/20 border"
                       >
                         Unique Identifier
                       </Badge>
@@ -859,6 +881,72 @@ export default function FieldMappingTab() {
                   </div>
                 </div>
               )}
+
+            {/* Active Job-Level Record Filters Summary Banner */}
+            {totalFiltersCount > 0 && (
+              <div
+                className="bg-muted/40 border-border/70 flex flex-col gap-2.5 rounded-2xl border p-3.5 text-xs sm:flex-row sm:items-center sm:justify-between"
+                data-testid="job-filters-active-summary"
+              >
+                <div className="flex min-w-0 flex-1 items-start gap-2.5 sm:items-center">
+                  <div className="bg-primary/10 text-primary mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl sm:mt-0">
+                    <ShieldCheck className="size-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-foreground font-semibold">
+                        Active Job-Level Record Filters
+                      </span>
+                      {excludeConditions.length > 0 && (
+                        <Badge
+                          variant="secondary"
+                          className="bg-primary/10 text-primary border-primary/20 text-[11px] font-medium"
+                        >
+                          Source:{' '}
+                          {
+                            excludeConditions.filter((c) => c.enabled !== false)
+                              .length
+                          }{' '}
+                          Active ({excludeConditionLogic})
+                        </Badge>
+                      )}
+                      {destinationSkipConditions.length > 0 && (
+                        <Badge
+                          variant="secondary"
+                          className="bg-primary/10 text-primary border-primary/20 text-[11px] font-medium"
+                        >
+                          Destination:{' '}
+                          {
+                            destinationSkipConditions.filter(
+                              (c) => c.enabled !== false,
+                            ).length
+                          }{' '}
+                          Guards
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-muted-foreground mt-0.5 truncate text-xs">
+                      {excludeConditions.length > 0 &&
+                      destinationSkipConditions.length > 0
+                        ? 'Records will be skipped from sync if source conditions match, or destination guard matches.'
+                        : excludeConditions.length > 0
+                          ? 'Records matching source criteria will be skipped before syncing.'
+                          : 'Records will be skipped when destination guard criteria match.'}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowJobFiltersDialog(true)}
+                  className="h-8 shrink-0 gap-1.5 self-end text-xs font-medium sm:self-center"
+                >
+                  <Filter className="size-3" />
+                  <span>Configure Filters</span>
+                </Button>
+              </div>
+            )}
 
             <FieldMappingCanvas
               isDirty={mappingDirty}
@@ -896,6 +984,9 @@ export default function FieldMappingTab() {
               }
               isFirstTime={isFirstTime}
               scrollToAttentionSignal={attentionSignal}
+              targetField={targetField}
+              targetSection={targetSection}
+              onClearTarget={handleClearTarget}
             />
 
             <div className="border-border/60 bg-muted/40 mt-4 flex flex-col gap-3 rounded-2xl border p-3.5 text-xs sm:flex-row sm:items-center sm:justify-between">
@@ -987,6 +1078,8 @@ export default function FieldMappingTab() {
         onPreviewSource={handlePreviewConditions}
         previewingSource={previewingConditions}
         error={displayedConditionsError}
+        mappedSourceKeys={mappedSourceKeys}
+        mappedDestinationKeys={mappedDestKeys}
       />
 
       {/* Cross-Object Properties Dialog */}

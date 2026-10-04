@@ -16,6 +16,8 @@ import {
   vi,
 } from 'vitest';
 
+import { MemoryRouter } from 'react-router-dom';
+
 import { RecordReason } from './RecordReason';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -38,17 +40,19 @@ afterAll(() => vi.unstubAllGlobals());
 
 function renderReason(record: SyncLogRecord) {
   return render(
-    <TooltipProvider delayDuration={0}>
-      <RecordReason
-        rec={record}
-        context={{
-          sourcePlatform: 'service_titan',
-          sourceObject: 'customer',
-          destPlatform: 'hubspot',
-          destObject: 'contact',
-        }}
-      />
-    </TooltipProvider>,
+    <MemoryRouter>
+      <TooltipProvider delayDuration={0}>
+        <RecordReason
+          rec={record}
+          context={{
+            sourcePlatform: 'service_titan',
+            sourceObject: 'customer',
+            destPlatform: 'hubspot',
+            destObject: 'contact',
+          }}
+        />
+      </TooltipProvider>
+    </MemoryRouter>,
   );
 }
 
@@ -176,20 +180,23 @@ describe('RecordReason', () => {
 
   it('closes when keyboard focus leaves the trigger', async () => {
     render(
-      <TooltipProvider delayDuration={0}>
-        <div>
-          <RecordReason
-            rec={{
-              id: 'record-4',
-              action: 'skipped',
-              sourceRecordId: 'source-4004',
-              skipReason: 'filter_excluded',
-              skipReasonDetail: 'Record matched a configured exclude condition',
-            }}
-          />
-          <button type="button">Next control</button>
-        </div>
-      </TooltipProvider>,
+      <MemoryRouter>
+        <TooltipProvider delayDuration={0}>
+          <div>
+            <RecordReason
+              rec={{
+                id: 'record-4',
+                action: 'skipped',
+                sourceRecordId: 'source-4004',
+                skipReason: 'filter_excluded',
+                skipReasonDetail:
+                  'Record matched a configured exclude condition',
+              }}
+            />
+            <button type="button">Next control</button>
+          </div>
+        </TooltipProvider>
+      </MemoryRouter>,
     );
 
     const trigger = screen.getByRole('button', {
@@ -250,5 +257,40 @@ describe('RecordReason', () => {
     expect(tooltip).toHaveTextContent('mapped=incoming@example.com');
     expect(tooltip).toHaveTextContent('destination=current@example.com');
     expect(tooltip).not.toHaveTextContent('Failed');
+  });
+
+  it('renders dynamic 1-click recovery actions with deep link params for missing required field', async () => {
+    render(
+      <MemoryRouter>
+        <TooltipProvider delayDuration={0}>
+          <RecordReason
+            projectId="proj-test-1"
+            jobId="job-test-2"
+            rec={{
+              id: 'record-missing-field',
+              action: 'failed',
+              sourceRecordId: 'order-101',
+              failReason: 'missing_required_field',
+              failReasonDetail: 'Missing required property: dealname',
+            }}
+            context={{
+              destPlatform: 'hubspot',
+              destObject: 'deal',
+            }}
+          />
+        </TooltipProvider>
+      </MemoryRouter>,
+    );
+
+    const trigger = screen.getByRole('button', {
+      name: /view failed reason details/i,
+    });
+    fireEvent.focus(trigger);
+
+    const tooltip = await screen.findByRole('tooltip');
+    expect(tooltip).toHaveTextContent('Suggested Action');
+    expect(tooltip).toHaveTextContent(/Default fallback value \("dealname"\)/i);
+    expect(tooltip).toHaveTextContent(/Skip rule suggestion \("dealname"\)/i);
+    expect(tooltip).toHaveTextContent('HubSpot requires "dealname"');
   });
 });

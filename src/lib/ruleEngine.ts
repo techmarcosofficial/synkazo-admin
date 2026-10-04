@@ -242,7 +242,21 @@ export const RULE_DEFINITIONS: RuleDefinition[] = [
     label: 'Is Not Empty',
     description: 'Assert value is not empty',
   },
-  // Conditional
+  // Conditional / Skip
+  {
+    type: 'skip_if_equals',
+    category: 'conditional',
+    label: 'Skip If Equals',
+    description: 'Drop record from sync if field equals target value',
+    params: ['value'],
+  },
+  {
+    type: 'skip_if_contains',
+    category: 'conditional',
+    label: 'Skip If Contains',
+    description: 'Drop record from sync if field contains text',
+    params: ['find'],
+  },
   {
     type: 'replace_if_contains',
     category: 'conditional',
@@ -490,6 +504,16 @@ export function suggestCastRule(
 function applyRule(value: string, rule: Rule): string {
   const v = String(value ?? '');
   switch (rule.type) {
+    case 'skip_if_empty':
+      return v.trim() === '' ? '__SKIPPED__:empty' : v;
+    case 'skip_if_equals':
+      return v === String(rule.value ?? '')
+        ? `__SKIPPED__:equals:${rule.value}`
+        : v;
+    case 'skip_if_contains':
+      return v.includes(String(rule.find ?? ''))
+        ? `__SKIPPED__:contains:${rule.find}`
+        : v;
     case 'trim':
       return v.trim();
     case 'remove_spaces':
@@ -654,7 +678,13 @@ function applyRule(value: string, rule: Rule): string {
 }
 
 export function executeRulePipeline(value: string, rules: Rule[] = []): string {
-  return rules
-    .filter((r) => r.enabled !== false)
-    .reduce((v, rule) => applyRule(v, rule), value);
+  let current = value;
+  for (const rule of rules) {
+    if (rule.enabled === false) continue;
+    current = applyRule(current, rule);
+    if (current.startsWith('__SKIPPED__:')) {
+      return current;
+    }
+  }
+  return current;
 }

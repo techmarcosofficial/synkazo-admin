@@ -50,7 +50,7 @@ const buttonVariants = cva(
 function Button({
   className,
   variant = 'default',
-  size = 'default',
+  size,
   shape = 'default',
   asChild = false,
   loading = false,
@@ -62,14 +62,19 @@ function Button({
     asChild?: boolean;
     loading?: boolean;
   }) {
+  const isSmall =
+    size === 'sm' ||
+    (!size && className && /\b(h-[678](\.5)?|text-xs)\b/.test(className));
+  const resolvedSize = size ?? (isSmall ? 'sm' : 'default');
+
   const Comp = asChild ? Slot.Root : 'button';
 
   return (
     <Comp
       data-slot="button"
       data-variant={variant}
-      data-size={size}
-      className={cn(buttonVariants({ variant, size, shape, className }))}
+      data-size={resolvedSize}
+      className={cn(buttonVariants({ variant, size: resolvedSize, shape, className }))}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       {...props}

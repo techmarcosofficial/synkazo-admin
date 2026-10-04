@@ -41,139 +41,11 @@ export interface TriageDrawerProps {
   onRefreshHistory?: () => void;
 }
 
-interface FixSuggestion {
-  label: string;
-  destination: 'mapping' | 'connections' | 'retry';
-  icon?: LucideIcon;
-  hint: string;
-}
-
-function getRecordFixSuggestions(rec: SyncLogRecord): FixSuggestion[] {
-  const suggestions: FixSuggestion[] = [];
-  const text =
-    `${rec.failReason || ''} ${rec.failReasonDetail || ''} ${rec.skipReason || ''} ${rec.skipReasonDetail || ''}`.toLowerCase();
-
-  const isAuth =
-    text.includes('auth') ||
-    text.includes('unauthorized') ||
-    text.includes('401') ||
-    text.includes('token') ||
-    text.includes('credential');
-  const isForbidden =
-    text.includes('forbidden') ||
-    text.includes('scope') ||
-    text.includes('403') ||
-    text.includes('permission');
-  const isMissingField =
-    text.includes('required') ||
-    text.includes('missing') ||
-    rec.failReason === 'missing_required_field' ||
-    rec.skipReason === 'missing_required_field';
-  const isValidationOrTransform =
-    text.includes('invalid') ||
-    text.includes('validation') ||
-    text.includes('transform') ||
-    text.includes('format') ||
-    text.includes('type') ||
-    text.includes('parse');
-  const isDuplicateOrIdMatch =
-    text.includes('duplicate') ||
-    text.includes('match') ||
-    text.includes('conflict') ||
-    rec.failReason === 'no_id_match' ||
-    rec.failReason === 'id_conflict';
-  const isRateLimitOrTimeout =
-    text.includes('rate limit') ||
-    text.includes('429') ||
-    text.includes('timeout') ||
-    text.includes('500') ||
-    text.includes('502') ||
-    text.includes('503') ||
-    text.includes('econnreset') ||
-    text.includes('network');
-
-  if (isAuth || isForbidden) {
-    suggestions.push({
-      label: 'Reconnect in Connections',
-      destination: 'connections',
-      icon: ExternalLink,
-      hint: 'Update credentials or grant required scopes',
-    });
-  }
-
-  if (isMissingField) {
-    suggestions.push({
-      label: 'Default fallback value',
-      destination: 'mapping',
-      icon: Wrench,
-      hint: 'Provide a fallback value when source field is empty',
-    });
-    suggestions.push({
-      label: 'Skip rule suggestion',
-      destination: 'mapping',
-      icon: SkipForward,
-      hint: 'Exclude records missing this field from syncing',
-    });
-  } else if (isValidationOrTransform) {
-    suggestions.push({
-      label: 'Rule suggestion (Transform)',
-      destination: 'mapping',
-      icon: Wrench,
-      hint: 'Format or clean values before sending to destination',
-    });
-    suggestions.push({
-      label: 'Default mapping suggestion',
-      destination: 'mapping',
-      icon: Wrench,
-      hint: 'Adjust target field mapping or fallback',
-    });
-  } else if (isDuplicateOrIdMatch) {
-    suggestions.push({
-      label: 'Review Match Identifier',
-      destination: 'mapping',
-      icon: Wrench,
-      hint: 'Check unique identifier mapping to prevent collisions',
-    });
-    suggestions.push({
-      label: 'Skip duplicate rule',
-      destination: 'mapping',
-      icon: SkipForward,
-      hint: 'Add skip condition to ignore duplicate records',
-    });
-  } else if (isRateLimitOrTimeout) {
-    suggestions.push({
-      label: 'Retry record now',
-      destination: 'retry',
-      icon: RotateCcw,
-      hint: 'Transient error — safe to retry',
-    });
-  } else {
-    // General fallback suggestions for failed or skipped records
-    if (rec.action === 'failed') {
-      suggestions.push({
-        label: 'Default mapping suggestion',
-        destination: 'mapping',
-        icon: Wrench,
-        hint: 'Inspect or adjust field mapping fallback',
-      });
-      suggestions.push({
-        label: 'Skip rule suggestion',
-        destination: 'mapping',
-        icon: SkipForward,
-        hint: 'Exclude this record pattern if not needed',
-      });
-    } else {
-      suggestions.push({
-        label: 'Review Skip Rules',
-        destination: 'mapping',
-        icon: SkipForward,
-        hint: 'Inspect skip conditions in Field Mapping',
-      });
-    }
-  }
-
-  return suggestions;
-}
+import {
+  analyzeRecordDiagnosis,
+  DIAGNOSIS_ICONS,
+  type RecordFixAction,
+} from '@/features/jobs/utils/recordDiagnosis';
 
 export function TriageDrawer({
   open,
@@ -229,16 +101,18 @@ export function TriageDrawer({
     };
   }, [open, run, filter, projectId, jobId]);
 
-  const handleAction = async (
-    destination: 'mapping' | 'connections' | 'retry',
-  ) => {
-    if (destination === 'mapping') {
+  const handleAction = async (action: RecordFixAction) => {
+    if (action.destination === 'mapping') {
       onOpenChange(false);
-      navigate(`/projects/${projectId}/jobs/${jobId}?tab=field-mapping`);
-    } else if (destination === 'connections') {
+      const q = new URLSearchParams();
+      q.set('tab', 'field-mapping');
+      if (action.deepLink?.field) q.set('field', action.deepLink.field);
+      if (action.deepLink?.action) q.set('action', action.deepLink.action);
+      navigate(`/projects/${projectId}/jobs/${jobId}?${q.toString()}`);
+    } else if (action.destination === 'connections') {
       onOpenChange(false);
       navigate(`/projects/${projectId}?tab=connections`);
-    } else if (destination === 'retry') {
+    } else if (action.destination === 'retry') {
       await handleRetryRun();
     }
   };
@@ -385,15 +259,7 @@ export function TriageDrawer({
             <div className="space-y-2.5">
               {filteredRecords.map((rec) => {
                 const isFailed = rec.action === 'failed';
-                const reasonText =
-                  rec.failReasonDetail ||
-                  rec.failReason ||
-                  rec.skipReasonDetail ||
-                  rec.skipReason ||
-                  (isFailed
-                    ? 'Record processing failed'
-                    : 'Excluded by sync rule');
-                const fixes = getRecordFixSuggestions(rec);
+                const diagnosis = analyzeRecordDiagnosis(rec);
 
                 return (
                   <div
@@ -435,26 +301,33 @@ export function TriageDrawer({
                     </div>
 
                     {/* Reason / Failure Detail */}
-                    <p className="text-muted-foreground text-xs leading-relaxed break-words">
-                      {reasonText}
-                    </p>
+                    <div className="space-y-1">
+                      <p className="text-foreground text-xs leading-relaxed font-medium break-words">
+                        {diagnosis.humanExplanation}
+                      </p>
+                      {diagnosis.rawDetail && (
+                        <p className="text-muted-foreground text-[11px] leading-relaxed break-words">
+                          {diagnosis.rawDetail}
+                        </p>
+                      )}
+                    </div>
 
                     {/* Actionable Fix Suggestions */}
-                    {fixes.length > 0 && (
+                    {diagnosis.actions.length > 0 && (
                       <div className="border-border/50 flex flex-wrap items-center gap-1.5 border-t pt-2">
                         <span className="text-muted-foreground text-[11px] font-medium">
                           Possible fixes:
                         </span>
-                        {fixes.map((fix) => {
-                          const Icon = fix.icon ?? Wrench;
+                        {diagnosis.actions.map((fix) => {
+                          const Icon = DIAGNOSIS_ICONS[fix.iconName] || Wrench;
                           return (
                             <Button
                               key={fix.label}
                               variant="outline"
                               size="xs"
-                              onClick={() => handleAction(fix.destination)}
+                              onClick={() => handleAction(fix)}
                               title={fix.hint}
-                              className="hover:bg-primary/10 hover:text-primary hover:border-primary/30 h-6 gap-1 px-2 text-[11px] transition-colors"
+                              className="hover:bg-primary/10 hover:text-primary hover:border-primary/30 h-6 cursor-pointer gap-1 px-2 text-[11px] transition-colors"
                             >
                               <Icon className="text-primary size-3" />
                               <span>{fix.label}</span>

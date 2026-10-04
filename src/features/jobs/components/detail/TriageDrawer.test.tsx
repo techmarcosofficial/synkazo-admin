@@ -44,7 +44,8 @@ describe('TriageDrawer', () => {
       action: 'failed',
       sourceRecordId: 'SRC-9901',
       failReason: 'missing_required_field',
-      failReasonDetail: 'Destination requires email field but source record has no value',
+      failReasonDetail:
+        'Destination requires email field but source record has no value',
     },
     {
       id: 'rec-2',
@@ -80,15 +81,21 @@ describe('TriageDrawer', () => {
     expect(screen.getByText('SRC-9902')).toBeInTheDocument();
 
     // Contextual fix suggestions for missing required field
-    const defaultValBtn = screen.getByRole('button', { name: /default fallback value/i });
+    const defaultValBtn = screen.getByRole('button', {
+      name: /default fallback value/i,
+    });
     expect(defaultValBtn).toBeInTheDocument();
 
-    const skipRuleBtn = screen.getByRole('button', { name: /skip rule suggestion/i });
+    const skipRuleBtn = screen.getByRole('button', {
+      name: /skip rule suggestion/i,
+    });
     expect(skipRuleBtn).toBeInTheDocument();
 
-    // Clicking a fix suggestion navigates to field mapping
+    // Clicking a fix suggestion navigates to field mapping with deep link
     fireEvent.click(defaultValBtn);
-    expect(mockNavigate).toHaveBeenCalledWith('/projects/proj-1/jobs/job-1?tab=field-mapping');
+    expect(mockNavigate).toHaveBeenCalledWith(
+      '/projects/proj-1/jobs/job-1?tab=field-mapping&field=email&action=fallbacks',
+    );
   });
 
   it('filters records by search query', async () => {
@@ -135,10 +142,14 @@ describe('TriageDrawer', () => {
       />,
     );
 
-    const reconnectBtn = await screen.findByRole('button', { name: /reconnect in connections/i });
+    const reconnectBtn = await screen.findByRole('button', {
+      name: /reconnect in connections/i,
+    });
     expect(reconnectBtn).toBeInTheDocument();
 
     fireEvent.click(reconnectBtn);
-    expect(mockNavigate).toHaveBeenCalledWith('/projects/proj-1?tab=connections');
+    expect(mockNavigate).toHaveBeenCalledWith(
+      '/projects/proj-1?tab=connections',
+    );
   });
 });

@@ -110,159 +110,151 @@ export default function CrossObjectPropertiesPanel({
 
   return (
     <div className="space-y-4">
-      <HeadingPair
-        visualLevel="card"
-        level="h3"
-        title="Cross-object properties"
-        subtitle="Import a property through an ID or employee-name field on each source record. Imported values become forward-only source fields."
-      />
-      <div className="bg-muted/20 space-y-4 rounded-3xl border p-4">
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="space-y-1.5">
-            <label id="cross-object-label" className="text-xs font-medium">
-              Related object
-            </label>
-            <Select
-              value={relatedObject}
-              onValueChange={(value) => {
-                setRelatedObject(value);
-                setLookupField('');
-                setImportedProperty('');
-                const object = objects.find(
-                  (candidate) => candidate.objectType === value,
-                );
-                setLookupMode(object?.lookupModes[0] ?? 'id');
-              }}
-            >
-              <SelectTrigger
-                aria-labelledby="cross-object-label"
-                className="w-full"
-              >
-                <SelectValue placeholder="Select object" />
-              </SelectTrigger>
-              <SelectContent>
-                {objects.map((object) => (
-                  <SelectItem key={object.objectType} value={object.objectType}>
-                    {object.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <label id="cross-mode-label" className="text-xs font-medium">
-              Relationship field
-            </label>
-            <Select
-              value={selectedObject ? lookupMode : ''}
-              onValueChange={(value) => setLookupMode(value as 'id' | 'name')}
-              disabled={!selectedObject}
-            >
-              <SelectTrigger
-                aria-labelledby="cross-mode-label"
-                className="w-full"
-              >
-                <SelectValue placeholder="Select relationship" />
-              </SelectTrigger>
-              <SelectContent>
-                {selectedObject?.lookupModes.map((mode) => (
-                  <SelectItem key={mode} value={mode}>
-                    {mode === 'id'
-                      ? relatedObject === 'customer-contacts'
-                        ? 'Influencer ID'
-                        : 'Related record ID'
-                      : 'Employee name'}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <label id="cross-lookup-label" className="text-xs font-medium">
-              Current object field
-            </label>
-            <Select
-              value={lookupField}
-              onValueChange={setLookupField}
-              disabled={!selectedObject}
-            >
-              <SelectTrigger
-                aria-labelledby="cross-lookup-label"
-                className="w-full"
-              >
-                <SelectValue placeholder="Select field" />
-              </SelectTrigger>
-              <SelectContent>
-                {sourceFields
-                  .filter(
-                    (field) =>
-                      !field.key.startsWith('__cross_object__:') &&
-                      (relatedObject !== 'customer-contacts' ||
-                        field.key === 'InfluencerId'),
-                  )
-                  .map((field) => (
-                    <SelectItem key={field.key} value={field.key}>
-                      {field.label ?? field.key}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-            <p className="text-muted-foreground text-xs">
-              Contains the related{' '}
-              {lookupMode === 'name'
-                ? 'name'
-                : relatedObject === 'customer-contacts'
-                  ? 'Influencer ID'
-                  : 'record ID'}
-              .
-            </p>
-          </div>
-        </div>
-        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
-          <div className="space-y-1.5">
-            <label id="cross-property-label" className="text-xs font-medium">
-              Property to import
-            </label>
-            <Select
-              value={importedProperty}
-              onValueChange={setImportedProperty}
-              disabled={!relatedObject || relatedFields.length === 0}
-            >
-              <SelectTrigger
-                aria-labelledby="cross-property-label"
-                className="w-full"
-              >
-                <SelectValue placeholder="Choose a property" />
-              </SelectTrigger>
-              <SelectContent>
-                {relatedFields
-                  .filter((field) => field.key !== '_discoveryError')
-                  .map((field) => (
-                    <SelectItem key={field.key} value={field.key}>
-                      {field.label ?? field.key}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button
-            type="button"
-            onClick={add}
-            className="w-full md:w-auto"
-            disabled={
-              busy ||
-              !selectedObject?.lookupModes.includes(lookupMode) ||
-              !lookupField ||
-              (relatedObject === 'customer-contacts' &&
-                lookupField !== 'InfluencerId') ||
-              !relatedFields.some((field) => field.key === importedProperty)
-            }
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="space-y-1.5">
+          <label id="cross-object-label" className="text-xs font-medium block">
+            Related object
+          </label>
+          <Select
+            value={relatedObject}
+            onValueChange={(value) => {
+              setRelatedObject(value);
+              setLookupField('');
+              setImportedProperty('');
+              const object = objects.find(
+                (candidate) => candidate.objectType === value,
+              );
+              setLookupMode(object?.lookupModes[0] ?? 'id');
+            }}
           >
-            {busy ? <Spinner /> : <Plus />} Add property
-          </Button>
+            <SelectTrigger
+              aria-labelledby="cross-object-label"
+              className="w-full"
+            >
+              <SelectValue placeholder="Select object" />
+            </SelectTrigger>
+            <SelectContent>
+              {objects.map((object) => (
+                <SelectItem key={object.objectType} value={object.objectType}>
+                  {object.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <label id="cross-mode-label" className="text-xs font-medium block">
+            Relationship field
+          </label>
+          <Select
+            value={selectedObject ? lookupMode : ''}
+            onValueChange={(value) => setLookupMode(value as 'id' | 'name')}
+            disabled={!selectedObject}
+          >
+            <SelectTrigger
+              aria-labelledby="cross-mode-label"
+              className="w-full"
+            >
+              <SelectValue placeholder="Select relationship" />
+            </SelectTrigger>
+            <SelectContent>
+              {selectedObject?.lookupModes.map((mode) => (
+                <SelectItem key={mode} value={mode}>
+                  {mode === 'id'
+                    ? relatedObject === 'customer-contacts'
+                      ? 'Influencer ID'
+                      : 'Related record ID'
+                    : 'Employee name'}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <label id="cross-lookup-label" className="text-xs font-medium block">
+            Current object field
+          </label>
+          <Select
+            value={lookupField}
+            onValueChange={setLookupField}
+            disabled={!selectedObject}
+          >
+            <SelectTrigger
+              aria-labelledby="cross-lookup-label"
+              className="w-full"
+            >
+              <SelectValue placeholder="Select field" />
+            </SelectTrigger>
+            <SelectContent>
+              {sourceFields
+                .filter(
+                  (field) =>
+                    !field.key.startsWith('__cross_object__:') &&
+                    (relatedObject !== 'customer-contacts' ||
+                      field.key === 'InfluencerId'),
+                )
+                .map((field) => (
+                  <SelectItem key={field.key} value={field.key}>
+                    {field.label ?? field.key}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+          <p className="text-muted-foreground text-xs">
+            Contains the related{' '}
+            {lookupMode === 'name'
+              ? 'name'
+              : relatedObject === 'customer-contacts'
+                ? 'Influencer ID'
+                : 'record ID'}
+            .
+          </p>
         </div>
       </div>
-      <h4 className="text-xs font-semibold">Imported properties</h4>
+      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+        <div className="space-y-1.5">
+          <label id="cross-property-label" className="text-xs font-medium block">
+            Property to import
+          </label>
+          <Select
+            value={importedProperty}
+            onValueChange={setImportedProperty}
+            disabled={!relatedObject || relatedFields.length === 0}
+          >
+            <SelectTrigger
+              aria-labelledby="cross-property-label"
+              className="w-full"
+            >
+              <SelectValue placeholder="Choose a property" />
+            </SelectTrigger>
+            <SelectContent>
+              {relatedFields
+                .filter((field) => field.key !== '_discoveryError')
+                .map((field) => (
+                  <SelectItem key={field.key} value={field.key}>
+                    {field.label ?? field.key}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <Button
+          type="button"
+          onClick={add}
+          className="w-full md:w-auto"
+          disabled={
+            busy ||
+            !selectedObject?.lookupModes.includes(lookupMode) ||
+            !lookupField ||
+            (relatedObject === 'customer-contacts' &&
+              lookupField !== 'InfluencerId') ||
+            !relatedFields.some((field) => field.key === importedProperty)
+          }
+        >
+          {busy ? <Spinner /> : <Plus />} Add property
+        </Button>
+      </div>
+      <h4 className="text-xs font-semibold mb-1">Imported properties</h4>
       {properties.length === 0 ? (
         <div className="bg-muted/30 text-muted-foreground rounded-4xl px-4 py-8 text-center text-sm">
           No cross-object properties configured for this {sourceObject} job.

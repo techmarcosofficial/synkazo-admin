@@ -1,7 +1,15 @@
-import { CircleAlert, Info } from 'lucide-react';
+import { ArrowRight, CircleAlert, Info } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
 
+import {
+  analyzeRecordDiagnosis,
+  DIAGNOSIS_ICONS,
+  type RecordContext,
+  type RecordFixAction,
+} from '@/features/jobs/utils/recordDiagnosis';
 import { PLATFORMS } from '@/components/platform/platform';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Tooltip,
   TooltipContent,
@@ -10,16 +18,11 @@ import {
 import { cn } from '@/lib/utils';
 import type { SyncLogRecord } from '@/types';
 
-interface RecordContext {
-  sourceObject?: string;
-  destObject?: string;
-  sourcePlatform?: string;
-  destPlatform?: string;
-}
-
-interface RecordReasonProps {
+export interface RecordReasonProps {
   rec: SyncLogRecord;
   context?: RecordContext;
+  projectId?: string;
+  jobId?: string;
 }
 
 interface DetailItem {
@@ -134,7 +137,18 @@ function DetailList({ items }: { items: DetailItem[] }) {
   );
 }
 
-export function RecordReason({ rec, context }: RecordReasonProps) {
+export function RecordReason({
+  rec,
+  context,
+  projectId: propProjectId,
+  jobId: propJobId,
+}: RecordReasonProps) {
+  const navigate = useNavigate();
+  const params = useParams<{ projectId?: string; jobId?: string }>();
+
+  const projectId = propProjectId || params.projectId;
+  const jobId = propJobId || params.jobId;
+
   const reason = rec.skipReason || rec.failReason;
   const detail = rec.skipReasonDetail || rec.failReasonDetail;
 
@@ -142,10 +156,12 @@ export function RecordReason({ rec, context }: RecordReasonProps) {
     return <span className="text-muted-foreground">—</span>;
   }
 
+  const diagnosis = analyzeRecordDiagnosis(rec, context);
   const actionLabel = rec.action === 'failed' ? 'Failed' : 'Skipped';
   const summary = getSummary(rec, reason);
   const apiDetails =
     rec.action === 'failed' ? formatErrorDetails(rec.destResponse) : null;
+
   const sourceItems: DetailItem[] = [
     ...(context?.sourceObject
       ? [
@@ -157,6 +173,7 @@ export function RecordReason({ rec, context }: RecordReasonProps) {
       : []),
     ...(rec.sourceRecordId ? [{ label: 'ID', value: rec.sourceRecordId }] : []),
   ];
+
   const destinationItems: DetailItem[] = [
     ...(rec.destRecordId && context?.destObject
       ? [
@@ -169,12 +186,28 @@ export function RecordReason({ rec, context }: RecordReasonProps) {
     ...(rec.destRecordId ? [{ label: 'ID', value: rec.destRecordId }] : []),
   ];
 
+  const handleActionClick = (action: RecordFixAction) => {
+    if (action.destination === 'connections' && projectId) {
+      navigate(`/projects/${projectId}?tab=connections`);
+    } else if (action.destination === 'mapping' && projectId && jobId) {
+      const q = new URLSearchParams();
+      q.set('tab', 'field-mapping');
+      if (action.deepLink?.field) {
+        q.set('field', action.deepLink.field);
+      }
+      if (action.deepLink?.action) {
+        q.set('action', action.deepLink.action);
+      }
+      navigate(`/projects/${projectId}/jobs/${jobId}?${q.toString()}`);
+    }
+  };
+
   return (
     <Tooltip delayDuration={150}>
       <TooltipTrigger asChild>
         <button
           type="button"
-          className="group/reason flex max-w-full min-w-0 items-center gap-1.5 text-left"
+          className="group/reason flex max-w-full min-w-0 cursor-pointer items-center gap-1.5 text-left"
           aria-label={`View ${actionLabel.toLowerCase()} reason details: ${summary}`}
         >
           {rec.action === 'failed' ? (
@@ -193,9 +226,10 @@ export function RecordReason({ rec, context }: RecordReasonProps) {
         align="start"
         sideOffset={8}
         collisionPadding={12}
-        className="bg-popover text-popover-foreground border-border [&>span>svg]:bg-popover [&>span>svg]:fill-popover max-h-[min(28rem,calc(100vh-1.5rem))] w-[min(26rem,calc(100vw-1.5rem))] max-w-none items-stretch overflow-y-auto rounded-2xl border p-0 shadow-xl"
+        className="bg-popover text-popover-foreground border-border [&>span>svg]:bg-popover [&>span>svg]:fill-popover pointer-events-auto max-h-[min(32rem,calc(100vh-1.5rem))] w-[min(28rem,calc(100vw-1.5rem))] max-w-none items-stretch overflow-y-auto rounded-2xl border p-0 shadow-xl"
       >
-        <div className="space-y-4 p-4">
+        <div className="space-y-3.5 p-4">
+          {/* Header */}
           <div className="flex items-start gap-3">
             <div
               className={cn(
@@ -227,13 +261,55 @@ export function RecordReason({ rec, context }: RecordReasonProps) {
                 </Badge>
               </div>
               {reason && (
-                <p className="text-muted-foreground mt-1 text-xs">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   {enumLabel(reason)}
                 </p>
               )}
             </div>
           </div>
 
+          {/* Smart Solution & Plain-English Explanation */}
+          <div className="bg-muted/40 space-y-2.5 rounded-xl border p-3">
+            <p className="text-foreground text-xs leading-relaxed font-medium break-words">
+              {diagnosis.humanExplanation}
+            </p>
+
+            {/* 1-Click Contextual Recovery Actions with Deep Links */}
+            {diagnosis.actions.length > 0 && projectId && jobId && (
+              <div className="space-y-1.5 pt-1">
+                <span className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
+                  Suggested Action
+                </span>
+                <div className="flex flex-col gap-1.5">
+                  {diagnosis.actions.map((act) => {
+                    const Icon = DIAGNOSIS_ICONS[act.iconName];
+                    return (
+                      <Button
+                        key={act.label}
+                        type="button"
+                        variant="secondary"
+                        size="xs"
+                        className="group/act hover:bg-primary/10 hover:text-primary hover:border-primary/40 flex h-7 w-full cursor-pointer items-center justify-between border px-2.5 text-xs font-medium transition-colors"
+                        title={act.hint}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleActionClick(act);
+                        }}
+                      >
+                        <span className="flex items-center gap-1.5 truncate">
+                          <Icon className="text-primary size-3.5 shrink-0" />
+                          <span className="truncate">{act.label}</span>
+                        </span>
+                        <ArrowRight className="size-3 shrink-0 opacity-60 transition-transform group-hover/act:translate-x-0.5" />
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Detail Sections */}
           {detail && (
             <DetailSection title="Reason">
               <p className="bg-muted/50 rounded-xl px-3 py-2 text-xs leading-relaxed break-words whitespace-pre-wrap">

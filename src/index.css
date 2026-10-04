@@ -190,7 +190,7 @@
 
   /* Structural surfaces. Keep hierarchy semantic so parent/child surfaces do
      not depend on one-off opacity utilities throughout the application. */
-  --surface-inner: #eceef3;
+  --surface-inner: #f9f9f9;
   --surface-inset: #e4e6ed;
 }
 
@@ -261,7 +261,7 @@
   --layout-surface-shadow: 0 1px 6px rgba(0, 0, 0, 0.22);
   --layout-surface-shadow-strong: 0 3px 12px rgba(0, 0, 0, 0.3);
 
-  --surface-inner: #1c202d;
+  --surface-inner: #151820;
   --surface-inset: #0b0c11;
 }
 

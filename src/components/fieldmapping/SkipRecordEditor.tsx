@@ -11,6 +11,8 @@ import type {
 interface Props {
   sourceFields: FieldDef[];
   destinationFields: FieldDef[];
+  mappedSourceKeys?: string[];
+  mappedDestinationKeys?: string[];
   sourceConditions: ExcludeCondition[];
   sourceConditionLogic: 'AND' | 'OR';
   destinationConditions: DestinationSkipCondition[];
@@ -23,11 +25,14 @@ interface Props {
   onPreviewSource?: () => void;
   previewingSource?: boolean;
   layout?: 'stacked' | 'grid';
+  activeSection?: 'all' | 'source' | 'destination';
 }
 
 export default function SkipRecordEditor({
   sourceFields,
   destinationFields,
+  mappedSourceKeys,
+  mappedDestinationKeys,
   sourceConditions,
   sourceConditionLogic,
   destinationConditions,
@@ -40,27 +45,29 @@ export default function SkipRecordEditor({
   onPreviewSource,
   previewingSource = false,
   layout = 'stacked',
+  activeSection = 'all',
 }: Props) {
+  const showSource = activeSection === 'all' || activeSection === 'source';
+  const showDestination =
+    activeSection === 'all' || activeSection === 'destination';
+
   return (
-    <section
-      className="border-border bg-card overflow-hidden rounded-4xl border"
-      aria-labelledby="skip-record-heading"
-    >
-      <div className="bg-muted/30 border-b px-4 py-3">
+    <section className="space-y-6" aria-labelledby="skip-record-heading">
+      <div className="sr-only">
         <HeadingPair
-          visualLevel="card"
+          visualLevel="section"
           level="h3"
           titleId="skip-record-heading"
           title="Skip Record"
           subtitle="Source conditions inspect incoming source data before mapping. Destination conditions run only after an existing destination record is found and can skip that record's update."
-          className="max-w-4xl"
         />
       </div>
 
-      <div className="divide-border divide-y">
-        <div className="min-w-0">
+      <div className="space-y-6">
+        {showSource && (
           <ExcludeConditionsEditor
             sourceFields={sourceFields}
+            mappedFieldKeys={mappedSourceKeys}
             conditions={sourceConditions}
             conditionLogic={sourceConditionLogic}
             onChange={onSourceChange}
@@ -73,17 +80,23 @@ export default function SkipRecordEditor({
             layout={layout}
             embedded
           />
-        </div>
+        )}
 
-        <div className="min-w-0">
+        {showSource && showDestination && (
+          <div className="border-border/80 my-2 border-t" />
+        )}
+
+        {showDestination && (
           <DestinationSkipConditionsEditor
             sourceFields={sourceFields}
             destinationFields={destinationFields}
+            mappedSourceKeys={mappedSourceKeys}
+            mappedDestinationKeys={mappedDestinationKeys}
             conditions={destinationConditions}
             onChange={onDestinationChange}
             embedded
           />
-        </div>
+        )}
       </div>
     </section>
   );

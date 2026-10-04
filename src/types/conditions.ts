@@ -30,6 +30,7 @@ export interface ExcludeCondition {
   operator: ConditionOperator;
   value?: string | number | boolean | string[] | null;
   normalization?: ConditionNormalization;
+  enabled?: boolean;
 }
 
 export type DestinationSkipOperator =
@@ -41,4 +42,5 @@ export interface DestinationSkipCondition {
   operator: DestinationSkipOperator;
   direction?: 'forward_only' | 'reverse_only' | 'bidirectional';
   origin?: 'user' | 'migrated_update_policy';
+  enabled?: boolean;
 }

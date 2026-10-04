@@ -11,6 +11,7 @@ import {
   ChevronsUpDown,
   ChevronUp,
   HelpCircle,
+  Filter,
   GripVertical,
   ListFilter,
   MoreHorizontal,
@@ -19,8 +20,10 @@ import {
   KeyRound,
   Lock,
   Plus,
+  RotateCcw,
   Search,
   Settings2,
+  Sparkles,
   Trash2,
   Wand2,
   X,
@@ -52,9 +55,11 @@ import AutoMapReviewDialog, {
 } from './AutoMapReviewDialog';
 import CombineFieldsDialog from './CombineFieldsDialog';
 import type { RequiredReason } from './EmptyValuePolicy';
-import FieldSettingsDrawer from './FieldSettingsDrawer';
+import FieldSettingsDrawer, {
+  type TargetDrawerSection,
+} from './FieldSettingsDrawer';
 import QuickFieldMapper from './QuickFieldMapper';
-import ReadOnlyFieldsDialog from './ReadOnlyFieldsDialog';
+import ReadOnlyFieldsPanel from './ReadOnlyFieldsPanel';
 import RuleBuilderModal from './RuleBuilderModal';
 import type { ExcludeCondition } from '@/types/conditions';
 
@@ -123,16 +128,16 @@ export function IconLegend({
 }) {
   const items: Array<{ icon: React.ReactNode; label: string }> = [
     {
-      icon: <KeyRound className="size-3.5 text-primary" />,
+      icon: <KeyRound className="text-primary size-3.5" />,
       label:
         'Match field — used to find existing records to update instead of creating duplicates.',
     },
     {
-      icon: <Zap className="size-3.5 text-warning" />,
+      icon: <Zap className="text-warning size-3.5" />,
       label: "Transform rule — converts the value before it's synced.",
     },
     {
-      icon: <Lock className="size-3.5 text-muted-foreground" />,
+      icon: <Lock className="text-muted-foreground size-3.5" />,
       label:
         "Read-only field, or an action your plan doesn't include — can't be mapped or used until you upgrade.",
     },
@@ -144,7 +149,11 @@ export function IconLegend({
       ),
       label: 'Required field — must be mapped when choosing a field.',
     },
-    { icon: <X className="size-3.5 text-muted-foreground" />, label: 'Remove this mapping.' },
+    {
+      icon: <X className="text-destructive size-3.5" />,
+      label:
+        'Remove this mapping (unlinks source and destination fields without deleting either field).',
+    },
   ];
   return (
     <Tooltip>
@@ -156,7 +165,7 @@ export function IconLegend({
           aria-label="What do these icons mean?"
           className={cn(
             'text-muted-foreground hover:text-foreground',
-            size === 'icon-xs' && 'size-6 p-0 rounded-full',
+            size === 'icon-xs' && 'size-6 rounded-full p-0',
             className,
           )}
         >
@@ -573,7 +582,8 @@ function TypeChip({ type }: { type?: string }) {
   return (
     <Badge
       variant="secondary"
-      className="max-w-20 shrink-0 truncate text-[10.5px] font-semibold capitalize border border-border/60"
+      size="xs"
+      className="text-muted-foreground bg-muted/60 max-w-20 shrink-0 truncate border-0 font-mono text-[9px] font-normal tracking-wider uppercase"
       title={type.toLowerCase()}
     >
       {type.toLowerCase()}
@@ -673,7 +683,9 @@ export function FieldSelect({
   onChange,
   placeholder,
   highlightRequired = true,
+  mappedFieldKeys,
   className,
+  'aria-label': ariaLabel,
 }: {
   fields: FieldDef[];
   value: string;
@@ -682,7 +694,11 @@ export function FieldSelect({
   /** Whether to surface `required` fields at all — false suppresses both the sort-to-top and
    *  the red asterisk (e.g. a ServiceTitan object on a one-way job, where nothing's required). */
   highlightRequired?: boolean;
+  /** Optional list of field keys that are actively mapped in this job.
+   *  When provided, surfaces a dedicated "Mapped in this Job" group at the top. */
+  mappedFieldKeys?: string[];
   className?: string;
+  'aria-label'?: string;
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -692,6 +708,59 @@ export function FieldSelect({
     ? [...fields].sort((a, b) => Number(!!b.required) - Number(!!a.required))
     : fields;
   const selected = fields.find((f) => f.key === value);
+
+  const hasMappedGrouping = Boolean(
+    mappedFieldKeys && mappedFieldKeys.length > 0,
+  );
+  const mappedSet = useMemo(
+    () => new Set(mappedFieldKeys ?? []),
+    [mappedFieldKeys],
+  );
+
+  const mappedFields = useMemo(
+    () => (hasMappedGrouping ? sorted.filter((f) => mappedSet.has(f.key)) : []),
+    [hasMappedGrouping, sorted, mappedSet],
+  );
+
+  const otherFields = useMemo(
+    () =>
+      hasMappedGrouping ? sorted.filter((f) => !mappedSet.has(f.key)) : sorted,
+    [hasMappedGrouping, sorted, mappedSet],
+  );
+
+  const renderItem = (f: FieldDef) => (
+    <CommandItem
+      key={f.key}
+      className="min-w-0 cursor-pointer px-2.5 py-1.5"
+      value={`${f.label || f.key} ${f.key}`}
+      onSelect={() => {
+        onChange(f.key);
+        setOpen(false);
+      }}
+    >
+      <div className="flex min-w-0 flex-1 items-center justify-between gap-3 overflow-hidden">
+        <div className="flex min-w-0 items-center gap-1.5 truncate">
+          <span className="text-foreground truncate text-xs font-medium">
+            {f.label || f.key}
+          </span>
+          {f.label && f.label !== f.key && (
+            <span className="text-muted-foreground/60 truncate font-mono text-[10px]">
+              ({f.key})
+            </span>
+          )}
+          {highlightRequired && f.required && (
+            <span className="text-destructive shrink-0 text-xs font-bold">
+              *
+            </span>
+          )}
+        </div>
+        <TypeChip type={f.type} />
+      </div>
+      {f.key === value && (
+        <Check className="text-primary ml-2 size-3.5 shrink-0" />
+      )}
+    </CommandItem>
+  );
 
   return (
     <Popover
@@ -710,9 +779,14 @@ export function FieldSelect({
           ref={triggerRef}
           type="button"
           variant="outline"
+          size="sm"
           role="combobox"
+          aria-label={ariaLabel}
           aria-expanded={open}
-          className={cn('w-full flex-1 justify-between font-normal', className)}
+          className={cn(
+            'h-8 w-full flex-1 justify-between rounded-xl text-xs font-normal',
+            className,
+          )}
         >
           <span
             className={cn('truncate', !selected && 'text-muted-foreground')}
@@ -722,25 +796,23 @@ export function FieldSelect({
               <span className="text-destructive ml-0.5">*</span>
             )}
           </span>
-          <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+          <ChevronsUpDown className="ml-2 size-3.5 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="max-h-(--radix-popover-content-available-height) w-(--radix-popover-trigger-width) overflow-hidden p-0">
+      <PopoverContent
+        align="start"
+        className="border-border max-h-(--radix-popover-content-available-height) w-[360px] max-w-[calc(100vw-2rem)] overflow-hidden border p-0 shadow-lg sm:w-[420px]"
+      >
         <Command
           filter={(itemValue, search) =>
             itemValue.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
           }
         >
-          <CommandInput placeholder="Search fields…" />
+          <CommandInput placeholder="Search fields…" className="h-9 text-xs" />
           <ScrollArea
             className="h-64 max-h-[calc(var(--radix-popover-content-available-height)-3rem)]"
             viewportClassName="[&>div]:!block [&>div]:!w-full [&>div]:!min-w-0"
             onWheelCapture={(event) => {
-              // Radix Dialog uses react-remove-scroll. Because Popover.Content is
-              // correctly portaled to the body for positioning, that library can
-              // cancel wheel input before it reaches this nested list. Only replace
-              // the cancelled native scroll; outside a modal, the browser remains in
-              // charge and this branch does nothing.
               if (!insideDialog || event.deltaY === 0) return;
               const viewport = event.currentTarget.querySelector<HTMLElement>(
                 '[data-slot="scroll-area-viewport"]',
@@ -750,34 +822,30 @@ export function FieldSelect({
           >
             <CommandList className="max-h-none w-full max-w-full min-w-0">
               <CommandEmpty>No fields found.</CommandEmpty>
-              <CommandGroup className="w-full max-w-full min-w-0">
-                {sorted.map((f) => (
-                  <CommandItem
-                    key={f.key}
-                    className="min-w-0 overflow-hidden"
-                    // cmdk matches on this string, so both the label and the raw
-                    // key are searchable.
-                    value={`${f.label || f.key} ${f.key}`}
-                    onSelect={() => {
-                      onChange(f.key);
-                      setOpen(false);
-                    }}
-                  >
-                    <span className="flex min-w-0 flex-1 items-center justify-between gap-2.5 overflow-hidden">
-                      <span className="truncate">
-                        {f.label || f.key}
-                        {highlightRequired && f.required && (
-                          <span className="text-destructive ml-0.5">*</span>
-                        )}
-                      </span>
-                      <TypeChip type={f.type} />
-                    </span>
-                    {f.key === value && (
-                      <Check className="ml-2 size-3.5 shrink-0" />
-                    )}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
+              {hasMappedGrouping ? (
+                <>
+                  {mappedFields.length > 0 && (
+                    <CommandGroup
+                      heading="Mapped in this Job"
+                      className="w-full max-w-full min-w-0"
+                    >
+                      {mappedFields.map((f) => renderItem(f))}
+                    </CommandGroup>
+                  )}
+                  {otherFields.length > 0 && (
+                    <CommandGroup
+                      heading="Other Available Object Fields"
+                      className="w-full max-w-full min-w-0"
+                    >
+                      {otherFields.map((f) => renderItem(f))}
+                    </CommandGroup>
+                  )}
+                </>
+              ) : (
+                <CommandGroup className="w-full max-w-full min-w-0">
+                  {sorted.map((f) => renderItem(f))}
+                </CommandGroup>
+              )}
             </CommandList>
           </ScrollArea>
         </Command>
@@ -864,6 +932,12 @@ interface FieldMappingCanvasProps {
   excludeConditions?: ExcludeCondition[];
   /** Callback when a field skip filter is added or updated from the field settings drawer. */
   onExcludeConditionsChange?: (conditions: ExcludeCondition[]) => void;
+  /** Target field to focus/highlight from deep linking */
+  targetField?: string;
+  /** Specific section of the settings drawer to open for the target field */
+  targetSection?: TargetDrawerSection;
+  /** Callback to clear deep link parameters after focus */
+  onClearTarget?: () => void;
 }
 
 export default function FieldMappingCanvas({
@@ -893,6 +967,9 @@ export default function FieldMappingCanvas({
   isDirty,
   excludeConditions = [],
   onExcludeConditionsChange,
+  targetField,
+  targetSection,
+  onClearTarget,
 }: FieldMappingCanvasProps) {
   const attentionSectionRef = useRef<HTMLDivElement>(null);
   const [showComposer, setShowComposer] = useState(false);
@@ -903,10 +980,11 @@ export default function FieldMappingCanvas({
   const [settingsDrawer, setSettingsDrawer] = useState<{
     sourceKey: string;
     destKey: string;
+    targetSection?: TargetDrawerSection;
   } | null>(null);
   const [mapSearch, setMapSearch] = useState('');
   const [rulesModal, setRulesModal] = useState<RulesModalRef | null>(null);
-  const [showReadOnlyModal, setShowReadOnlyModal] = useState(false);
+  const [showReadOnlyFields, setShowReadOnlyFields] = useState(false);
   const [editingPair, setEditingPair] = useState<PairRef | null>(null);
   const [editDraft, setEditDraft] = useState<PairRef | null>(null);
   const [glow, setGlow] = useState<GlowTarget | null>(null);
@@ -918,15 +996,17 @@ export default function FieldMappingCanvas({
   const effectiveDirty = isDirty !== undefined ? isDirty : hasLocalEdits;
 
   // Persisted match keys capture the baseline identifiers when saved or first loaded.
-  const [persistedMatchKeys, setPersistedMatchKeys] = useState<Set<string>>(() => {
-    const initial = new Set<string>();
-    mappings.forEach((m) => {
-      if (m.matchDestKey) {
-        initial.add(`${m.sourceField}::${m.matchDestKey}`);
-      }
-    });
-    return initial;
-  });
+  const [persistedMatchKeys, setPersistedMatchKeys] = useState<Set<string>>(
+    () => {
+      const initial = new Set<string>();
+      mappings.forEach((m) => {
+        if (m.matchDestKey) {
+          initial.add(`${m.sourceField}::${m.matchDestKey}`);
+        }
+      });
+      return initial;
+    },
+  );
 
   const initialCapturedRef = useRef(false);
   useEffect(() => {
@@ -946,6 +1026,22 @@ export default function FieldMappingCanvas({
   const [newlyAddedKeys, setNewlyAddedKeys] = useState<Set<string>>(new Set());
   // Single key that was JUST added to trigger smooth scroll and pulse highlight
   const [justAddedKey, setJustAddedKey] = useState<string | null>(null);
+  // Track open 3-dot dropdown menu to maintain smooth slide position while open
+  const [openDropdownPair, setOpenDropdownPair] = useState<string | null>(null);
+
+  // Snapshot of mappings prior to the latest auto-map run, enabling 1-click rollback
+  const [lastAutoMapSnapshot, setLastAutoMapSnapshot] = useState<
+    MappingRow[] | null
+  >(null);
+  // Source field keys introduced by the latest auto-map run for dedicated badging
+  const [autoMappedSourceKeys, setAutoMappedSourceKeys] = useState<Set<string>>(
+    new Set(),
+  );
+  // Banner notification for newly applied auto-map batch
+  const [autoMapBanner, setAutoMapBanner] = useState<{
+    count: number;
+    previousCount: number;
+  } | null>(null);
 
   // When saved or discarded (effectiveDirty becomes false), update the baseline match keys
   // and clear newly added keys so rows settle into canonical order.
@@ -960,6 +1056,9 @@ export default function FieldMappingCanvas({
       });
       setPersistedMatchKeys(keys);
       setNewlyAddedKeys(new Set());
+      setLastAutoMapSnapshot(null);
+      setAutoMappedSourceKeys(new Set());
+      setAutoMapBanner(null);
       setHasLocalEdits(false);
     }
     prevDirtyRef.current = effectiveDirty;
@@ -983,6 +1082,85 @@ export default function FieldMappingCanvas({
       clearTimeout(clearHighlight);
     };
   }, [justAddedKey]);
+
+  const handledTargetRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (
+      !targetField ||
+      (sourceFields.length === 0 && destFields.length === 0)
+    ) {
+      return;
+    }
+
+    const targetKey = `${targetField}:${targetSection || 'all'}`;
+    if (handledTargetRef.current === targetKey) {
+      return;
+    }
+    handledTargetRef.current = targetKey;
+
+    const normalizedTarget = targetField.toLowerCase().trim();
+
+    // 1. Search existing mappings for matching field (source or destination)
+    const matching = mappings.find((m) => {
+      const srcMatch = m.sourceField?.toLowerCase() === normalizedTarget;
+      const dests = Array.isArray(m.destField) ? m.destField : [m.destField];
+      const destMatch = dests.some(
+        (df) => df?.toLowerCase() === normalizedTarget,
+      );
+      return srcMatch || destMatch;
+    });
+
+    if (matching) {
+      const dests = Array.isArray(matching.destField)
+        ? matching.destField
+        : [matching.destField];
+      const matchedDest =
+        dests.find((df) => df?.toLowerCase() === normalizedTarget) || dests[0];
+      const pairKey = `${matching.sourceField}-${matchedDest}`;
+
+      // Smooth scroll and pulse highlight
+      setJustAddedKey(pairKey);
+
+      // If a section is requested, open FieldSettingsDrawer
+      if (targetSection) {
+        setSettingsDrawer({
+          sourceKey: matching.sourceField,
+          destKey: matchedDest,
+          targetSection,
+        });
+      }
+
+      toast.info(
+        `Focused on "${targetField}". Opened ${targetSection || 'settings'} to resolve sync issue.`,
+      );
+      onClearTarget?.();
+    } else {
+      // 2. Field is not mapped yet! Check if it is a known destination field or source field
+      const isKnownDest = destFields.some(
+        (f) => f.key.toLowerCase() === normalizedTarget,
+      );
+      const isKnownSrc = sourceFields.some(
+        (f) => f.key.toLowerCase() === normalizedTarget,
+      );
+
+      if (isKnownDest || isKnownSrc) {
+        setShowComposer(true);
+        toast.warning(
+          `Field "${targetField}" is required by ${destPlatform || 'the destination'}, but is not mapped yet. Add a mapping below to resolve the error.`,
+        );
+        onClearTarget?.();
+      }
+    }
+  }, [
+    targetField,
+    targetSection,
+    mappings,
+    sourceFields,
+    destFields,
+    destPlatform,
+    onClearTarget,
+  ]);
 
   // Plan gating: a plan whose `allowed_transform_types` is `direct` alone gets no rule
   // builder at all — the ~60 rules don't map onto the seven transform-type values, so the
@@ -1170,8 +1348,7 @@ export default function FieldMappingCanvas({
           sourceField: m.sourceField,
           destKey,
           actionType: (issue === 'value_map' ? 'value_map' : 'cast') as
-            | 'value_map'
-            | 'cast',
+            'value_map' | 'cast',
         };
       },
     ),
@@ -1698,12 +1875,37 @@ export default function FieldMappingCanvas({
   const applyAutoMap = (
     rows: { source: MatchableField; dest: MatchableField }[],
   ) => {
+    if (rows.length === 0) return;
+    // Snapshot existing mappings for instant 1-click rollback
+    setLastAutoMapSnapshot([...mappings]);
+
     const added: MappingRow[] = rows.map(({ source, dest }) =>
       newMappingRow(source, dest),
     );
+
+    // Track which source keys were newly auto-mapped
+    const newKeys = new Set(added.map((m) => m.sourceField));
+    setAutoMappedSourceKeys(newKeys);
+
+    // Also mark pairKeys as newlyAddedKeys for row highlight glow
+    const newPairKeys = new Set(newlyAddedKeys);
+    for (const m of added) {
+      const dk = Array.isArray(m.destField) ? m.destField[0] : m.destField;
+      newPairKeys.add(`${m.sourceField}-${dk}`);
+    }
+    setNewlyAddedKeys(newPairKeys);
+    setHasLocalEdits(true);
+
     onMappingsChange([...mappings, ...added]);
     void enrichValueMapSuggestions(added);
     setAutoMapPreview(null);
+
+    // Activate rollback banner notification
+    setAutoMapBanner({
+      count: added.length,
+      previousCount: mappings.length,
+    });
+
     const repaired = added.filter((m) => m.destRules).length;
     toast.success(
       `Auto-mapped ${added.length} field${added.length !== 1 ? 's' : ''}.` +
@@ -1711,6 +1913,22 @@ export default function FieldMappingCanvas({
           ? ` ${repaired} got a conversion rule to match the destination type.`
           : ''),
     );
+  };
+
+  const handleRollbackAutoMap = () => {
+    if (!lastAutoMapSnapshot) return;
+    const removedCount = autoMappedSourceKeys.size;
+    onMappingsChange(lastAutoMapSnapshot);
+    setLastAutoMapSnapshot(null);
+    setAutoMappedSourceKeys(new Set());
+    setAutoMapBanner(null);
+    toast.info(
+      `Auto-map reverted. Restored ${lastAutoMapSnapshot.length} previous mapping${lastAutoMapSnapshot.length !== 1 ? 's' : ''} (${removedCount} removed).`,
+    );
+  };
+
+  const handleDismissAutoMapBanner = () => {
+    setAutoMapBanner(null);
   };
 
   // Auto-map on load waits for the field lists to stop growing before it runs.
@@ -1774,8 +1992,44 @@ export default function FieldMappingCanvas({
     );
   };
 
-  const openSettingsDrawer = (sourceKey: string, destKey: string) => {
-    setSettingsDrawer({ sourceKey, destKey });
+  const handleQuickMapBatch = (
+    pairs: Array<{ source: FieldDef; dest: FieldDef }>,
+  ) => {
+    if (!pairs.length) return;
+    let nextMappings = mappings;
+    const addedKeys = new Set<string>();
+
+    for (const { source, dest } of pairs) {
+      nextMappings = mergeMappingPair(nextMappings, source, dest);
+      addedKeys.add(`${source.key}-${dest.key}`);
+    }
+
+    setNewlyAddedKeys((prev) => {
+      const next = new Set(prev);
+      addedKeys.forEach((k) => next.add(k));
+      return next;
+    });
+
+    const lastPair = pairs[pairs.length - 1];
+    setJustAddedKey(`${lastPair.source.key}-${lastPair.dest.key}`);
+    setHasLocalEdits(true);
+    onMappingsChange(nextMappings);
+
+    if (pairs.length === 1) {
+      toast.success(
+        `Mapped ${pairs[0].source.label || pairs[0].source.key} to ${pairs[0].dest.label || pairs[0].dest.key}.`,
+      );
+    } else {
+      toast.success(`Mapped ${pairs.length} field pairs successfully.`);
+    }
+  };
+
+  const openSettingsDrawer = (
+    sourceKey: string,
+    destKey: string,
+    targetSection?: TargetDrawerSection,
+  ) => {
+    setSettingsDrawer({ sourceKey, destKey, targetSection });
   };
 
   const handleSettingsSave = (payload: {
@@ -2020,23 +2274,38 @@ export default function FieldMappingCanvas({
       </InputGroup>
 
       {readOnlyDestFields.length > 0 && (
-        <Button
-          type="button"
-          variant="outline"
-          size={toolbarControlSize}
-          onClick={() => setShowReadOnlyModal(true)}
-          className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground shrink-0"
-        >
-          <Lock className="size-3.5" />
-          <span>Read-only</span>
-          <Badge
-            variant="secondary"
-            size="xs"
-            className="ml-0.5 text-[10px]"
-          >
-            {readOnlyDestFields.length}
-          </Badge>
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant={showReadOnlyFields ? 'secondary' : 'outline'}
+              size={toolbarControlSize}
+              onClick={() => setShowReadOnlyFields((prev) => !prev)}
+              aria-expanded={showReadOnlyFields}
+              className={cn(
+                'h-8 shrink-0 gap-1.5 text-xs transition-colors',
+                showReadOnlyFields
+                  ? 'bg-muted text-foreground border-border font-medium'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <Lock className="size-3.5" />
+              <span>Read-only</span>
+              <Badge
+                variant="secondary"
+                size="xs"
+                className="ml-0.5 text-[10px]"
+              >
+                {readOnlyDestFields.length}
+              </Badge>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            {showReadOnlyFields
+              ? 'Hide unmappable destination fields'
+              : `Show the ${readOnlyDestFields.length} destination fields that can't be mapped to`}
+          </TooltipContent>
+        </Tooltip>
       )}
 
       <Tooltip>
@@ -2053,11 +2322,15 @@ export default function FieldMappingCanvas({
               setShowComposer((p) => !p);
             }}
             className={cn(
-              'h-8 gap-1.5 text-xs font-medium shrink-0',
+              'h-8 shrink-0 gap-1.5 text-xs font-medium',
               !canManualMap && 'text-muted-foreground cursor-not-allowed',
             )}
           >
-            {canManualMap ? <Plus className="size-3.5" /> : <Lock className="size-3.5" />}
+            {canManualMap ? (
+              <Plus className="size-3.5" />
+            ) : (
+              <Lock className="size-3.5" />
+            )}
             <span>Add mapping</span>
           </Button>
         </TooltipTrigger>
@@ -2075,7 +2348,7 @@ export default function FieldMappingCanvas({
             type="button"
             variant="outline"
             size="sm"
-            className="size-8 p-0 shrink-0 text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground size-8 shrink-0 p-0"
             aria-label="More mapping options"
           >
             <MoreHorizontal className="size-4" />
@@ -2093,7 +2366,7 @@ export default function FieldMappingCanvas({
             className="gap-2 text-xs"
           >
             {!canUseTransforms ? (
-              <Lock className="size-3.5 text-muted-foreground" />
+              <Lock className="text-muted-foreground size-3.5" />
             ) : (
               <Plus className="size-3.5" />
             )}
@@ -2101,11 +2374,14 @@ export default function FieldMappingCanvas({
           </DropdownMenuItem>
           {readOnlyDestFields.length > 0 && (
             <DropdownMenuItem
-              onClick={() => setShowReadOnlyModal(true)}
+              onClick={() => setShowReadOnlyFields((prev) => !prev)}
               className="gap-2 text-xs"
             >
-              <Lock className="size-3.5 text-muted-foreground" />
-              <span>View read-only fields ({readOnlyDestFields.length})</span>
+              <Lock className="text-muted-foreground size-3.5" />
+              <span>
+                {showReadOnlyFields ? 'Hide' : 'View'} unmappable fields (
+                {readOnlyDestFields.length})
+              </span>
             </DropdownMenuItem>
           )}
           <DropdownMenuSeparator />
@@ -2121,7 +2397,7 @@ export default function FieldMappingCanvas({
                 onConfirm: () => onMappingsChange([]),
               })
             }
-            className="gap-2 text-xs text-destructive focus:text-destructive focus:bg-destructive/10"
+            className="text-destructive focus:text-destructive focus:bg-destructive/10 gap-2 text-xs"
           >
             <Trash2 className="size-3.5" />
             <span>Clear all mappings</span>
@@ -2159,19 +2435,21 @@ export default function FieldMappingCanvas({
               {naCount > 0 ? (
                 <Badge
                   variant="secondary"
-                  className="bg-warning/10 text-warning hover:bg-warning/10 gap-1.5"
+                  size="xs"
+                  className="gap-1.5"
                 >
-                  <span className="bg-warning size-1.5 rounded-full" />
-                  {naCount} need attention
+                  <AlertTriangle className="size-3 text-warning shrink-0" />
+                  <span>{naCount} need attention</span>
                 </Badge>
               ) : (
                 pairRows.length > 0 && (
                   <Badge
                     variant="secondary"
-                    className="bg-success/10 text-success hover:bg-success/10 gap-1"
+                    size="xs"
+                    className="gap-1"
                   >
-                    <Check className="size-3" />
-                    All mapped
+                    <Check className="size-3 text-success shrink-0" />
+                    <span>All mapped</span>
                   </Badge>
                 )
               )}
@@ -2401,19 +2679,21 @@ export default function FieldMappingCanvas({
               {naCount > 0 ? (
                 <Badge
                   variant="secondary"
-                  className="bg-warning/10 text-warning hover:bg-warning/10 shrink-0 gap-1.5"
+                  size="xs"
+                  className="shrink-0 gap-1.5"
                 >
-                  <span className="bg-warning size-1.5 rounded-full" />
-                  {naCount} need attention
+                  <AlertTriangle className="text-warning size-3 shrink-0" />
+                  <span>{naCount} need attention</span>
                 </Badge>
               ) : (
                 pairRows.length > 0 && (
                   <Badge
                     variant="secondary"
-                    className="bg-success/10 text-success hover:bg-success/10 shrink-0 gap-1"
+                    size="xs"
+                    className="shrink-0 gap-1"
                   >
-                    <Check className="size-3" />
-                    All mapped
+                    <Check className="text-success size-3 shrink-0" />
+                    <span>All mapped</span>
                   </Badge>
                 )
               )}
@@ -2634,12 +2914,20 @@ export default function FieldMappingCanvas({
         </CardContent>
       </Card>
 
-      <Card className="gap-0 overflow-hidden py-0 bg-card border-border shadow-xs">
+      {showReadOnlyFields && (
+        <ReadOnlyFieldsPanel
+          fields={readOnlyDestFields}
+          platformLabel={PLATFORM_LABEL[destPlatform] ?? destPlatform}
+          onClose={() => setShowReadOnlyFields(false)}
+        />
+      )}
+
+      <Card className="bg-card border-border gap-0 overflow-hidden py-0 shadow-xs">
         <CardContent className="p-0">
           {toolbarContainer === undefined && (
             <div
               className={cn(
-                'flex flex-col gap-4 border-b border-border px-5 py-4 xl:flex-row xl:items-center xl:justify-between bg-muted/30 dark:bg-card/90',
+                'border-border bg-muted/30 dark:bg-card/90 flex flex-col gap-4 border-b px-5 py-4 xl:flex-row xl:items-center xl:justify-between',
                 !showHeading && 'xl:justify-end',
               )}
             >
@@ -2731,15 +3019,15 @@ export default function FieldMappingCanvas({
               ]);
             }}
           />
-          <div className="overflow-hidden bg-card">
-            <div className="bg-muted/40 dark:bg-muted/20 flex items-center gap-2 border-b border-border px-4 py-2.5">
+          <div className="bg-card overflow-hidden">
+            <div className="bg-muted/40 dark:bg-muted/20 border-border flex items-center gap-2 border-b px-4 py-2.5">
               <div className="text-foreground/85 dark:text-foreground/80 flex min-w-0 flex-1 items-center gap-2 text-[11px] font-bold tracking-wide">
                 <PlatformTile platformId={sourcePlatform} size={18} />
                 {(
                   PLATFORM_LABEL[sourcePlatform] ?? sourcePlatform
                 ).toUpperCase()}
                 {sourceObject && (
-                  <Badge className="bg-primary/10 text-primary border border-primary/20">
+                  <Badge variant="secondary" size="xs">
                     {sourceObject}
                   </Badge>
                 )}
@@ -2757,7 +3045,7 @@ export default function FieldMappingCanvas({
                 <PlatformTile platformId={destPlatform} size={18} />
                 {(PLATFORM_LABEL[destPlatform] ?? destPlatform).toUpperCase()}
                 {destObject && (
-                  <Badge className="bg-hubspot/10 text-hubspot border border-hubspot/20">
+                  <Badge variant="secondary" size="xs">
                     {destObject}
                   </Badge>
                 )}
@@ -2773,12 +3061,13 @@ export default function FieldMappingCanvas({
             </div>
 
             {showComposer && (
-              <div className="border-b border-border bg-muted/10">
+              <div className="border-border bg-muted/10 border-b">
                 <QuickFieldMapper
                   sourceFields={sourceFields}
                   destFields={destFields}
                   mappings={mappings}
                   onMap={handleQuickMap}
+                  onMapBatch={handleQuickMapBatch}
                   onClose={() => setShowComposer(false)}
                   sourcePlatformLabel={
                     PLATFORM_LABEL[sourcePlatform] ?? sourcePlatform
@@ -2791,9 +3080,45 @@ export default function FieldMappingCanvas({
               </div>
             )}
 
+            {autoMapBanner && (
+              <div className="border-primary/20 bg-primary/10 flex flex-wrap items-center justify-between gap-3 border-b px-4 py-2.5 text-xs">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="text-primary size-4 shrink-0" />
+                  <span className="text-foreground font-semibold">
+                    Auto-mapped {autoMapBanner.count} field
+                    {autoMapBanner.count !== 1 ? 's' : ''}.
+                  </span>
+                  <span className="text-muted-foreground hidden sm:inline">
+                    {autoMapBanner.previousCount > 0
+                      ? `Your ${autoMapBanner.previousCount} previous mapping${autoMapBanner.previousCount !== 1 ? 's were' : ' was'} untouched.`
+                      : 'Added as new mappings.'}
+                  </span>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="xs"
+                    className="border-primary/30 text-primary hover:bg-primary/20 h-7 gap-1.5 text-xs font-semibold"
+                    onClick={handleRollbackAutoMap}
+                  >
+                    <RotateCcw className="size-3.5" />
+                    Undo Auto-Map
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    className="text-muted-foreground hover:text-foreground h-7 text-xs"
+                    onClick={handleDismissAutoMapBanner}
+                  >
+                    Keep Mappings
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <div>
               {autoMapping && (
-                <div className="text-muted-foreground flex items-center justify-center gap-3 border-b border-border py-10 text-sm">
+                <div className="text-muted-foreground border-border flex items-center justify-center gap-3 border-b py-10 text-sm">
                   <Spinner />
                   Waiting for all fields to load, then matching them
                   automatically…
@@ -2803,12 +3128,12 @@ export default function FieldMappingCanvas({
               {naCount > 0 && !mapSearch && (
                 <div
                   ref={attentionSectionRef}
-                  className="scroll-mt-28 transition-shadow border-b border-border"
+                  className="border-border scroll-mt-28 border-b transition-shadow"
                 >
                   <Table>
                     <TableBody>
                       <TableRow
-                        className="hover:bg-warning/[0.08] cursor-pointer transition-colors border-b border-border"
+                        className="hover:bg-warning/[0.08] border-border cursor-pointer border-b transition-colors"
                         onClick={() => {
                           setNaOpen((o) => !o);
                           setAttentionReviewed(true);
@@ -2816,11 +3141,11 @@ export default function FieldMappingCanvas({
                       >
                         <TableCell
                           colSpan={2}
-                          className="bg-warning/[0.06] dark:bg-warning/[0.08] text-warning py-2.5 px-4 text-xs font-bold tracking-wide"
+                          className="bg-warning/[0.06] dark:bg-warning/[0.08] text-warning px-4 py-2.5 text-xs font-bold tracking-wide"
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                              <AlertTriangle className="size-4 shrink-0 text-warning" />
+                              <AlertTriangle className="text-warning size-4 shrink-0" />
                               <span>
                                 NEEDS ATTENTION · {naCount}{' '}
                                 {naCount === 1 ? 'ITEM' : 'ITEMS'}
@@ -2828,7 +3153,9 @@ export default function FieldMappingCanvas({
                             </div>
                             <div className="flex items-center gap-1 text-[11px] font-medium opacity-90">
                               <span>
-                                {naOpen ? 'Hide issues' : 'Show & resolve issues'}
+                                {naOpen
+                                  ? 'Hide issues'
+                                  : 'Show & resolve issues'}
                               </span>
                               {naOpen ? (
                                 <ChevronUp className="size-3.5" />
@@ -2844,7 +3171,7 @@ export default function FieldMappingCanvas({
                           <TableRow
                             key={n.id}
                             className={cn(
-                              'transition-colors hover:bg-muted/30 bg-card border-b border-border/70',
+                              'hover:bg-muted/30 bg-card border-border/70 border-b transition-colors',
                               n.blocking
                                 ? 'bg-destructive/[0.04] dark:bg-destructive/[0.07]'
                                 : 'bg-warning/[0.035] dark:bg-warning/[0.06]',
@@ -2860,57 +3187,103 @@ export default function FieldMappingCanvas({
                               />
                               <div className="space-y-1">
                                 <div className="flex flex-wrap items-center gap-2">
-                                  <span className="font-semibold text-sm text-foreground">
+                                  <span className="text-foreground text-sm font-semibold">
                                     {n.name}
                                   </span>
-                                  {n.targetLabel && n.targetLabel !== n.name && (
-                                    <>
-                                      <ArrowRight className="size-3.5 text-muted-foreground shrink-0" />
-                                      <span className="font-semibold text-sm text-foreground">
-                                        {n.targetLabel}
-                                      </span>
-                                    </>
-                                  )}
+                                  {n.targetLabel &&
+                                    n.targetLabel !== n.name && (
+                                      <>
+                                        <ArrowRight className="text-muted-foreground size-3.5 shrink-0" />
+                                        <span className="text-foreground text-sm font-semibold">
+                                          {n.targetLabel}
+                                        </span>
+                                      </>
+                                    )}
                                   <Badge
                                     variant="secondary"
-                                    className={cn(
-                                      'text-[10px] font-semibold uppercase px-1.5 py-0 shrink-0',
-                                      n.blocking
-                                        ? 'bg-destructive/15 text-destructive border border-destructive/25'
-                                        : 'bg-warning/15 text-warning border border-warning/25',
-                                    )}
+                                    size="xs"
+                                    className="shrink-0 gap-1"
                                   >
-                                    {n.blocking
-                                      ? 'Action Required'
-                                      : 'Recommendation'}
+                                    <span
+                                      className={cn(
+                                        'size-1.5 shrink-0 rounded-full',
+                                        n.blocking
+                                          ? 'bg-destructive'
+                                          : 'bg-warning',
+                                      )}
+                                    />
+                                    <span
+                                      className={
+                                        n.blocking
+                                          ? 'text-destructive font-medium'
+                                          : 'text-warning font-medium'
+                                      }
+                                    >
+                                      {n.blocking
+                                        ? 'Action Required'
+                                        : 'Recommendation'}
+                                    </span>
                                   </Badge>
                                 </div>
-                                <p className="text-xs text-muted-foreground leading-relaxed max-w-3xl">
+                                <p className="text-muted-foreground max-w-3xl text-xs leading-relaxed">
                                   {n.why || n.note}
                                 </p>
                               </div>
                             </TableCell>
-                            <TableCell className="text-right py-2.5 pr-4 align-middle">
-                              <div className="flex items-center justify-end gap-2 shrink-0">
+                            <TableCell className="py-2.5 pr-4 text-right align-middle">
+                              <div className="flex shrink-0 items-center justify-end gap-2">
                                 {n.actionType === 'value_map' && (
                                   <Button
                                     variant="default"
                                     size="sm"
                                     className="gap-1.5"
-                                    onClick={() =>
-                                      canUseTransforms
-                                        ? openRulesModal(
-                                            n.sourceField!,
+                                    onClick={() => {
+                                      if (canUseTransforms) {
+                                        if (n.sourceField) {
+                                          const existing = mappings.find(
+                                            (item) =>
+                                              item.sourceField ===
+                                              n.sourceField,
+                                          );
+                                          const existingRules = (existing
+                                            ?.destRules?.[n.destKey] ??
+                                            []) as Rule[];
+                                          if (
+                                            !existingRules.some(
+                                              (r) =>
+                                                r.type === 'value_map' ||
+                                                r.type === 'value_mapping',
+                                            )
+                                          ) {
+                                            saveRules(
+                                              n.sourceField,
+                                              n.destKey,
+                                              [
+                                                ...existingRules,
+                                                {
+                                                  type: 'value_map',
+                                                  enabled: true,
+                                                  map: {},
+                                                  fallback: '',
+                                                },
+                                              ],
+                                            );
+                                          }
+                                          openSettingsDrawer(
+                                            n.sourceField,
                                             n.destKey,
-                                            true,
-                                          )
-                                        : promptUpgrade(
-                                            TRANSFORM_UPGRADE_MESSAGE,
-                                          )
-                                    }
+                                            'transforms',
+                                          );
+                                        }
+                                      } else {
+                                        promptUpgrade(
+                                          TRANSFORM_UPGRADE_MESSAGE,
+                                        );
+                                      }
+                                    }}
                                   >
                                     {canUseTransforms ? (
-                                      <Zap className="size-4 text-warning" />
+                                      <Zap className="text-warning size-4" />
                                     ) : (
                                       <Lock className="size-4" />
                                     )}
@@ -2922,20 +3295,24 @@ export default function FieldMappingCanvas({
                                     variant="secondary"
                                     size="sm"
                                     className="gap-1.5"
-                                    onClick={() =>
-                                      canUseTransforms
-                                        ? openRulesModal(
-                                            n.sourceField!,
+                                    onClick={() => {
+                                      if (canUseTransforms) {
+                                        if (n.sourceField) {
+                                          openSettingsDrawer(
+                                            n.sourceField,
                                             n.destKey,
-                                            false,
-                                          )
-                                        : promptUpgrade(
-                                            TRANSFORM_UPGRADE_MESSAGE,
-                                          )
-                                    }
+                                            'transforms',
+                                          );
+                                        }
+                                      } else {
+                                        promptUpgrade(
+                                          TRANSFORM_UPGRADE_MESSAGE,
+                                        );
+                                      }
+                                    }}
                                   >
                                     {canUseTransforms ? (
-                                      <Zap className="size-4 text-warning" />
+                                      <Zap className="text-warning size-4" />
                                     ) : (
                                       <Lock className="size-4" />
                                     )}
@@ -2951,6 +3328,7 @@ export default function FieldMappingCanvas({
                                       openSettingsDrawer(
                                         n.sourceField!,
                                         n.destKey,
+                                        'fallbacks',
                                       )
                                     }
                                   >
@@ -3022,24 +3400,24 @@ export default function FieldMappingCanvas({
               )}
 
               {filteredPairs.length > 0 && (
-                <Table className="min-w-[960px] bg-card">
-                  <TableHeader className="bg-muted/50 dark:bg-muted/25 border-b border-border">
-                    <TableRow className="border-b border-border hover:bg-transparent">
-                      <TableHead className="w-[32%] py-3 pl-4 pr-3 font-semibold uppercase tracking-wider text-xs text-foreground/80 dark:text-foreground/75">
+                <Table className="bg-card min-w-[960px]">
+                  <TableHeader className="bg-muted/50 dark:bg-muted/25 border-border border-b">
+                    <TableRow className="border-border border-b hover:bg-transparent">
+                      <TableHead className="text-foreground/80 dark:text-foreground/75 w-[34%] py-3 pr-2 pl-4 text-xs font-semibold tracking-wider uppercase">
                         Source field
                       </TableHead>
-                      <TableHead className="w-[32%] py-3 px-3 font-semibold uppercase tracking-wider text-xs text-foreground/80 dark:text-foreground/75">
+                      <TableHead className="text-foreground/80 dark:text-foreground/75 w-[34%] px-2 py-3 text-xs font-semibold tracking-wider uppercase">
                         Destination field
                       </TableHead>
                       {showDirectionToggle && (
-                        <TableHead className="w-32 py-3 px-3 font-semibold uppercase tracking-wider text-xs text-foreground/80 dark:text-foreground/75">
+                        <TableHead className="text-foreground/80 dark:text-foreground/75 w-28 px-2 py-3 text-xs font-semibold tracking-wider uppercase">
                           Direction
                         </TableHead>
                       )}
-                      <TableHead className="w-36 py-3 px-3 font-semibold uppercase tracking-wider text-xs text-foreground/80 dark:text-foreground/75">
+                      <TableHead className="text-foreground/80 dark:text-foreground/75 w-32 px-2 py-3 text-xs font-semibold tracking-wider uppercase">
                         Identifier
                       </TableHead>
-                      <TableHead className="text-right py-3 pr-4 pl-3 font-semibold uppercase tracking-wider text-xs text-foreground/80 dark:text-foreground/75">
+                      <TableHead className="text-foreground/80 dark:text-foreground/75 py-3 pr-4 pl-2 text-right text-xs font-semibold tracking-wider uppercase">
                         Actions
                       </TableHead>
                     </TableRow>
@@ -3051,14 +3429,16 @@ export default function FieldMappingCanvas({
                       );
                       const df = destFields.find((f) => f.key === dk);
                       const isMatch = m.matchDestKey === dk;
-                      const ruleCount = (m.destRules?.[dk] || []).filter(
+                      const rowRules = (m.destRules?.[dk] ||
+                        (Array.isArray(m.rules) ? m.rules : []) ||
+                        []) as Array<Record<string, unknown>>;
+                      const ruleCount = rowRules.filter(
                         (r: unknown) =>
                           (r as Record<string, unknown>).enabled !== false,
                       ).length;
                       const rowAttentionIssues = needsAttention.filter(
                         (n) =>
-                          n.sourceField === m.sourceField &&
-                          n.destKey === dk,
+                          n.sourceField === m.sourceField && n.destKey === dk,
                       );
                       const hasAttentionIssue = rowAttentionIssues.length > 0;
                       const hasBlockingIssue = rowAttentionIssues.some(
@@ -3088,6 +3468,9 @@ export default function FieldMappingCanvas({
                       const pairKey = `${m.sourceField}-${dk}`;
                       const isJustAdded = justAddedKey === pairKey;
                       const isNewlyAdded = newlyAddedKeys.has(pairKey);
+                      const isAutoMapped = autoMappedSourceKeys.has(
+                        m.sourceField,
+                      );
                       const isNewlySetIdentifier =
                         isMatch &&
                         effectiveDirty &&
@@ -3097,21 +3480,26 @@ export default function FieldMappingCanvas({
                           key={pairKey}
                           id={`mapping-row-${pairKey}`}
                           className={cn(
-                            'group/row transition-all duration-300 hover:bg-muted/30 border-b border-border/70 bg-card',
+                            'group/row hover:bg-muted/30 border-border/70 bg-card border-b transition-all duration-300',
                             hasAttentionIssue &&
                               (hasBlockingIssue
                                 ? 'bg-destructive/[0.04] dark:bg-destructive/[0.07]'
                                 : 'bg-warning/[0.035] dark:bg-warning/[0.06]'),
-                            isJustAdded && 'ring-2 ring-primary/40 bg-primary/10 shadow-xs',
+                            isJustAdded &&
+                              'ring-primary/40 bg-primary/10 shadow-xs ring-2',
+                            isAutoMapped &&
+                              'bg-primary/[0.025] dark:bg-primary/[0.04]',
                           )}
                         >
                           {/* Column 1: Source Field (with Direction Arrow pointing to Destination) */}
-                          <TableCell className="relative min-w-0 py-2 pl-4 pr-3 align-middle">
+                          <TableCell className="relative min-w-0 py-2 pr-2 pl-4 align-middle">
                             {hasAttentionIssue && (
                               <div
                                 className={cn(
                                   'absolute inset-y-0 left-0 w-1',
-                                  hasBlockingIssue ? 'bg-destructive' : 'bg-warning',
+                                  hasBlockingIssue
+                                    ? 'bg-destructive'
+                                    : 'bg-warning',
                                 )}
                                 aria-hidden="true"
                               />
@@ -3147,18 +3535,29 @@ export default function FieldMappingCanvas({
                                             </span>
                                           )}
                                       </span>
-                                      {isNewlyAdded && (
+                                      {isAutoMapped ? (
                                         <Badge
                                           variant="secondary"
-                                          className="bg-primary/15 text-primary border-primary/25 text-[9.5px] font-semibold tracking-wider uppercase px-1.5 py-0 shrink-0"
+                                          size="xs"
+                                          className="border-0 bg-primary/10 text-primary gap-1 font-medium"
+                                        >
+                                          <Sparkles className="text-primary size-2.5 shrink-0" />
+                                          <span>Auto-mapped</span>
+                                        </Badge>
+                                      ) : isNewlyAdded ? (
+                                        <Badge
+                                          variant="secondary"
+                                          size="xs"
+                                          className="border-0 bg-primary/15 text-primary font-semibold"
                                         >
                                           New
                                         </Badge>
-                                      )}
+                                      ) : null}
                                       {m.transformType === 'combine' && (
                                         <Badge
                                           variant="secondary"
-                                          className="shrink-0 text-[10px]"
+                                          size="xs"
+                                          className="border-0 bg-muted/60 text-muted-foreground font-medium"
                                         >
                                           Combined
                                         </Badge>
@@ -3204,7 +3603,7 @@ export default function FieldMappingCanvas({
                           </TableCell>
 
                           {/* Column 2: Destination Field */}
-                          <TableCell className="min-w-0 py-2 align-middle">
+                          <TableCell className="min-w-0 py-2 px-2 align-middle">
                             {isEditing ? (
                               <FieldSelect
                                 fields={destFields.filter((f) => !f.readOnly)}
@@ -3218,7 +3617,7 @@ export default function FieldMappingCanvas({
                                 highlightRequired={destRequiredActive}
                               />
                             ) : (
-                              <div className="space-y-0.5 min-w-0">
+                              <div className="min-w-0 space-y-0.5">
                                 <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                                   <span className="truncate text-sm font-semibold">
                                     {df?.label ?? dk}
@@ -3228,26 +3627,63 @@ export default function FieldMappingCanvas({
                                       </span>
                                     )}
                                   </span>
+                                  {ruleCount > 0 && (
+                                    <Badge
+                                      variant="secondary"
+                                      size="xs"
+                                      className="border-0 bg-primary/10 text-primary hover:bg-primary/20 shrink-0 cursor-pointer gap-1 font-medium"
+                                      onClick={() =>
+                                        openSettingsDrawer(
+                                          m.sourceField,
+                                          dk,
+                                          'transforms',
+                                        )
+                                      }
+                                      title="View and edit transform rules"
+                                    >
+                                      <Zap className="size-2.5 shrink-0 text-primary" />
+                                      <span>{ruleCount > 1 ? `${ruleCount} Rules` : 'Rule'}</span>
+                                    </Badge>
+                                  )}
                                   {onEmpty !== 'none' && (
                                     <Badge
                                       variant="secondary"
-                                      className="shrink-0 gap-1 text-[11px] font-normal cursor-pointer hover:bg-muted"
-                                      onClick={() => openSettingsDrawer(m.sourceField, dk)}
-                                      title="Configure fallback when empty"
+                                      size="xs"
+                                      className="border-0 bg-muted/60 text-muted-foreground hover:bg-muted/80 shrink-0 cursor-pointer gap-1 font-normal"
+                                      onClick={() =>
+                                        openSettingsDrawer(
+                                          m.sourceField,
+                                          dk,
+                                          'fallbacks',
+                                        )
+                                      }
+                                      title="Configure empty value policy & fallback"
                                     >
-                                      {onEmpty === 'skip_record'
-                                        ? '🚫 Skip if empty'
-                                        : `Default: "${m.destDefaults?.[dk] || '—'}"`}
+                                      <span>
+                                        {onEmpty === 'skip_record'
+                                          ? 'Skip if empty'
+                                          : `Default: "${m.destDefaults?.[dk] || '—'}"`}
+                                      </span>
                                     </Badge>
                                   )}
-                                  {excludeConditions?.some((c) => c.field === m.sourceField) && (
+                                  {excludeConditions?.some(
+                                    (c) => c.field === m.sourceField,
+                                  ) && (
                                     <Badge
-                                      variant="outline"
-                                      className="shrink-0 gap-1 text-[11px] border-warning/40 bg-warning/10 text-warning cursor-pointer hover:bg-warning/20"
-                                      onClick={() => openSettingsDrawer(m.sourceField, dk)}
+                                      variant="secondary"
+                                      size="xs"
+                                      className="border-0 bg-warning/15 text-warning-foreground hover:bg-warning/25 shrink-0 cursor-pointer gap-1 font-normal"
+                                      onClick={() =>
+                                        openSettingsDrawer(
+                                          m.sourceField,
+                                          dk,
+                                          'skips',
+                                        )
+                                      }
                                       title="Edit field filter condition"
                                     >
-                                      🛡️ Filter
+                                      <Filter className="text-warning size-2.5 shrink-0" />
+                                      <span>Filter</span>
                                     </Badge>
                                   )}
                                   <TypeChip type={df?.type} />
@@ -3261,18 +3697,21 @@ export default function FieldMappingCanvas({
 
                           {/* Column 3: Direction (if bidirectional) */}
                           {showDirectionToggle && (
-                            <TableCell className="w-32 py-2 align-middle">
+                            <TableCell className="w-28 py-2 px-2 align-middle">
                               {rowDirectionReadOnly ? (
                                 <Badge
-                                  variant="outline"
-                                  className="gap-1 whitespace-nowrap text-xs"
+                                  variant="secondary"
+                                  size="xs"
+                                  className="border-0 bg-muted/60 text-muted-foreground gap-1 whitespace-nowrap"
                                 >
-                                  <ArrowLeftRight className="size-3.5" />
-                                  {
-                                    DIRECTION_OPTIONS.find(
-                                      (o) => o.value === direction,
-                                    )?.label
-                                  }
+                                  <ArrowLeftRight className="text-muted-foreground size-3" />
+                                  <span>
+                                    {
+                                      DIRECTION_OPTIONS.find(
+                                        (o) => o.value === direction,
+                                      )?.label
+                                    }
+                                  </span>
                                 </Badge>
                               ) : (
                                 <Select
@@ -3284,12 +3723,19 @@ export default function FieldMappingCanvas({
                                     )
                                   }
                                 >
-                                  <SelectTrigger size="sm" className="h-8 w-full text-xs bg-muted/20 border-border/40 hover:bg-muted/30">
+                                  <SelectTrigger
+                                    size="sm"
+                                    className="bg-muted/20 border-border/40 hover:bg-muted/30 h-8 w-full text-xs"
+                                  >
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent align="start">
                                     {DIRECTION_OPTIONS.map((o) => (
-                                      <SelectItem key={o.value} value={o.value} className="text-xs">
+                                      <SelectItem
+                                        key={o.value}
+                                        value={o.value}
+                                        className="text-xs"
+                                      >
                                         {o.label}
                                       </SelectItem>
                                     ))}
@@ -3300,16 +3746,13 @@ export default function FieldMappingCanvas({
                           )}
 
                           {/* Column 4: Identifier */}
-                          <TableCell className="w-36 py-2 align-middle">
-                            {!isEditing && (
-                              isMatch ? (
+                          <TableCell className="w-32 py-2 px-2 align-middle">
+                            {!isEditing &&
+                              (isMatch ? (
                                 <Badge
                                   variant="secondary"
-                                  className={cn(
-                                    'bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 shrink-0 gap-1.5 cursor-pointer transition-colors text-xs py-1 px-2.5 font-medium',
-                                    isNewlySetIdentifier &&
-                                      'border-primary/40 bg-primary/15 ring-1 ring-primary/20',
-                                  )}
+                                  size="xs"
+                                  className="border-0 bg-primary/10 text-primary hover:bg-primary/20 shrink-0 cursor-pointer gap-1.5 font-medium"
                                   onClick={() => toggleMatch(m.sourceField, dk)}
                                   title={
                                     isNewlySetIdentifier
@@ -3317,30 +3760,31 @@ export default function FieldMappingCanvas({
                                       : 'Identifier match key (click to unset)'
                                   }
                                 >
-                                  <KeyRound className="size-3.5" />
-                                  Identifier
-                                  {matchMode === 'or' &&
-                                    m.matchOrder != null &&
-                                    ` #${m.matchOrder}`}
+                                  <KeyRound className="text-primary size-3 shrink-0" />
+                                  <span>
+                                    Identifier
+                                    {matchMode === 'or' &&
+                                      m.matchOrder != null &&
+                                      ` #${m.matchOrder}`}
+                                  </span>
                                 </Badge>
                               ) : (
                                 <Button
                                   type="button"
                                   variant="ghost"
                                   size="sm"
-                                  className="opacity-0 group-hover/row:opacity-100 transition-opacity h-8 text-xs gap-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 border border-dashed border-border/70 hover:border-primary/40 rounded-xl px-2.5 cursor-pointer font-medium shrink-0"
+                                  className="text-muted-foreground hover:text-primary hover:bg-primary/10 border-border/70 hover:border-primary/40 h-7.5 shrink-0 cursor-pointer gap-1.5 rounded-lg border border-dashed px-2 text-xs font-medium opacity-0 transition-opacity group-hover/row:opacity-100"
                                   onClick={() => toggleMatch(m.sourceField, dk)}
                                   title="Set as identifier match key (will move to top on save)"
                                 >
                                   <KeyRound className="size-3.5" />
                                   Set Identifier
                                 </Button>
-                              )
-                            )}
+                              ))}
                           </TableCell>
 
                           {/* Column 7: Actions */}
-                          <TableCell className="text-right py-2 pr-4 align-middle whitespace-nowrap">
+                          <TableCell className="relative py-2 pr-4 pl-2 text-right align-middle whitespace-nowrap overflow-hidden">
                             {isEditing ? (
                               <div className="flex items-center justify-end gap-2">
                                 <Button
@@ -3383,272 +3827,370 @@ export default function FieldMappingCanvas({
                                 </Button>
                               </div>
                             ) : (
-                              <div className="flex items-center justify-end gap-2">
-                                {hasAttentionIssue && primaryIssue ? (
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant={hasBlockingIssue ? 'destructive' : 'secondary'}
-                                    className="gap-1.5"
-                                    onClick={() => {
-                                      if (
-                                        primaryIssue.actionType === 'value_map'
-                                      ) {
-                                        if (canUseTransforms) {
-                                          openRulesModal(
-                                            m.sourceField,
-                                            dk,
-                                            true,
-                                          );
-                                        } else {
-                                          promptUpgrade(
-                                            TRANSFORM_UPGRADE_MESSAGE,
-                                          );
-                                        }
-                                      } else if (
-                                        primaryIssue.actionType === 'cast'
-                                      ) {
-                                        if (canUseTransforms) {
-                                          openRulesModal(
-                                            m.sourceField,
-                                            dk,
-                                            false,
-                                          );
-                                        } else {
-                                          promptUpgrade(
-                                            TRANSFORM_UPGRADE_MESSAGE,
-                                          );
-                                        }
-                                      } else {
-                                        openSettingsDrawer(m.sourceField, dk);
-                                      }
-                                    }}
-                                    title={primaryIssue.why || primaryIssue.note}
+                              <div className="relative flex items-center justify-end">
+                                {/* 3-dots Dropdown Trigger: anchored at far right, smoothly revealed when front buttons slide left */}
+                                <div className="absolute right-0 flex items-center justify-center">
+                                  <DropdownMenu
+                                    open={openDropdownPair === pairKey}
+                                    onOpenChange={(open) =>
+                                      setOpenDropdownPair(
+                                        open ? pairKey : null,
+                                      )
+                                    }
                                   >
-                                    <AlertTriangle
-                                      className={cn(
-                                        'size-4 shrink-0',
-                                        hasBlockingIssue
-                                          ? 'text-destructive-foreground'
-                                          : 'text-warning',
-                                      )}
-                                    />
-                                    <span>
-                                      {primaryIssue.actionType === 'value_map'
-                                        ? 'Map values'
-                                        : primaryIssue.actionType ===
-                                            'open_drawer'
-                                          ? 'Set default'
-                                          : 'Action required'}
-                                    </span>
-                                  </Button>
-                                ) : ruleCount > 0 ? (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
+                                    <DropdownMenuTrigger asChild>
+                                      <button
                                         type="button"
-                                        variant="secondary"
-                                        size="sm"
                                         className={cn(
-                                          'h-8 gap-1.5 text-xs font-medium',
-                                          glowing === 'rule' && GLOW_CLASS,
+                                          'text-muted-foreground hover:text-foreground hover:bg-muted/70 flex size-7 cursor-pointer items-center justify-center rounded-lg outline-none transition-all duration-200 ease-out',
+                                          'opacity-0 group-hover/row:opacity-100',
+                                          openDropdownPair === pairKey &&
+                                            'opacity-100',
                                         )}
-                                        onClick={() => {
-                                          if (glowing === 'rule') setGlow(null);
-                                          openSettingsDrawer(m.sourceField, dk);
-                                        }}
-                                        title="Edit field settings and rules"
+                                        aria-label="More row options"
                                       >
-                                        {!canUseTransforms ? (
-                                          <Lock className="size-3.5 text-muted-foreground" />
-                                        ) : (
-                                          <Zap className="size-3.5 text-warning" />
+                                        <MoreVertical className="size-4 shrink-0 transition-colors" />
+                                      </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent
+                                      align="end"
+                                      className="w-52"
+                                    >
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          openSettingsDrawer(
+                                            m.sourceField,
+                                            dk,
+                                            'all',
+                                          )
+                                        }
+                                        className="gap-2 text-xs"
+                                      >
+                                        <Settings2 className="text-primary size-3.5" />
+                                        <span>Field Settings</span>
+                                      </DropdownMenuItem>
+
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          openSettingsDrawer(
+                                            m.sourceField,
+                                            dk,
+                                            'transforms',
+                                          )
+                                        }
+                                        className="gap-2 text-xs"
+                                      >
+                                        <Zap className="text-warning size-3.5" />
+                                        <span>Transform Rules</span>
+                                      </DropdownMenuItem>
+
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          openSettingsDrawer(
+                                            m.sourceField,
+                                            dk,
+                                            'fallbacks',
+                                          )
+                                        }
+                                        className="gap-2 text-xs"
+                                      >
+                                        <Settings2 className="text-muted-foreground size-3.5" />
+                                        <span>Default Values</span>
+                                      </DropdownMenuItem>
+
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          openSettingsDrawer(
+                                            m.sourceField,
+                                            dk,
+                                            'skips',
+                                          )
+                                        }
+                                        className="gap-2 text-xs"
+                                      >
+                                        <Filter className="text-primary size-3.5" />
+                                        <span>Skip Conditions</span>
+                                      </DropdownMenuItem>
+
+                                      <DropdownMenuSeparator />
+
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          toggleMatch(m.sourceField, dk)
+                                        }
+                                        className="gap-2 text-xs"
+                                      >
+                                        <KeyRound className="text-primary size-3.5" />
+                                        <span>
+                                          {isMatch
+                                            ? 'Unset Identifier'
+                                            : 'Set as Identifier'}
+                                        </span>
+                                      </DropdownMenuItem>
+
+                                      <DropdownMenuItem
+                                        onClick={() =>
+                                          setUpdatePolicy(
+                                            m.sourceField,
+                                            dk,
+                                            updatePolicy === 'create_only'
+                                              ? 'always'
+                                              : 'create_only',
+                                          )
+                                        }
+                                        className="gap-2 text-xs"
+                                      >
+                                        <ArrowRight className="size-3.5" />
+                                        <span>
+                                          {updatePolicy === 'create_only'
+                                            ? 'Policy: Overwrite'
+                                            : 'Policy: Create Only'}
+                                        </span>
+                                      </DropdownMenuItem>
+
+                                      <DropdownMenuSeparator />
+
+                                      <DropdownMenuItem
+                                        className="text-destructive focus:text-destructive focus:bg-destructive/10 gap-2 text-xs"
+                                        onClick={() => remove(m.sourceField, dk)}
+                                      >
+                                        <X className="size-3.5" />
+                                        <span>Remove Mapping</span>
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+
+                                {/* Front action buttons: smooth 28px slide-to-reveal on row hover */}
+                                <div
+                                  className={cn(
+                                    'flex items-center gap-1.5 transition-transform duration-200 ease-out',
+                                    'group-hover/row:-translate-x-7',
+                                    openDropdownPair === pairKey &&
+                                      '-translate-x-7',
+                                  )}
+                                >
+                                  {hasAttentionIssue && primaryIssue ? (
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant={
+                                        hasBlockingIssue
+                                          ? 'destructive'
+                                          : 'secondary'
+                                      }
+                                      className="gap-1.5 border-0"
+                                      onClick={() => {
+                                        if (
+                                          primaryIssue.actionType === 'value_map'
+                                        ) {
+                                          if (canUseTransforms) {
+                                            const existingRules = (m.destRules?.[
+                                              dk
+                                            ] ?? []) as Rule[];
+                                            if (
+                                              !existingRules.some(
+                                                (r) =>
+                                                  r.type === 'value_map' ||
+                                                  r.type === 'value_mapping',
+                                              )
+                                            ) {
+                                              saveRules(m.sourceField, dk, [
+                                                ...existingRules,
+                                                {
+                                                  type: 'value_map',
+                                                  enabled: true,
+                                                  map: {},
+                                                  fallback: '',
+                                                },
+                                              ]);
+                                            }
+                                            openSettingsDrawer(
+                                              m.sourceField,
+                                              dk,
+                                              'transforms',
+                                            );
+                                          } else {
+                                            promptUpgrade(
+                                              TRANSFORM_UPGRADE_MESSAGE,
+                                            );
+                                          }
+                                        } else if (
+                                          primaryIssue.actionType === 'cast'
+                                        ) {
+                                          if (canUseTransforms) {
+                                            openSettingsDrawer(
+                                              m.sourceField,
+                                              dk,
+                                              'transforms',
+                                            );
+                                          } else {
+                                            promptUpgrade(
+                                              TRANSFORM_UPGRADE_MESSAGE,
+                                            );
+                                          }
+                                        } else {
+                                          openSettingsDrawer(
+                                            m.sourceField,
+                                            dk,
+                                            primaryIssue.actionType ===
+                                              'open_drawer'
+                                              ? 'fallbacks'
+                                              : 'transforms',
+                                          );
+                                        }
+                                      }}
+                                      title={
+                                        primaryIssue.why || primaryIssue.note
+                                      }
+                                    >
+                                      <AlertTriangle
+                                        className={cn(
+                                          'size-4 shrink-0',
+                                          hasBlockingIssue
+                                            ? 'text-destructive-foreground'
+                                            : 'text-warning',
                                         )}
-                                        <span>{`Rule${ruleCount > 1 ? ` (${ruleCount})` : ''}`}</span>
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="bottom">
-                                      {!canUseTransforms
-                                        ? "Field transform rules aren't available on your plan."
-                                        : glowing === 'rule'
-                                          ? 'This mapping just changed — check the rule still fits.'
-                                          : 'Edit the transform rule applied before this field syncs.'}
-                                    </TooltipContent>
-                                  </Tooltip>
-                                ) : (
+                                      />
+                                      <span>
+                                        {primaryIssue.actionType === 'value_map'
+                                          ? 'Map values'
+                                          : primaryIssue.actionType ===
+                                              'open_drawer'
+                                            ? 'Set default'
+                                            : 'Action required'}
+                                      </span>
+                                    </Button>
+                                  ) : ruleCount > 0 ? (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          type="button"
+                                          variant="secondary"
+                                          size="sm"
+                                          className={cn(
+                                            'h-8 gap-1.5 border-0 text-xs font-medium',
+                                            glowing === 'rule' && GLOW_CLASS,
+                                          )}
+                                          onClick={() => {
+                                            if (glowing === 'rule')
+                                              setGlow(null);
+                                            openSettingsDrawer(
+                                              m.sourceField,
+                                              dk,
+                                              'transforms',
+                                            );
+                                          }}
+                                          title="Edit field settings and rules"
+                                        >
+                                          {!canUseTransforms ? (
+                                            <Lock className="text-muted-foreground size-3.5" />
+                                          ) : (
+                                            <Zap className="text-warning size-3.5" />
+                                          )}
+                                          <span>{`Rule${ruleCount > 1 ? ` (${ruleCount})` : ''}`}</span>
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="bottom">
+                                        {!canUseTransforms
+                                          ? "Field transform rules aren't available on your plan."
+                                          : glowing === 'rule'
+                                            ? 'This mapping just changed — check the rule still fits.'
+                                            : 'Edit the transform rule applied before this field syncs.'}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  ) : (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          className={cn(
+                                            'h-8 gap-1.5 text-xs font-medium',
+                                            glowing === 'rule' && GLOW_CLASS,
+                                          )}
+                                          onClick={() => {
+                                            if (glowing === 'rule')
+                                              setGlow(null);
+                                            openSettingsDrawer(
+                                              m.sourceField,
+                                              dk,
+                                              'transforms',
+                                            );
+                                          }}
+                                          title="Add field transform rule"
+                                        >
+                                          {!canUseTransforms ? (
+                                            <Lock className="text-muted-foreground size-3.5" />
+                                          ) : (
+                                            <Plus className="size-3.5" />
+                                          )}
+                                          <span>Add Rule</span>
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="bottom">
+                                        {!canUseTransforms
+                                          ? "Field transform rules aren't available on your plan."
+                                          : 'Add a rule to transform the value before it syncs.'}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  )}
+
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <Button
                                         type="button"
                                         variant="outline"
-                                        size="sm"
-                                        className={cn(
-                                          'h-8 gap-1.5 text-xs font-medium',
-                                          glowing === 'rule' && GLOW_CLASS,
-                                        )}
+                                        size="icon-xs"
+                                        className="border-border/80 bg-background text-muted-foreground hover:border-foreground/50 hover:text-foreground hover:bg-muted/30 size-7 cursor-pointer rounded-lg border-dashed shadow-xs transition-all"
                                         onClick={() => {
-                                          if (glowing === 'rule') setGlow(null);
-                                          openSettingsDrawer(m.sourceField, dk);
+                                          if (m.transformType === 'combine') {
+                                            setEditingCombineSource(
+                                              m.sourceField,
+                                            );
+                                            setShowCombineComposer(true);
+                                            return;
+                                          }
+                                          setEditingPair({
+                                            sourceField: m.sourceField,
+                                            destKey: dk,
+                                          });
+                                          setEditDraft({
+                                            sourceField: m.sourceField,
+                                            destKey: dk,
+                                          });
                                         }}
-                                        title="Add field transform rule"
+                                        aria-label="Change fields"
+                                        title="Change fields"
                                       >
-                                        {!canUseTransforms ? (
-                                          <Lock className="size-3.5 text-muted-foreground" />
-                                        ) : (
-                                          <Plus className="size-3.5" />
-                                        )}
-                                        <span>Add Rule</span>
+                                        <Pencil className="size-3.5" />
                                       </Button>
                                     </TooltipTrigger>
                                     <TooltipContent side="bottom">
-                                      {!canUseTransforms
-                                        ? "Field transform rules aren't available on your plan."
-                                        : 'Add a rule to transform the value before it syncs.'}
+                                      Change fields
                                     </TooltipContent>
                                   </Tooltip>
-                                )}
 
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      className="size-8 p-0 text-muted-foreground hover:text-foreground"
-                                      onClick={() => {
-                                        if (m.transformType === 'combine') {
-                                          setEditingCombineSource(
-                                            m.sourceField,
-                                          );
-                                          setShowCombineComposer(true);
-                                          return;
-                                        }
-                                        setEditingPair({
-                                          sourceField: m.sourceField,
-                                          destKey: dk,
-                                        });
-                                        setEditDraft({
-                                          sourceField: m.sourceField,
-                                          destKey: dk,
-                                        });
-                                      }}
-                                      aria-label="Change fields"
-                                    >
-                                      <Pencil className="size-3.5" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent side="bottom">
-                                    Change fields
-                                  </TooltipContent>
-                                </Tooltip>
-
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      className="size-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                      onClick={() => remove(m.sourceField, dk)}
-                                      aria-label="Remove mapping"
-                                    >
-                                      <X className="size-4" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent side="bottom">
-                                    Remove mapping
-                                  </TooltipContent>
-                                </Tooltip>
-
-                                {/* 3-dots Dropdown Trigger: hidden by default, slides in from left on hover with dedicated flat surface plate */}
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <button
-                                      type="button"
-                                      className={cn(
-                                        'flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/80 bg-card/95 text-muted-foreground shadow-xs outline-none cursor-pointer',
-                                        'hover:bg-accent hover:text-foreground hover:border-border focus-visible:ring-2 focus-visible:ring-ring',
-                                        'opacity-0 -translate-x-2.5 pointer-events-none group-hover/row:opacity-100 group-hover/row:translate-x-0 group-hover/row:pointer-events-auto',
-                                        'data-[state=open]:opacity-100 data-[state=open]:translate-x-0 data-[state=open]:pointer-events-auto',
-                                        'transition-all duration-200 ease-out',
-                                      )}
-                                      aria-label="More row options"
-                                    >
-                                      <MoreVertical className="size-4 shrink-0 transition-colors" />
-                                    </button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end" className="w-56">
-                                    <DropdownMenuItem
-                                      onClick={() => openSettingsDrawer(m.sourceField, dk)}
-                                      className="gap-2 text-xs"
-                                    >
-                                      <Settings2 className="size-3.5 text-primary" />
-                                      <span>Field settings (rules & defaults)</span>
-                                    </DropdownMenuItem>
-
-                                    <DropdownMenuItem
-                                      onClick={() => toggleMatch(m.sourceField, dk)}
-                                      className="gap-2 text-xs"
-                                    >
-                                      <KeyRound className="size-3.5 text-primary" />
-                                      <span>{isMatch ? 'Unset as identifier' : 'Set as identifier'}</span>
-                                    </DropdownMenuItem>
-
-                                    <DropdownMenuItem
-                                      onClick={() =>
-                                        setUpdatePolicy(
-                                          m.sourceField,
-                                          dk,
-                                          updatePolicy === 'create_only'
-                                            ? 'always'
-                                            : 'create_only',
-                                        )
-                                      }
-                                      className="gap-2 text-xs"
-                                    >
-                                      <ArrowRight className="size-3.5" />
-                                      <span>
-                                        {updatePolicy === 'create_only'
-                                          ? 'Policy: Always overwrite'
-                                          : 'Policy: Create only'}
-                                      </span>
-                                    </DropdownMenuItem>
-
-                                    <DropdownMenuItem
-                                      onClick={() => {
-                                        if (m.transformType === 'combine') {
-                                          setEditingCombineSource(
-                                            m.sourceField,
-                                          );
-                                          setShowCombineComposer(true);
-                                          return;
-                                        }
-                                        setEditingPair({
-                                          sourceField: m.sourceField,
-                                          destKey: dk,
-                                        });
-                                        setEditDraft({
-                                          sourceField: m.sourceField,
-                                          destKey: dk,
-                                        });
-                                      }}
-                                      className="gap-2 text-xs"
-                                    >
-                                      <Pencil className="size-3.5" />
-                                      <span>Change fields</span>
-                                    </DropdownMenuItem>
-
-                                    <DropdownMenuSeparator />
-
-                                    <DropdownMenuItem
-                                      className="gap-2 text-xs text-destructive focus:text-destructive focus:bg-destructive/10"
-                                      onClick={() => remove(m.sourceField, dk)}
-                                    >
-                                      <Trash2 className="size-3.5" />
-                                      <span>Remove mapping</span>
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="icon-xs"
+                                        className="border-destructive/40 bg-background text-destructive hover:border-destructive hover:bg-destructive/10 size-7 cursor-pointer rounded-lg border-dashed shadow-xs transition-all"
+                                        onClick={() => remove(m.sourceField, dk)}
+                                        aria-label="Remove mapping"
+                                        title="Remove mapping"
+                                      >
+                                        <X className="size-3.5" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom">
+                                      Remove mapping
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </div>
                               </div>
                             )}
                           </TableCell>
@@ -3693,7 +4235,7 @@ export default function FieldMappingCanvas({
             </div>
           </div>
 
-          <div className="flex items-center justify-between border-t border-border px-4 py-3 bg-muted/20 dark:bg-card">
+          <div className="border-border bg-muted/20 dark:bg-card flex items-center justify-between border-t px-4 py-3">
             <span className="text-muted-foreground text-xs font-medium">
               {pairCount} field{pairCount !== 1 ? 's' : ''} mapped
             </span>
@@ -3711,27 +4253,26 @@ export default function FieldMappingCanvas({
         }}
         mapping={
           settingsDrawer
-            ? (mappings.find((m) => m.sourceField === settingsDrawer.sourceKey) ??
-              null)
+            ? (mappings.find(
+                (m) => m.sourceField === settingsDrawer.sourceKey,
+              ) ?? null)
             : null
         }
         destKey={settingsDrawer?.destKey ?? null}
         sourceFieldDef={sourceFields.find(
           (f) => f.key === settingsDrawer?.sourceKey,
         )}
-        destFieldDef={destFields.find(
-          (f) => f.key === settingsDrawer?.destKey,
-        )}
+        destFieldDef={destFields.find((f) => f.key === settingsDrawer?.destKey)}
         isTwoWay={showDirectionToggle}
         canUseTransforms={canUseTransforms}
         promptUpgrade={promptUpgrade}
         excludeCondition={excludeConditions?.find(
           (c) => c.field === settingsDrawer?.sourceKey,
         )}
+        targetSection={settingsDrawer?.targetSection}
+        projectId={projectId}
+        sourceObject={sourceObject}
         onSave={handleSettingsSave}
-        onOpenAdvancedRules={(sourceKey, destKey) => {
-          setRulesModal({ sourceKey, destKey });
-        }}
       />
 
       {rulesModal && rulesMapping && rulesDestKey && (
@@ -3758,13 +4299,6 @@ export default function FieldMappingCanvas({
           onApply={applyAutoMap}
         />
       )}
-
-      <ReadOnlyFieldsDialog
-        open={showReadOnlyModal}
-        onOpenChange={setShowReadOnlyModal}
-        fields={readOnlyDestFields}
-        platformLabel={PLATFORM_LABEL[destPlatform] ?? destPlatform}
-      />
 
       {upgradeDialog}
     </div>

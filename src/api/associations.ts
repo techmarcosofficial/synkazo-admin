@@ -29,6 +29,7 @@ export interface AssociationCondition {
   operator: ConditionOperator;
   value?: string | number | boolean | string[] | null;
   normalization?: ConditionNormalization;
+  enabled?: boolean;
 }
 
 export type ConditionLogic = 'AND' | 'OR';

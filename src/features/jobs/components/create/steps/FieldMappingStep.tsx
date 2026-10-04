@@ -6,6 +6,7 @@ import {
   RefreshCw,
   X,
 } from 'lucide-react';
+import { useMemo } from 'react';
 
 import SkipRecordEditor from '@/components/fieldmapping/SkipRecordEditor';
 import FieldMappingCanvas, {
@@ -97,6 +98,34 @@ export default function FieldMappingStep({
 }) {
   const sourceFields = [...customSourceFields, ...apiSourceFields];
   const destFields = [...customDestFields, ...apiDestFields];
+
+  const mappedSourceKeys = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          fieldMappings
+            .map((mapping) => mapping.sourceField)
+            .filter((field): field is string => Boolean(field)),
+        ),
+      ),
+    [fieldMappings],
+  );
+
+  const mappedDestinationKeys = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          fieldMappings
+            .flatMap((mapping) =>
+              Array.isArray(mapping.destField)
+                ? mapping.destField
+                : [mapping.destField],
+            )
+            .filter((field): field is string => Boolean(field)),
+        ),
+      ),
+    [fieldMappings],
+  );
 
   return (
     <div className="space-y-3">
@@ -257,6 +286,8 @@ export default function FieldMappingStep({
         destinationConditions={destinationSkipConditions}
         onSourceChange={onExcludeConditionsChange}
         onDestinationChange={onDestinationSkipConditionsChange}
+        mappedSourceKeys={mappedSourceKeys}
+        mappedDestinationKeys={mappedDestinationKeys}
       />
 
       <Card>

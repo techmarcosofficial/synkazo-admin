@@ -531,7 +531,12 @@ function PageRow({
                           {record.destRecordId || '—'}
                         </td>
                         <td className="max-w-sm px-3 py-1.5">
-                          <RecordReason rec={record} context={recordContext} />
+                          <RecordReason
+                            rec={record}
+                            context={recordContext}
+                            projectId={projectId}
+                            jobId={jobId}
+                          />
                         </td>
                       </tr>
                     );
@@ -706,315 +711,317 @@ function RunLogRow({
         onOpenChange={handleOpenChange}
         className="bg-card overflow-hidden rounded-4xl border"
       >
-      <div className="hover:bg-muted/30 flex items-stretch transition-colors">
-        <CollapsibleTrigger
-          className="group flex min-w-0 flex-1 items-center gap-3 px-4 py-2.5 text-left"
-          title={`Run ID: ${run.id}`}
-        >
-          <StatusBadge status={displayStatus} size="sm" />
+        <div className="hover:bg-muted/30 flex items-stretch transition-colors">
+          <CollapsibleTrigger
+            className="group flex min-w-0 flex-1 items-center gap-3 px-4 py-2.5 text-left"
+            title={`Run ID: ${run.id}`}
+          >
+            <StatusBadge status={displayStatus} size="sm" />
 
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">
-              {run.sourceObject && run.destObject
-                ? `${enumLabel(run.sourceObject)} → ${enumLabel(run.destObject)}`
-                : `${getTriggerLabel(run.triggeredBy)} sync`}
-            </p>
-            <div className="text-muted-foreground mt-1 flex min-w-0 flex-wrap items-center gap-2 text-xs">
-              <span>{getTriggerLabel(run.triggeredBy)}</span>
-              {run.sourcePlatform && run.destPlatform && (
-                <>
-                  <span aria-hidden="true">·</span>
-                  <PlatformPair
-                    sourcePlatformId={run.sourcePlatform}
-                    destPlatformId={run.destPlatform}
-                    variant="text"
-                    size="sm"
-                    className="min-w-0"
-                    arrowClassName="mx-0"
-                  />
-                </>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold">
+                {run.sourceObject && run.destObject
+                  ? `${enumLabel(run.sourceObject)} → ${enumLabel(run.destObject)}`
+                  : `${getTriggerLabel(run.triggeredBy)} sync`}
+              </p>
+              <div className="text-muted-foreground mt-1 flex min-w-0 flex-wrap items-center gap-2 text-xs">
+                <span>{getTriggerLabel(run.triggeredBy)}</span>
+                {run.sourcePlatform && run.destPlatform && (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <PlatformPair
+                      sourcePlatformId={run.sourcePlatform}
+                      destPlatformId={run.destPlatform}
+                      variant="text"
+                      size="sm"
+                      className="min-w-0"
+                      arrowClassName="mx-0"
+                    />
+                  </>
+                )}
+              </div>
+              <div className="text-muted-foreground mt-1.5 flex flex-wrap items-center gap-1.5 text-xs lg:hidden">
+                <span>
+                  {run.startedAt
+                    ? format(new Date(run.startedAt), 'MMM d · h:mm a')
+                    : 'Start time unavailable'}
+                </span>
+                <span aria-hidden="true">·</span>
+                <span>{recordsSynced.toLocaleString()} synced</span>
+                <span aria-hidden="true">·</span>
+                <span>{formatDuration(run.durationMs)}</span>
+              </div>
+            </div>
+
+            <div className="hidden shrink-0 items-center divide-x lg:flex">
+              <div className="min-w-36 px-4">
+                <p className="text-muted-foreground text-xs">Started</p>
+                <p className="mt-0.5 text-sm font-medium">
+                  {run.startedAt
+                    ? format(new Date(run.startedAt), 'MMM d, yyyy · h:mm a')
+                    : '—'}
+                </p>
+              </div>
+              <div className="min-w-28 px-4">
+                <p className="text-muted-foreground text-xs">Records synced</p>
+                <p className="mt-0.5 text-sm font-medium">
+                  {recordsSynced.toLocaleString()}
+                </p>
+              </div>
+              <div className="min-w-24 px-4">
+                <p className="text-muted-foreground text-xs">Duration</p>
+                <p className="mt-0.5 text-sm font-medium">
+                  {formatDuration(run.durationMs)}
+                </p>
+              </div>
+            </div>
+
+            <div className="ml-auto flex shrink-0 items-center gap-2 lg:ml-0">
+              {((run.failedCount ?? 0) > 0 || (run.skippedCount ?? 0) > 0) && (
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowTriage(true);
+                  }}
+                  className={cn(
+                    'h-6 gap-1 px-2 text-[11px]',
+                    (run.failedCount ?? 0) > 0
+                      ? 'bg-destructive/10 text-destructive hover:bg-destructive/20'
+                      : 'bg-warning/10 text-warning hover:bg-warning/20',
+                  )}
+                  title="Triage issues for this run"
+                >
+                  <Wrench className="size-3" /> Triage
+                </Button>
               )}
+              {loadingDetails && (
+                <RefreshCw className="text-muted-foreground size-3 animate-spin" />
+              )}
+              <ExpandChevron open={expanded} bordered />
             </div>
-            <div className="text-muted-foreground mt-1.5 flex flex-wrap items-center gap-1.5 text-xs lg:hidden">
-              <span>
-                {run.startedAt
-                  ? format(new Date(run.startedAt), 'MMM d · h:mm a')
-                  : 'Start time unavailable'}
-              </span>
-              <span aria-hidden="true">·</span>
-              <span>{recordsSynced.toLocaleString()} synced</span>
-              <span aria-hidden="true">·</span>
-              <span>{formatDuration(run.durationMs)}</span>
-            </div>
-          </div>
+          </CollapsibleTrigger>
 
-          <div className="hidden shrink-0 items-center divide-x lg:flex">
-            <div className="min-w-36 px-4">
-              <p className="text-muted-foreground text-xs">Started</p>
-              <p className="mt-0.5 text-sm font-medium">
-                {run.startedAt
-                  ? format(new Date(run.startedAt), 'MMM d, yyyy · h:mm a')
-                  : '—'}
-              </p>
-            </div>
-            <div className="min-w-28 px-4">
-              <p className="text-muted-foreground text-xs">Records synced</p>
-              <p className="mt-0.5 text-sm font-medium">
-                {recordsSynced.toLocaleString()}
-              </p>
-            </div>
-            <div className="min-w-24 px-4">
-              <p className="text-muted-foreground text-xs">Duration</p>
-              <p className="mt-0.5 text-sm font-medium">
-                {formatDuration(run.durationMs)}
-              </p>
-            </div>
-          </div>
-
-          <div className="ml-auto flex shrink-0 items-center gap-2 lg:ml-0">
-            {((run.failedCount ?? 0) > 0 || (run.skippedCount ?? 0) > 0) && (
+          {run.status === 'running' && (
+            <div className="flex items-center pr-3">
+              <Separator orientation="vertical" className="mr-3 h-7" />
               <Button
                 variant="ghost"
-                size="xs"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowTriage(true);
-                }}
-                className={cn(
-                  'h-6 px-2 text-[11px] gap-1',
-                  (run.failedCount ?? 0) > 0
-                    ? 'bg-destructive/10 text-destructive hover:bg-destructive/20'
-                    : 'bg-warning/10 text-warning hover:bg-warning/20',
-                )}
-                title="Triage issues for this run"
-              >
-                <Wrench className="size-3" /> Triage
-              </Button>
-            )}
-            {loadingDetails && (
-              <RefreshCw className="text-muted-foreground size-3 animate-spin" />
-            )}
-            <ExpandChevron open={expanded} bordered />
-          </div>
-        </CollapsibleTrigger>
-
-        {run.status === 'running' && (
-          <div className="flex items-center pr-3">
-            <Separator orientation="vertical" className="mr-3 h-7" />
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleStopRun}
-              disabled={stoppingRun}
-              className="bg-warning/10 text-warning hover:bg-warning/20 h-6 shrink-0 px-2.5 text-xs"
-              title="Stop this sync run"
-            >
-              {stoppingRun ? (
-                <>
-                  <RefreshCw className="animate-spin" /> Stopping…
-                </>
-              ) : (
-                <>
-                  <XCircle /> Stop
-                </>
-              )}
-            </Button>
-          </div>
-        )}
-      </div>
-
-      <CollapsibleContent className="bg-muted/35 border-t">
-        <div className="space-y-4 p-4">
-          <section>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-              {[
-                {
-                  label: 'Processed',
-                  value: run.totalFetched ?? 0,
-                  icon: FileText,
-                  iconClassName: 'text-muted-foreground',
-                },
-                {
-                  label: 'Created',
-                  value: run.createdCount ?? 0,
-                  icon: Plus,
-                  iconClassName: 'text-success',
-                },
-                {
-                  label: 'Updated',
-                  value: run.updatedCount ?? 0,
-                  icon: Edit2,
-                  iconClassName: 'text-info',
-                },
-                {
-                  label: 'Skipped',
-                  value: run.skippedCount ?? 0,
-                  icon: SkipForward,
-                  iconClassName: 'text-warning',
-                },
-                {
-                  label: 'Failed',
-                  value: run.failedCount ?? 0,
-                  icon: CircleAlert,
-                  iconClassName: 'text-destructive',
-                },
-              ].map(({ label, value, icon: MetricIcon, iconClassName }) => (
-                <div
-                  key={label}
-                  className="bg-card flex items-center gap-2.5 rounded-2xl border px-3 py-2.5"
-                >
-                  <div className="bg-muted flex size-7 shrink-0 items-center justify-center rounded-full">
-                    <MetricIcon className={cn('size-3.5', iconClassName)} />
-                  </div>
-                  <div>
-                    <p className="text-base leading-none font-semibold">
-                      {Number(value).toLocaleString()}
-                    </p>
-                    <p className="text-muted-foreground mt-1 text-xs">
-                      {label}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {((run.failedCount ?? 0) > 0 || (run.skippedCount ?? 0) > 0) && (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-destructive/20 bg-destructive/5 p-3.5">
-              <div className="flex items-center gap-2.5">
-                <Wrench className="size-4 text-destructive shrink-0" />
-                <div>
-                  <p className="text-sm font-semibold text-foreground">
-                    {(run.failedCount ?? 0) > 0
-                      ? `${run.failedCount} record${run.failedCount !== 1 ? 's' : ''} failed during sync`
-                      : `${run.skippedCount} record${run.skippedCount !== 1 ? 's' : ''} skipped`}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Review root cause diagnosis and recover failed records with 1 click.
-                  </p>
-                </div>
-              </div>
-              <Button
-                variant="outline"
                 size="sm"
-                onClick={() => setShowTriage(true)}
-                className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 text-xs"
+                onClick={handleStopRun}
+                disabled={stoppingRun}
+                className="bg-warning/10 text-warning hover:bg-warning/20 h-6 shrink-0 px-2.5 text-xs"
+                title="Stop this sync run"
               >
-                <Wrench className="size-3.5" />
-                Triage Issues ({(run.failedCount ?? 0) + (run.skippedCount ?? 0)})
+                {stoppingRun ? (
+                  <>
+                    <RefreshCw className="animate-spin" /> Stopping…
+                  </>
+                ) : (
+                  <>
+                    <XCircle /> Stop
+                  </>
+                )}
               </Button>
             </div>
           )}
+        </div>
 
-          {runMessage && (
-            <div
-              className={cn(
-                'flex gap-2.5 rounded-2xl border px-3.5 py-2.5',
-                displayStatus === 'failed'
-                  ? 'border-destructive/25 bg-destructive/5'
-                  : 'border-warning/25 bg-warning/5',
-              )}
-            >
-              <CircleAlert
-                className={cn(
-                  'mt-0.5 size-4 shrink-0',
-                  displayStatus === 'failed'
-                    ? 'text-destructive'
-                    : 'text-warning',
-                )}
-              />
-              <div>
-                <p className="text-sm font-semibold">
-                  {displayStatus === 'failed'
-                    ? 'Why this run failed'
-                    : 'Why this run stopped early'}
-                </p>
-                <p className="text-muted-foreground mt-0.5 text-xs">
-                  {runMessage}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {detailError ? (
-            <div className="bg-card flex flex-wrap items-center justify-between gap-3 rounded-3xl border px-4 py-4">
-              <div>
-                <p className="text-sm font-medium">
-                  Could not load run details
-                </p>
-                <p className="text-muted-foreground text-xs">
-                  Check your connection and try again.
-                </p>
-              </div>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => handleOpenChange(true)}
-              >
-                <RefreshCw /> Try again
-              </Button>
-            </div>
-          ) : pages.length > 0 ? (
+        <CollapsibleContent className="bg-muted/35 border-t">
+          <div className="space-y-4 p-4">
             <section>
-              <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
-          <HeadingPair
-            visualLevel="card"
-            level="h3"
-            title="Page Breakdown"
-                  subtitle="Expand a page to review and filter only its records."
-                />
-                <button
-                  type="button"
-                  className="text-muted-foreground hover:text-foreground flex min-w-0 items-center gap-1.5 text-xs transition-colors"
-                  onClick={() => {
-                    navigator.clipboard.writeText(run.id);
-                    toast.success('Run ID copied');
-                  }}
-                >
-                  <span className="max-w-56 truncate">Run ID: {run.id}</span>
-                  <Copy className="size-3.5 shrink-0" />
-                </button>
-              </div>
-              <div className="space-y-1">
-                {pages.map((pageLog) => (
-                  <PageRow
-                    key={pageLog.id}
-                    pg={pageLog}
-                    projectId={projectId}
-                    jobId={jobId}
-                    runId={run.id}
-                    recordSearch={recordSearch}
-                    recordContext={{
-                      sourceObject: run.sourceObject,
-                      destObject: run.destObject,
-                      sourcePlatform: run.sourcePlatform,
-                      destPlatform: run.destPlatform,
-                    }}
-                  />
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+                {[
+                  {
+                    label: 'Processed',
+                    value: run.totalFetched ?? 0,
+                    icon: FileText,
+                    iconClassName: 'text-muted-foreground',
+                  },
+                  {
+                    label: 'Created',
+                    value: run.createdCount ?? 0,
+                    icon: Plus,
+                    iconClassName: 'text-success',
+                  },
+                  {
+                    label: 'Updated',
+                    value: run.updatedCount ?? 0,
+                    icon: Edit2,
+                    iconClassName: 'text-info',
+                  },
+                  {
+                    label: 'Skipped',
+                    value: run.skippedCount ?? 0,
+                    icon: SkipForward,
+                    iconClassName: 'text-warning',
+                  },
+                  {
+                    label: 'Failed',
+                    value: run.failedCount ?? 0,
+                    icon: CircleAlert,
+                    iconClassName: 'text-destructive',
+                  },
+                ].map(({ label, value, icon: MetricIcon, iconClassName }) => (
+                  <div
+                    key={label}
+                    className="bg-card flex items-center gap-2.5 rounded-2xl border px-3 py-2.5"
+                  >
+                    <div className="bg-muted flex size-7 shrink-0 items-center justify-center rounded-full">
+                      <MetricIcon className={cn('size-3.5', iconClassName)} />
+                    </div>
+                    <div>
+                      <p className="text-base leading-none font-semibold">
+                        {Number(value).toLocaleString()}
+                      </p>
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        {label}
+                      </p>
+                    </div>
+                  </div>
                 ))}
               </div>
             </section>
-          ) : (
-            !loadingDetails && (
-              <div className="bg-card text-muted-foreground rounded-3xl border px-4 py-4 text-sm">
-                {(run.totalFetched ?? 0) === 0
-                  ? 'No matching records were found for this run. Nothing was changed.'
-                  : 'Detailed record logs are not available for this run.'}
+
+            {((run.failedCount ?? 0) > 0 || (run.skippedCount ?? 0) > 0) && (
+              <div className="border-destructive/20 bg-destructive/5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-3.5">
+                <div className="flex items-center gap-2.5">
+                  <Wrench className="text-destructive size-4 shrink-0" />
+                  <div>
+                    <p className="text-foreground text-sm font-semibold">
+                      {(run.failedCount ?? 0) > 0
+                        ? `${run.failedCount} record${run.failedCount !== 1 ? 's' : ''} failed during sync`
+                        : `${run.skippedCount} record${run.skippedCount !== 1 ? 's' : ''} skipped`}
+                    </p>
+                    <p className="text-muted-foreground text-xs">
+                      Review root cause diagnosis and recover failed records
+                      with 1 click.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowTriage(true)}
+                  className="border-destructive/30 text-destructive hover:bg-destructive/10 gap-1.5 text-xs"
+                >
+                  <Wrench className="size-3.5" />
+                  Triage Issues (
+                  {(run.failedCount ?? 0) + (run.skippedCount ?? 0)})
+                </Button>
               </div>
-            )
-          )}
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
-    <TriageDrawer
-      open={showTriage}
-      onOpenChange={setShowTriage}
-      projectId={projectId}
-      jobId={jobId}
-      run={run}
-      onRefreshHistory={onRefresh}
-    />
-  </>
+            )}
+
+            {runMessage && (
+              <div
+                className={cn(
+                  'flex gap-2.5 rounded-2xl border px-3.5 py-2.5',
+                  displayStatus === 'failed'
+                    ? 'border-destructive/25 bg-destructive/5'
+                    : 'border-warning/25 bg-warning/5',
+                )}
+              >
+                <CircleAlert
+                  className={cn(
+                    'mt-0.5 size-4 shrink-0',
+                    displayStatus === 'failed'
+                      ? 'text-destructive'
+                      : 'text-warning',
+                  )}
+                />
+                <div>
+                  <p className="text-sm font-semibold">
+                    {displayStatus === 'failed'
+                      ? 'Why this run failed'
+                      : 'Why this run stopped early'}
+                  </p>
+                  <p className="text-muted-foreground mt-0.5 text-xs">
+                    {runMessage}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {detailError ? (
+              <div className="bg-card flex flex-wrap items-center justify-between gap-3 rounded-3xl border px-4 py-4">
+                <div>
+                  <p className="text-sm font-medium">
+                    Could not load run details
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    Check your connection and try again.
+                  </p>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => handleOpenChange(true)}
+                >
+                  <RefreshCw /> Try again
+                </Button>
+              </div>
+            ) : pages.length > 0 ? (
+              <section>
+                <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
+                  <HeadingPair
+                    visualLevel="card"
+                    level="h3"
+                    title="Page Breakdown"
+                    subtitle="Expand a page to review and filter only its records."
+                  />
+                  <button
+                    type="button"
+                    className="text-muted-foreground hover:text-foreground flex min-w-0 items-center gap-1.5 text-xs transition-colors"
+                    onClick={() => {
+                      navigator.clipboard.writeText(run.id);
+                      toast.success('Run ID copied');
+                    }}
+                  >
+                    <span className="max-w-56 truncate">Run ID: {run.id}</span>
+                    <Copy className="size-3.5 shrink-0" />
+                  </button>
+                </div>
+                <div className="space-y-1">
+                  {pages.map((pageLog) => (
+                    <PageRow
+                      key={pageLog.id}
+                      pg={pageLog}
+                      projectId={projectId}
+                      jobId={jobId}
+                      runId={run.id}
+                      recordSearch={recordSearch}
+                      recordContext={{
+                        sourceObject: run.sourceObject,
+                        destObject: run.destObject,
+                        sourcePlatform: run.sourcePlatform,
+                        destPlatform: run.destPlatform,
+                      }}
+                    />
+                  ))}
+                </div>
+              </section>
+            ) : (
+              !loadingDetails && (
+                <div className="bg-card text-muted-foreground rounded-3xl border px-4 py-4 text-sm">
+                  {(run.totalFetched ?? 0) === 0
+                    ? 'No matching records were found for this run. Nothing was changed.'
+                    : 'Detailed record logs are not available for this run.'}
+                </div>
+              )
+            )}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+      <TriageDrawer
+        open={showTriage}
+        onOpenChange={setShowTriage}
+        projectId={projectId}
+        jobId={jobId}
+        run={run}
+        onRefreshHistory={onRefresh}
+      />
+    </>
   );
 }
 
@@ -1167,7 +1174,10 @@ export default function RunHistoryTab() {
 
   return (
     <Card className="gap-0 overflow-hidden">
-      <CardHeader visualLevel="section" className="flex flex-col gap-4 border-b pb-4 xl:flex-row xl:items-center xl:justify-between">
+      <CardHeader
+        visualLevel="section"
+        className="flex flex-col gap-4 border-b pb-4 xl:flex-row xl:items-center xl:justify-between"
+      >
         <div className="shrink-0">
           <CardTitle>Run History</CardTitle>
           <CardDescription>
