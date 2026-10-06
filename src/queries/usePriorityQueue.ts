@@ -152,12 +152,3 @@ export function useUpdateAssociationConfigMutation(projectId: string) {
     onSuccess: invalidate,
   });
 }
-
-export function useUpdateCompanyOwnerSyncConfigMutation(projectId: string) {
-  const invalidate = useInvalidatePriorityQueue(projectId);
-  return useMutation({
-    mutationFn: (enabled: boolean) =>
-      priorityQueueApi.updateCompanyOwnerSyncConfig(projectId, enabled),
-    onSuccess: invalidate,
-  });
-}
