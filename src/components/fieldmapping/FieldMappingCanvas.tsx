@@ -3369,7 +3369,7 @@ export default function FieldMappingCanvas({
                                     }}
                                   >
                                     <KeyRound className="size-4" />
-                                    Set primary identifier
+                                    Use Recommended Identifier
                                   </Button>
                                 )}
                                 {n.isCast && !n.blocking && (

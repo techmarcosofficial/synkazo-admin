@@ -270,6 +270,7 @@
 html:has([data-admin-shell]) {
   --radius-3xl: calc(var(--radius) * 1.75);
   --radius-4xl: calc(var(--radius) * 2.125);
+  scrollbar-gutter: stable;
 }
 @layer base {
   * {
@@ -285,6 +286,12 @@ html:has([data-admin-shell]) {
     overflow-x: clip;
     max-width: 100%;
     min-height: 100vh;
+  }
+  /* Radix locks body scrolling for modal dialogs and menus. The root already
+     reserves the scrollbar gutter, so its added body margin would move the
+     entire dashboard to the left and leave a visible gap on the right. */
+  body[data-scroll-locked]:has([data-admin-shell]) {
+    margin-right: 0 !important;
   }
   #root {
     min-height: 100vh;
