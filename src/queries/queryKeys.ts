@@ -119,26 +119,6 @@ export const queryKeys = {
       ] as const,
     logs: (projectId: string, ruleId: string) =>
       ['associations', 'logs', projectId, ruleId] as const,
-    companyOwnerLogs: (projectId: string) =>
-      ['associations', 'companyOwnerLogs', projectId] as const,
-    companyOwnerResults: (
-      projectId: string,
-      runId: string | null,
-      page: number,
-      limit: number,
-      status: string,
-      search: string,
-    ) =>
-      [
-        'associations',
-        'companyOwnerResults',
-        projectId,
-        runId,
-        page,
-        limit,
-        status,
-        search,
-      ] as const,
   },
   users: {
     all: ['users'] as const,

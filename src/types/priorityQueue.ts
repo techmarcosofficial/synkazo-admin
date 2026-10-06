@@ -67,7 +67,6 @@ export interface ProjectQueue {
   oneTimeCompletedAt?: string | null;
   associationQueueEnabled: boolean;
   associationDelayMinutes: number;
-  companyOwnerSyncEnabled: boolean;
   nextStartAt?: string | null;
   activeCycleId?: string | null;
   lastHeartbeatAt?: string | null;
@@ -133,11 +132,6 @@ export interface QueueCycle {
   associationsStartedAt?: string | null;
   associationsCompletedAt?: string | null;
   associationsItemResults?: AssociationItemResult[] | null;
-  companyOwnerSyncStatus: StageOutcomeStatus;
-  companyOwnerSyncStartedAt?: string | null;
-  companyOwnerSyncCompletedAt?: string | null;
-  companyOwnerSyncRetryCount: number;
-  companyOwnerSyncErrorMessage?: string | null;
   completedAt?: string | null;
 }
 

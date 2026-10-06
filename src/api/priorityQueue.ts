@@ -114,9 +114,4 @@ export const priorityQueueApi = {
   ): Promise<{ queue: ProjectQueue; items: AssociationQueueItem[] }> =>
     apiClient.patch(`${p(projectId)}/associations`, payload).then(d),
 
-  updateCompanyOwnerSyncConfig: (
-    projectId: string,
-    enabled: boolean,
-  ): Promise<ProjectQueue> =>
-    apiClient.patch(`${p(projectId)}/company-owner-sync`, { enabled }).then(d),
 };

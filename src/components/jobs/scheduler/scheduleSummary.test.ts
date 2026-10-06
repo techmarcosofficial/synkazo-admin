@@ -87,7 +87,6 @@ describe('project schedule summary', () => {
         nextStartAt: '2026-09-08T14:00:00.000Z',
         associationQueueEnabled: true,
         associationDelayMinutes: 0,
-        companyOwnerSyncEnabled: false,
       },
     };
 

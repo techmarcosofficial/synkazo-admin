@@ -7,15 +7,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useEntitlements } from '@/queries/useEntitlements';
 
 export default function AssociationsTab() {
-  const { projectId, connections } = useProjectDetailContext();
+  const { projectId } = useProjectDetailContext();
   const { associationRules } = useEntitlements();
-  const ownerSourcePlatform = connections.some(
-    (connection) => connection.platformId === 'servicetitan',
-  )
-    ? 'servicetitan'
-    : connections.some((connection) => connection.platformId === 'dataforma')
-      ? 'dataforma'
-      : null;
   return (
     <PlanFeatureGate
       allowed={associationRules}
@@ -36,11 +29,7 @@ export default function AssociationsTab() {
           </AlertDescription>
         </Alert>
 
-        <AssociationRulesList
-          projectId={projectId}
-          showCompanyOwnerSection={ownerSourcePlatform !== null}
-          ownerSourcePlatform={ownerSourcePlatform}
-        />
+        <AssociationRulesList projectId={projectId} />
       </div>
     </PlanFeatureGate>
   );
