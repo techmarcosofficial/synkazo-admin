@@ -36,6 +36,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
+import HeadingPair from '@/components/shared/HeadingPair';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -90,7 +91,6 @@ const REQUIRED_PARAMS: Record<string, string[]> = {
   word_limit: ['value'],
   min_length: ['value'],
   max_length: ['value'],
-  default_if_empty: ['value'],
   replace_if_contains: ['find'],
   if_starts_with: ['value'],
   if_ends_with: ['value'],
@@ -227,15 +227,12 @@ function ValueMapEditor({
             value={from}
             onChange={(e) => renameKey(i, e.target.value)}
             placeholder="Source value"
-            className="bg-muted h-9 flex-1 rounded-3xl border-transparent font-mono text-xs shadow-none"
+            className="flex-1 font-mono"
           />
           <ArrowRight className="text-muted-foreground size-3 shrink-0" />
           {destOptions?.length ? (
             <Select value={to} onValueChange={(v) => setValue(i, v)}>
-              <SelectTrigger
-                size="sm"
-                className="bg-muted h-9 flex-1 rounded-3xl border-transparent shadow-none"
-              >
+              <SelectTrigger size="sm" className="flex-1">
                 <SelectValue placeholder="Destination value" />
               </SelectTrigger>
               <SelectContent>
@@ -251,7 +248,7 @@ function ValueMapEditor({
               value={to}
               onChange={(e) => setValue(i, e.target.value)}
               placeholder="Destination value"
-              className="bg-muted h-9 flex-1 rounded-3xl border-transparent font-mono text-xs shadow-none"
+              className="flex-1 font-mono"
             />
           )}
           <Button
@@ -365,15 +362,12 @@ function ValueMappingEditor({
             value={from}
             onChange={(e) => renameKey(i, e.target.value)}
             placeholder="Source value"
-            className="bg-muted h-9 flex-1 rounded-3xl border-transparent font-mono text-xs shadow-none"
+            className="flex-1 font-mono"
           />
           <ArrowRight className="text-muted-foreground size-3 shrink-0" />
           {destOptions?.length ? (
             <Select value={to} onValueChange={(v) => setValue(i, v)}>
-              <SelectTrigger
-                size="sm"
-                className="bg-muted h-9 flex-1 rounded-3xl border-transparent shadow-none"
-              >
+              <SelectTrigger size="sm" className="flex-1">
                 <SelectValue placeholder="Destination value" />
               </SelectTrigger>
               <SelectContent>
@@ -389,7 +383,7 @@ function ValueMappingEditor({
               value={to}
               onChange={(e) => setValue(i, e.target.value)}
               placeholder="Destination value"
-              className="bg-muted h-9 flex-1 rounded-3xl border-transparent font-mono text-xs shadow-none"
+              className="flex-1 font-mono"
             />
           )}
           <Button
@@ -462,7 +456,7 @@ function ActiveRule({
   return (
     <div
       className={cn(
-        'border-border bg-card rounded-4xl border shadow-none transition-opacity',
+        'border-border bg-card rounded-2xl border shadow-none transition-opacity',
         hasError && 'border-destructive',
         !isEnabled && 'opacity-55',
         isDragging && 'ring-primary/30 shadow-lg ring-2',
@@ -472,7 +466,7 @@ function ActiveRule({
         <button
           type="button"
           {...dragHandleProps}
-          className="text-muted-foreground hover:bg-muted focus-visible:ring-ring/30 flex size-7 shrink-0 cursor-grab items-center justify-center rounded-3xl outline-none focus-visible:ring-3 active:cursor-grabbing"
+          className="text-muted-foreground hover:bg-muted focus-visible:ring-ring/30 flex size-7 shrink-0 cursor-grab items-center justify-center rounded-md outline-none focus-visible:ring-3 active:cursor-grabbing"
           aria-label={`Drag to reorder ${def?.label || rule.type} rule`}
         >
           <GripVertical className="size-4" />
@@ -480,7 +474,7 @@ function ActiveRule({
 
         <span
           className={cn(
-            'bg-muted text-foreground flex size-6 shrink-0 items-center justify-center rounded-3xl text-[11px] font-bold',
+            'bg-muted text-foreground flex size-6 shrink-0 items-center justify-center rounded-md text-[11px] font-bold',
             hasError && 'bg-destructive text-destructive-foreground',
           )}
         >
@@ -564,7 +558,8 @@ function ActiveRule({
                   inputMode={isNum ? 'decimal' : 'text'}
                   onClick={(e) => e.stopPropagation()}
                   aria-invalid={showError}
-                  className="bg-muted h-8 w-full rounded-3xl border-transparent font-mono text-xs shadow-none"
+                  uiSize="sm"
+                  className="w-full font-mono"
                 />
               </label>
             );
@@ -931,9 +926,7 @@ export default function RuleBuilderModal({
               <Sparkles className="size-4.5" />
             </div>
             <div className="min-w-0 flex-1">
-              <SheetTitle className="text-lg font-bold">
-                Transformation Rules
-              </SheetTitle>
+              <SheetTitle>Transformation Rules</SheetTitle>
               <SheetDescription className="mt-0.5 text-xs">
                 Build transformation rules for this field mapping.
               </SheetDescription>
@@ -981,7 +974,7 @@ export default function RuleBuilderModal({
         </SheetHeader>
 
         <div className="shrink-0 px-3 pt-3">
-          <div className="bg-muted/40 flex items-start gap-2.5 rounded-4xl px-3 py-2.5">
+          <div className="bg-muted/40 flex items-start gap-2.5 rounded-3xl px-3 py-2.5">
             <Info className="text-primary mt-0.5 size-4 shrink-0" />
             <div>
               <p className="text-xs font-semibold">How transformations work</p>
@@ -995,14 +988,14 @@ export default function RuleBuilderModal({
 
         <div className="grid min-h-0 flex-1 gap-3 overflow-y-auto p-3 xl:grid-cols-[16rem_minmax(19rem,1fr)_15rem] xl:overflow-hidden">
           {/* Rule library */}
-          <aside className="border-border bg-card flex max-h-[38vh] min-h-0 flex-col gap-3 rounded-4xl border p-3 xl:max-h-none">
-            <div>
-              <h3 className="text-sm font-bold">Rule library</h3>
-              <p className="text-muted-foreground mt-0.5 text-xs">
-                Choose a rule to add to this field.
-              </p>
-            </div>
-            <InputGroup className="h-8">
+          <aside className="border-border bg-card flex max-h-[38vh] min-h-0 flex-col gap-3 rounded-3xl border p-3 xl:max-h-none">
+            <HeadingPair
+              visualLevel="card"
+              level="h3"
+              title="Rule library"
+              subtitle="Choose a rule to add to this field."
+            />
+            <InputGroup uiSize="sm">
               <InputGroupAddon>
                 <Search className="text-muted-foreground size-4" />
               </InputGroupAddon>
@@ -1048,7 +1041,7 @@ export default function RuleBuilderModal({
                         key={cat.id}
                         value={cat.id}
                         className={cn(
-                          'overflow-hidden rounded-4xl border-0 border-l-2',
+                          'overflow-hidden rounded-2xl border-0 border-l-2',
                           isOpen
                             ? 'border-primary bg-muted/50'
                             : 'border-transparent',
@@ -1067,7 +1060,8 @@ export default function RuleBuilderModal({
                             {cat.label}
                             <Badge
                               variant="secondary"
-                              className="ml-auto rounded-full px-1.5 font-normal"
+                              size="xs"
+                              className="ml-auto font-normal"
                             >
                               {catRules.length}
                             </Badge>
@@ -1085,7 +1079,7 @@ export default function RuleBuilderModal({
                                   type="button"
                                   onClick={() => addRule(def)}
                                   className={cn(
-                                    'group grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-2 rounded-3xl px-2 py-1.5 text-left text-xs transition-colors',
+                                    'group grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors',
                                     isFlashing
                                       ? 'bg-destructive/10'
                                       : 'hover:bg-muted/60',
@@ -1135,7 +1129,7 @@ export default function RuleBuilderModal({
                         type="button"
                         onClick={() => addRule(def)}
                         className={cn(
-                          'group w-full rounded-3xl px-2 py-1.5 text-left transition-colors',
+                          'group w-full rounded-md px-2 py-1.5 text-left transition-colors',
                           isFlashing
                             ? 'bg-destructive/10'
                             : 'hover:bg-muted/60',
@@ -1177,17 +1171,15 @@ export default function RuleBuilderModal({
           </aside>
 
           {/* Rule pipeline */}
-          <section className="border-border bg-card flex min-h-96 min-w-0 flex-col rounded-4xl border xl:min-h-0">
+          <section className="border-border bg-card flex min-h-96 min-w-0 flex-col rounded-3xl border xl:min-h-0">
             <div className="flex shrink-0 items-start justify-between gap-3 px-4 py-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold">Rule pipeline</h3>
-                  <Badge variant="secondary">{rules.length}</Badge>
-                </div>
-                <p className="text-muted-foreground mt-0.5 text-xs">
-                  Drag rules to set the top-to-bottom order.
-                </p>
-              </div>
+              <HeadingPair
+                visualLevel="card"
+                level="h3"
+                title="Rule pipeline"
+                subtitle="Drag rules to set the top-to-bottom order."
+                trailing={<Badge variant="secondary">{rules.length}</Badge>}
+              />
               {rules.length > 0 && (
                 <Button
                   variant="ghost"
@@ -1223,7 +1215,7 @@ export default function RuleBuilderModal({
                     {ruleSuggestions.map((suggestion) => (
                       <div
                         key={suggestion.id}
-                        className="border-border bg-muted/30 rounded-4xl border p-3"
+                        className="border-border bg-muted/30 rounded-2xl border p-3"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
@@ -1233,7 +1225,8 @@ export default function RuleBuilderModal({
                               </p>
                               <Badge
                                 variant="secondary"
-                                className="rounded-full px-1.5 text-[10px] font-normal"
+                                size="xs"
+                                className="font-normal"
                               >
                                 {suggestion.confidence === 'recommended'
                                   ? 'Recommended'
@@ -1267,7 +1260,7 @@ export default function RuleBuilderModal({
 
                 {rules.length === 0 ? (
                   <div className="flex flex-col items-center pt-5 text-center">
-                    <div className="bg-muted mb-3 flex size-12 items-center justify-center rounded-4xl">
+                    <div className="bg-muted mb-3 flex size-12 items-center justify-center rounded-2xl">
                       <Sparkles className="text-muted-foreground size-5" />
                     </div>
                     <p className="text-muted-foreground text-sm font-medium">
@@ -1329,15 +1322,15 @@ export default function RuleBuilderModal({
           </section>
 
           {/* Transformation preview */}
-          <aside className="border-border bg-card min-h-0 overflow-y-auto rounded-4xl border p-3">
-            <div>
-              <h3 className="text-sm font-bold">Test transformation</h3>
-              <p className="text-muted-foreground mt-0.5 text-xs">
-                Try a value before applying these rules.
-              </p>
-            </div>
+          <aside className="border-border bg-card min-h-0 overflow-y-auto rounded-3xl border p-3">
+            <HeadingPair
+              visualLevel="card"
+              level="h3"
+              title="Test transformation"
+              subtitle="Try a value before applying these rules."
+            />
 
-            <div className="bg-muted/30 mt-3 rounded-4xl border p-2.5">
+            <div className="bg-muted/30 mt-3 rounded-2xl border p-2.5">
               <label
                 htmlFor="rule-preview-input"
                 className="text-xs font-semibold"
@@ -1351,13 +1344,14 @@ export default function RuleBuilderModal({
                 id="rule-preview-input"
                 value={testInput}
                 onChange={(e) => setTestInput(e.target.value)}
-                className="bg-background mt-2 h-8 rounded-3xl font-mono text-xs shadow-none"
+                uiSize="sm"
+                className="mt-2 font-mono"
                 placeholder="Test input…"
               />
             </div>
 
             <div className="mt-3">
-              <div className="bg-muted/30 rounded-4xl border px-3 py-2">
+              <div className="bg-muted/30 rounded-2xl border px-3 py-2">
                 <p className="text-muted-foreground text-[11px] font-medium">
                   Original
                 </p>
@@ -1373,12 +1367,12 @@ export default function RuleBuilderModal({
                   <div className="bg-border mx-5 h-2 w-px" />
                   <div
                     className={cn(
-                      'rounded-4xl border px-3 py-2',
+                      'rounded-2xl border px-3 py-2',
                       !step.enabled && 'bg-muted/30 opacity-60',
                     )}
                   >
                     <div className="flex items-center gap-2">
-                      <span className="bg-muted flex size-5 shrink-0 items-center justify-center rounded-3xl text-[10px] font-bold">
+                      <span className="bg-muted flex size-5 shrink-0 items-center justify-center rounded-md text-[10px] font-bold">
                         {step.index + 1}
                       </span>
                       <p className="min-w-0 flex-1 truncate text-[11px] font-semibold">
@@ -1400,7 +1394,7 @@ export default function RuleBuilderModal({
               ))}
             </div>
 
-            <div className="border-primary/20 bg-primary/5 mt-3 rounded-4xl border p-2.5">
+            <div className="border-primary/20 bg-primary/5 mt-3 rounded-2xl border p-2.5">
               <p className="text-primary text-[11px] font-semibold">
                 Final output
               </p>

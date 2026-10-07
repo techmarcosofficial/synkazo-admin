@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { marketplaceApi } from '@/api/marketplace';
 import { tokenStorage } from '@/lib/tokenStorage';
+import { queryClientInstance } from '@/lib/query-client';
 
 export default function AuthCallback() {
   const navigate = useNavigate();
@@ -10,7 +11,11 @@ export default function AuthCallback() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const handoff = params.get('handoff');
-    const redirect = params.get('redirect') || '/dashboard';
+    const rawRedirect = params.get('redirect');
+    const redirect =
+      rawRedirect?.startsWith('/') && !rawRedirect.startsWith('//')
+        ? rawRedirect
+        : '/dashboard';
 
     if (!handoff) {
       navigate('/login', { replace: true });
@@ -22,9 +27,16 @@ export default function AuthCallback() {
     marketplaceApi
       .exchangeHandoff(handoff)
       .then((tokens) => {
+        queryClientInstance.clear();
+        tokenStorage.clearTokens();
         tokenStorage.setTokens(tokens);
         // Force a full page load so the auth context re-initialises from storage
-        window.location.replace(redirect);
+        const serverRedirect =
+          tokens.returnPath?.startsWith('/') &&
+          !tokens.returnPath.startsWith('//')
+            ? tokens.returnPath
+            : redirect;
+        window.location.replace(serverRedirect);
       })
       .catch(() => navigate('/login', { replace: true }));
   }, []);

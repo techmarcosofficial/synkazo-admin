@@ -1,6 +1,14 @@
-import { AlertCircleIcon, RefreshCw, X } from 'lucide-react';
+import {
+  AlertCircleIcon,
+  CheckCircle2,
+  Key,
+  Link2,
+  RefreshCw,
+  X,
+} from 'lucide-react';
+import { useMemo } from 'react';
 
-import ExcludeConditionsEditor from '@/components/fieldmapping/ExcludeConditionsEditor';
+import SkipRecordEditor from '@/components/fieldmapping/SkipRecordEditor';
 import FieldMappingCanvas, {
   type FieldDef as CanvasFieldDef,
   type MappingRow as CanvasMappingRow,
@@ -14,7 +22,10 @@ import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import type { MappingRow } from '@/features/jobs/types';
 import type { CanvasField } from '@/features/jobs/utils';
-import type { ExcludeCondition } from '@/types/conditions';
+import type {
+  DestinationSkipCondition,
+  ExcludeCondition,
+} from '@/types/conditions';
 
 export default function FieldMappingStep({
   sourcePlatform,
@@ -42,6 +53,8 @@ export default function FieldMappingStep({
   excludeConditions,
   excludeConditionLogic,
   onExcludeConditionsChange,
+  destinationSkipConditions,
+  onDestinationSkipConditionsChange,
   skipUpdateOnMatch,
   onSkipUpdateOnMatchChange,
 }: {
@@ -76,11 +89,43 @@ export default function FieldMappingStep({
     conditions: ExcludeCondition[],
     logic: 'AND' | 'OR',
   ) => void;
+  destinationSkipConditions: DestinationSkipCondition[];
+  onDestinationSkipConditionsChange: (
+    conditions: DestinationSkipCondition[],
+  ) => void;
   skipUpdateOnMatch: boolean;
   onSkipUpdateOnMatchChange: (value: boolean) => void;
 }) {
   const sourceFields = [...customSourceFields, ...apiSourceFields];
   const destFields = [...customDestFields, ...apiDestFields];
+
+  const mappedSourceKeys = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          fieldMappings
+            .map((mapping) => mapping.sourceField)
+            .filter((field): field is string => Boolean(field)),
+        ),
+      ),
+    [fieldMappings],
+  );
+
+  const mappedDestinationKeys = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          fieldMappings
+            .flatMap((mapping) =>
+              Array.isArray(mapping.destField)
+                ? mapping.destField
+                : [mapping.destField],
+            )
+            .filter((field): field is string => Boolean(field)),
+        ),
+      ),
+    [fieldMappings],
+  );
 
   return (
     <div className="space-y-3">
@@ -129,6 +174,51 @@ export default function FieldMappingStep({
               </AlertDescription>
             </Alert>
           )}
+          {(() => {
+            const hasMatchField = fieldMappings.some(
+              (m) => Boolean(m.isMatchField || m.matchDestKey),
+            );
+            return (
+              <div className="rounded-3xl border border-info/30 bg-info/5 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-info/10 text-info">
+                    {hasMatchField ? (
+                      <CheckCircle2 className="text-success size-3.5" />
+                    ) : (
+                      <Key className="size-3.5" />
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h4 className="text-foreground text-sm font-semibold">
+                        How should we identify matching records? (Unique Identifier)
+                      </h4>
+                      {hasMatchField ? (
+                        <Badge
+                          variant="secondary"
+                          className="border-success/20 bg-success/10 text-success text-[10px]"
+                        >
+                          Identifier Configured
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant="secondary"
+                          className="border-warning/20 bg-warning/10 text-warning text-[10px]"
+                        >
+                          Required Before Next Step
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-muted-foreground text-xs leading-relaxed">
+                      To prevent duplicate records from being created in your destination platform,
+                      choose at least one field that uniquely identifies each record (such as Email, Phone, or ID).
+                      Click the <strong>key icon</strong> next to the primary matching field in the canvas below.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
           <FieldMappingCanvas
             sourceFields={sourceFields as unknown as CanvasFieldDef[]}
             destFields={destFields as unknown as CanvasFieldDef[]}
@@ -188,21 +278,17 @@ export default function FieldMappingStep({
         </div>
       )}
 
-      <Card>
-        <CardContent>
-          <h3 className="mb-1 font-semibold">Skip Records</h3>
-          <p className="text-muted-foreground mb-4 text-xs">
-            Exclude source records from this job entirely — e.g. skip employee
-            accounts, test records, or anything matching a specific value.
-          </p>
-          <ExcludeConditionsEditor
-            sourceFields={sourceFields as unknown as CanvasFieldDef[]}
-            conditions={excludeConditions}
-            conditionLogic={excludeConditionLogic}
-            onChange={onExcludeConditionsChange}
-          />
-        </CardContent>
-      </Card>
+      <SkipRecordEditor
+        sourceFields={sourceFields as unknown as CanvasFieldDef[]}
+        destinationFields={destFields as unknown as CanvasFieldDef[]}
+        sourceConditions={excludeConditions}
+        sourceConditionLogic={excludeConditionLogic}
+        destinationConditions={destinationSkipConditions}
+        onSourceChange={onExcludeConditionsChange}
+        onDestinationChange={onDestinationSkipConditionsChange}
+        mappedSourceKeys={mappedSourceKeys}
+        mappedDestinationKeys={mappedDestinationKeys}
+      />
 
       <Card>
         <CardContent>
@@ -225,6 +311,22 @@ export default function FieldMappingStep({
           </Field>
         </CardContent>
       </Card>
+
+      <div className="border-border/60 bg-muted/40 flex flex-col gap-3 rounded-2xl border p-3.5 text-xs sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-xl">
+            <Link2 className="size-4" />
+          </div>
+          <div>
+            <p className="text-foreground font-semibold">
+              Linking Related Records (e.g. Contacts to Companies)
+            </p>
+            <p className="text-muted-foreground text-xs">
+              Field mapping synchronizes record attributes. To associate records across platforms, configure Record Associations in Project Settings once your flows are set up.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

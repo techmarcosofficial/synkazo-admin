@@ -24,6 +24,7 @@ import PipelineMissingBanner from './PipelineMissingBanner';
 import { jobsApi } from '@/api/jobs';
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
+import HeadingPair from '@/components/shared/HeadingPair';
 import ManagementToolbar from '@/components/shared/ManagementToolbar';
 import PageContextAlert from '@/components/shared/PageContextAlert';
 import PageHeader from '@/components/shared/PageHeader';
@@ -56,7 +57,7 @@ import { cn } from '@/lib/utils';
 import { queryKeys } from '@/queries/queryKeys';
 import { useJobsQuery } from '@/queries/useJobs';
 import { useProjectsQuery } from '@/queries/useProjects';
-import type { Job, JobStatus } from '@/types';
+import type { Job, JobStatus, Project, ProjectEnvironment } from '@/types';
 
 interface JobWithMeta extends Job {
   projectName?: string;
@@ -312,12 +313,11 @@ export default function JobsListPage() {
         <Card>
           <CardContent className="space-y-6">
             <div className="flex justify-between">
-              <div className="space-y-1">
-                <h3 className="text-lg font-semibold">Manage jobs</h3>
-                <p className="text-muted-foreground text-sm">
-                  Manage and trigger sync jobs
-                </p>
-              </div>
+              <HeadingPair
+                level="h3"
+                title="Manage jobs"
+                subtitle="Manage and trigger sync jobs"
+              />
               <ManagementToolbar
                 searchValue={search}
                 onSearchChange={setSearch}
@@ -368,7 +368,7 @@ export default function JobsListPage() {
                 viewMode="table"
               />
             ) : (
-              <div className="overflow-hidden rounded-4xl border">
+              <div className="overflow-hidden rounded-3xl border">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted hover:bg-muted/50">
@@ -565,6 +565,15 @@ export default function JobsListPage() {
           job={confirm.job}
           projectId={confirm.job.projectId}
           jobId={confirm.job.id}
+          environment={
+            (
+              projects.find((p) => p.id === confirm.job.projectId) as
+                | (Project & { activeEnvironment?: ProjectEnvironment })
+                | undefined
+            )?.activeEnvironment ??
+            projects.find((p) => p.id === confirm.job.projectId)
+              ?.active_environment
+          }
           mode="runNow"
           pipelineRequired={!!pipelineIssues[confirm.job.id]}
           pipelineConfigured={!pipelineIssues[confirm.job.id]}

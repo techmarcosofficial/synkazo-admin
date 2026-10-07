@@ -13,19 +13,41 @@ export function selectContextualSetupAction(input: {
 }
 
 export type ProjectOnboardingStage =
-  'connect_platforms' | 'create_first_job' | 'complete';
+  'connect_platforms' | 'create_first_job' | 'configure_job' | 'complete';
+
+export interface ProjectOnboardingStageJob {
+  status?: string;
+  syncEnabled?: boolean;
+  isEnabled?: boolean;
+  lastSyncedAt?: string | null;
+  recordsSynced?: number;
+}
 
 export function selectProjectOnboardingStage(input: {
   hasBothConnections: boolean;
   hasJobs: boolean;
+  jobs?: ProjectOnboardingStageJob[];
+  runStatuses?: Array<string | undefined>;
 }): ProjectOnboardingStage {
-  // A job can only be created after connections were ready. Its existence is
-  // therefore the durable, data-backed completion signal for this project;
-  // a later connection outage should be handled operationally, not restart
-  // first-time onboarding.
-  if (input.hasJobs) return 'complete';
-  if (input.hasBothConnections) return 'create_first_job';
-  return 'connect_platforms';
+  // Recent activity distinguishes a clean run from a partial one. Older
+  // projects without retained run activity can still use the job watermark.
+  const loggedRuns = input.runStatuses?.filter(Boolean) ?? [];
+  const hasCompletedRun =
+    loggedRuns.length > 0
+      ? loggedRuns.includes('success')
+      : (input.jobs?.some(
+          (job) => Boolean(job.lastSyncedAt) || (job.recordsSynced ?? 0) > 0,
+        ) ?? false);
+
+  if (!input.hasBothConnections) {
+    return hasCompletedRun ? 'complete' : 'connect_platforms';
+  }
+
+  if (hasCompletedRun) return 'complete';
+
+  return input.hasJobs || Boolean(input.jobs?.length)
+    ? 'configure_job'
+    : 'create_first_job';
 }
 
 export type JobOnboardingStage =

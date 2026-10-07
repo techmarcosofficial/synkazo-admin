@@ -163,8 +163,8 @@ describe('DangerZoneCard', () => {
       await screen.findByText('Admin access required'),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: 'Review and archive' }),
-    ).not.toBeInTheDocument();
+      screen.getByRole('button', { name: 'Review and archive' }),
+    ).toBeDisabled();
   });
 
   it('keeps archive failures in the dialog without redirecting', async () => {

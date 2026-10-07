@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { useLocation, useParams, useSearchParams } from 'react-router-dom';
 
 import {
   ProjectDetailProvider,
@@ -17,6 +17,9 @@ import StickyDetailHeader from '@/components/shared/StickyDetailHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs } from '@/components/ui/tabs';
+import { projectsApi } from '@/api/projects';
+import type { ProjectStatus } from '@/types';
+import { toast } from 'sonner';
 import {
   useProjectDetailCacheHelpers,
   useProjectDetailQuery,
@@ -29,6 +32,26 @@ import { hasBothConnections as computeHasBothConnections } from '@/features/proj
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const locationState = location.state as { from?: string; fromLabel?: string } | null;
+  const fromParam = searchParams.get('from');
+  const rawFrom = locationState?.from || fromParam;
+  const isFromDashboard = Boolean(
+    rawFrom &&
+      (rawFrom === 'dashboard' ||
+        rawFrom === '/dashboard' ||
+        rawFrom.startsWith('/dashboard')),
+  );
+  const backTo = isFromDashboard
+    ? '/dashboard'
+    : rawFrom && rawFrom.startsWith('/') && !rawFrom.startsWith('//')
+      ? rawFrom
+      : '/projects';
+  const backLabel =
+    locationState?.fromLabel ||
+    (isFromDashboard ? 'Back to Dashboard' : 'Back to Projects');
+
   const projectId = id!;
 
   const detailQuery = useProjectDetailQuery(projectId);
@@ -42,7 +65,24 @@ export default function ProjectDetailPage() {
   const connections = detailQuery.data?.connections ?? [];
   const logs = detailQuery.data?.logs ?? [];
 
-  const [showCreateJob, setShowCreateJob] = useState(false);
+  const [showCreateJob, setShowCreateJob] = useState(
+    () => searchParams.get('create') === 'true' || searchParams.get('create') === '1',
+  );
+
+  useEffect(() => {
+    if (searchParams.get('create') === 'true' || searchParams.get('create') === '1') {
+      setShowCreateJob(true);
+    }
+  }, [searchParams]);
+
+  const handleSetShowCreateJob = (show: boolean) => {
+    setShowCreateJob(show);
+    if (!show && searchParams.get('create')) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('create');
+      setSearchParams(next, { replace: true });
+    }
+  };
 
   const hasBothConnections = computeHasBothConnections(connections);
   const hasJobs = jobs.length > 0;
@@ -63,6 +103,97 @@ export default function ProjectDetailPage() {
   });
 
   useProjectDetailLiveSync(projectId, refetch);
+
+  // Automated self-healing project status management:
+  // 1. Promotes from 'draft' to 'active' when both platforms are verified during onboarding.
+  // 2. Restores from 'error' to their previous state ('active' or 'draft') when broken connections are fixed and re-verified.
+  // 3. Demotes from 'active' to 'error' when an active project's connection fails or is disconnected.
+  const isUpdatingStatusRef = useRef(false);
+
+  useEffect(() => {
+    if (
+      loading ||
+      !detailQuery.data ||
+      !project ||
+      isUpdatingStatusRef.current
+    ) {
+      return;
+    }
+
+    const prevStatusKey = `synkazo:proj-prev-status:${projectId}`;
+
+    if (hasBothConnections) {
+      if (project.status === 'draft') {
+        isUpdatingStatusRef.current = true;
+        projectsApi
+          .updateProject(projectId, { status: 'active' as ProjectStatus })
+          .then(() => {
+            patchProject({ status: 'active' as ProjectStatus });
+            try {
+              sessionStorage.removeItem(prevStatusKey);
+            } catch {}
+          })
+          .catch(() => {})
+          .finally(() => {
+            isUpdatingStatusRef.current = false;
+          });
+      } else if (project.status === 'error') {
+        isUpdatingStatusRef.current = true;
+        let targetStatus: ProjectStatus = 'active';
+        try {
+          const stored = sessionStorage.getItem(prevStatusKey);
+          if (stored === 'draft') {
+            targetStatus = 'draft';
+          } else {
+            targetStatus = 'active';
+          }
+        } catch {
+          targetStatus = 'active';
+        }
+
+        projectsApi
+          .updateProject(projectId, { status: targetStatus })
+          .then(() => {
+            patchProject({ status: targetStatus });
+            try {
+              sessionStorage.removeItem(prevStatusKey);
+            } catch {}
+          })
+          .catch(() => {})
+          .finally(() => {
+            isUpdatingStatusRef.current = false;
+          });
+      }
+    } else {
+      // Connections are broken or missing on an active project
+      if (project.status === 'active') {
+        try {
+          sessionStorage.setItem(prevStatusKey, 'active');
+        } catch {}
+        isUpdatingStatusRef.current = true;
+        projectsApi
+          .updateProject(projectId, { status: 'error' as ProjectStatus })
+          .then(() => {
+            patchProject({ status: 'error' as ProjectStatus });
+            toast.error(
+              'Connection issue detected — Project status set to Error.',
+            );
+          })
+          .catch(() => {})
+          .finally(() => {
+            isUpdatingStatusRef.current = false;
+          });
+      }
+    }
+  }, [
+    hasBothConnections,
+    project?.status,
+    projectId,
+    patchProject,
+    loading,
+    detailQuery.data,
+    jobs.length,
+  ]);
 
   if (loading) {
     return (
@@ -97,7 +228,7 @@ export default function ProjectDetailPage() {
   if (!project) {
     return (
       <div className="space-y-4">
-        <BackLink label="Back to Projects" to="/projects" />
+        <BackLink label={backLabel} to={backTo} />
         <ErrorState onRetry={() => detailQuery.refetch()} />
       </div>
     );
@@ -117,10 +248,10 @@ export default function ProjectDetailPage() {
     refetch,
     handleTabChange,
     showCreateJob,
-    setShowCreateJob,
+    setShowCreateJob: handleSetShowCreateJob,
     onCreateSyncRule: () => {
       handleTabChange('sync-rules');
-      setShowCreateJob(true);
+      handleSetShowCreateJob(true);
     },
     projectActiveEnv: envActivation.projectActiveEnv,
     envActivating: envActivation.envActivating,
@@ -137,15 +268,15 @@ export default function ProjectDetailPage() {
       <Tabs
         value={activeTab}
         onValueChange={(v) => handleTabChange(v as ProjectDetailTabId)}
-        className="gap-0"
+        className="project-flow-guidance gap-0"
       >
         <StickyDetailHeader
-          backLabel="Back to Projects"
-          backTo="/projects"
+          backLabel={backLabel}
+          backTo={backTo}
           header={
-            <Card className="gap-0 space-y-3 overflow-hidden py-0">
+            <Card className="gap-0 space-y-2 overflow-hidden py-0">
               <ProjectHeader />
-              <div className="overflow-x-auto px-5">
+              <div className="overflow-x-auto px-4">
                 <ProjectTabs tabs={tabs} />
               </div>
             </Card>

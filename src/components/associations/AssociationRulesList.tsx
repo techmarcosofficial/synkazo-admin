@@ -30,7 +30,6 @@ import {
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
-import CompanyOwnerSection from './CompanyOwnerSection';
 import AssociationRuleFormDialog from './AssociationRuleFormDialog';
 import AssociationRunsList, {
   type AssociationResultFilter,
@@ -115,7 +114,7 @@ function StatChip({
 }) {
   if (!count && count !== 0) return null;
   return (
-    <Badge className={cn(tone, 'rounded-full')}>
+    <Badge className={tone}>
       {count} {label}
     </Badge>
   );
@@ -318,26 +317,31 @@ export function RuleRecordsList({
               setPage(1);
             }}
             placeholder="Search records…"
-            className="h-8 w-full text-sm sm:w-48"
+            uiSize="sm"
+            className="w-full sm:w-48"
           />
           <div className="flex flex-wrap gap-2">
             {RECORD_FILTER_OPTIONS.map((option) => (
-              <button
+              <Button
                 key={option.value}
                 type="button"
+                size="xs"
+                variant={
+                  recordFilter === option.value ? 'secondary' : 'outline'
+                }
                 onClick={() => {
                   setRecordFilter(option.value);
                   setPage(1);
                 }}
                 className={cn(
-                  'rounded-full border px-3 py-1 text-[11px] font-medium transition-colors',
+                  'font-medium',
                   recordFilter === option.value
                     ? 'border-primary bg-primary/10 text-primary'
                     : 'border-border/80 bg-background/50 hover:bg-muted text-muted-foreground hover:text-foreground',
                 )}
               >
                 {option.label}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -887,7 +891,8 @@ function RuleCard({
                   type="button"
                   variant="outline"
                   size="icon-sm"
-                  className="shrink-0 rounded-full"
+                  shape="pill"
+                  className="shrink-0"
                   aria-label={`${expanded ? 'Collapse' : 'Expand'} ${associationName}`}
                   aria-expanded={expanded}
                 >
@@ -1048,12 +1053,8 @@ function AssociationMetric({
 
 export default function AssociationRulesList({
   projectId,
-  showCompanyOwnerSection = true,
-  ownerSourcePlatform = 'servicetitan',
 }: {
   projectId: string;
-  showCompanyOwnerSection?: boolean;
-  ownerSourcePlatform?: 'servicetitan' | 'dataforma' | null;
 }) {
   const [rules, setRules] = useState<AssociationRule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1163,13 +1164,11 @@ export default function AssociationRulesList({
   return (
     <div className="space-y-4">
       <Card className="gap-0 border py-0">
-        <CardHeader className="border-b px-4 py-3">
+        <CardHeader visualLevel="section" className="border-b px-4 py-3">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div className="min-w-0">
-              <CardTitle className="text-sm font-semibold">
-                Associations
-              </CardTitle>
-              <CardDescription className="mt-0.5 text-xs">
+              <CardTitle>Associations</CardTitle>
+              <CardDescription>
                 Create associations, review their runs, and trace every record.
               </CardDescription>
             </div>
@@ -1283,13 +1282,6 @@ export default function AssociationRulesList({
           )}
         </CardContent>
       </Card>
-
-      {showCompanyOwnerSection && (
-        <CompanyOwnerSection
-          projectId={projectId}
-          sourcePlatform={ownerSourcePlatform ?? 'servicetitan'}
-        />
-      )}
 
       {showCreate && (
         <AssociationRuleFormDialog

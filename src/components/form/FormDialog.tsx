@@ -1,7 +1,11 @@
+import type { LucideIcon } from 'lucide-react';
 import { XIcon } from 'lucide-react';
+import { useContext } from 'react';
 
 import WizardStepHeader from './WizardStepHeader';
 
+import { TenantAdminVisualContext } from '@/components/shared/TenantAdminVisualContext';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -13,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { useDialogCloseGuard } from '@/hooks/useDialogCloseGuard';
+import { cn } from '@/lib/utils';
 
 interface FormDialogProps {
   open: boolean;
@@ -20,6 +25,14 @@ interface FormDialogProps {
   title: string;
   description?: string;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
+  /** Domain category badge shown above title (e.g. 'Related Objects', 'Custom Schema') */
+  category?: string;
+  /** Context or count badge shown next to category (string or custom ReactNode) */
+  badge?: React.ReactNode;
+  /** Primary icon rendered next to dialog title */
+  icon?: LucideIcon | React.ComponentType<{ className?: string }>;
+  /** Tighter spacing without header/footer dividers for brief confirmations. */
+  compact?: boolean;
   children: React.ReactNode;
   // Function form receives requestClose, the same close handler used by the
   // header X button — wire footer Cancel buttons to it (instead of an onClose
@@ -52,6 +65,10 @@ export default function FormDialog({
   title,
   description,
   size = 'md',
+  category,
+  badge,
+  icon: Icon,
+  compact = false,
   children,
   footer,
   currentStep,
@@ -61,6 +78,7 @@ export default function FormDialog({
   preventOutsideClose = true,
   isDirty = false,
 }: FormDialogProps) {
+  const tenantAdminVisuals = useContext(TenantAdminVisualContext);
   const { requestClose } = useDialogCloseGuard({
     isDirty,
     onClose: () => onOpenChange(false),
@@ -69,13 +87,37 @@ export default function FormDialog({
   const isWizard =
     typeof currentStep === 'number' && typeof totalSteps === 'number';
   const hasFullStepper = isWizard && !!stepLabels;
+  const dialogSpacing = tenantAdminVisuals
+    ? compact
+      ? {
+          header: 'px-4 pt-4 pb-1',
+          body: 'px-4 py-2',
+          footer: 'px-4 pt-2 pb-4',
+        }
+      : {
+          header: 'bg-background border-b px-4 py-3',
+          body: 'px-4 py-4',
+          footer: 'bg-muted/20 border-t px-4 py-3',
+        }
+    : compact
+      ? {
+          header: 'px-5 pt-5 pb-1',
+          body: 'px-5 py-2',
+          footer: 'px-5 pt-2 pb-5',
+        }
+      : {
+          header: 'bg-background border-b px-6 py-4',
+          body: 'px-6 py-6',
+          footer: 'bg-muted/20 border-t px-6 py-3',
+        };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         size={size}
+        padding="none"
         showCloseButton={false}
-        className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0"
+        className="flex max-h-[85vh] flex-col gap-0 overflow-hidden"
         onEscapeKeyDown={(e) => {
           if (preventOutsideClose) e.preventDefault();
         }}
@@ -83,7 +125,12 @@ export default function FormDialog({
           if (preventOutsideClose) e.preventDefault();
         }}
       >
-        <DialogHeader className="shrink-0 flex-row items-center justify-between gap-4 border-b px-6 py-4">
+        <DialogHeader
+          className={cn(
+            'shrink-0 flex-row items-start justify-between gap-4',
+            dialogSpacing.header,
+          )}
+        >
           {hasFullStepper ? (
             <WizardStepHeader
               title={title}
@@ -98,9 +145,42 @@ export default function FormDialog({
           ) : (
             <>
               <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <DialogTitle>{title}</DialogTitle>
+                {(category || badge) && (
+                  <div className="flex items-center gap-2 mb-0.5">
+                    {category && (
+                      <Badge
+                        variant="outline"
+                        className="text-muted-foreground text-[11px] font-medium"
+                      >
+                        {category}
+                      </Badge>
+                    )}
+                    {badge &&
+                      (typeof badge === 'string' ? (
+                        <Badge
+                          variant="secondary"
+                          className="bg-primary/10 text-primary border-primary/20 text-[11px]"
+                        >
+                          {badge}
+                        </Badge>
+                      ) : (
+                        badge
+                      ))}
+                  </div>
+                )}
+                <DialogTitle
+                  className={cn(
+                    'text-foreground flex items-center gap-2 text-base font-semibold',
+                    (category || badge) && 'mt-0.5',
+                  )}
+                >
+                  {Icon && <Icon className="text-primary size-5 shrink-0" />}
+                  <span>{title}</span>
+                </DialogTitle>
                 {description && (
-                  <DialogDescription>{description}</DialogDescription>
+                  <DialogDescription className="text-muted-foreground text-xs">
+                    {description}
+                  </DialogDescription>
                 )}
                 {isWizard && (
                   <Progress
@@ -112,7 +192,10 @@ export default function FormDialog({
               <Button
                 variant="ghost"
                 size="icon-sm"
-                className="bg-secondary shrink-0"
+                className={cn(
+                  'shrink-0',
+                  compact ? 'bg-transparent' : 'bg-secondary',
+                )}
                 onClick={requestClose}
               >
                 <XIcon />
@@ -122,12 +205,14 @@ export default function FormDialog({
           )}
         </DialogHeader>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
+        <div
+          className={cn('min-h-0 flex-1 overflow-y-auto', dialogSpacing.body)}
+        >
           {children}
         </div>
 
         {footer && (
-          <DialogFooter className="shrink-0 border-t px-6 py-4">
+          <DialogFooter className={cn('shrink-0', dialogSpacing.footer)}>
             {typeof footer === 'function' ? footer(requestClose) : footer}
           </DialogFooter>
         )}

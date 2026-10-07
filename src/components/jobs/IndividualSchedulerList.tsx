@@ -319,13 +319,13 @@ function JobCard({
                 </p>
                 <Button asChild variant="outline" size="sm">
                   <Link
-                    to={`/projects/${projectId}/jobs/${job.id}?tab=schedule`}
+                    to={`/projects/${projectId}/jobs/${job.id}?tab=settings&section=schedule`}
                   >
                     Edit schedule
                   </Link>
                 </Button>
               </div>
-              <div className="overflow-hidden rounded-4xl border">
+              <div className="overflow-hidden rounded-3xl border">
                 <div className="bg-muted px-4 py-3">
                   <p className="text-xs font-semibold tracking-wider uppercase">
                     Recent Runs

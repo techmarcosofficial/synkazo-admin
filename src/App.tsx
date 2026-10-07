@@ -55,13 +55,22 @@ import SchedulerHealth from '@/pages/SchedulerHealth';
 import PreferencesTab from '@/pages/settings/tabs/PreferencesTab';
 import ProfileTab from '@/pages/settings/tabs/ProfileTab';
 import SettingsLayout from '@/pages/settings/SettingsLayout';
+import FailedPaymentsPage from '@/pages/superadmin/FailedPaymentsPage';
 import OrganisationsPage from '@/pages/superadmin/OrganisationsPage';
+import OrganisationBillingPage from '@/pages/superadmin/OrganisationBillingPage';
+import OrganisationDetailPage from '@/pages/superadmin/OrganisationDetailPage';
+import OrganisationMembersPage from '@/pages/superadmin/OrganisationMembersPage';
+import OrganisationProjectDetailPage from '@/pages/superadmin/OrganisationProjectDetailPage';
+import OrganisationProjectAssociationsPage from '@/pages/superadmin/associations/OrganisationProjectAssociationsPage';
+import OrganisationProjectMigrationPage from '@/pages/superadmin/migration/OrganisationProjectMigrationPage';
+import OrganisationProjectsPage from '@/pages/superadmin/OrganisationProjectsPage';
 import MarketingPage from '@/pages/superadmin/MarketingPage';
 import OverviewPage from '@/pages/superadmin/OverviewPage';
 import PlatformAuditPage from '@/pages/superadmin/PlatformAuditPage';
 import SuperAdminLayout from '@/pages/superadmin/SuperAdminLayout';
 import SuperAdminProjectsPage from '@/pages/superadmin/ProjectsPage';
 import SystemSettingsPage from '@/pages/superadmin/SystemSettingsPage';
+import SuperAdminsPage from '@/pages/superadmin/SuperAdminsPage';
 import UsersPage from '@/pages/superadmin/UsersPage';
 
 // App pages
@@ -219,11 +228,44 @@ function App() {
                 />
                 <Route path="overview" element={<OverviewPage />} />
                 <Route path="organisations" element={<OrganisationsPage />} />
+                <Route
+                  path="organisations/:organisationId/overview"
+                  element={<OrganisationDetailPage />}
+                />
+                <Route
+                  path="organisations/:organisationId/members"
+                  element={<OrganisationMembersPage />}
+                />
+                <Route
+                  path="organisations/:organisationId/projects"
+                  element={<OrganisationProjectsPage />}
+                />
+                <Route
+                  path="organisations/:organisationId/projects/:projectId"
+                  element={<OrganisationProjectDetailPage />}
+                />
+                <Route
+                  path="organisations/:organisationId/projects/:projectId/associations"
+                  element={<OrganisationProjectAssociationsPage />}
+                />
+                <Route
+                  path="organisations/:organisationId/projects/:projectId/migration"
+                  element={<OrganisationProjectMigrationPage />}
+                />
+                <Route
+                  path="organisations/:organisationId/billing"
+                  element={<OrganisationBillingPage />}
+                />
                 <Route path="users" element={<UsersPage />} />
+                <Route path="super-admins" element={<SuperAdminsPage />} />
                 <Route path="marketing" element={<MarketingPage />} />
                 <Route path="projects" element={<SuperAdminProjectsPage />} />
                 <Route path="plans" element={<PlanManagementPage />} />
                 <Route path="discounts" element={<DiscountManagementPage />} />
+                <Route
+                  path="failed-payments"
+                  element={<FailedPaymentsPage />}
+                />
                 <Route path="system" element={<SystemSettingsPage />} />
                 <Route path="audit-log" element={<PlatformAuditPage />} />
                 <Route

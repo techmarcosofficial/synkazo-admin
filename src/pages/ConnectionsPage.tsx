@@ -10,6 +10,7 @@ import {
 } from '@/components/platform';
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
+import HeadingPair from '@/components/shared/HeadingPair';
 import ManagementToolbar from '@/components/shared/ManagementToolbar';
 import PageHeader from '@/components/shared/PageHeader';
 import PaginationBar from '@/components/shared/PaginationBar';
@@ -210,12 +211,11 @@ export default function ConnectionsPage() {
       <Card>
         <CardContent className="space-y-8">
           <div className="flex justify-between">
-            <div className="space-y-1">
-              <h3 className="text-lg font-semibold">Manage your connections</h3>
-              <p className="text-muted-foreground text-xs">
-                Search, filter, and switch between table and card view
-              </p>
-            </div>
+            <HeadingPair
+              level="h3"
+              title="Manage your connections"
+              subtitle="Search, filter, and switch between table and card view"
+            />
             <ManagementToolbar
               searchValue={search}
               onSearchChange={setSearch}
@@ -263,7 +263,7 @@ export default function ConnectionsPage() {
 
           {isLoading ? (
             viewMode === 'table' ? (
-              <div className="overflow-hidden rounded-4xl border">
+              <div className="overflow-hidden rounded-3xl border">
                 <SkeletonTable rows={6} columns={5} />
               </div>
             ) : (
@@ -297,7 +297,7 @@ export default function ConnectionsPage() {
               />
             )
           ) : viewMode === 'table' ? (
-            <div className="overflow-hidden rounded-4xl border">
+            <div className="overflow-hidden rounded-3xl border">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted hover:bg-muted/50">

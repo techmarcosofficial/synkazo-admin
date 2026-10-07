@@ -95,8 +95,17 @@ apiClient.interceptors.response.use(
     ) {
       const msg =
         error.response?.data?.message || 'Server error. Please try again.';
+      // GAP-030 — surface the correlation id so an operator can pass
+      // it to support. The API sets it as `X-Correlation-Id` on every
+      // response (header) and also echoes it into the error body for
+      // clients that can't read the header cross-origin.
+      const correlationId =
+        (error.response?.data as { correlationId?: string } | undefined)
+          ?.correlationId ??
+        (error.response?.headers?.['x-correlation-id'] as string | undefined);
+      const label = typeof msg === 'string' ? msg : 'Server error. Please try again.';
       toast.error(
-        typeof msg === 'string' ? msg : 'Server error. Please try again.',
+        correlationId ? `${label} (ref: ${correlationId})` : label,
       );
     }
     return Promise.reject(error);

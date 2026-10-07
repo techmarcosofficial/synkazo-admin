@@ -37,6 +37,7 @@ export function useJobHeaderAlert(): ResolvedJobHeaderAlert | undefined {
     handleToggle,
     handleTabChange,
     refetch,
+    activeTab,
   } = useJobDetailContext();
 
   const [activatingProject, setActivatingProject] = useState(false);
@@ -76,7 +77,7 @@ export function useJobHeaderAlert(): ResolvedJobHeaderAlert | undefined {
     }
   };
 
-  if (!isProjectActive) {
+  if (!isProjectActive && activeTab !== 'field-mapping') {
     candidates.push({
       key: 'project-inactive',
       variant: 'warning',
@@ -131,14 +132,14 @@ export function useJobHeaderAlert(): ResolvedJobHeaderAlert | undefined {
           )}
           {jobFieldMappings.length > 0 && !hasMatchField && (
             <li>
-              Mark at least one field as a{' '}
+              Mark at least one field as an{' '}
               <button
                 onClick={() => handleTabChange('field-mapping')}
                 className="hover:text-foreground underline transition-colors"
               >
-                Match Field
+                Identifier
               </button>{' '}
-              — required to match existing HubSpot records
+              — required to match existing records
             </li>
           )}
         </ul>
@@ -149,22 +150,26 @@ export function useJobHeaderAlert(): ResolvedJobHeaderAlert | undefined {
   if (canActivate && !isActive) {
     candidates.push({
       key: 'ready-to-activate',
-      variant: 'success',
-      icon: Check,
-      title: 'Setup complete — activate to start scheduled syncing',
+      variant: 'warning',
+      icon: AlertTriangle,
+      title: 'Job is Inactive — Activation required for data movement',
       description: (
         <>
-          This project is fully configured.{' '}
+          This job is fully configured, but currently{' '}
+          <strong className="text-foreground">Inactive</strong>. Synkazo
+          requires an Active status before any sync can move data. When Inactive,
+          all manual runs, automated schedules, and priority queue cycles are
+          frozen.{' '}
           <Button
             variant="link"
             size="xs"
-            className="text-success h-auto p-0"
+            className="text-foreground h-auto p-0 font-semibold underline"
             onClick={handleToggle}
             disabled={toggling}
           >
-            {toggling ? 'Activating…' : 'Activate'}
+            {toggling ? 'Activating…' : 'Activate Job'}
           </Button>{' '}
-          to enable synchronization.
+          to enable synchronization, or toggle the Status dropdown in the header.
         </>
       ),
     });

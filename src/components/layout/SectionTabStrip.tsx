@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 
 /**
  * The route-driven tab strip shared by the section workspaces, using the same
- * line treatment and thick primary underline as the Project and Sync Job detail
+ * line treatment and primary underline as the Project and Sync Job detail
  * pages (see features/projects ProjectTabs).
  *
  * Presentational only: `value` comes from the resolved route, `onValueChange`
@@ -39,7 +39,7 @@ export default function SectionTabStrip({
               key={tab.id}
               value={tab.id}
               data-tour={`${tab.id}-tab`}
-              className="after:bg-primary rounded-full py-2 font-semibold after:-bottom-0.5! after:h-1!"
+              className="py-2"
             >
               {tab.label}
             </TabsTrigger>

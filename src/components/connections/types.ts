@@ -10,3 +10,11 @@ export interface TestResult {
   ok: boolean;
   msg: string;
 }
+
+export interface ConnectionPayload {
+  platformId?: string;
+  connectionType?: string;
+  environment?: string;
+  credentials?: Record<string, string | undefined>;
+  status?: string;
+}

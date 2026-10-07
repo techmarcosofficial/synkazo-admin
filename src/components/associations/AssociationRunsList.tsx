@@ -143,6 +143,7 @@ function RecordDetails({
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const ruleId = run.associationRuleId ?? run.associationRule?.id ?? '';
+  const isOwnerRule = run.associationRule?.targetObject === 'record_owner';
   const status = result === 'associated' ? 'completed' : result;
 
   useEffect(() => {
@@ -254,8 +255,14 @@ function RecordDetails({
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Source Record ID</TableHead>
-                          <TableHead>Destination Record ID</TableHead>
+                          <TableHead>
+                            {isOwnerRule
+                              ? 'Owner Assignment'
+                              : 'Source Record ID'}
+                          </TableHead>
+                          <TableHead>
+                            {isOwnerRule ? 'Owner ID' : 'Destination Record ID'}
+                          </TableHead>
                           <TableHead>Source HS ID</TableHead>
                           <TableHead>Result</TableHead>
                           <TableHead>Updated At</TableHead>
@@ -286,10 +293,15 @@ function RecordDetails({
                           records.map((record: AssociationRecord) => (
                             <TableRow key={record.id}>
                               <TableCell className="font-mono text-xs">
-                                {record.sourceId}
+                                {isOwnerRule
+                                  ? `${record.targetMatchValue} → ${record.targetId || 'Unknown owner'}`
+                                  : record.sourceId}
                               </TableCell>
                               <TableCell className="font-mono text-xs">
-                                {record.targetHsId || record.targetId || '—'}
+                                {run.associationRule?.targetObject ===
+                                'record_owner'
+                                  ? `${record.targetMatchValue} → ${record.targetId || 'Owner unresolved'}`
+                                  : record.targetHsId || record.targetId || '—'}
                               </TableCell>
                               <TableCell className="font-mono text-xs">
                                 {record.sourceHsId || '—'}
@@ -587,7 +599,7 @@ export default function AssociationRunsList({
 
   return (
     <Card className="gap-0 py-0">
-      <CardHeader className="border-b px-4 py-3">
+      <CardHeader visualLevel="section" className="border-b px-4 py-3">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <div>
             <CardTitle>Association Runs</CardTitle>

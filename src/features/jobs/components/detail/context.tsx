@@ -7,7 +7,7 @@ import type {
   ScheduleTogglePayload,
 } from '@/features/jobs/hooks';
 import type { JobDetailTabId } from '@/features/jobs/lib/jobDetailTabs';
-import type { Project } from '@/types';
+import type { Project, SyncProgressEvent } from '@/types';
 
 export interface JobDetailContextValue {
   projectId: string;
@@ -17,24 +17,24 @@ export interface JobDetailContextValue {
   runLogs: ExtSyncRun[];
   jobFieldMappings: ConsolidatedMapping[];
   hasConnection: boolean;
+  isProductionReady?: boolean;
   pipelineRequired: boolean;
   pipelineConfigured: boolean;
+
   activeTab: JobDetailTabId;
   patchJob: (patch: Partial<ExtJob>) => void;
   refetch: () => void;
   handleTabChange: (
     id: JobDetailTabId,
-    options?: { replace?: boolean },
+    options?: {
+      replace?: boolean;
+      searchParams?: Record<string, string | undefined | null>;
+    },
   ) => void;
 
   // Run/schedule state — see useJobRunState.
   activeRunLog: Partial<ExtSyncRun> | null;
-  liveProgress: {
-    totalRecords?: number;
-    recordsProcessed?: number;
-    etaSeconds?: number;
-    ratePerSec?: number;
-  } | null;
+  liveProgress: SyncProgressEvent | null;
   upgradeDialog: { open: boolean; message: string };
   setUpgradeDialog: (value: { open: boolean; message: string }) => void;
   isSyncing: boolean;
@@ -56,6 +56,12 @@ export interface JobDetailContextValue {
   handleCancelQueue: () => Promise<void>;
   handleRetryQueue: () => Promise<void>;
   handleToggle: () => Promise<void>;
+
+  // Guidance and dialog orchestration
+  highlightStatusGuide: boolean;
+  triggerInactiveGuide: () => void;
+  manualDialogOpen: boolean;
+  setManualDialogOpen: (open: boolean) => void;
 }
 
 const JobDetailContext = createContext<JobDetailContextValue | null>(null);

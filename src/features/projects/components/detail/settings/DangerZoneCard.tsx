@@ -34,6 +34,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useProjectArchive, type ProjectExt } from '@/features/projects/hooks';
+import { ActionTooltip } from '@/features/journey';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { showToast } from '@/lib/toast';
 
@@ -164,7 +165,6 @@ function ArchiveDialog({
             Cancel
           </Button>
           <Button
-            variant="destructive"
             onClick={performArchive}
             disabled={!confirmed || archiving}
           >
@@ -217,7 +217,7 @@ export default function DangerZoneCard({
       <CardHeader className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
         <div>
           <CardTitle className="text-destructive">Danger Zone</CardTitle>
-          <CardDescription className="mt-1">
+          <CardDescription>
             Archive this project only after reviewing its live execution impact.
           </CardDescription>
         </div>
@@ -323,15 +323,24 @@ export default function DangerZoneCard({
                   than permanently deleted.
                 </p>
               </div>
-              {canManage && (
+              <ActionTooltip
+                tooltip={
+                  !canManage
+                    ? 'Only Organization Admins can archive integration projects. Contact your administrator.'
+                    : !impact.canArchive
+                      ? 'Active syncs or queued jobs are currently running. Wait for them to finish before archiving.'
+                      : undefined
+                }
+                disabled={!canManage || !impact.canArchive || loading}
+              >
                 <Button
                   variant="destructive"
-                  onClick={() => setDialogOpen(true)}
-                  disabled={!impact.canArchive || loading}
+                  onClick={() => canManage && impact.canArchive && setDialogOpen(true)}
+                  disabled={!canManage || !impact.canArchive || loading}
                 >
                   <Archive /> Review and archive
                 </Button>
-              )}
+              </ActionTooltip>
             </div>
           </>
         ) : null}

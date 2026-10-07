@@ -3,9 +3,11 @@ import { ArrowLeft, Shield } from 'lucide-react';
 import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 
 import GlobalLoader, { PageLoader } from '@/components/shared/GlobalLoader';
-import { SynkazoWordmark } from '@/components/branding/SynkazoMark';
+import HeadingPair from '@/components/shared/HeadingPair';
+import { SynkazoMark } from '@/components/branding/SynkazoMark';
 import { NavMain } from '@/components/layout/nav-main';
 import { NavUser } from '@/components/layout/nav-user';
+import NotificationsMenu from '@/components/layout/NotificationsMenu';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -44,14 +46,15 @@ class SuperAdminErrorBoundary extends Component<
   render() {
     if (this.state.error) {
       return (
-        <div className="flex flex-col gap-4 rounded-lg border border-red-200 bg-red-50 p-6">
-          <div className="text-lg font-semibold text-red-900">
-            This platform admin page failed to render
-          </div>
-          <p className="text-sm text-red-800">
-            {this.state.error.message ||
-              'An unexpected error occurred. Reload the page or return to the workspace overview.'}
-          </p>
+        <div className="border-destructive/20 bg-destructive/5 flex flex-col gap-4 rounded-4xl border p-4">
+          <HeadingPair
+            tone="danger"
+            title="This platform admin page failed to render"
+            subtitle={
+              this.state.error.message ||
+              'An unexpected error occurred. Reload the page or return to the workspace overview.'
+            }
+          />
           <div className="flex gap-2">
             <Button
               variant="outline"
@@ -76,12 +79,28 @@ function SuperAdminSidebar() {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild size="lg" tooltip="Platform admin">
-              <Link to="/super-admin/overview">
-                <SynkazoWordmark
-                  className="text-foreground h-7! w-auto!"
-                  tone="auto"
+            <SidebarMenuButton
+              size="lg"
+              asChild
+              tooltip="Platform Admin"
+              className="h-12 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-0! [&_svg]:size-auto"
+            >
+              <Link
+                to="/super-admin/overview"
+                className="flex items-center gap-2.5 group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:justify-center"
+              >
+                <SynkazoMark
+                  variant="badge"
+                  className="size-8! rounded-lg shadow-xs shrink-0 drop-shadow-[0_2px_8px_rgba(255,107,57,0.25)]"
                 />
+                <div className="flex items-center gap-1.5 group-data-[collapsible=icon]:hidden">
+                  <span className="text-lg font-bold tracking-tight text-foreground">
+                    synkazo
+                  </span>
+                  <span className="text-[10px] font-semibold tracking-wider uppercase text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">
+                    Admin
+                  </span>
+                </div>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -112,12 +131,18 @@ function SuperAdminHeader() {
       </div>
 
       <div className="ml-4 flex shrink-0 items-center gap-2 sm:ml-6">
-        <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
+        <Button
+          asChild
+          variant="ghost"
+          size="sm"
+          className="hidden sm:inline-flex"
+        >
           <Link to="/dashboard">
             <ArrowLeft className="size-4" aria-hidden />
             Return to workspace
           </Link>
         </Button>
+        <NotificationsMenu />
         <Separator
           orientation="vertical"
           className="h-6 data-vertical:self-center"
@@ -135,14 +160,14 @@ export default function SuperAdminLayout() {
   if (!currentUser) return <Navigate to="/login" replace />;
 
   return (
-    <SidebarProvider>
+    <SidebarProvider data-admin-shell="platform">
       <SuperAdminSidebar />
-      <SidebarInset className="[--app-shell-header-height:--spacing(16)]">
+      <SidebarInset className="min-w-0 max-w-full overflow-x-clip [--app-shell-header-height:--spacing(16)]">
         <SuperAdminHeader />
 
         {/* Recognisable visual context (SA-107) so an operator never confuses a
             platform action with a tenant action. Distinct color, distinct copy. */}
-        <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 sm:px-6">
+        <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 sm:px-6">
           <div className="container mx-auto flex items-center gap-2 text-xs text-amber-900">
             <Shield className="size-3.5 shrink-0" aria-hidden />
             <span>
@@ -152,7 +177,7 @@ export default function SuperAdminLayout() {
           </div>
         </div>
 
-        <main className="container mx-auto flex w-full flex-1 flex-col gap-6 px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
+        <main className="container mx-auto flex w-full min-w-0 max-w-full flex-1 flex-col gap-6 px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
           <SuperAdminErrorBoundary>
             <PageSuspense>
               <Outlet />

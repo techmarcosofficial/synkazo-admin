@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   Building2,
   ClipboardList,
   FolderOpen,
@@ -6,6 +7,7 @@ import {
   Megaphone,
   Percent,
   Settings2,
+  Shield,
   Tag,
   Users,
 } from 'lucide-react';
@@ -42,6 +44,12 @@ export const SUPER_ADMIN_NAV: NavGroup[] = [
         minRole: 'super_admin',
       },
       {
+        title: 'Super Admins',
+        url: '/super-admin/super-admins',
+        icon: Shield,
+        minRole: 'super_admin',
+      },
+      {
         title: 'Projects',
         url: '/super-admin/projects',
         icon: FolderOpen,
@@ -62,6 +70,12 @@ export const SUPER_ADMIN_NAV: NavGroup[] = [
         title: 'Discounts',
         url: '/super-admin/discounts',
         icon: Percent,
+        minRole: 'super_admin',
+      },
+      {
+        title: 'Failed payments',
+        url: '/super-admin/failed-payments',
+        icon: AlertTriangle,
         minRole: 'super_admin',
       },
     ],

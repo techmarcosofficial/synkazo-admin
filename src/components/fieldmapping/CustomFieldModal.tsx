@@ -94,6 +94,9 @@ export default function CustomFieldModal({
     <FormDialog
       open
       onOpenChange={(open) => !open && onClose()}
+      category="Custom Field"
+      badge={side}
+      icon={Plus}
       title="Add Custom Field"
       description={`${side} Schema${isHubSpotDest ? ' · Creates property in HubSpot' : ''}`}
       size="sm"

@@ -4,6 +4,7 @@ import { connectionsApi } from '@/api/connections';
 import { jobsApi } from '@/api/jobs';
 import { projectsApi } from '@/api/projects';
 import { syncLogsApi } from '@/api/syncLogs';
+import { isEnvironmentFullyConnected } from '@/features/projects/lib/projectConnections';
 import type {
   FieldMapping,
   Job,
@@ -70,10 +71,7 @@ export interface ConsolidatedMapping extends Omit<FieldMapping, 'destField'> {
   /** What happens to this destination's value on an update (not a create), keyed
    *  per destination for the same fan-out reason as destOnEmpty. */
   destUpdatePolicy?: Record<string, UpdatePolicy>;
-  /** Only meaningful for destinations whose destUpdatePolicy entry is 'fill_if_empty' —
-   *  see conflictScope on FieldMapping. */
-  destConflictScope?: Record<string, 'field' | 'record'>;
-  transformConfig?: unknown;
+  transformConfig?: Record<string, unknown> | null;
   isRequired?: boolean;
   /** Set by the canvas when the user waves off a type mismatch. Not persisted. */
   dismissed?: boolean;
@@ -105,13 +103,7 @@ export function consolidateMappings(
         ? row.reverseOnEmpty
         : null;
     const updatePolicy =
-      row.updatePolicy && row.updatePolicy !== 'always'
-        ? row.updatePolicy
-        : null;
-    const conflictScope =
-      row.conflictScope && row.conflictScope !== 'field'
-        ? row.conflictScope
-        : null;
+      row.updatePolicy === 'create_only' ? 'create_only' : null;
     if (map.has(row.sourceField)) {
       const existing = map.get(row.sourceField)!;
       existing.destField = Array.isArray(existing.destField)
@@ -143,10 +135,6 @@ export function consolidateMappings(
         existing.destUpdatePolicy = existing.destUpdatePolicy ?? {};
         existing.destUpdatePolicy[row.destField] = updatePolicy;
       }
-      if (conflictScope) {
-        existing.destConflictScope = existing.destConflictScope ?? {};
-        existing.destConflictScope[row.destField] = conflictScope;
-      }
     } else {
       map.set(row.sourceField, {
         ...row,
@@ -166,9 +154,6 @@ export function consolidateMappings(
           ? { [row.destField]: row.reverseDefaultValue ?? '' }
           : {},
         destUpdatePolicy: updatePolicy ? { [row.destField]: updatePolicy } : {},
-        destConflictScope: conflictScope
-          ? { [row.destField]: conflictScope }
-          : {},
       });
     }
   });
@@ -188,6 +173,7 @@ export interface JobDetailData {
   runLogs: ExtSyncRun[];
   jobFieldMappings: ConsolidatedMapping[];
   hasConnection: boolean;
+  isProductionReady?: boolean;
   pipelineRequired: boolean;
   pipelineConfigured: boolean;
 }
@@ -237,6 +223,14 @@ export function useJobDetailQuery(
         runLogs: (runLogsRes as { data?: ExtSyncRun[] }).data || [],
         jobFieldMappings: (mappingsRes as ConsolidatedMapping[]) || [],
         hasConnection: (connectionsRes || []).length > 0,
+        isProductionReady: isEnvironmentFullyConnected(
+          (connectionsRes as Array<{
+            status?: string;
+            connectionType?: string;
+            environment?: string;
+          }>) || [],
+          'production',
+        ),
         pipelineRequired: pipeReq || !!extJob?.destPipelineId,
         pipelineConfigured: !pipeReq || psAny?.['configured'] === true,
       };

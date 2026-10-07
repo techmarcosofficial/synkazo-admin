@@ -7,6 +7,7 @@ import DateRangePicker from '@/components/shared/DateRangePicker';
 import type { DateRangeValue } from '@/components/shared/DateRangePicker';
 import ErrorState from '@/components/shared/ErrorState';
 import PageHeader from '@/components/shared/PageHeader';
+import { cn } from '@/lib/utils';
 import {
   Card,
   CardAction,
@@ -24,11 +25,12 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
+  ActiveProjectPipelineCard,
   computeDashboardStats,
   DashboardSkeleton,
-  DashboardOnboardingEmptyState,
   KpiStatCard,
   RecentActivityCard,
+  ZeroStateIntegrationValueCard,
 } from '@/features/dashboard';
 import type { ActivityFilter } from '@/features/dashboard';
 import {
@@ -40,7 +42,12 @@ import {
   unwrapOrganizationLogs,
 } from '@/features/metrics/metricsData';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
-import { useOnboardingState } from '@/features/onboarding';
+import {
+  useJourneyState,
+  JourneyStorylineBanner,
+  DraftResumptionBanner,
+} from '@/features/journey';
+import { useCreateProjectStore } from '@/features/projects/store/useCreateProjectStore';
 import {
   useDashboardSummaryQuery,
   useDashboardSyncMetricsQuery,
@@ -135,16 +142,36 @@ export default function Dashboard() {
     connectionsQuery.isError ||
     activityQuery.isError;
 
+  const projects = projectsQuery.data ?? [];
+  const targetProject = useMemo(() => {
+    if (!projects.length) return undefined;
+    return [...projects].sort((a, b) => {
+      const timeA = new Date(a.createdAt || a.updatedAt || 0).getTime();
+      const timeB = new Date(b.createdAt || b.updatedAt || 0).getTime();
+      return timeB - timeA;
+    })[0];
+  }, [projects]);
   const jobs = jobsQuery.data ?? [];
   const connections = connectionsQuery.data ?? [];
-  const onboardingState = useOnboardingState(
-    projectsQuery.data,
+  const openCreateProjectDialog = useCreateProjectStore((s) => s.open);
+  const journey = useJourneyState({
+    projects: projectsQuery.data,
     jobs,
     connections,
-  );
+  });
   const activityLogs = unwrapOrganizationLogs(activityQuery.data);
   const firstName = currentUser?.fullName?.trim().split(/\s+/)[0];
-  const greeting = `${getGreeting()}${firstName ? `, ${firstName}` : ''}`;
+  const pageClassName =
+    projects.length === 0
+      ? 'w-full flex-1 flex flex-col justify-between min-h-[calc(100vh-8.5rem)] animate-fade-in-up space-y-6 sm:space-y-7 pb-4'
+      : 'w-full animate-fade-in-up space-y-4 sm:space-y-5';
+  const greeting = getGreeting();
+  const description =
+    projects.length === 0
+      ? "Let's set up your first integration project."
+      : !journey.isGraduated
+        ? 'Complete your setup journey to start syncing your data.'
+        : 'Overview of integration health, data throughput, and sync activity.';
   const metricsRangeLabel =
     metricsQuery.data?.period === metricsPeriod
       ? formatRangeLabel(
@@ -173,13 +200,10 @@ export default function Dashboard() {
 
   const header = (
     <PageHeader
-      title={greeting}
+      title={firstName || 'there'}
+      greeting={greeting}
+      description={description}
       showAccountContextAlert={false}
-      description={
-        onboardingState.stage !== 'complete'
-          ? 'Complete your setup journey to start syncing your data.'
-          : undefined
-      }
     />
   );
 
@@ -194,7 +218,7 @@ export default function Dashboard() {
 
   if (isLoading) {
     return (
-      <div className="w-full space-y-6">
+      <div className={pageClassName}>
         {header}
         <AccountContextAlert />
         <DashboardSkeleton />
@@ -204,22 +228,9 @@ export default function Dashboard() {
 
   if (isError || !summaryQuery.data) {
     return (
-      <div className="w-full space-y-6">
+      <div className={pageClassName}>
         {header}
         <ErrorState onRetry={refetchAll} />
-      </div>
-    );
-  }
-
-  if (onboardingState.stage !== 'complete') {
-    return (
-      <div className="w-full space-y-6">
-        {header}
-        <DashboardOnboardingEmptyState
-          state={onboardingState}
-          canManage={hasRole('org_admin')}
-        />
-        <AccountContextAlert />
       </div>
     );
   }
@@ -231,138 +242,198 @@ export default function Dashboard() {
   });
 
   return (
-    <div className="w-full space-y-6">
+    <div className={pageClassName}>
       {header}
       <AccountContextAlert />
+      <DraftResumptionBanner />
 
-      <section aria-label="Organization statistics">
-        <div className="grid grid-cols-1 items-stretch gap-4 sm:grid-cols-3">
-          {stats.map((stat) => (
-            <KpiStatCard key={stat.id} {...stat} />
-          ))}
-        </div>
-      </section>
+      {/* State 1: Zero Projects -> Primary Action Hero Banner & Visual Blueprint */}
+      {projects.length === 0 && (
+        <>
+          <JourneyStorylineBanner
+            nextAction={journey.nextAction}
+            onTriggerModal={(key) => {
+              if (key === 'create_project') {
+                openCreateProjectDialog();
+              }
+            }}
+            stepNumber={1}
+            totalSteps={4}
+          />
+          <ZeroStateIntegrationValueCard className="flex-1" />
+        </>
+      )}
 
-      <section aria-label="Sync metrics">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold">
-              Sync Metrics
-            </CardTitle>
-            <CardDescription>
-              Organization-wide throughput and run health · {metricsRangeLabel}
-            </CardDescription>
-            <CardAction className="col-span-2 col-start-1 row-start-3 mt-2 flex w-full flex-col gap-2 justify-self-stretch sm:col-span-1 sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:mt-0 sm:w-auto sm:flex-row sm:justify-self-end">
-              <Select
-                value={metricsPeriod === 'custom' ? '' : metricsPeriod}
-                onValueChange={(value) =>
-                  handlePresetChange(value as DashboardPresetPeriod)
-                }
-              >
-                <SelectTrigger
-                  aria-label="Metrics preset period"
-                  className="w-full sm:w-32"
-                >
-                  <SelectValue placeholder="Preset range" />
-                </SelectTrigger>
-                <SelectContent>
-                  {DASHBOARD_PRESET_PERIODS.map((period) => (
-                    <SelectItem key={period} value={period}>
-                      {period === 'daily'
-                        ? 'Daily'
-                        : period === 'weekly'
-                          ? 'Weekly'
-                          : period === 'monthly'
-                            ? 'Monthly'
-                            : 'Yearly'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <DateRangePicker
-                value={customRange}
-                onChange={handleCustomRangeChange}
-                placeholder="Date range"
-                closeOnComplete
-                className={
-                  metricsPeriod === 'custom'
-                    ? 'border-primary bg-primary/5 text-primary w-full sm:w-auto'
-                    : 'w-full sm:w-auto'
-                }
-                disabled={[
-                  { after: new Date() },
-                  ...(metricsQuery.data?.retention.availableFrom
-                    ? [
-                        {
-                          before: new Date(
-                            metricsQuery.data.retention.availableFrom,
-                          ),
-                        },
-                      ]
-                    : []),
-                ]}
-              />
-            </CardAction>
-          </CardHeader>
-          <CardContent>
-            {metricsQuery.data?.retention.limited &&
-              metricsQuery.data.retention.availableFrom && (
-                <p className="text-muted-foreground mb-4 text-xs">
-                  Showing available history since{' '}
-                  {new Date(
-                    metricsQuery.data.retention.availableFrom,
-                  ).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                  })}
-                  .
-                </p>
-              )}
-            <div className="grid gap-6 lg:grid-cols-2">
-              {metricsQuery.isLoading || metricsQuery.isPlaceholderData ? (
-                <>
-                  {[0, 1].map((item) => (
-                    <Card key={item} size="sm" className="border">
-                      <CardHeader className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_auto]">
-                        <div className="space-y-2">
-                          <Skeleton className="h-5 w-48 max-w-full" />
-                          <Skeleton className="h-4 w-64 max-w-full" />
-                        </div>
-                        <div className="space-y-2 sm:text-right">
-                          <Skeleton className="h-9 w-24 sm:ml-auto" />
-                          <Skeleton className="h-4 w-40" />
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <Skeleton className="h-[260px] w-full" />
-                      </CardContent>
-                    </Card>
-                  ))}
-                </>
-              ) : metricsQuery.isError || !metricsQuery.data ? (
-                <div className="lg:col-span-2">
-                  <ErrorState onRetry={() => metricsQuery.refetch()} />
-                </div>
-              ) : (
-                <>
-                  <RecordsProcessedMetric metrics={metricsQuery.data} />
-                  <SyncRunHealthMetric metrics={metricsQuery.data} />
-                </>
-              )}
+      {/* State 2: Projects exist, but account not graduated -> Show Active Setup Pipeline Tracker & Storyline */}
+      {projects.length > 0 && !journey.isGraduated && targetProject && (
+        <>
+          <JourneyStorylineBanner
+            nextAction={journey.nextAction}
+            onTriggerModal={(key) => {
+              if (key === 'create_project') {
+                openCreateProjectDialog();
+              }
+            }}
+            stepNumber={
+              journey.currentState === 'S03_NO_PROJECT'
+                ? 1
+                : journey.currentState === 'S04_PROJECT_NO_CONNECTIONS' ||
+                    journey.currentState === 'S05_ONE_CONNECTION_MISSING'
+                  ? 2
+                  : journey.currentState === 'S06_CONNECTIONS_READY' ||
+                      journey.currentState === 'S07_SYNC_RECIPE_SELECTED' ||
+                      journey.currentState === 'S08_MAPPING_INCOMPLETE'
+                    ? 3
+                    : 4
+            }
+            totalSteps={4}
+          />
+          <ActiveProjectPipelineCard
+            project={targetProject}
+            connections={connections}
+            jobs={jobs}
+            canManage={hasRole('org_admin')}
+            totalProjects={projects.length}
+          />
+        </>
+      )}
+
+      {/* State 3: Graduated -> Reveal full operational analytics cockpit */}
+      {journey.isGraduated && (
+        <>
+          <section aria-label="Organization statistics">
+            <div className="grid grid-cols-1 items-stretch gap-4 sm:grid-cols-3">
+              {stats.map((stat) => (
+                <KpiStatCard key={stat.id} {...stat} />
+              ))}
             </div>
-          </CardContent>
-        </Card>
-      </section>
+          </section>
 
-      <section aria-label="Recent Activity">
-        <RecentActivityCard
-          logs={activityLogs}
-          filter={activityFilter}
-          onFilterChange={setActivityFilter}
-          isLoading={activityQuery.isPlaceholderData}
-        />
-      </section>
+          <section aria-label="Sync metrics">
+            <Card>
+              <CardHeader
+                visualLevel="section"
+                className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
+              >
+                <div className="space-y-1">
+                  <CardTitle>Sync Metrics</CardTitle>
+                  <CardDescription>
+                    Organization-wide throughput and run health · {metricsRangeLabel}
+                  </CardDescription>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Select
+                    value={metricsPeriod === 'custom' ? '' : metricsPeriod}
+                    onValueChange={(value) =>
+                      handlePresetChange(value as DashboardPresetPeriod)
+                    }
+                  >
+                    <SelectTrigger
+                      aria-label="Metrics preset period"
+                      className="w-full sm:w-32"
+                    >
+                      <SelectValue placeholder="Preset range" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DASHBOARD_PRESET_PERIODS.map((period) => (
+                        <SelectItem key={period} value={period}>
+                          {period === 'daily'
+                            ? 'Daily'
+                            : period === 'weekly'
+                              ? 'Weekly'
+                              : period === 'monthly'
+                                ? 'Monthly'
+                                : 'Yearly'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <DateRangePicker
+                    value={customRange}
+                    onChange={handleCustomRangeChange}
+                    placeholder="Date range"
+                    closeOnComplete
+                    className={
+                      metricsPeriod === 'custom'
+                        ? 'border-primary bg-primary/5 text-primary w-full sm:w-auto'
+                        : 'w-full sm:w-auto'
+                    }
+                    disabled={[
+                      { after: new Date() },
+                      ...(metricsQuery.data?.retention.availableFrom
+                        ? [
+                            {
+                              before: new Date(
+                                metricsQuery.data.retention.availableFrom,
+                              ),
+                            },
+                          ]
+                        : []),
+                    ]}
+                  />
+                </div>
+              </CardHeader>
+              <CardContent>
+                {metricsQuery.data?.retention.limited &&
+                  metricsQuery.data.retention.availableFrom && (
+                    <p className="text-muted-foreground mb-4 text-xs">
+                      Showing available history since{' '}
+                      {new Date(
+                        metricsQuery.data.retention.availableFrom,
+                      ).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                      .
+                    </p>
+                  )}
+                <div className="grid gap-6 lg:grid-cols-2">
+                  {metricsQuery.isLoading || metricsQuery.isPlaceholderData ? (
+                    <>
+                      {[0, 1].map((item) => (
+                        <Card key={item} size="sm" className="border">
+                          <CardHeader className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_auto]">
+                            <div className="space-y-2">
+                              <Skeleton className="h-5 w-48 max-w-full" />
+                              <Skeleton className="h-4 w-64 max-w-full" />
+                            </div>
+                            <div className="space-y-2 sm:text-right">
+                              <Skeleton className="h-9 w-24 sm:ml-auto" />
+                              <Skeleton className="h-4 w-40" />
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <Skeleton className="h-[260px] w-full" />
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </>
+                  ) : metricsQuery.isError || !metricsQuery.data ? (
+                    <div className="lg:col-span-2">
+                      <ErrorState onRetry={() => metricsQuery.refetch()} />
+                    </div>
+                  ) : (
+                    <>
+                      <RecordsProcessedMetric metrics={metricsQuery.data} />
+                      <SyncRunHealthMetric metrics={metricsQuery.data} />
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+
+          <section aria-label="Recent Activity">
+            <RecentActivityCard
+              logs={activityLogs}
+              filter={activityFilter}
+              onFilterChange={setActivityFilter}
+              isLoading={activityQuery.isPlaceholderData}
+            />
+          </section>
+        </>
+      )}
     </div>
   );
 }

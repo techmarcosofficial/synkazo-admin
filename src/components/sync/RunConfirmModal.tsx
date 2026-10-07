@@ -7,11 +7,13 @@ import {
   Database,
   GitBranch,
   Play,
+  ShieldCheck,
 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 
 import { jobsApi } from '@/api/jobs';
 import { ChoiceCardItem } from '@/components/form/ChoiceCard';
+import StatusBadge from '@/components/shared/StatusBadge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -33,7 +35,7 @@ import {
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import type { InitialSyncPeriod } from '@/features/jobs/hooks';
-import type { Job, SyncEstimate } from '@/types';
+import type { Job, ProjectEnvironment, SyncEstimate } from '@/types';
 
 const INITIAL_SYNC_PERIOD_OPTIONS: Array<{
   value: InitialSyncPeriod;
@@ -68,6 +70,7 @@ export default function RunConfirmModal({
   projectId,
   jobId,
   job,
+  environment,
   mode = 'run',
   onConfirm,
   onClose,
@@ -79,6 +82,7 @@ export default function RunConfirmModal({
   projectId: string;
   jobId: string;
   job?: Job;
+  environment?: ProjectEnvironment;
   mode?: 'runNow' | 'resume' | 'run';
   onConfirm: (payload?: {
     initialSyncPeriod?: InitialSyncPeriod;
@@ -148,19 +152,45 @@ export default function RunConfirmModal({
 
   const isFirstSync = !lastSyncedAt;
   const countAvailable = estimate?.countAvailable;
+  const isSandbox = environment === 'sandbox';
 
   const headerNode = (
-    <div className="flex items-center gap-3">
-      <div className="bg-muted text-foreground flex size-8 items-center justify-center rounded-lg">
-        <Play className="size-4" />
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center gap-3">
+        <div className="bg-muted text-foreground flex size-8 items-center justify-center rounded-lg">
+          <Play className="size-4" />
+        </div>
+        <div>
+          <div className="font-heading text-base font-medium">{title}</div>
+          <p className="text-muted-foreground flex items-center gap-1 text-xs font-normal">
+            {job?.sourceObject} <ArrowRight className="size-3" />{' '}
+            {job?.destObject}
+          </p>
+        </div>
       </div>
-      <div>
-        <div className="font-heading text-base font-medium">{title}</div>
-        <p className="text-muted-foreground flex items-center gap-1 text-xs font-normal">
-          {job?.sourceObject} <ArrowRight className="size-3" />{' '}
-          {job?.destObject}
-        </p>
-      </div>
+      {environment && (
+        <StatusBadge
+          status={environment}
+          label={isSandbox ? 'Sandbox (Test Mode)' : 'Production (Live)'}
+          title={
+            isSandbox
+              ? 'Operating in Sandbox — Live customer data is not affected'
+              : 'Live Production Sync active'
+          }
+          size="sm"
+        />
+      )}
+    </div>
+  );
+
+  const sandboxSafetyNotice = isSandbox && (
+    <div className="flex items-center gap-2.5 rounded-2xl bg-muted/50 border border-border/60 px-3.5 py-2.5 text-xs text-muted-foreground">
+      <ShieldCheck className="size-4 text-warning shrink-0" />
+      <span>
+        <strong className="text-foreground">Operating in Sandbox:</strong> This
+        run tests data movement using your sandbox connections. No live
+        production records will be modified.
+      </span>
     </div>
   );
 
@@ -184,6 +214,7 @@ export default function RunConfirmModal({
 
   const resumeBodyNode = (
     <div className="space-y-4">
+      {sandboxSafetyNotice}
       {pipelineAlert}
       <p className="text-sm">
         Your schedule was last successfully synced on{' '}
@@ -240,6 +271,7 @@ export default function RunConfirmModal({
 
   const bodyNode = (
     <div className="space-y-4">
+      {sandboxSafetyNotice}
       {pipelineAlert}
 
       <div className="overflow-hidden rounded-4xl border">

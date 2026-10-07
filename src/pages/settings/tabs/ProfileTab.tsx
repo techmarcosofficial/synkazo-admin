@@ -92,7 +92,7 @@ export default function ProfileTab() {
   return (
     <div className="grid w-full gap-4 lg:grid-cols-2">
       <Card className="h-full">
-        <CardHeader>
+        <CardHeader visualLevel="section">
           <CardTitle className="flex items-center gap-2">
             <User className="text-muted-foreground size-4" /> Personal Details
           </CardTitle>

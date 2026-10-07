@@ -1,8 +1,10 @@
 import { Trash2 } from 'lucide-react';
 
+import { ActionTooltip } from '@/features/journey';
+import HeadingPair from '@/components/shared/HeadingPair';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 
 export default function JobDangerZoneCard({
   onDelete,
@@ -10,25 +12,43 @@ export default function JobDangerZoneCard({
   onDelete: () => Promise<void>;
 }) {
   const { confirm } = useConfirmDialog();
+  const { hasRole } = useSynkazoAuth();
+  const canManage = hasRole('org_admin');
 
   return (
-    <Card className="border-destructive/20">
-      <CardContent>
-        <h3 className="text-destructive font-semibold">Danger Zone</h3>
-        <p className="text-muted-foreground mb-3 text-xs">
-          These actions are irreversible.
-        </p>
+    <section
+      aria-labelledby="job-danger-zone-title"
+      className="border-destructive/20 bg-destructive/[0.02] rounded-3xl border p-4"
+    >
+      <HeadingPair
+        visualLevel="card"
+        level="h3"
+        titleId="job-danger-zone-title"
+        title="Danger Zone"
+        subtitle="These actions are irreversible."
+        tone="danger"
+        className="mb-3"
+      />
 
-        <div className="pt-3">
-          <p className="text-sm font-medium">Delete Job</p>
-          <p className="text-muted-foreground mb-3 text-xs">
-            Permanently deletes this job and all its logs.
-          </p>
+      <div className="pt-3">
+        <p className="text-sm font-medium">Delete Job</p>
+        <p className="text-muted-foreground mb-3 text-xs">
+          Permanently deletes this job and all its logs.
+        </p>
+        <ActionTooltip
+          tooltip={
+            !canManage
+              ? 'Organization Admin role required to delete a sync job.'
+              : undefined
+          }
+        >
           <Button
             variant="outline"
             size="sm"
             className="text-destructive hover:bg-destructive/10"
+            disabled={!canManage}
             onClick={() =>
+              canManage &&
               confirm({
                 variant: 'danger',
                 title: 'Delete this job?',
@@ -41,8 +61,8 @@ export default function JobDangerZoneCard({
           >
             <Trash2 /> Delete Job
           </Button>
-        </div>
-      </CardContent>
-    </Card>
+        </ActionTooltip>
+      </div>
+    </section>
   );
 }

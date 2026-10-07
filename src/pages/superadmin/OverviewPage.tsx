@@ -1,44 +1,471 @@
+import {
+  AlertTriangle,
+  Building2,
+  Clock,
+  CreditCard,
+  ExternalLink,
+  Loader2,
+  RefreshCw,
+  ShieldAlert,
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-import { SUPER_ADMIN_NAV } from '@/lib/superAdminNav';
+import HeadingPair from '@/components/shared/HeadingPair';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
+import { useSuperAdminPlatformOverviewQuery } from '@/queries/useSuperAdmin';
+import type { PlatformOverviewResponse } from '@/types';
 
-// Placeholder for the Phase 3 platform overview. Keeps /super-admin/overview
-// deep-linkable so the shell has a real index destination while the Phase 3
-// metrics build lands separately.
-export default function OverviewPage() {
+// Phase 3 platform overview. Every card links to the destination screen
+// that filters or drills into the same underlying record set — nothing
+// here is a dead summary (SA-301). The whole page renders off one
+// aggregate call so we never fan out per-organisation (SA-303).
+
+function useRelative(iso: string | undefined): string {
+  if (!iso) return '';
+  const then = new Date(iso).getTime();
+  if (!Number.isFinite(then)) return '';
+  const seconds = Math.max(0, Math.floor((Date.now() - then) / 1000));
+  if (seconds < 5) return 'just now';
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
+function MetricCard({
+  label,
+  value,
+  to,
+  icon: Icon,
+  tone = 'default',
+}: {
+  label: string;
+  value: number | string;
+  to: string;
+  icon: React.ElementType;
+  tone?: 'default' | 'warning' | 'danger';
+}) {
+  const toneClasses =
+    tone === 'danger'
+      ? 'border-destructive/30 bg-destructive/5 text-destructive hover:border-destructive/50'
+      : tone === 'warning'
+        ? 'border-warning/30 bg-warning/5 text-warning hover:border-warning/50'
+        : 'border-border bg-card text-card-foreground hover:border-primary/40';
+
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Platform overview</h1>
+    <Link
+      to={to}
+      className={`block rounded-3xl border p-4 transition-colors focus-visible:outline-2 focus-visible:outline-ring ${toneClasses}`}
+    >
+      <div className="flex items-center gap-3">
+        <Icon className="size-5 shrink-0" aria-hidden />
+        <div className="flex-1">
+          <div className="text-2xl font-semibold">{value}</div>
+          <div className="text-xs">{label}</div>
+        </div>
+        <ExternalLink className="size-3.5 opacity-50" aria-hidden />
+      </div>
+    </Link>
+  );
+}
+
+function BreakdownList({
+  title,
+  rows,
+  linkFor,
+}: {
+  title: string;
+  rows: Array<{ label: string; value: number; key: string }>;
+  linkFor: (key: string) => string;
+}) {
+  return (
+    <div className="bg-card rounded-4xl border border-border p-4">
+      <div className="mb-3 text-base font-semibold">{title}</div>
+      <ul className="divide-y">
+        {rows.map((row) => (
+          <li key={row.key}>
+            <Link
+              to={linkFor(row.key)}
+              className="hover:bg-accent flex items-center justify-between py-2 text-sm"
+            >
+              <span className="capitalize">
+                {row.label.replace(/_/g, ' ')}
+              </span>
+              <span className="font-mono">{row.value}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function RecentAlerts({
+  alerts,
+}: {
+  alerts: PlatformOverviewResponse['recentAlerts'];
+}) {
+  if (alerts.length === 0) {
+    return (
+      <div className="bg-card rounded-4xl border border-border p-4">
+        <div className="mb-2 text-base font-semibold">Recent alerts</div>
         <p className="text-muted-foreground text-sm">
-          Health metrics, running work, and recent platform events land here in
-          Phase 3. Use the sidebar to reach any specific area for now.
+          No warning or critical events in the last window. All quiet.
         </p>
       </div>
+    );
+  }
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {SUPER_ADMIN_NAV.flatMap((group) =>
-          group.items
-            .filter((item) => item.url !== '/super-admin/overview')
-            .map((item) => (
+  return (
+    <div className="bg-card rounded-4xl border border-border">
+      <div className="border-b px-4 py-3 text-base font-semibold">
+        Recent alerts
+      </div>
+      <ul className="divide-y">
+        {alerts.map((alert) => {
+          const to = alert.organisationId
+            ? `/super-admin/organisations/${alert.organisationId}/activity`
+            : '/super-admin/audit-log';
+          const isCritical = alert.severity === 'critical';
+          return (
+            <li key={alert.id}>
               <Link
-                key={item.url}
-                to={item.url}
-                className="bg-card hover:border-primary rounded-lg border p-4 transition-colors"
+                to={to}
+                className="hover:bg-accent flex items-start gap-3 px-4 py-3 text-sm"
               >
-                <div className="flex items-center gap-3">
-                  <item.icon className="text-muted-foreground size-5" />
-                  <div>
-                    <div className="font-medium">{item.title}</div>
-                    <div className="text-muted-foreground text-xs">
-                      {group.label}
-                    </div>
+                <ShieldAlert
+                  className={`mt-0.5 size-4 shrink-0 ${
+                    isCritical ? 'text-destructive' : 'text-warning'
+                  }`}
+                  aria-hidden
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate">
+                    <span className="font-medium">{alert.summary}</span>
+                    {alert.userEmail ? (
+                      <span className="text-muted-foreground">
+                        {' '}
+                        · by {alert.userEmail}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="text-muted-foreground truncate text-xs">
+                    {alert.action}
+                    {' · '}
+                    {new Date(alert.createdAt).toLocaleString()}
                   </div>
                 </div>
+                <ExternalLink className="mt-0.5 size-3.5 shrink-0 opacity-50" aria-hidden />
               </Link>
-            )),
-        )}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+// GAP-043 / SA-302 — compact inline banner for a section-level error.
+// The whole overview still renders even if one aggregate query fails on
+// the API side; this banner appears just above the widget whose section
+// returned an error so an operator can see the failure without missing
+// the working data.
+function SectionErrorBanner({ label, error }: { label: string; error: string }) {
+  return (
+    <div className="border-warning/30 bg-warning/5 text-warning flex items-start gap-2 rounded-xl border px-3 py-2 text-xs">
+      <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+      <div className="min-w-0 flex-1">
+        <div className="font-medium">{label}</div>
+        <div className="truncate">{error}</div>
       </div>
+    </div>
+  );
+}
+
+// CAP-108 — platform sync success/failure rate over the last 24h.
+// Renders fractions as percentages; null (empty window / query failed)
+// falls back to "—".
+function SyncHealthCard({
+  health,
+}: {
+  health: NonNullable<PlatformOverviewResponse['syncHealth']>;
+}) {
+  const pct = (v: number | null) =>
+    v == null ? '—' : `${Math.round(v * 100)}%`;
+  return (
+    <div className="bg-card rounded-4xl border border-border">
+      <div className="border-b px-4 py-3 text-base font-semibold">
+        Sync health
+        <span className="text-muted-foreground ml-2 text-xs font-normal">
+          last {health.windowHours}h
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-4">
+        <div>
+          <div className="text-muted-foreground text-xs">Total runs</div>
+          <div className="text-lg font-semibold">{health.totalRuns}</div>
+        </div>
+        <div>
+          <div className="text-muted-foreground text-xs">Success rate</div>
+          <div className="text-lg font-semibold text-emerald-700">
+            {pct(health.successRate)}
+          </div>
+        </div>
+        <div>
+          <div className="text-muted-foreground text-xs">Failure rate</div>
+          <div className="text-lg font-semibold text-red-700">
+            {pct(health.failureRate)}
+          </div>
+        </div>
+        <div>
+          <div className="text-muted-foreground text-xs">Recent failures</div>
+          <div className="text-lg font-semibold">{health.recentFailures}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// GAP-023 / CAP-091 — process-local health snapshot. Renders four
+// compact metrics side-by-side; anything null (e.g. Redis ping failed)
+// falls back to "—" without a special-case cell.
+function SystemHealthCard({
+  health,
+}: {
+  health: PlatformOverviewResponse['systemHealth'];
+}) {
+  const formatUptime = (seconds: number) => {
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ${minutes % 60}m`;
+    return `${Math.floor(hours / 24)}d ${hours % 24}h`;
+  };
+
+  const memoryPct =
+    health.memoryHeapTotalMb > 0
+      ? Math.round((health.memoryHeapUsedMb / health.memoryHeapTotalMb) * 100)
+      : null;
+
+  return (
+    <div className="bg-card rounded-4xl border border-border">
+      <div className="border-b px-4 py-3 text-base font-semibold">
+        System health
+      </div>
+      <div className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-4">
+        <div>
+          <div className="text-muted-foreground text-xs">Process uptime</div>
+          <div className="text-lg font-semibold">
+            {formatUptime(health.processUptimeSeconds)}
+          </div>
+        </div>
+        <div>
+          <div className="text-muted-foreground text-xs">Heap used</div>
+          <div className="text-lg font-semibold">
+            {health.memoryHeapUsedMb} MB
+            {memoryPct != null ? (
+              <span className="text-muted-foreground ml-1 text-xs font-normal">
+                ({memoryPct}% of {health.memoryHeapTotalMb} MB)
+              </span>
+            ) : null}
+          </div>
+        </div>
+        <div>
+          <div className="text-muted-foreground text-xs">Redis PING</div>
+          <div className="text-lg font-semibold">
+            {health.redisPingMs != null ? `${health.redisPingMs} ms` : '—'}
+          </div>
+        </div>
+        <div>
+          <div className="text-muted-foreground text-xs">Snapshot</div>
+          <div className="text-lg font-semibold">In-process</div>
+          <div className="text-muted-foreground mt-0.5 text-[10px]">
+            Refreshes with the overview.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function OverviewPage() {
+  const query = useSuperAdminPlatformOverviewQuery();
+
+  if (query.isLoading) {
+    return (
+      <div className="flex min-h-64 items-center justify-center">
+        <Spinner className="size-5" />
+      </div>
+    );
+  }
+
+  if (query.isError) {
+    return (
+      <Alert variant="destructive">
+        <AlertTriangle className="size-4" />
+        <AlertTitle>Could not load the platform overview</AlertTitle>
+        <AlertDescription className="mt-2 flex items-center gap-2">
+          <span>
+            {(query.error as Error)?.message ??
+              'The aggregate endpoint returned an error.'}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => query.refetch()}
+          >
+            Retry
+          </Button>
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  const data = query.data!;
+  // GAP-043 — per-widget errors surfaced by the API's Promise.allSettled
+  // path. Absent when every section loaded cleanly.
+  const errors = data.errors;
+  const relative = useRelative(data.generatedAt);
+  const subscriptionRows = Object.entries(data.organisations.bySubscriptionStatus)
+    .filter(([, value]) => value > 0)
+    .map(([key, value]) => ({ key, label: key, value }));
+  const queueRows = [
+    { key: 'waiting', label: 'Waiting', value: data.jobs.queue.waiting },
+    { key: 'active', label: 'Active', value: data.jobs.queue.active },
+    { key: 'failed', label: 'Failed', value: data.jobs.queue.failed },
+    { key: 'delayed', label: 'Delayed', value: data.jobs.queue.delayed },
+    { key: 'completed', label: 'Completed', value: data.jobs.queue.completed },
+  ];
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-start justify-between gap-4">
+        <HeadingPair
+          level="h1"
+          title="Platform overview"
+          subtitle={
+            <span className="inline-flex items-center gap-2">
+              <Clock className="size-3.5" aria-hidden />
+              <span>Updated {relative}</span>
+              {query.isFetching ? (
+                <Loader2 className="size-3.5 animate-spin" aria-hidden />
+              ) : null}
+            </span>
+          }
+        />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => query.refetch()}
+          disabled={query.isFetching}
+        >
+          <RefreshCw className="size-4" aria-hidden />
+          Refresh
+        </Button>
+      </div>
+
+      {errors?.organisations ? (
+        <SectionErrorBanner
+          label="Organisation counts unavailable"
+          error={errors.organisations}
+        />
+      ) : null}
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <MetricCard
+          label="Organisations"
+          value={data.organisations.total}
+          to="/super-admin/organisations"
+          icon={Building2}
+        />
+        <MetricCard
+          label="Suspended"
+          value={data.organisations.suspendedCount}
+          to="/super-admin/organisations?status=suspended"
+          icon={ShieldAlert}
+          tone={data.organisations.suspendedCount > 0 ? 'warning' : 'default'}
+        />
+        <MetricCard
+          label="Past-due billing"
+          value={data.organisations.pastDueCount}
+          to="/super-admin/organisations?subscriptionStatus=past_due"
+          icon={CreditCard}
+          tone={data.organisations.pastDueCount > 0 ? 'danger' : 'default'}
+        />
+        <MetricCard
+          label={
+            data.jobs.queue.workerOnline
+              ? 'Worker online'
+              : 'Worker OFFLINE'
+          }
+          value={data.jobs.queue.active + data.jobs.queue.waiting}
+          to="/admin/queues"
+          icon={Loader2}
+          tone={data.jobs.queue.workerOnline ? 'default' : 'danger'}
+        />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="flex flex-col gap-2">
+          {errors?.subscriptions ? (
+            <SectionErrorBanner
+              label="Subscriptions counts unavailable"
+              error={errors.subscriptions}
+            />
+          ) : null}
+          <BreakdownList
+            title="Subscriptions by status"
+            rows={subscriptionRows}
+            linkFor={(key) =>
+              `/super-admin/organisations?subscriptionStatus=${encodeURIComponent(
+                key,
+              )}`
+            }
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          {errors?.queue ? (
+            <SectionErrorBanner
+              label="Queue snapshot unavailable"
+              error={errors.queue}
+            />
+          ) : null}
+          <BreakdownList
+            title="Queue by state"
+            rows={queueRows}
+            linkFor={() => '/admin/queues'}
+          />
+        </div>
+      </div>
+
+      {errors?.systemHealth ? (
+        <SectionErrorBanner
+          label="System health unavailable"
+          error={errors.systemHealth}
+        />
+      ) : null}
+      <SystemHealthCard health={data.systemHealth} />
+
+      {errors?.syncHealth ? (
+        <SectionErrorBanner
+          label="Sync health unavailable"
+          error={errors.syncHealth}
+        />
+      ) : null}
+      {data.syncHealth ? <SyncHealthCard health={data.syncHealth} /> : null}
+
+      {errors?.recentAlerts ? (
+        <SectionErrorBanner
+          label="Recent alerts unavailable"
+          error={errors.recentAlerts}
+        />
+      ) : null}
+      <RecentAlerts alerts={data.recentAlerts} />
     </div>
   );
 }

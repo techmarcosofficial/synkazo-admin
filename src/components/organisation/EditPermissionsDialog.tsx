@@ -165,7 +165,7 @@ export default function EditPermissionsDialog({
         </div>
 
         {hasFullAccess ? (
-          <p className="text-muted-foreground bg-muted rounded-4xl p-3 text-sm">
+          <p className="text-muted-foreground bg-muted rounded-3xl p-3 text-sm">
             {role === 'super_admin'
               ? "Super Admins have unrestricted access to all functionality — granular permissions don't apply."
               : "Org Admins have full access to this organisation's functionality — granular permissions don't apply."}

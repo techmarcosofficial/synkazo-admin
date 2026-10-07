@@ -31,6 +31,13 @@ import {
 } from './planFeatureFields';
 
 import FormDialog from '@/components/form/FormDialog';
+import {
+  PlanIcon,
+  PLAN_ICON_FEATURE_KEY,
+  PLAN_ICON_OPTIONS,
+  resolvePlanIconKey,
+  type PlanIconKey,
+} from '@/components/common/PlanIcon';
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
 import PageHeader from '@/components/shared/PageHeader';
@@ -690,7 +697,7 @@ function CopyPriceIdButton({ priceId }: { priceId: string }) {
           onClick={copy}
           variant="ghost"
           size="icon-xs"
-          className="text-muted-foreground hover:text-foreground rounded-full"
+          className="text-muted-foreground hover:text-foreground"
           aria-label="Copy price ID"
         >
           <Copy className="size-3" />
@@ -781,7 +788,7 @@ function PriceGroup({
               key={price.id}
               htmlFor={`price-${price.id}`}
               className={cn(
-                'flex cursor-pointer items-center gap-2 rounded-3xl border px-3 py-1.5 transition-all',
+                'flex cursor-pointer flex-wrap items-center gap-2 rounded-3xl border px-3 py-1.5 transition-all',
                 selected
                   ? 'border-primary bg-primary/5'
                   : 'hover:border-primary/40 hover:bg-muted/40',
@@ -938,6 +945,7 @@ function PlanFormDialog(
   const [sortOrder, setSortOrder] = useState('0');
   const [isActive, setIsActive] = useState(true);
   const [tagline, setTagline] = useState('');
+  const [planIconKey, setPlanIconKey] = useState<PlanIconKey>('general');
   const [ctaLabel, setCtaLabel] = useState('');
   const [highlighted, setHighlighted] = useState(false);
   const [sellable, setSellable] = useState(false);
@@ -990,6 +998,9 @@ function PlanFormDialog(
         setSortOrder(String(plan.sortOrder));
         setIsActive(plan.isActive);
         setTagline(plan.features[TAGLINE_KEY] ?? '');
+        setPlanIconKey(
+          resolvePlanIconKey(plan.features[PLAN_ICON_FEATURE_KEY], plan.name),
+        );
         setCtaLabel(plan.features[CTA_LABEL_KEY] ?? '');
         setHighlighted(plan.features[HIGHLIGHTED_KEY] === 'true');
         setSellable(plan.features[SELLABLE_KEY] === 'true');
@@ -1013,6 +1024,7 @@ function PlanFormDialog(
         setSortOrder('0');
         setIsActive(true);
         setTagline('');
+        setPlanIconKey('general');
         setCtaLabel('');
         setHighlighted(false);
         setSellable(false);
@@ -1050,6 +1062,7 @@ function PlanFormDialog(
     ...features,
     [CTA_LABEL_KEY]: ctaLabel.trim(),
     [TAGLINE_KEY]: tagline.trim(),
+    [PLAN_ICON_FEATURE_KEY]: planIconKey,
     [HIGHLIGHTED_KEY]: highlighted ? 'true' : 'false',
     [SELLABLE_KEY]: sellable ? 'true' : 'false',
     [SHOW_ON_PRICING_KEY]: showOnPricing ? 'true' : 'false',
@@ -1319,6 +1332,35 @@ function PlanFormDialog(
                 placeholder="Short subtitle shown under the plan name"
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="plan-icon">Plan icon</Label>
+              <Select
+                value={planIconKey}
+                disabled={
+                  mode === 'edit' &&
+                  existingLockedKeys.has(PLAN_ICON_FEATURE_KEY)
+                }
+                onValueChange={(value) =>
+                  setPlanIconKey(resolvePlanIconKey(value, ''))
+                }
+              >
+                <SelectTrigger id="plan-icon" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PLAN_ICON_OPTIONS.map((option) => (
+                    <SelectItem key={option.key} value={option.key}>
+                      <PlanIcon iconKey={option.key} className="size-4" />
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-muted-foreground text-xs">
+                Shown on the plan card. New plan names use General until you
+                choose an icon.
+              </p>
+            </div>
             <div className="grid grid-cols-3 gap-3">
               <ToggleCard
                 label="Highlighted"
@@ -1495,7 +1537,7 @@ function PlanFormDialog(
                         onClick={() => removeStagedPrice(i)}
                         variant="ghost"
                         size="icon-xs"
-                        className="hover:text-destructive ml-1 size-5 rounded-full"
+                        className="hover:text-destructive ml-1 size-5"
                         title="Remove"
                         aria-label={`Remove ${staged.interval} staged price`}
                       >
@@ -1665,7 +1707,7 @@ function PlanCard({ plan }: { plan: AdminApiPlan }) {
             </div>
           )}
           {/* Features & limits */}
-          <div className="bg-muted space-y-2 rounded-4xl p-3">
+          <div className="bg-muted space-y-2 rounded-3xl p-3">
             <p className="text-xs font-bold tracking-wide uppercase">
               Features & Limits
             </p>

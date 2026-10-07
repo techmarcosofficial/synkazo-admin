@@ -23,7 +23,9 @@ import { connectionsApi } from '@/api/connections';
 import { jobsApi } from '@/api/jobs';
 import CustomFieldModal from '@/components/fieldmapping/CustomFieldModal';
 import CustomObjectModal from '@/components/fieldmapping/CustomObjectModal';
+import { isValidDefaultValue } from '@/components/fieldmapping/EmptyValuePolicy';
 import EmptyState from '@/components/shared/EmptyState';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { hasBothConnections } from '@/features/projects/lib/projectConnections';
@@ -45,6 +47,7 @@ import {
   useProjectConnectionsQuery,
 } from '@/queries/useConnections';
 import { useEntitlements } from '@/queries/useEntitlements';
+import { useProjectJobsQuery } from '@/queries/useJobs';
 import { usePlatformsQuery } from '@/queries/usePlatforms';
 import { useProjectQuery } from '@/queries/useProjects';
 import type { Connection, FieldMapping, PlatformId } from '@/types';
@@ -93,15 +96,20 @@ const withDirection = (
     return dests.map((destField) => ({
       sourceField: m.sourceField,
       destField,
-      transformType: 'direct',
-      transformConfig: m.destRules?.[destField]
-        ? { rules: m.destRules[destField] }
-        : null,
+      transformType: m.transformType ?? 'direct',
+      transformConfig:
+        m.transformType === 'combine'
+          ? (m.transformConfig ?? null)
+          : m.destRules?.[destField]
+            ? { rules: m.destRules[destField] }
+            : null,
       isMatchField: m.matchDestKey === destField,
       matchPriority:
         m.matchDestKey === destField ? (m.matchOrder ?? null) : null,
-      updatePolicy: m.destUpdatePolicy?.[destField] ?? 'always',
-      conflictScope: m.destConflictScope?.[destField] ?? 'field',
+      updatePolicy:
+        m.destUpdatePolicy?.[destField] === 'create_only'
+          ? 'create_only'
+          : 'always',
       onEmpty: m.destOnEmpty?.[destField] ?? 'none',
       defaultValue: m.destDefaults?.[destField] ?? null,
       reverseOnEmpty: m.destReverseOnEmpty?.[destField] ?? 'none',
@@ -193,6 +201,11 @@ export const CreateJobForm = forwardRef<
     projectId,
     projectPlatforms,
   );
+  const projectJobsQuery = useProjectJobsQuery(projectId);
+  const hasPreviousJobs = (projectJobsQuery.data?.length ?? 0) > 0;
+  const [compactLayout, setCompactLayout] = useState(
+    () => detailsOnly || hasPreviousJobs,
+  );
 
   const [apiSourceFields, setApiSourceFields] = useState<CanvasField[]>([]);
   const [apiDestFields, setApiDestFields] = useState<CanvasField[]>([]);
@@ -216,6 +229,7 @@ export const CreateJobForm = forwardRef<
     idMappingDestField: 'hs_object_id',
     excludeConditions: [],
     excludeConditionLogic: 'AND',
+    destinationSkipConditions: [],
     skipUpdateOnMatch: false,
   });
   const [fieldMappings, setFieldMappings] = useState<MappingRow[]>([]);
@@ -516,7 +530,11 @@ export const CreateJobForm = forwardRef<
       destFields,
       fieldMappings,
       { includeSource: true, includeDest: true },
-    ).filter((i) => i.currentOnEmpty === 'none');
+    ).filter(
+      (i) =>
+        i.currentOnEmpty !== 'default' ||
+        !isValidDefaultValue(i.field.type, i.currentDefaultValue),
+    );
     if (!unresolved.length) return null;
     return `These required fields need a default value or a skip rule: ${unresolved
       .map((i) => i.field.label || i.field.key)
@@ -572,6 +590,11 @@ export const CreateJobForm = forwardRef<
               ? config.excludeConditions
               : null,
           excludeConditionLogic: config.excludeConditionLogic,
+          destinationSkipConditions:
+            config.destinationSkipConditions &&
+            config.destinationSkipConditions.length > 0
+              ? config.destinationSkipConditions
+              : null,
           skipUpdateOnMatch: config.skipUpdateOnMatch,
         };
         let savedId = draftJobId;
@@ -647,7 +670,7 @@ export const CreateJobForm = forwardRef<
       }
       if (!fieldMappings.some((m) => m.matchDestKey)) {
         toast.error(
-          'At least one Match Field is required — toggle the switch on a mapping to set it.',
+          'Please choose how to identify matching records (Match Field) before continuing.',
         );
         return false;
       }
@@ -795,6 +818,11 @@ export const CreateJobForm = forwardRef<
             ? config.excludeConditions
             : null,
         excludeConditionLogic: config.excludeConditionLogic,
+        destinationSkipConditions:
+          config.destinationSkipConditions &&
+          config.destinationSkipConditions.length > 0
+            ? config.destinationSkipConditions
+            : null,
         skipUpdateOnMatch: config.skipUpdateOnMatch,
       });
 
@@ -834,7 +862,7 @@ export const CreateJobForm = forwardRef<
     }
     if (!fieldMappings.some((m) => m.matchDestKey)) {
       toast.error(
-        'At least one Match Field is required — toggle the switch on a mapping to set it.',
+        'Please choose how to identify matching records (Identifier) before saving.',
       );
       return;
     }
@@ -891,6 +919,11 @@ export const CreateJobForm = forwardRef<
             ? config.excludeConditions
             : null,
         excludeConditionLogic: config.excludeConditionLogic,
+        destinationSkipConditions:
+          config.destinationSkipConditions &&
+          config.destinationSkipConditions.length > 0
+            ? config.destinationSkipConditions
+            : null,
         skipUpdateOnMatch: config.skipUpdateOnMatch,
       };
 
@@ -1017,8 +1050,13 @@ export const CreateJobForm = forwardRef<
     return (
       <EmptyState
         icon={AlertCircle}
-        title="Connection Required"
-        description="Connect both the source and destination platforms in the same environment before creating a sync."
+        title="Connections Required"
+        description="Both your source and destination platforms must be connected before you can create a sync flow."
+        action={{
+          label: 'Connect Platforms Now',
+          onClick: () => navigate(`/projects/${projectId}?tab=connections`),
+          timeEstimate: 'Takes ~2 mins',
+        }}
       />
     );
   }
@@ -1061,6 +1099,25 @@ export const CreateJobForm = forwardRef<
 
   return (
     <div className="w-full">
+      {step === 0 && hasPreviousJobs && !detailsOnly && (
+        <div className="border-border/60 bg-muted/30 mb-4 flex items-center justify-between rounded-2xl border px-3.5 py-2 text-xs">
+          <span className="text-muted-foreground">
+            {compactLayout
+              ? 'Compact creation layout active'
+              : 'Detailed step-by-step guidance active'}
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            onClick={() => setCompactLayout((prev) => !prev)}
+            className="text-primary hover:text-primary/80 h-6 px-2 text-xs font-semibold"
+          >
+            {compactLayout ? 'Show full guidance' : 'Switch to compact view'}
+          </Button>
+        </div>
+      )}
+
       {step === 0 && (
         <JobDetailsStep
           config={config}
@@ -1078,7 +1135,8 @@ export const CreateJobForm = forwardRef<
             setShowCustomObjectModal(side === 'source' ? 'source' : 'dest')
           }
           projectId={projectId}
-          compact={detailsOnly}
+          compact={compactLayout || detailsOnly}
+          existingJobs={projectJobsQuery.data ?? []}
         />
       )}
 
@@ -1155,6 +1213,13 @@ export const CreateJobForm = forwardRef<
               ...c,
               excludeConditions: conditions,
               excludeConditionLogic: logic,
+            }))
+          }
+          destinationSkipConditions={config.destinationSkipConditions ?? []}
+          onDestinationSkipConditionsChange={(conditions) =>
+            setConfig((current) => ({
+              ...current,
+              destinationSkipConditions: conditions,
             }))
           }
           skipUpdateOnMatch={config.skipUpdateOnMatch ?? false}

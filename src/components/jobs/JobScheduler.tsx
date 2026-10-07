@@ -13,6 +13,7 @@ import BulkScheduleControlsCard from './scheduler/BulkScheduleControlsCard';
 import ScheduleSummaryCard from './scheduler/ScheduleSummaryCard';
 
 import { PlanLock, PlanLockBadge } from '@/components/shared/PlanGate';
+import HeadingPair from '@/components/shared/HeadingPair';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -72,7 +73,7 @@ function ExecutionModeCard({
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader visualLevel="section">
         <CardTitle>Execution mode</CardTitle>
         <CardDescription>
           Choose whether jobs follow their own schedules or run sequentially.
@@ -171,12 +172,12 @@ function SectionHeading({
 }) {
   return (
     <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-      <div>
-        <h3 id={id} className="font-heading text-base font-semibold">
-          {title}
-        </h3>
-        <p className="text-muted-foreground mt-1 text-sm">{description}</p>
-      </div>
+      <HeadingPair
+        level="h3"
+        titleId={id}
+        title={title}
+        subtitle={description}
+      />
       {children}
     </div>
   );
@@ -274,7 +275,7 @@ export default function JobScheduler({ projectId }: { projectId: string }) {
       <div className="space-y-4">
         <ScheduleSummaryCard jobs={jobs} config={config} />
         <Card>
-          <CardHeader>
+          <CardHeader visualLevel="section">
             <CardTitle>Automatic two-way scheduling</CardTitle>
             <CardDescription>
               Two-way projects use their platform polling configuration.

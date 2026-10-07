@@ -12,13 +12,13 @@ const integrations = [
   {
     name: 'Dataforma',
     description: 'Back Office',
-    logo: '/dataforma-logo.svg',
+    logo: '/dataforma-logo.png',
     className: 'is-dataforma',
   },
   {
     name: 'Texada',
     description: 'Equipment Data',
-    logo: '/texada-logo.svg',
+    logo: '/texada-logo.png',
     className: 'is-texada',
   },
 ];
@@ -45,7 +45,11 @@ function IntegrationCardFace({
   );
 }
 
-export default function AuthShowcase() {
+export default function AuthShowcase({
+  showBackToHome = true,
+}: {
+  showBackToHome?: boolean;
+}) {
   return (
     <aside
       className="synkazo-login-showcase"
@@ -55,12 +59,14 @@ export default function AuthShowcase() {
       <div className="synkazo-showcase-glow" aria-hidden="true" />
       <div className="synkazo-showcase-horizon" aria-hidden="true" />
 
-      <header className="synkazo-showcase-header">
-        <a href={import.meta.env.VITE_FRONTEND_URL}>
-          <ArrowLeft />
-          Back to Home
-        </a>
-      </header>
+      {showBackToHome && (
+        <header className="synkazo-showcase-header">
+          <a href={import.meta.env.VITE_FRONTEND_URL}>
+            <ArrowLeft />
+            Back to Home
+          </a>
+        </header>
+      )}
 
       <div className="synkazo-showcase-content">
         <div className="synkazo-showcase-intro">

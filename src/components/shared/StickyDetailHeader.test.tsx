@@ -7,7 +7,7 @@ import StickyDetailHeader from './StickyDetailHeader';
 afterEach(() => cleanup());
 
 describe('StickyDetailHeader', () => {
-  it('layers the header card slightly in front of the compact back action', () => {
+  it('extends the back action beneath the card corner without moving the header', () => {
     const { container } = render(
       <MemoryRouter>
         <StickyDetailHeader
@@ -28,15 +28,15 @@ describe('StickyDetailHeader', () => {
 
     expect(backLink).toHaveClass(
       'h-(--detail-back-row-height)',
-      'rounded-t-3xl',
+      'rounded-t-4xl',
       'rounded-b-none',
       'pb-(--detail-header-overlap)',
     );
     expect(backLink).toHaveAttribute('data-variant', 'secondary');
     expect(backLink).toHaveTextContent('Back to Projects');
     expect(backRow?.parentElement).toHaveClass(
-      '[--detail-back-row-height:--spacing(11)]',
-      '[--detail-header-overlap:--spacing(2)]',
+      '[--detail-back-row-height:--spacing(14)]',
+      '[--detail-header-overlap:--spacing(5)]',
     );
     expect(
       backRow?.parentElement?.style.getPropertyValue('--detail-sticky-top'),

@@ -1,0 +1,763 @@
+// Response DTOs for the /super-admin/* API. Intentionally hand-written and
+// narrow — do not reuse tenant entity types (which the backend does not
+// promise to keep stable) and do not reuse persistence-layer types. Every
+// property here is one the Super Admin workspace actually renders.
+//
+// `SubscriptionStatus` is imported from ./billing (shared with the tenant
+// billing screens); `Paginated<T>` is also shared but uses `items: T[]` so
+// this file additionally exports `SuperAdminPage<T>` for the {data, total,
+// page, limit} response envelope every /super-admin/* list endpoint uses.
+
+import type { SubscriptionStatus } from './billing';
+
+export type OrgStatus = 'active' | 'suspended' | 'pending' | 'archived';
+
+export type { SubscriptionStatus };
+
+export interface SuperAdminOwnerSummary {
+  id: string;
+  fullName: string | null;
+  email: string;
+  isActive: boolean;
+}
+
+export interface SuperAdminOrganisationListItem {
+  id: string;
+  name: string;
+  slug: string;
+  status: OrgStatus;
+  subscriptionStatus: SubscriptionStatus;
+  owner: SuperAdminOwnerSummary | null;
+  plan: { id: string | null; name: string };
+  memberCount: number;
+  projectCount: number;
+  createdAt: string;
+}
+
+export interface SuperAdminOrganisationDetail {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  logoUrl: string | null;
+  status: OrgStatus;
+  owner: SuperAdminOwnerSummary | null;
+  settings: { defaultCurrency: string | null };
+  plan: {
+    id: string | null;
+    name: string;
+    subscriptionStatus: SubscriptionStatus;
+  };
+  access: {
+    mode: 'super_admin_organisation_access';
+    planRestrictionsBypassed: boolean;
+    canManage: boolean;
+  };
+  usage: {
+    members: { total: number; active: number; limit: number | null };
+    projects: { count: number; limit: number | null; over: boolean };
+    jobs: { count: number; limit: number | null; over: boolean };
+    records: {
+      used: number;
+      limit: number | null;
+      remaining: number | null;
+      periodStart: string | null;
+    };
+  };
+  paymentHoldActive?: boolean;
+  paymentHoldSince?: string | null;
+  manualHoldReason?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SuperAdminMemberListItem {
+  id: string;
+  email: string;
+  fullName: string | null;
+  role: 'editor' | 'org_admin' | 'super_admin';
+  isActive: boolean;
+  // Returned by the API when the row matches organisation.ownerId.
+  // Optional for forward-compat with older cached responses that
+  // predate the flag.
+  isOwner?: boolean;
+  lastLoginAt: string | null;
+  createdAt: string;
+}
+
+export interface SuperAdminInvitationListItem {
+  id: string;
+  email: string;
+  role: 'editor' | 'org_admin';
+  status: 'pending' | 'accepted' | 'revoked' | 'expired';
+  createdAt: string;
+  expiresAt: string | null;
+  revokedAt: string | null;
+}
+
+export interface SuperAdminProjectListItem {
+  id: string;
+  organisationId: string;
+  name: string;
+  description: string | null;
+  status: 'active' | 'archived' | 'setup';
+  sourcePlatformId: string;
+  destPlatformId: string;
+  syncMode: string;
+  jobCount: number;
+  enabledJobCount: number;
+  lastSyncedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SuperAdminProjectDetail extends SuperAdminProjectListItem {
+  schedulerMode: string;
+  activeEnvironment: string;
+  totalRecordsSynced: number;
+  totalErrorCount: number;
+}
+
+export interface SuperAdminJobListItem {
+  id: string;
+  projectId: string;
+  organisationId: string;
+  name: string;
+  isEnabled: boolean;
+  syncEnabled: boolean;
+  isRunning: boolean;
+  status: string;
+  scheduleState: string;
+  syncDirection: string;
+  lastSyncedAt: string | null;
+  nextRunAt: string | null;
+  // GAP-014 — checkpoint visibility. The next run resumes from these
+  // values, so support conversations that turn on "why did the run
+  // rewind / skip ahead" are answerable from the detail page.
+  checkpointPage: number | null;
+  checkpointSince: string | null;
+  checkpointRunId: string | null;
+  syncAllPage: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SuperAdminJobDetail extends SuperAdminJobListItem {
+  scheduleMode: string | null;
+  intervalMinutes: number | null;
+  sourceObjectId: string | null;
+  destObjectId: string | null;
+  dependsOnJobId: string | null;
+  // GAP-050 / SA-602 — last 5 failed sync runs; omitted on list.
+  recentFailures?: SuperAdminJobRecentFailure[];
+}
+
+export interface SuperAdminRunStatus {
+  bullJobId: string;
+  state: string;
+  progress: number | Record<string, unknown> | null;
+  failedReason: string | null;
+}
+
+export interface SuperAdminBillingOverview {
+  plan: {
+    planId: string | null;
+    planName: string;
+    subscriptionStatus: SubscriptionStatus;
+    billingInterval: string | null;
+    trialEndsAt: string | null;
+    trialPendingStart: boolean;
+    currentPeriodEnd: string | null;
+    cancelAtPeriodEnd: boolean;
+    overLimit: {
+      projects: { count: number; limit: number | null; over: boolean };
+      jobs: { count: number; limit: number | null; over: boolean };
+      teamMembers: { count: number; limit: number | null; over: boolean };
+      records: { count: number; limit: number | null; over: boolean };
+      isOverLimit: boolean;
+    };
+  };
+  usage: {
+    recordsSynced: number;
+    maxRecordsPerMonth: number | null;
+    periodStart: string;
+    remaining: number | null;
+  };
+}
+
+export interface SuperAdminInvoiceListItem {
+  id: string;
+  invoiceNumber: string | null;
+  status: string;
+  amountDue: number;
+  amountPaid: number;
+  currency: string;
+  createdAt: string;
+  paidAt: string | null;
+  dueDate: string | null;
+  hostedInvoiceUrl: string | null;
+}
+
+export interface SuperAdminActivityEntry {
+  id: string;
+  action: string;
+  resource: string;
+  resourceId: string | null;
+  severity: 'INFO' | 'WARNING' | 'ERROR';
+  userId: string | null;
+  userEmail: string | null;
+  organisationId: string;
+  details: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface SuperAdminPage<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+// Request DTOs. Never a bare `boolean` or `string` that could accidentally
+// carry a bypass — the API derives `platform_override` from the caller's
+// identity, never from a request field.
+
+// GAP-001 — mirrors the API's allowlisted DTO (name / description /
+// logoUrl / settings). Status transitions go through the dedicated
+// lifecycle route so `status` and `reason` are deliberately absent.
+export interface SuperAdminUpdateOrganisationDto {
+  name?: string;
+  description?: string;
+  logoUrl?: string;
+  settings?: Record<string, unknown>;
+}
+
+export interface ProvisionOrganisationDto {
+  name: string;
+  slug?: string;
+  description?: string;
+  ownerEmail?: string;
+  invitationMessage?: string;
+  reason: string;
+}
+
+export interface ProvisionOrganisationResponse {
+  organisationId: string;
+  slug: string;
+  invitationId: string | null;
+  invitationSent: boolean;
+  reused: boolean;
+}
+
+export interface SuperAdminInviteMemberDto {
+  email: string;
+  role: 'editor' | 'org_admin';
+  message?: string;
+  // SA-504 — mandatory operator rationale (≥10 chars). Server bumps the
+  // audit row severity to WARNING when this is present.
+  reason: string;
+}
+
+// SA-504 — typed-email confirmation on revoke matches the SA-411
+// destructive-action contract used by lifecycle transitions + rule
+// deletes.
+export interface SuperAdminRevokeInvitationDto {
+  reason: string;
+  confirmEmail: string;
+}
+
+export interface SuperAdminRunJobDto {
+  fullSync?: boolean;
+  maxRecords?: number;
+  startDate?: string;
+  endDate?: string;
+}
+
+// Lifecycle actions (Phase 4 slice 2). Match the DTOs in
+// synkazo-api/src/super-admin/organisations/dto/lifecycle-transition.dto.ts.
+export interface TransitionOrganisationStatusDto {
+  targetStatus: 'active' | 'suspended' | 'archived';
+  confirmName: string;
+  reason: string;
+}
+
+export interface HoldWorkDto {
+  reason?: string;
+}
+
+export interface PaymentHoldDto {
+  reason: string;
+  confirmName: string;
+}
+
+export interface ClearPaymentHoldDto {
+  reason: string;
+}
+
+export interface LifecycleTransitionResponse {
+  status: 'active' | 'suspended' | 'archived';
+  cascade: LifecycleCascade;
+}
+
+// GAP-046 / SA-411 — every axis populated by the SA lifecycle service.
+// Optional fields are omitted from responses that don't apply (holdWork
+// doesn't touch users, imposePaymentHold doesn't touch queues, etc.).
+export interface LifecycleCascade {
+  pausedJobs?: number;
+  queuedRemoved?: number;
+  heldJobs?: number;
+  resumedJobs?: number;
+  usersAffected?: number;
+  billingTreatment?: 'preserved' | 'canceled' | 'suspended' | 'none';
+  queuesAffected?: string[];
+  associationRulesAffected?: number;
+}
+
+export interface HoldWorkResponse {
+  heldJobs: number;
+}
+
+export interface ResumeWorkResponse {
+  resumedJobs: number;
+}
+
+// SA-703/704 subscription command payloads. Every command carries a
+// reason. Length constraints are enforced server-side; the client just
+// requires presence.
+export interface CancelAtPeriodEndDto {
+  reason: string;
+}
+
+export interface ResumeSubscriptionDto {
+  reason: string;
+}
+
+export interface CancelSubscriptionImmediateDto {
+  reason: string;
+}
+
+export interface CancelAtPeriodEndResponse {
+  command: 'cancel_at_period_end';
+  subscriptionId: string;
+  status: 'pending_cancel';
+  accessUntil: string | null;
+}
+
+export interface ResumeSubscriptionResponse {
+  command: 'resume';
+  subscriptionId: string;
+  status: 'active';
+}
+
+export interface CancelSubscriptionImmediateResponse {
+  command: 'cancel_immediate';
+  status: 'canceled';
+  effectiveAt: string;
+}
+
+// SA-705 failed-payments queue row. Denormalised so the queue page can
+// render every column without joining subscriptions / orders / orgs on
+// the client.
+export interface RetryInvoiceDto {
+  note?: string;
+}
+
+export interface RetryInvoiceResponse {
+  command: 'invoice_retry';
+  orderId: string;
+  stripeInvoiceId: string;
+  status: string;
+  amount: number;
+}
+
+export interface FailedPaymentRow {
+  organisationId: string;
+  organisationName: string;
+  organisationSlug: string;
+  ownerEmail: string;
+  subscriptionStatus: SubscriptionStatus;
+  subscriptionId: string | null;
+  amountDue: number;
+  currency: string | null;
+  latestFailedInvoiceId: string | null;
+  latestFailedInvoiceNumber: string | null;
+  firstFailureAt: string | null;
+  daysInGrace: number | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+}
+
+// Platform-wide overview (Phase 3). One aggregate call to avoid client
+// fan-out across organisations; every metric is a link to a filtered list
+// in the corresponding subsystem screen.
+export interface PlatformOverviewResponse {
+  generatedAt: string;
+  organisations: {
+    total: number;
+    byStatus: Record<OrgStatus, number>;
+    bySubscriptionStatus: Record<SubscriptionStatus, number>;
+    pastDueCount: number;
+    suspendedCount: number;
+  };
+  jobs: {
+    queue: {
+      waiting: number;
+      active: number;
+      completed: number;
+      failed: number;
+      delayed: number;
+      workerOnline: boolean;
+    };
+  };
+  recentAlerts: Array<{
+    id: string;
+    action: string;
+    resource: string | null;
+    resourceId: string | null;
+    severity: 'info' | 'warning' | 'critical';
+    userEmail: string | null;
+    organisationId: string | null;
+    summary: string;
+    createdAt: string;
+  }>;
+  // GAP-023 / CAP-091 — process-local health signals.
+  systemHealth: {
+    processUptimeSeconds: number;
+    memoryHeapUsedMb: number;
+    memoryHeapTotalMb: number;
+    // null when the Redis PING failed.
+    redisPingMs: number | null;
+  };
+  // CAP-108 — platform sync success/failure rate over a 24h window.
+  syncHealth?: PlatformSyncHealth;
+  // GAP-041 — in-process alias hit counter so operators can see when
+  // the legacy prefixes are safe to delete.
+  legacyAliases?: PlatformLegacyAliases;
+  // GAP-043 / SA-302 — per-section error surface. Populated only when
+  // at least one aggregate query on the API's Promise.allSettled path
+  // rejected. Absent on a fully-successful load.
+  errors?: {
+    organisations?: string;
+    subscriptions?: string;
+    queue?: string;
+    recentAlerts?: string;
+    systemHealth?: string;
+    syncHealth?: string;
+  };
+}
+
+// GAP-023 — SA settings entities returned by the platform-settings
+// endpoints. Shapes mirror the API entities exactly.
+
+export interface PlatformFeatureFlag {
+  id: string;
+  key: string;
+  enabled: boolean;
+  description: string | null;
+  updatedByUserId: string | null;
+  updatedByUserEmail: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MarketplaceCatalogEntry {
+  id: string;
+  slug: string;
+  displayName: string | null;
+  shortDescription: string | null;
+  visible: boolean;
+  sortOrder: number;
+  updatedByUserId: string | null;
+  updatedByUserEmail: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpsertFeatureFlagDto {
+  enabled: boolean;
+  description?: string;
+  reason: string;
+}
+
+export interface UpsertMarketplaceCatalogEntryDto {
+  displayName?: string;
+  shortDescription?: string;
+  visible?: boolean;
+  sortOrder?: number;
+  reason: string;
+}
+
+// CAP-006 / CAP-007 — Super Admin directory.
+export interface SuperAdminDirectoryEntry {
+  id: string;
+  email: string;
+  fullName: string;
+  role: 'super_admin';
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateSuperAdminDto {
+  email: string;
+  fullName: string;
+  initialPassword: string;
+  reason: string;
+}
+
+export interface DeactivateSuperAdminDto {
+  reason: string;
+  confirmEmail: string;
+}
+
+export interface ReactivateSuperAdminDto {
+  reason: string;
+}
+
+// GAP-003/4/5 — SA member mutations.
+export interface SuperAdminDeactivateMemberDto {
+  reason: string;
+  confirmEmail: string;
+}
+
+export interface SuperAdminReactivateMemberDto {
+  reason: string;
+}
+
+export interface SuperAdminChangeMemberRoleDto {
+  role: 'org_admin' | 'editor';
+  reason: string;
+}
+
+// CAP-016 — ownership transfer.
+export interface SuperAdminTransferOwnershipDto {
+  newOwnerUserId: string;
+  reason: string;
+  confirmName: string;
+}
+
+// CAP-029 / CAP-093..097 — operator notes.
+export type OrganisationNoteCategory = 'general' | 'billing' | 'support';
+
+export interface OrganisationNote {
+  id: string;
+  organisationId: string;
+  category: OrganisationNoteCategory;
+  body: string;
+  createdByUserId: string | null;
+  createdByEmail: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateOrganisationNoteDto {
+  category?: OrganisationNoteCategory;
+  body: string;
+}
+
+// CAP-039 — platform plan defaults.
+export interface PlanDefaults {
+  defaultPlanId: string | null;
+  trialPlanId: string | null;
+  trialLengthDays: number | null;
+}
+
+export interface UpsertPlanDefaultsDto {
+  defaultPlanId?: string | null;
+  trialPlanId?: string | null;
+  trialLengthDays?: number | null;
+  reason: string;
+}
+
+// CAP-060 / CAP-061 — masked project connections.
+export interface SuperAdminProjectConnection {
+  id: string;
+  platformId: string;
+  connectionType: string;
+  environment: string;
+  status: string;
+  accountName: string | null;
+  connectedAt: string | null;
+  lastCheckedAt: string | null;
+}
+
+// CAP-108 — platform sync health block + legacy aliases.
+export interface PlatformSyncHealth {
+  windowHours: number;
+  totalRuns: number;
+  successRate: number | null;
+  failureRate: number | null;
+  recentFailures: number;
+}
+
+export interface PlatformLegacyAliases {
+  firstHitAt: string | null;
+  lastHitAt: string | null;
+  counts: Record<string, number>;
+  canonicals: Record<string, string>;
+}
+
+// GAP-050 — enriched job detail.
+export interface SuperAdminJobRecentFailure {
+  id: string;
+  startedAt: string;
+  completedAt: string | null;
+  durationMs: number | null;
+  totalFetched: number;
+  failedCount: number;
+  status: string;
+}
+
+// GAP-022 — SA association rules + env-migration.
+
+export type SuperAdminConditionOperator =
+  | 'equals'
+  | 'not_equals'
+  | 'is_empty'
+  | 'is_not_empty'
+  | 'contains'
+  | 'not_contains'
+  | 'starts_with'
+  | 'ends_with'
+  | 'in'
+  | 'not_in'
+  | 'gt'
+  | 'gte'
+  | 'lt'
+  | 'lte';
+
+export type SuperAdminConditionLogic = 'AND' | 'OR';
+
+export interface SuperAdminAssociationCondition {
+  field: string;
+  operator: SuperAdminConditionOperator;
+  value?: string | number | boolean | string[] | null;
+  normalization?: {
+    trim?: boolean;
+    lowercase?: boolean;
+    removeWhitespace?: boolean;
+  };
+}
+
+export interface SuperAdminAssociationRule {
+  id: string;
+  projectId: string;
+  name?: string;
+  sourceObject: string;
+  sourceMatchField: string;
+  destSourceObjectType?: string;
+  targetObject: string;
+  targetMatchField: string;
+  destTargetObjectType?: string;
+  assocTypeId?: number;
+  assocCategory?: string;
+  assocLabel?: string | null;
+  cardinality?: string;
+  isEnabled?: boolean;
+  conditions?: SuperAdminAssociationCondition[] | null;
+  conditionLogic?: SuperAdminConditionLogic;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface SuperAdminCreateAssociationRuleDto {
+  name: string;
+  sourceObject: string;
+  sourceMatchField: string;
+  destSourceObjectType: string;
+  targetObject: string;
+  targetMatchField: string;
+  destTargetObjectType: string;
+  assocTypeId: number;
+  assocCategory?: string;
+  assocLabel?: string;
+  cardinality?: string;
+  conditions?: SuperAdminAssociationCondition[];
+  conditionLogic?: SuperAdminConditionLogic;
+  reason: string;
+}
+
+export interface SuperAdminUpdateAssociationRuleDto {
+  name?: string;
+  assocTypeId?: number;
+  assocCategory?: string;
+  assocLabel?: string;
+  isEnabled?: boolean;
+  conditions?: SuperAdminAssociationCondition[];
+  conditionLogic?: SuperAdminConditionLogic;
+  reason: string;
+}
+
+export interface SuperAdminDeleteAssociationRuleDto {
+  reason: string;
+  confirmName: string;
+}
+
+export interface SuperAdminPendingAssociation {
+  id: string;
+  associationRuleId: string;
+  sourceId: string;
+  sourceHsId: string | null;
+  targetMatchValue: string;
+  targetId: string | null;
+  targetHsId: string | null;
+  status: 'pending' | 'completed' | 'failed';
+  retryCount: number;
+  lastAttemptedAt: string | null;
+  errorMessage: string | null;
+  createdAt: string;
+}
+
+export type SuperAdminConnectionEnvironment = 'production' | 'sandbox';
+
+export interface SuperAdminMigrationDiffItem {
+  identityKey: string;
+  kind: 'custom_object' | 'property' | 'association';
+  displayName: string;
+  objectType?: string;
+  status: 'missing' | 'in_sync' | 'conflict';
+  conflictReason?: string;
+  payload?: Record<string, unknown>;
+}
+
+export interface SuperAdminMigrationDiff {
+  from: SuperAdminConnectionEnvironment;
+  to: SuperAdminConnectionEnvironment;
+  ready: boolean;
+  sandboxConnected: boolean;
+  productionConnected: boolean;
+  message?: string;
+  customObjects: SuperAdminMigrationDiffItem[];
+  properties: SuperAdminMigrationDiffItem[];
+  associations: SuperAdminMigrationDiffItem[];
+}
+
+export interface SuperAdminMigrationRun {
+  id: string;
+  projectId: string;
+  status: 'pending' | 'running' | 'completed' | 'partial' | 'failed';
+  fromEnvironment: SuperAdminConnectionEnvironment;
+  toEnvironment: SuperAdminConnectionEnvironment;
+  totalItems: number;
+  succeeded: number;
+  skipped: number;
+  failed: number;
+  startedAt: string;
+  createdAt: string;
+  completedAt?: string;
+}
+
+export interface SuperAdminMigrationRunItem {
+  id: string;
+  kind: string;
+  displayName: string;
+  status: string;
+  errorMessage?: string | null;
+}
+
+export interface SuperAdminRunMigrationDto {
+  selectedKeys: string[];
+  from?: SuperAdminConnectionEnvironment;
+  to?: SuperAdminConnectionEnvironment;
+  reason: string;
+}

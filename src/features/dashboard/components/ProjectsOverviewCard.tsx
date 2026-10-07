@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 
 import { PlatformPair } from '@/components/platform';
 import EmptyState from '@/components/shared/EmptyState';
+import HeadingPair from '@/components/shared/HeadingPair';
 import ListRow from '@/components/shared/list/ListRow';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
@@ -28,7 +29,7 @@ export default function ProjectsOverviewCard({
       className="bg-card overflow-hidden rounded-4xl border"
     >
       <div className="bg-muted flex flex-row items-center justify-between px-3 py-2">
-        <h3 className="text-md font-semibold">Your projects</h3>
+        <HeadingPair level="h3" title="Your projects" />
         <Button asChild variant="link" size="sm">
           <Link to="/projects">
             View all <ArrowRight />

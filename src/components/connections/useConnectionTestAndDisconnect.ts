@@ -9,6 +9,7 @@ import { connectionsApi } from '@/api/connections';
 export function useConnectionTestAndDisconnect(
   conn: ExtConnection,
   onUpdated: (updated: ExtConnection | null) => void,
+  onTestError?: (message: string) => void,
 ) {
   const meta = PLATFORM_META[conn.platformId] ?? { label: conn.platformId };
 
@@ -32,13 +33,16 @@ export function useConnectionTestAndDisconnect(
         toast.success(`${meta.label} connection verified`);
         onUpdated?.({ ...conn, status: 'connected' });
       } else {
-        toast.error(result?.message ?? `${meta.label} connection test failed`);
+        const message = result?.message ?? `${meta.label} connection test failed`;
+        onTestError?.(message);
+        toast.error(message);
         onUpdated?.({ ...conn, status: 'error' });
       }
     } catch (err) {
       const e = err as { response?: { data?: { message?: string } } };
       const msg = e?.response?.data?.message ?? 'Connection test failed';
       setTestResult({ ok: false, msg });
+      onTestError?.(msg);
       toast.error(msg);
     } finally {
       setTesting(false);

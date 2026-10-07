@@ -20,14 +20,9 @@ afterEach(() => {
 });
 
 describe('ConfirmDialog', () => {
-  it.each([
-    ['danger', 'bg-destructive'],
-    ['warning', 'bg-warning'],
-    ['success', 'bg-success'],
-    ['info', 'bg-info'],
-  ] as const)(
-    'uses the %s tone for its compact icon and dynamic action',
-    (variant: ConfirmDialogVariant, actionClass) => {
+  it.each(['danger', 'warning', 'success', 'info'] as const)(
+    'uses the %s tone for its icon with primary and outline actions',
+    (variant: ConfirmDialogVariant) => {
       useConfirmDialogStore.getState().confirm({
         variant,
         title: 'Review this action',
@@ -50,10 +45,11 @@ describe('ConfirmDialog', () => {
       expect(media).toHaveClass(
         `bg-${variant === 'danger' ? 'destructive' : variant}/10`,
       );
-      expect(action).toHaveClass(actionClass);
-      expect(
-        screen.getByRole('button', { name: 'Go back' }),
-      ).toBeInTheDocument();
+      expect(action).toHaveClass('bg-primary');
+      expect(action).not.toHaveClass('bg-warning', 'bg-destructive');
+      const cancel = screen.getByRole('button', { name: 'Go back' });
+      expect(cancel).toHaveClass('border');
+      expect(cancel).toHaveClass('bg-background');
       expect(media?.compareDocumentPosition(title)).toBe(
         Node.DOCUMENT_POSITION_FOLLOWING,
       );

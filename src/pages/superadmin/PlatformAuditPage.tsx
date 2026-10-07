@@ -3,6 +3,7 @@ import {
   Building2,
   ClipboardList,
   Clock,
+  Download,
   Info,
   type LucideIcon,
   RefreshCw,
@@ -14,6 +15,7 @@ import { useMemo, useState } from 'react';
 import DateRangePicker from '@/components/shared/DateRangePicker';
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
+import HeadingPair from '@/components/shared/HeadingPair';
 import ManagementToolbar from '@/components/shared/ManagementToolbar';
 import PageContextAlert from '@/components/shared/PageContextAlert';
 import PageHeader from '@/components/shared/PageHeader';
@@ -40,6 +42,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import apiClient from '@/api/apiClient';
 import { cn } from '@/lib/utils';
 import { usePlatformAuditLogsQuery } from '@/queries/useAudit';
 import { useOrgsQuery } from '@/queries/useOrganisations';
@@ -67,7 +70,7 @@ const SEVERITY_CONFIG: Record<
 function SeverityBadge({ severity }: { severity: string }) {
   const cfg = SEVERITY_CONFIG[severity] ?? SEVERITY_CONFIG.info;
   return (
-    <Badge className="bg-muted text-muted-foreground gap-1 rounded-full font-semibold">
+    <Badge className="bg-muted text-muted-foreground gap-1 font-semibold">
       <cfg.Icon className={cn('size-2.5', cfg.iconClassName)} />
       {cfg.label}
     </Badge>
@@ -101,6 +104,21 @@ const SEVERITY_FILTER_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'critical', label: 'Critical' },
 ];
 
+// GAP-055 — audit rows carry a small fixed vocabulary in `resource`.
+// Kept as a Select rather than free text so the operator can't miss
+// an exact-match filter with a typo, and so the option list matches
+// the actual audit vocabulary emitted by AuditService callers.
+const RESOURCE_FILTER_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: 'all', label: 'All resources' },
+  { value: 'organisation', label: 'Organisation' },
+  { value: 'user', label: 'User' },
+  { value: 'invoice', label: 'Invoice' },
+  { value: 'subscription', label: 'Subscription' },
+  { value: 'project', label: 'Project' },
+  { value: 'job', label: 'Job' },
+  { value: 'connection', label: 'Connection' },
+];
+
 export default function PlatformAuditPage() {
   const [activeTab, setActiveTab] = useState<'audit' | 'system'>('audit');
 
@@ -114,12 +132,17 @@ export default function PlatformAuditPage() {
   const [severity, setSeverity] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  // GAP-055 — extra filter axes required by SA-804 acceptance.
+  const [actorEmail, setActorEmail] = useState('');
+  const [resource, setResource] = useState('all');
 
   const auditFilters = {
     search: search.trim() || undefined,
     organisationId: organisationId === 'all' ? undefined : organisationId,
     userId: userId === 'all' ? undefined : userId,
+    actorEmail: actorEmail.trim() || undefined,
     action: action.trim() || undefined,
+    resource: resource === 'all' ? undefined : resource,
     severity: severity === 'all' ? undefined : (severity as AuditSeverity),
     dateFrom: dateFrom || undefined,
     dateTo: dateTo || undefined,
@@ -180,7 +203,9 @@ export default function PlatformAuditPage() {
     !!search.trim() ||
     organisationId !== 'all' ||
     userId !== 'all' ||
+    !!actorEmail.trim() ||
     !!action.trim() ||
+    resource !== 'all' ||
     severity !== 'all' ||
     !!dateFrom ||
     !!dateTo;
@@ -211,22 +236,46 @@ export default function PlatformAuditPage() {
       title="Platform Audit"
       description="Platform-wide administrative, security, and organization activity across synkazo"
       actions={
-        <Button
-          variant="outline"
-          onClick={() => {
-            auditQuery.refetch();
-            systemQuery.refetch();
-          }}
-          disabled={auditQuery.isFetching || systemQuery.isFetching}
-        >
-          <RefreshCw
-            className={cn(
-              (auditQuery.isFetching || systemQuery.isFetching) &&
-                'animate-spin',
-            )}
-          />
-          Refresh
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={async () => {
+              // CAP-103 — stream CSV via the existing SA audit export
+              // endpoint. Reuses the same filter params as the list.
+              const response = await apiClient.get('/audit-logs/platform/export.csv', {
+                params: auditFilters,
+                responseType: 'blob',
+              });
+              const url = URL.createObjectURL(response.data as Blob);
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              URL.revokeObjectURL(url);
+            }}
+          >
+            <Download />
+            Export CSV
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              auditQuery.refetch();
+              systemQuery.refetch();
+            }}
+            disabled={auditQuery.isFetching || systemQuery.isFetching}
+          >
+            <RefreshCw
+              className={cn(
+                (auditQuery.isFetching || systemQuery.isFetching) &&
+                  'animate-spin',
+              )}
+            />
+            Refresh
+          </Button>
+        </div>
       }
     />
   );
@@ -298,14 +347,11 @@ export default function PlatformAuditPage() {
                 <Card>
                   <CardContent className="space-y-6">
                     <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
-                      <div className="space-y-1">
-                        <h3 className="text-lg font-semibold">
-                          Review platform activity
-                        </h3>
-                        <p className="text-muted-foreground text-sm">
-                          What happened across synkazo, and who did it
-                        </p>
-                      </div>
+                      <HeadingPair
+                        level="h3"
+                        title="Review platform activity"
+                        subtitle="What happened across synkazo, and who did it"
+                      />
                       <ManagementToolbar
                         searchValue={search}
                         onSearchChange={handleSearchChange}
@@ -364,6 +410,36 @@ export default function PlatformAuditPage() {
                               className="bg-muted sm:w-36"
                             />
 
+                            <Input
+                              value={actorEmail}
+                              onChange={(e) => {
+                                setActorEmail(e.target.value);
+                                setPage(1);
+                              }}
+                              placeholder="Actor email…"
+                              type="email"
+                              className="bg-muted sm:w-48"
+                            />
+
+                            <Select
+                              value={resource}
+                              onValueChange={(v) => {
+                                setResource(v);
+                                setPage(1);
+                              }}
+                            >
+                              <SelectTrigger className="bg-muted sm:w-40">
+                                <SelectValue placeholder="Resource" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {RESOURCE_FILTER_OPTIONS.map((opt) => (
+                                  <SelectItem key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+
                             <Select
                               value={severity}
                               onValueChange={(v) => {
@@ -404,7 +480,7 @@ export default function PlatformAuditPage() {
                         viewMode="table"
                       />
                     ) : (
-                      <div className="overflow-hidden rounded-4xl border">
+                      <div className="overflow-hidden rounded-3xl border">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-muted hover:bg-muted/50">
@@ -500,14 +576,11 @@ export default function PlatformAuditPage() {
                 <Card>
                   <CardContent className="space-y-6">
                     <div className="flex justify-between">
-                      <div className="space-y-1">
-                        <h3 className="text-lg font-semibold">
-                          Review system activity
-                        </h3>
-                        <p className="text-muted-foreground text-sm">
-                          Operational and technical activity trail
-                        </p>
-                      </div>
+                      <HeadingPair
+                        level="h3"
+                        title="Review system activity"
+                        subtitle="Operational and technical activity trail"
+                      />
                       <ManagementToolbar
                         searchValue={sysSearch}
                         onSearchChange={handleSysSearchChange}
@@ -521,7 +594,7 @@ export default function PlatformAuditPage() {
                         viewMode="table"
                       />
                     ) : (
-                      <div className="overflow-hidden rounded-4xl border">
+                      <div className="overflow-hidden rounded-3xl border">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-muted hover:bg-muted/50">

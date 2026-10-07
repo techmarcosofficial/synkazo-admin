@@ -51,6 +51,7 @@ describe('layout style preference', () => {
       'data-layout-surface',
       'outer',
     );
+    expect(screen.getByTestId('outer-card').className).not.toContain('shadow');
     expect(screen.getByTestId('inner-card')).toHaveAttribute(
       'data-layout-surface',
       'inner',

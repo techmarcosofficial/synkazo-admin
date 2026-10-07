@@ -70,14 +70,14 @@ const VIEW_OPTIONS = [
 const LAYOUT_OPTIONS = [
   {
     id: 'contrast',
-    label: 'Contrast / Border',
-    description: 'Defined surfaces with clear boundaries',
+    label: 'Border',
+    description: 'Crisp boundaries with no outer shadows',
     icon: PanelTop,
   },
   {
     id: 'shadow',
-    label: 'Normal / Shadow',
-    description: 'Softer separation with subtle depth',
+    label: 'Shadow',
+    description: 'Borderless surfaces with visible depth',
     icon: Layers3,
   },
 ] as const;
@@ -156,7 +156,7 @@ export default function PreferencesTab() {
   return (
     <div className="grid w-full gap-4 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
       <Card className="h-full">
-        <CardHeader>
+        <CardHeader visualLevel="section">
           <CardTitle className="flex items-center gap-2">
             <Bell className="text-muted-foreground size-4" /> Notifications
           </CardTitle>
@@ -207,7 +207,7 @@ export default function PreferencesTab() {
       </Card>
 
       <Card className="h-full">
-        <CardHeader>
+        <CardHeader visualLevel="section">
           <CardTitle className="flex items-center gap-2">
             <Palette className="text-muted-foreground size-4" /> Appearance &
             Display

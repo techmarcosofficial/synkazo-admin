@@ -3,6 +3,7 @@
 import { ChevronDown, type LucideIcon } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
+import { Badge } from '@/components/ui/badge';
 import {
   Collapsible,
   CollapsibleContent,
@@ -92,9 +93,12 @@ export function NavMain({
                           <item.icon />
                           <span>{item.title}</span>
                           {item.badge && (
-                            <span className="bg-sidebar-primary text-sidebar-primary-foreground ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-semibold">
+                            <Badge
+                              size="xs"
+                              className="bg-sidebar-primary text-sidebar-primary-foreground ml-auto font-semibold"
+                            >
                               {item.badge}
-                            </span>
+                            </Badge>
                           )}
                         </Link>
                       </SidebarMenuButton>

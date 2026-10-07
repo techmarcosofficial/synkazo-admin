@@ -29,6 +29,7 @@ export interface AssociationCondition {
   operator: ConditionOperator;
   value?: string | number | boolean | string[] | null;
   normalization?: ConditionNormalization;
+  enabled?: boolean;
 }
 
 export type ConditionLogic = 'AND' | 'OR';
@@ -54,18 +55,6 @@ export interface AssociationRule {
   isEnabled?: boolean;
   conditions?: AssociationCondition[] | null;
   conditionLogic?: ConditionLogic;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface CompanyOwnerMapping {
-  id: string;
-  projectId: string;
-  sourcePlatformId: string;
-  sourceObject: string;
-  sourceProperty: string;
-  targetHubspotProperty: string;
-  isEnabled: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -204,14 +193,35 @@ export const associationsApi = {
   ): Promise<AssociationRunResult> =>
     apiClient.post(`${base(projectId)}/rules/${ruleId}/retry-failed`).then(d),
 
-  getProjectObjects: (projectId: string): Promise<string[]> =>
+  getProjectObjects: (
+    projectId: string,
+  ): Promise<Array<{ sourceObject: string; hsObjectType: string }>> =>
     apiClient.get(`${base(projectId)}/objects`).then(d),
 
   getObjectFields: (
     projectId: string,
     sourceObject: string,
   ): Promise<string[]> =>
-    apiClient.get(`${base(projectId)}/objects/${sourceObject}/fields`).then(d),
+    apiClient
+      .get(
+        `${base(projectId)}/objects/${encodeURIComponent(sourceObject)}/fields`,
+      )
+      .then(d),
+
+  getAssociationFields: (
+    projectId: string,
+    sourceObject: string,
+  ): Promise<Array<{ field: string; label: string; isArray: boolean }>> =>
+    apiClient
+      .get(
+        `${base(projectId)}/objects/${encodeURIComponent(sourceObject)}/fields`,
+      )
+      .then(d),
+
+  getOwnerFields: (
+    projectId: string,
+  ): Promise<Array<{ field: string; label: string; isArray: boolean }>> =>
+    apiClient.get(`${base(projectId)}/owner-fields`).then(d),
 
   getAssociationTypes: (
     projectId: string,
@@ -249,112 +259,4 @@ export const associationsApi = {
       )
       .then(d),
 
-  // Dataforma company-owner mapping config — {sourceProperty -> targetHubspotProperty}
-  // rows, isolated from ServiceTitan's CAM-matching flow below.
-  listCompanyOwnerMappings: (
-    projectId: string,
-  ): Promise<CompanyOwnerMapping[]> =>
-    apiClient.get(`${base(projectId)}/company-owner-mappings`).then(d),
-
-  createCompanyOwnerMapping: (
-    projectId: string,
-    data: { sourceProperty: string; targetHubspotProperty: string },
-  ): Promise<CompanyOwnerMapping> =>
-    apiClient.post(`${base(projectId)}/company-owner-mappings`, data).then(d),
-
-  updateCompanyOwnerMapping: (
-    projectId: string,
-    mappingId: string,
-    data: Partial<{
-      sourceProperty: string;
-      targetHubspotProperty: string;
-      isEnabled: boolean;
-    }>,
-  ): Promise<CompanyOwnerMapping> =>
-    apiClient
-      .patch(`${base(projectId)}/company-owner-mappings/${mappingId}`, data)
-      .then(d),
-
-  deleteCompanyOwnerMapping: (
-    projectId: string,
-    mappingId: string,
-  ): Promise<void> =>
-    apiClient
-      .delete(`${base(projectId)}/company-owner-mappings/${mappingId}`)
-      .then(d),
-
-  runAllCompanyOwners: (
-    projectId: string,
-    config: Record<string, unknown> = {},
-  ): Promise<CompanyOwnerStats> =>
-    apiClient.post(`${base(projectId)}/company-owners/run-all`, config).then(d),
-
-  getCompanyOwnerLogs: (
-    projectId: string,
-    limit = 20,
-  ): Promise<CompanyOwnerRunLog[]> =>
-    apiClient
-      .get(`${base(projectId)}/company-owners/logs`, { params: { limit } })
-      .then(d),
-
-  getCompanyOwnerResults: (
-    projectId: string,
-    params: {
-      page?: number;
-      limit?: number;
-      search?: string;
-      status?: string;
-      runId?: string;
-    } = {},
-  ): Promise<CompanyOwnerResultsPage> =>
-    apiClient
-      .get(`${base(projectId)}/company-owners/results`, { params })
-      .then(d),
 };
-
-export type CompanyOwnerResultStatus = 'success' | 'skipped' | 'failed';
-
-export interface CompanyOwnerResultRow {
-  hsId: string;
-  camValue: string | null;
-  resolvedEmails: string[];
-  assignedHsOwnerId: string | null;
-  companyName: string | null;
-  ownerName: string | null;
-  associatedAt: string | null;
-  result: CompanyOwnerResultStatus;
-  reason?: string;
-}
-
-export interface CompanyOwnerResultsPage {
-  items: CompanyOwnerResultRow[];
-  total: number;
-  page: number;
-  limit: number;
-  runId: string | null;
-  runStartedAt: string | null;
-  runStatus: 'completed' | 'partial' | 'failed' | null;
-}
-
-export type CompanyOwnerRunStatus = 'completed' | 'partial' | 'failed';
-
-export interface CompanyOwnerRunLog {
-  id: string;
-  status: CompanyOwnerRunStatus;
-  startedAt: string;
-  completedAt?: string;
-  triggeredBy?: string;
-  hsTotalCount?: number;
-  hsSuccessCount?: number;
-  hsFailedCount?: number;
-  hsSkippedCount?: number;
-}
-
-export interface CompanyOwnerStats {
-  hubspot?: {
-    total?: number;
-    success?: number;
-    failed?: number;
-    skipped?: number;
-  };
-}

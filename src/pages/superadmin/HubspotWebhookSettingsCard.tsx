@@ -42,7 +42,7 @@ export default function HubspotWebhookSettingsCard() {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader visualLevel="section">
         <CardTitle className="flex items-center gap-2 font-semibold">
           <Webhook className="size-4" />
           HubSpot Webhook Target
@@ -61,7 +61,7 @@ export default function HubspotWebhookSettingsCard() {
         ) : (
           query.data && (
             <div className="space-y-4">
-              <div className="bg-card space-y-3 rounded-4xl border p-4">
+              <div className="bg-card space-y-3 rounded-3xl border p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-muted-foreground text-sm">
                     Currently registered with HubSpot

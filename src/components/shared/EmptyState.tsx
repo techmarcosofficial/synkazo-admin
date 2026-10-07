@@ -17,18 +17,29 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty';
 
-interface ActionButton {
+import { ActionTooltip } from '@/features/journey';
+
+export interface ActionButton {
   onClick: () => void;
   icon?: ComponentType<{ className?: string }>;
   label: string;
+  timeEstimate?: string;
+  disabled?: boolean;
+  tooltip?: string;
+  dataFlowNextAction?: boolean;
 }
 
-interface EmptyStateProps {
+export interface EmptyStateProps {
   icon: LucideIcon | ComponentType<{ className?: string }>;
   title: string;
   description?: string;
   action?: ReactElement | ActionButton | null;
   secondaryAction?: ReactElement | ActionButton | null;
+  helpLink?: {
+    label: string;
+    href?: string;
+    onClick?: () => void;
+  };
   /** Overrides the default icon media (e.g. a custom SVG illustration). */
   illustration?: ReactNode;
   viewMode?: 'list' | 'table' | 'card';
@@ -39,13 +50,42 @@ function renderAction(
   variant?: 'outline',
 ) {
   if (isValidElement(action)) return action;
-  const { onClick, icon: ActionIcon, label } = action as ActionButton;
-  return (
-    <Button onClick={onClick} variant={variant}>
+  const {
+    onClick,
+    icon: ActionIcon,
+    label,
+    timeEstimate,
+    disabled,
+    tooltip,
+    dataFlowNextAction,
+  } = action as ActionButton;
+
+  const button = (
+    <Button
+      onClick={onClick}
+      variant={variant}
+      disabled={disabled}
+      data-flow-next-action={dataFlowNextAction ? 'true' : undefined}
+    >
       {ActionIcon && <ActionIcon />}
-      {label}
+      <span>{label}</span>
+      {timeEstimate && (
+        <span className="text-muted-foreground/80 ml-1 text-xs font-normal">
+          ({timeEstimate})
+        </span>
+      )}
     </Button>
   );
+
+  if (disabled && tooltip) {
+    return (
+      <ActionTooltip tooltip={tooltip} disabled={disabled}>
+        {button}
+      </ActionTooltip>
+    );
+  }
+
+  return button;
 }
 
 export default function EmptyState({
@@ -54,6 +94,7 @@ export default function EmptyState({
   description,
   action = null,
   secondaryAction = null,
+  helpLink,
   illustration,
   viewMode,
 }: EmptyStateProps) {
@@ -68,12 +109,36 @@ export default function EmptyState({
         <EmptyTitle>{title}</EmptyTitle>
         {description && <EmptyDescription>{description}</EmptyDescription>}
       </EmptyHeader>
-      {(action || secondaryAction) && (
-        <EmptyContent>
-          <div className="flex items-center gap-2">
-            {action && renderAction(action)}
-            {secondaryAction && renderAction(secondaryAction, 'outline')}
-          </div>
+      {(action || secondaryAction || helpLink) && (
+        <EmptyContent className="space-y-3">
+          {(action || secondaryAction) && (
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {action && renderAction(action)}
+              {secondaryAction && renderAction(secondaryAction, 'outline')}
+            </div>
+          )}
+          {helpLink && (
+            <div>
+              {helpLink.href ? (
+                <a
+                  href={helpLink.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground hover:text-foreground text-xs underline underline-offset-4 transition-colors"
+                >
+                  {helpLink.label}
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  onClick={helpLink.onClick}
+                  className="text-muted-foreground hover:text-foreground text-xs underline underline-offset-4 transition-colors"
+                >
+                  {helpLink.label}
+                </button>
+              )}
+            </div>
+          )}
         </EmptyContent>
       )}
     </Empty>
@@ -83,7 +148,7 @@ export default function EmptyState({
     return (
       <div className="bg-card flex h-full w-full flex-col overflow-hidden rounded-4xl border">
         <div className="bg-muted px-3 py-1.5 text-sm font-semibold">
-          No any data
+          No data found
         </div>
         {content}
       </div>

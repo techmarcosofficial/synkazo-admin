@@ -4,7 +4,13 @@ import { GripVertical, Plus, Save, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -140,11 +146,11 @@ export default function AssociationQueueCard({
           <div className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
             2
           </div>
-          <div>
-            <CardTitle className="text-sm">Association Queue</CardTitle>
-            <p className="text-muted-foreground mt-0.5 text-xs">
+          <div className="flex flex-col gap-1">
+            <CardTitle>Association Queue</CardTitle>
+            <CardDescription>
               Runs after the Priority Queue completes.
-            </p>
+            </CardDescription>
           </div>
         </div>
         <Switch
@@ -171,7 +177,8 @@ export default function AssociationQueueCard({
                 setDelayAmount(Math.max(0, Number(e.target.value)));
                 markDirty();
               }}
-              className="h-8 w-24 font-mono"
+              uiSize="sm"
+              className="w-24 font-mono"
             />
             <Select
               value={delayUnit}
@@ -191,7 +198,7 @@ export default function AssociationQueueCard({
           </div>
 
           {localItems.length === 0 ? (
-            <p className="text-muted-foreground rounded-4xl border py-6 text-center text-xs">
+            <p className="text-muted-foreground rounded-3xl border py-6 text-center text-xs">
               No association rules added to the queue yet.
             </p>
           ) : (
@@ -201,7 +208,7 @@ export default function AssociationQueueCard({
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className="overflow-x-auto rounded-4xl border"
+                    className="overflow-x-auto rounded-3xl border"
                     role="table"
                     aria-label="Association queue rules"
                   >
@@ -251,7 +258,7 @@ export default function AssociationQueueCard({
                                 ASSOCIATION_GRID_CLASS,
                                 'bg-card hover:bg-muted/40 items-center border-t text-xs transition-colors',
                                 snapshot.isDragging &&
-                                  'ring-ring rounded-4xl shadow-sm ring-2',
+                                  'ring-ring rounded-2xl shadow-sm ring-2',
                               )}
                               role="row"
                             >

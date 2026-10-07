@@ -6,6 +6,7 @@ import { marketplaceApi } from '@/api/marketplace';
 import AuthStatus from '@/components/auth/AuthStatus';
 import { PlatformIcon } from '@/components/platform';
 import HelpText from '@/components/shared/HelpText';
+import HeadingPair from '@/components/shared/HeadingPair';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -91,7 +92,7 @@ export default function WelcomeOnboarding() {
               icon={Mail}
               tone="danger"
               title="This link is invalid"
-              description="The onboarding link is missing or has expired. Please reinstall synkazo from the HubSpot Marketplace, or log in if you already have an account."
+              description="The onboarding link is missing or has expired. Please reinstall Synkazo from the HubSpot Marketplace, or log in if you already have an account."
             >
               <Button onClick={() => navigate('/login')} className="w-full">
                 Go to login
@@ -124,15 +125,10 @@ export default function WelcomeOnboarding() {
                 </AlertDescription>
               </Alert>
 
-              <div className="space-y-1">
-                <h2 className="text-xl font-bold tracking-tight">
-                  Connect ServiceTitan
-                </h2>
-                <p className="text-muted-foreground text-sm">
-                  One last step — add your ServiceTitan credentials to start
-                  syncing. They're stored securely and encrypted.
-                </p>
-              </div>
+              <HeadingPair
+                title="Connect ServiceTitan"
+                subtitle="One last step — add your ServiceTitan credentials to start syncing. They're stored securely and encrypted."
+              />
 
               <FieldGroup>
                 <Field>

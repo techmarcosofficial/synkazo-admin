@@ -77,11 +77,11 @@ export const PLATFORMS: Record<string, Platform> = {
  * Each entry is className for the badge's bg, border, and text color.
  */
 export const PLATFORM_BADGE_CLASSES: Record<string, string> = {
-  servicetitan: 'bg-servicetitan text-servicetitan',
-  hubspot: 'bg-hubspot text-hubspot',
-  dataforma: 'bg-dataforma text-dataforma',
-  texada: 'bg-texada text-texada',
-  salesforce: 'bg-salesforce text-salesforce',
+  servicetitan: 'bg-secondary text-secondary-foreground',
+  hubspot: 'bg-secondary text-secondary-foreground',
+  dataforma: 'bg-secondary text-secondary-foreground',
+  texada: 'bg-secondary text-secondary-foreground',
+  salesforce: 'bg-secondary text-secondary-foreground',
 };
 
 /**
@@ -90,6 +90,30 @@ export const PLATFORM_BADGE_CLASSES: Record<string, string> = {
  */
 export function getPlatformLogoUrl(platformId: string): string | undefined {
   return PLATFORMS[platformId]?.logoUrl;
+}
+
+/** Logos with their own background fill the tile; transparent marks use the tile surface. */
+export function getPlatformLogoImageClass(platformId: string): string {
+  if (platformId === 'dataforma' || platformId === 'hubspot') {
+    return 'h-full w-full object-cover';
+  }
+  if (platformId === 'texada') {
+    return 'h-full w-full object-contain';
+  }
+  return 'h-[88%] w-[88%] object-contain';
+}
+
+export function getPlatformLogoTileClass(platformId: string): string {
+  switch (platformId) {
+    case 'servicetitan':
+      return 'bg-servicetitan-tile';
+    case 'hubspot':
+      return 'bg-hubspot';
+    case 'dataforma':
+      return 'bg-dataforma';
+    default:
+      return 'bg-background';
+  }
 }
 
 /**

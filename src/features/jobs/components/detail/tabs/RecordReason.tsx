@@ -1,7 +1,15 @@
-import { CircleAlert, Info } from 'lucide-react';
+import { ArrowRight, CircleAlert, Info } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
 
+import {
+  analyzeRecordDiagnosis,
+  DIAGNOSIS_ICONS,
+  type RecordContext,
+  type RecordFixAction,
+} from '@/features/jobs/utils/recordDiagnosis';
 import { PLATFORMS } from '@/components/platform/platform';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Tooltip,
   TooltipContent,
@@ -10,16 +18,11 @@ import {
 import { cn } from '@/lib/utils';
 import type { SyncLogRecord } from '@/types';
 
-interface RecordContext {
-  sourceObject?: string;
-  destObject?: string;
-  sourcePlatform?: string;
-  destPlatform?: string;
-}
-
-interface RecordReasonProps {
+export interface RecordReasonProps {
   rec: SyncLogRecord;
   context?: RecordContext;
+  projectId?: string;
+  jobId?: string;
 }
 
 interface DetailItem {
@@ -36,6 +39,7 @@ const REASON_SUMMARIES: Record<string, string> = {
   manually_excluded: 'Manually excluded',
   matched_no_update: 'Matched record left unchanged',
   record_level_conflict: 'Record-level conflict',
+  destination_condition: 'Matched a destination skip rule',
   api_error: 'API error',
   rate_limited: 'Rate limit reached',
   transform_error: 'Transformation failed',
@@ -44,25 +48,6 @@ const REASON_SUMMARIES: Record<string, string> = {
   network_error: 'Network error',
   unknown: 'Unknown error',
 };
-
-const CONTACT_FIELD_NAMES = new Set([
-  'email',
-  'emailaddress',
-  'email_address',
-  'phone',
-  'phonenumber',
-  'phone_number',
-  'mobilephone',
-  'mobile_phone',
-]);
-
-const SOURCE_ID_FIELD_NAMES = new Set([
-  'source_record_id',
-  'sourcerecordid',
-  'record_id',
-  'recordid',
-  'id',
-]);
 
 function enumLabel(value: string): string {
   return value
@@ -79,97 +64,16 @@ function objectLabel(platform: string | undefined, object: string): string {
   return [platformName, enumLabel(object)].filter(Boolean).join(' ');
 }
 
-function isEmptyValue(value: unknown): boolean {
-  return (
-    value == null ||
-    (typeof value === 'string' && value.trim() === '') ||
-    (Array.isArray(value) && value.length === 0) ||
-    (typeof value === 'object' &&
-      !Array.isArray(value) &&
-      Object.keys(value).length === 0)
-  );
-}
-
-function sanitizeStructuredValue(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    const cleaned = value
-      .map(sanitizeStructuredValue)
-      .filter((item) => !isEmptyValue(item));
-    return cleaned.length > 0 ? cleaned : undefined;
-  }
-
-  if (value && typeof value === 'object') {
-    const cleaned = Object.fromEntries(
-      Object.entries(value)
-        .map(([key, item]) => [key, sanitizeStructuredValue(item)])
-        .filter(([, item]) => !isEmptyValue(item)),
-    );
-    return Object.keys(cleaned).length > 0 ? cleaned : undefined;
-  }
-
-  return isEmptyValue(value) ? undefined : value;
-}
-
-function parseStructuredValue(value: unknown): unknown {
-  if (typeof value !== 'string') return sanitizeStructuredValue(value);
-
-  const trimmed = value.trim();
-  if (!trimmed) return undefined;
-
-  try {
-    return sanitizeStructuredValue(JSON.parse(trimmed));
-  } catch {
-    return trimmed;
-  }
-}
-
-function formatStructuredValue(value: unknown): string | null {
-  const parsed = parseStructuredValue(value);
-  if (parsed == null) return null;
-  return typeof parsed === 'string' ? parsed : JSON.stringify(parsed, null, 2);
-}
-
-function collectContactDetails(
-  value: unknown,
-  path: string[] = [],
-  details: DetailItem[] = [],
-): DetailItem[] {
-  const parsed = path.length === 0 ? parseStructuredValue(value) : value;
-
-  if (Array.isArray(parsed)) {
-    parsed.forEach((item, index) =>
-      collectContactDetails(item, [...path, String(index + 1)], details),
-    );
-    return details;
-  }
-
-  if (!parsed || typeof parsed !== 'object') return details;
-
-  Object.entries(parsed).forEach(([key, item]) => {
-    if (isEmptyValue(item)) return;
-
-    const normalizedKey = key.toLowerCase().replace(/[\s.-]/g, '_');
-    const nextPath = [...path, key];
-    const isSourceId =
-      SOURCE_ID_FIELD_NAMES.has(normalizedKey) &&
-      (normalizedKey !== 'id' ||
-        path.length === 0 ||
-        path.some((segment) => /source|records?/i.test(segment)));
-    if (
-      (CONTACT_FIELD_NAMES.has(normalizedKey) || isSourceId) &&
-      ['string', 'number'].includes(typeof item)
-    ) {
-      details.push({
-        label: nextPath.join(' › '),
-        value: String(item),
-      });
-      return;
+function formatErrorDetails(value: unknown): string | null {
+  if (!value) return null;
+  if (typeof value === 'string') {
+    try {
+      return JSON.stringify(JSON.parse(value), null, 2);
+    } catch {
+      return null;
     }
-
-    collectContactDetails(item, nextPath, details);
-  });
-
-  return details;
+  }
+  return typeof value === 'object' ? JSON.stringify(value, null, 2) : null;
 }
 
 function getSummary(rec: SyncLogRecord, reason?: string | null): string {
@@ -233,7 +137,18 @@ function DetailList({ items }: { items: DetailItem[] }) {
   );
 }
 
-export function RecordReason({ rec, context }: RecordReasonProps) {
+export function RecordReason({
+  rec,
+  context,
+  projectId: propProjectId,
+  jobId: propJobId,
+}: RecordReasonProps) {
+  const navigate = useNavigate();
+  const params = useParams<{ projectId?: string; jobId?: string }>();
+
+  const projectId = propProjectId || params.projectId;
+  const jobId = propJobId || params.jobId;
+
   const reason = rec.skipReason || rec.failReason;
   const detail = rec.skipReasonDetail || rec.failReasonDetail;
 
@@ -241,27 +156,12 @@ export function RecordReason({ rec, context }: RecordReasonProps) {
     return <span className="text-muted-foreground">—</span>;
   }
 
+  const diagnosis = analyzeRecordDiagnosis(rec, context);
   const actionLabel = rec.action === 'failed' ? 'Failed' : 'Skipped';
   const summary = getSummary(rec, reason);
-  const contactDetails = collectContactDetails(rec.sourceData).filter(
-    (item, index, items) =>
-      !(
-        item.value === rec.sourceRecordId &&
-        SOURCE_ID_FIELD_NAMES.has(
-          item.label
-            .split(' › ')
-            .slice(-1)[0]
-            .toLowerCase()
-            .replace(/[\s.-]/g, '_'),
-        )
-      ) &&
-      items.findIndex(
-        (candidate) =>
-          candidate.label === item.label && candidate.value === item.value,
-      ) === index,
-  );
-  const mappedData = formatStructuredValue(rec.mappedData);
-  const apiDetails = formatStructuredValue(rec.destResponse);
+  const apiDetails =
+    rec.action === 'failed' ? formatErrorDetails(rec.destResponse) : null;
+
   const sourceItems: DetailItem[] = [
     ...(context?.sourceObject
       ? [
@@ -272,10 +172,10 @@ export function RecordReason({ rec, context }: RecordReasonProps) {
         ]
       : []),
     ...(rec.sourceRecordId ? [{ label: 'ID', value: rec.sourceRecordId }] : []),
-    ...contactDetails,
   ];
+
   const destinationItems: DetailItem[] = [
-    ...(context?.destObject
+    ...(rec.destRecordId && context?.destObject
       ? [
           {
             label: 'Object',
@@ -286,12 +186,28 @@ export function RecordReason({ rec, context }: RecordReasonProps) {
     ...(rec.destRecordId ? [{ label: 'ID', value: rec.destRecordId }] : []),
   ];
 
+  const handleActionClick = (action: RecordFixAction) => {
+    if (action.destination === 'connections' && projectId) {
+      navigate(`/projects/${projectId}?tab=connections`);
+    } else if (action.destination === 'mapping' && projectId && jobId) {
+      const q = new URLSearchParams();
+      q.set('tab', 'field-mapping');
+      if (action.deepLink?.field) {
+        q.set('field', action.deepLink.field);
+      }
+      if (action.deepLink?.action) {
+        q.set('action', action.deepLink.action);
+      }
+      navigate(`/projects/${projectId}/jobs/${jobId}?${q.toString()}`);
+    }
+  };
+
   return (
     <Tooltip delayDuration={150}>
       <TooltipTrigger asChild>
         <button
           type="button"
-          className="group/reason flex max-w-full min-w-0 items-center gap-1.5 text-left"
+          className="group/reason flex max-w-full min-w-0 cursor-pointer items-center gap-1.5 text-left"
           aria-label={`View ${actionLabel.toLowerCase()} reason details: ${summary}`}
         >
           {rec.action === 'failed' ? (
@@ -310,9 +226,10 @@ export function RecordReason({ rec, context }: RecordReasonProps) {
         align="start"
         sideOffset={8}
         collisionPadding={12}
-        className="bg-popover text-popover-foreground border-border [&>span>svg]:bg-popover [&>span>svg]:fill-popover max-h-[min(28rem,calc(100vh-1.5rem))] w-[min(26rem,calc(100vw-1.5rem))] max-w-none items-stretch overflow-y-auto rounded-2xl border p-0 shadow-xl"
+        className="bg-popover text-popover-foreground border-border [&>span>svg]:bg-popover [&>span>svg]:fill-popover pointer-events-auto max-h-[min(32rem,calc(100vh-1.5rem))] w-[min(28rem,calc(100vw-1.5rem))] max-w-none items-stretch overflow-y-auto rounded-2xl border p-0 shadow-xl"
       >
-        <div className="space-y-4 p-4">
+        <div className="space-y-3.5 p-4">
+          {/* Header */}
           <div className="flex items-start gap-3">
             <div
               className={cn(
@@ -344,13 +261,55 @@ export function RecordReason({ rec, context }: RecordReasonProps) {
                 </Badge>
               </div>
               {reason && (
-                <p className="text-muted-foreground mt-1 text-xs">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   {enumLabel(reason)}
                 </p>
               )}
             </div>
           </div>
 
+          {/* Smart Solution & Plain-English Explanation */}
+          <div className="bg-muted/40 space-y-2.5 rounded-xl border p-3">
+            <p className="text-foreground text-xs leading-relaxed font-medium break-words">
+              {diagnosis.humanExplanation}
+            </p>
+
+            {/* 1-Click Contextual Recovery Actions with Deep Links */}
+            {diagnosis.actions.length > 0 && projectId && jobId && (
+              <div className="space-y-1.5 pt-1">
+                <span className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
+                  Suggested Action
+                </span>
+                <div className="flex flex-col gap-1.5">
+                  {diagnosis.actions.map((act) => {
+                    const Icon = DIAGNOSIS_ICONS[act.iconName];
+                    return (
+                      <Button
+                        key={act.label}
+                        type="button"
+                        variant="secondary"
+                        size="xs"
+                        className="group/act hover:bg-primary/10 hover:text-primary hover:border-primary/40 flex h-7 w-full cursor-pointer items-center justify-between border px-2.5 text-xs font-medium transition-colors"
+                        title={act.hint}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleActionClick(act);
+                        }}
+                      >
+                        <span className="flex items-center gap-1.5 truncate">
+                          <Icon className="text-primary size-3.5 shrink-0" />
+                          <span className="truncate">{act.label}</span>
+                        </span>
+                        <ArrowRight className="size-3 shrink-0 opacity-60 transition-transform group-hover/act:translate-x-0.5" />
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Detail Sections */}
           {detail && (
             <DetailSection title="Reason">
               <p className="bg-muted/50 rounded-xl px-3 py-2 text-xs leading-relaxed break-words whitespace-pre-wrap">
@@ -368,14 +327,6 @@ export function RecordReason({ rec, context }: RecordReasonProps) {
           {destinationItems.length > 0 && (
             <DetailSection title="Destination record">
               <DetailList items={destinationItems} />
-            </DetailSection>
-          )}
-
-          {mappedData && (
-            <DetailSection title="Mapped field values">
-              <pre className="bg-muted/50 max-w-full rounded-xl px-3 py-2 font-mono text-[11px] leading-relaxed break-words whitespace-pre-wrap">
-                {mappedData}
-              </pre>
             </DetailSection>
           )}
 

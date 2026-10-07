@@ -1,4 +1,5 @@
-import { useLocation, useParams } from 'react-router-dom';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useLocation, useParams, useSearchParams } from 'react-router-dom';
 
 import type { JobDetailContextValue } from './context';
 import { JobDetailProvider } from './context';
@@ -30,22 +31,42 @@ export default function JobDetailPage() {
   const projectId = projectIdParam!;
   const jobId = jobIdParam!;
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const navigationState = location.state as {
     jobBackTo?: unknown;
     jobBackLabel?: unknown;
+    from?: string;
+    fromLabel?: string;
   } | null;
-  const fallbackBackTo = `/projects/${projectId}?tab=sync-rules`;
+  const fromParam = searchParams.get('from');
+  const rawFrom = (typeof navigationState?.jobBackTo === 'string' ? navigationState.jobBackTo : null) ||
+    navigationState?.from ||
+    fromParam;
+  const isFromDashboard = Boolean(
+    rawFrom &&
+      (rawFrom === 'dashboard' ||
+        rawFrom === '/dashboard' ||
+        rawFrom.startsWith('/dashboard')),
+  );
+  const fallbackBackTo = isFromDashboard
+    ? '/dashboard'
+    : `/projects/${projectId}?tab=sync-rules`;
   const stateBackTo = navigationState?.jobBackTo;
   const backTo =
     typeof stateBackTo === 'string' &&
     stateBackTo.startsWith('/') &&
     !stateBackTo.startsWith('//')
       ? stateBackTo
-      : fallbackBackTo;
+      : isFromDashboard
+        ? '/dashboard'
+        : rawFrom && rawFrom.startsWith('/') && !rawFrom.startsWith('//')
+          ? rawFrom
+          : fallbackBackTo;
   const backLabel =
     typeof navigationState?.jobBackLabel === 'string'
       ? navigationState.jobBackLabel
-      : 'Back to Sync Jobs';
+      : navigationState?.fromLabel ||
+        (isFromDashboard ? 'Back to Dashboard' : 'Back to Sync Jobs');
 
   const detailQuery = useJobDetailQuery(projectId, jobId);
   const { patchJob } = useJobDetailCacheHelpers(projectId, jobId);
@@ -59,8 +80,10 @@ export default function JobDetailPage() {
   const runLogs = detailQuery.data?.runLogs ?? [];
   const jobFieldMappings = detailQuery.data?.jobFieldMappings ?? [];
   const hasConnection = detailQuery.data?.hasConnection ?? false;
+  const isProductionReady = detailQuery.data?.isProductionReady ?? false;
   const pipelineRequired = detailQuery.data?.pipelineRequired ?? false;
   const pipelineConfigured = detailQuery.data?.pipelineConfigured ?? true;
+
 
   const runState = useJobRunState({
     projectId,
@@ -75,6 +98,33 @@ export default function JobDetailPage() {
     pipelineRequired,
     isTwoWay: job?.syncDirection === 'two_way',
   });
+
+  const [highlightStatusGuide, setHighlightStatusGuide] = useState(false);
+  const [manualDialogOpen, setManualDialogOpen] = useState(false);
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const triggerInactiveGuide = useCallback(() => {
+    if (highlightTimerRef.current) {
+      clearTimeout(highlightTimerRef.current);
+    }
+    setHighlightStatusGuide(true);
+    const target =
+      document.getElementById('job-contextual-alert') ||
+      document.getElementById('job-status-dropdown');
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    highlightTimerRef.current = setTimeout(() => {
+      setHighlightStatusGuide(false);
+      highlightTimerRef.current = null;
+    }, 2800);
+  }, []);
+
+  useEffect(() => () => {
+    if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+  }, []);
 
   if (loading) {
     return (
@@ -124,12 +174,18 @@ export default function JobDetailPage() {
     runLogs,
     jobFieldMappings,
     hasConnection,
+    isProductionReady,
     pipelineRequired,
+
     pipelineConfigured,
     activeTab,
     patchJob,
     refetch,
     handleTabChange,
+    highlightStatusGuide,
+    triggerInactiveGuide,
+    manualDialogOpen,
+    setManualDialogOpen,
     ...runState,
   };
 
@@ -138,7 +194,7 @@ export default function JobDetailPage() {
       <Tabs
         value={activeTab}
         onValueChange={(v) => handleTabChange(v as typeof activeTab)}
-        className="gap-0"
+        className="project-flow-guidance gap-0"
       >
         <StickyDetailHeader
           backLabel={backLabel}

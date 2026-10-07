@@ -1,4 +1,4 @@
-import { AlertCircle, Lock, Plus, X } from 'lucide-react';
+import { AlertCircle, Boxes, Lock, Plus, X } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -207,6 +207,9 @@ export default function CustomObjectModal({
       <FormDialog
         open
         onOpenChange={(open) => !open && onClose()}
+        category="Custom Object"
+        badge={side}
+        icon={Boxes}
         title={`Add Custom ${side} Object`}
         size="lg"
         footer={(requestClose) => (
@@ -215,7 +218,7 @@ export default function CustomObjectModal({
           </Button>
         )}
       >
-        <div className="bg-muted/40 flex items-start gap-3 rounded-4xl border p-4">
+        <div className="bg-muted/40 flex items-start gap-3 rounded-3xl border p-4">
           <AlertCircle className="text-warning mt-0.5 size-4.5 shrink-0" />
           <div>
             <p className="mb-1 text-sm font-medium">
@@ -239,6 +242,9 @@ export default function CustomObjectModal({
       <FormDialog
         open
         onOpenChange={(open) => !open && onClose()}
+        category="Custom Object"
+        badge={side}
+        icon={Lock}
         title={`Add Custom ${side} Object`}
         size="lg"
         footer={(requestClose) => (
@@ -276,6 +282,9 @@ export default function CustomObjectModal({
       <FormDialog
         open
         onOpenChange={(open) => !open && onClose()}
+        category="Custom Object"
+        badge={side}
+        icon={Lock}
         title={`Add Custom ${side} Object`}
         size="lg"
         footer={(requestClose) => (
@@ -297,7 +306,7 @@ export default function CustomObjectModal({
                 'HubSpot rejected the last attempt to create a custom object on this connection.'}
             </p>
           </div>
-          <div className="bg-muted/40 text-muted-foreground w-full rounded-4xl border p-3 text-xs">
+          <div className="bg-muted/40 text-muted-foreground w-full rounded-3xl border p-3 text-xs">
             If you've since upgraded your HubSpot plan, re-test your connection
             in synkazo to try again.
           </div>
@@ -310,7 +319,11 @@ export default function CustomObjectModal({
     <FormDialog
       open
       onOpenChange={(open) => !open && onClose()}
+      category="Custom Object"
+      badge={side}
+      icon={Boxes}
       title={`Add Custom ${side} Object`}
+      description={`Define a custom ${side.toLowerCase()} object schema.`}
       size="lg"
       footer={(requestClose) => (
         <>
@@ -413,7 +426,7 @@ export default function CustomObjectModal({
 
           <Field>
             <FieldLabel>Object Fields</FieldLabel>
-            <div className="overflow-hidden rounded-4xl border">
+            <div className="overflow-hidden rounded-3xl border">
               {fields.map((f, i) => (
                 <div
                   key={i}
@@ -422,12 +435,14 @@ export default function CustomObjectModal({
                   <Input
                     value={f.key}
                     onChange={(e) => updateFieldKey(i, e.target.value)}
-                    className="h-7 flex-1 font-mono text-xs"
+                    uiSize="sm"
+                    className="flex-1 font-mono"
                   />
                   <Input
                     value={f.label}
                     onChange={(e) => updateFieldLabel(i, e.target.value)}
-                    className="h-7 flex-1 text-xs"
+                    uiSize="sm"
+                    className="flex-1"
                   />
                   <Badge
                     className={cn(
@@ -460,7 +475,8 @@ export default function CustomObjectModal({
                       setNewField((f) => ({ ...f, key: e.target.value }))
                     }
                     placeholder="field_key"
-                    className="h-8 flex-1 font-mono text-xs"
+                    uiSize="sm"
+                    className="flex-1 font-mono"
                     onKeyDown={(e) => e.key === 'Enter' && addField()}
                   />
                   <Input
@@ -469,7 +485,8 @@ export default function CustomObjectModal({
                       setNewField((f) => ({ ...f, label: e.target.value }))
                     }
                     placeholder="Display Label"
-                    className="h-8 flex-1 text-xs"
+                    uiSize="sm"
+                    className="flex-1"
                     onKeyDown={(e) => e.key === 'Enter' && addField()}
                   />
                   <Select

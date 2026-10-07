@@ -24,12 +24,12 @@ export function useJobDetailTabs(ctx: JobDetailTabContext) {
   );
 
   const rawRequestedTab = searchParams.get('tab');
-  const requestedTab =
-    rawRequestedTab === 'overview'
-      ? DEFAULT_TAB_ID
+  const normalizedRequestedTab =
+    rawRequestedTab === 'sync-history'
+      ? 'run-history'
       : (rawRequestedTab as JobDetailTabId | null);
-  const activeTab = visibleDefs.some((t) => t.id === requestedTab)
-    ? (requestedTab as JobDetailTabId)
+  const activeTab = visibleDefs.some((t) => t.id === normalizedRequestedTab)
+    ? (normalizedRequestedTab as JobDetailTabId)
     : DEFAULT_TAB_ID;
 
   const tabs: JobDetailTabView[] = visibleDefs.map((tab) => ({
@@ -37,22 +37,39 @@ export function useJobDetailTabs(ctx: JobDetailTabContext) {
     label: tab.label,
   }));
 
-  // Overview now lives in the expandable card on the project's Sync Jobs tab.
-  // Keep existing bookmarks useful by replacing the retired tab in-place.
+  // Automatically migrate legacy ?tab=schedule or ?tab=settings&section=schedule links to Overview tab with modal auto-open.
   useEffect(() => {
-    if (rawRequestedTab !== 'overview') return;
-
-    const next = new URLSearchParams(searchParams);
-    next.set('tab', DEFAULT_TAB_ID);
-    setSearchParams(next, { replace: true });
+    if (
+      rawRequestedTab === 'schedule' ||
+      (rawRequestedTab === 'settings' &&
+        searchParams.get('section') === 'schedule')
+    ) {
+      const next = new URLSearchParams(searchParams);
+      next.set('tab', 'overview');
+      next.set('openSchedule', 'true');
+      next.delete('section');
+      setSearchParams(next, { replace: true });
+    }
   }, [rawRequestedTab, searchParams, setSearchParams]);
 
   const handleTabChange = (
     id: JobDetailTabId,
-    options?: { replace?: boolean },
+    options?: {
+      replace?: boolean;
+      searchParams?: Record<string, string | undefined | null>;
+    },
   ) => {
     const next = new URLSearchParams(searchParams);
     next.set('tab', id);
+    if (options?.searchParams) {
+      Object.entries(options.searchParams).forEach(([k, v]) => {
+        if (v === undefined || v === null || v === '') {
+          next.delete(k);
+        } else {
+          next.set(k, v);
+        }
+      });
+    }
     setSearchParams(next, { replace: options?.replace });
   };
 

@@ -10,6 +10,7 @@ import SiteHeader from './site-header';
 
 import SubscriptionPaywall from '@/components/billing/SubscriptionPaywall';
 import { AppSidebar } from '@/components/layout/app-sidebar';
+import { TenantAdminVisualContext } from '@/components/shared/TenantAdminVisualContext';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import SourceSetupDialog from '@/features/projects/components/setup/SourceSetupDialog';
 import CreateProjectDialog from '@/features/projects/components/create/CreateProjectDialog';
@@ -61,21 +62,21 @@ export default function AppLayout() {
   }
 
   return (
-    <>
-      <SidebarProvider>
+    <TenantAdminVisualContext.Provider value={true}>
+      <SidebarProvider data-admin-shell="workspace">
         {showWelcome && (
           <WelcomeGuideModal onClose={() => setShowWelcome(false)} />
         )}
         <SourceSetupDialog />
-        {hasPermission('project.create') && <CreateProjectDialog />}
+        <CreateProjectDialog />
         <AppSidebar />
-        <SidebarInset className="[--app-shell-header-height:--spacing(16)]">
+        <SidebarInset className="min-w-0 max-w-full overflow-x-clip [--app-shell-header-height:--spacing(16)]">
           <SiteHeader />
-          <main className="container mx-auto flex w-full flex-1 flex-col gap-6 px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
+          <main className="container mx-auto flex w-full min-w-0 max-w-full flex-1 flex-col gap-4 px-5 py-4 sm:px-7 sm:py-6 lg:px-8 xl:px-10">
             <Outlet />
           </main>
         </SidebarInset>
       </SidebarProvider>
-    </>
+    </TenantAdminVisualContext.Provider>
   );
 }

@@ -59,6 +59,19 @@ describe('auth form inline validation', () => {
 
   afterEach(cleanup);
 
+  it('offers HubSpot login only on the login page', () => {
+    const { unmount } = renderAuthPage(<Login />);
+    expect(
+      screen.getByRole('button', { name: 'Login with HubSpot' }),
+    ).toBeInTheDocument();
+
+    unmount();
+    renderAuthPage(<Register />);
+    expect(
+      screen.queryByRole('button', { name: 'Login with HubSpot' }),
+    ).not.toBeInTheDocument();
+  });
+
   it('shows login errors beside the empty fields', async () => {
     const user = userEvent.setup();
     renderAuthPage(<Login />);

@@ -1,11 +1,21 @@
-import { ArrowRight, CheckCircle2, Wand2, X } from 'lucide-react';
+import {
+  ArrowRight,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  RotateCcw,
+  ShieldCheck,
+  Sparkles,
+  Wand2,
+  X,
+} from 'lucide-react';
 import { useState } from 'react';
 
 import type { FieldDef } from './FieldMappingCanvas';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -14,7 +24,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Select,
@@ -24,6 +33,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { MatchableField } from '@/lib/fieldMatching';
+import { cn } from '@/lib/utils';
 
 export interface AutoMapPreviewRow {
   source: MatchableField;
@@ -50,6 +60,8 @@ interface AutoMapReviewDialogProps {
   onApply: (rows: { source: MatchableField; dest: MatchableField }[]) => void;
 }
 
+type FilterView = 'all' | 'review' | 'matched' | 'unmatched';
+
 export default function AutoMapReviewDialog({
   preview,
   destFields,
@@ -67,6 +79,9 @@ export default function AutoMapReviewDialog({
       ]),
     ),
   );
+
+  const [activeFilter, setActiveFilter] = useState<FilterView>('all');
+  const [matchedExpanded, setMatchedExpanded] = useState(true);
 
   const takenDestKeys = new Set([
     ...preview.matched.map((m) => m.dest.key),
@@ -94,121 +109,247 @@ export default function AutoMapReviewDialog({
     onApply(rows);
   };
 
+  const handleAcceptAll = () => {
+    setReviewState((prev) => {
+      const next = { ...prev };
+      for (const r of preview.review) {
+        next[r.source.key] = {
+          status: 'accepted',
+          destKey: prev[r.source.key]?.destKey ?? r.dest.key,
+        };
+      }
+      return next;
+    });
+  };
+
+  const handleResetAll = () => {
+    setReviewState(
+      Object.fromEntries(
+        preview.review.map((r) => [
+          r.source.key,
+          { status: 'pending' as RowStatus, destKey: r.dest.key },
+        ]),
+      ),
+    );
+  };
+
+  const showReview =
+    (activeFilter === 'all' || activeFilter === 'review') &&
+    preview.review.length > 0;
+  const showMatched =
+    (activeFilter === 'all' || activeFilter === 'matched') &&
+    preview.matched.length > 0;
+  const showUnmatched =
+    (activeFilter === 'all' || activeFilter === 'unmatched') &&
+    preview.unmatched.length > 0;
+
   return (
     <Dialog open onOpenChange={(open) => !open && onCancel()}>
       <DialogContent
-        size="md"
-        className="flex h-[85vh] max-h-[85vh] flex-col gap-0 p-0"
+        size="lg"
+        padding="none"
+        className="flex h-[82vh] max-h-[82vh] sm:max-w-[860px] flex-col gap-0 overflow-hidden"
       >
-        <DialogHeader className="gap-0 border-b px-6 py-5">
-          <div className="flex items-center gap-3">
-            <div className="bg-primary text-primary-foreground flex size-9 shrink-0 items-center justify-center rounded-lg">
-              <Wand2 className="size-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <DialogTitle>Auto-map results</DialogTitle>
-              <DialogDescription>
-                We scanned {totalScanned} field{totalScanned !== 1 ? 's' : ''}.
-                {preview.existingCount > 0
-                  ? ` ${preview.existingCount} existing mapping${preview.existingCount !== 1 ? 's' : ''} left untouched.`
-                  : ''}
-              </DialogDescription>
-            </div>
+        <DialogHeader className="bg-background shrink-0 border-b px-6 py-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge
+              variant="secondary"
+              size="xs"
+            >
+              Field Matching
+            </Badge>
+
+            <Badge
+              variant="secondary"
+              size="xs"
+              className="gap-1"
+            >
+              <ShieldCheck className="size-3 text-success shrink-0" />
+              <span>
+                Non-destructive
+                {preview.existingCount > 0 &&
+                  ` · ${preview.existingCount} existing intact`}
+              </span>
+            </Badge>
+
+            {applyCount > 0 && (
+              <Badge
+                variant="secondary"
+                size="xs"
+                className="gap-1 font-semibold"
+              >
+                <Sparkles className="size-3 text-primary shrink-0" />
+                <span>{applyCount} Mapping{applyCount !== 1 ? 's' : ''} Ready</span>
+              </Badge>
+            )}
           </div>
+
+          <DialogTitle className="text-foreground mt-1.5 flex items-center gap-2 text-base font-semibold">
+            <Wand2 className="text-primary size-5 shrink-0" />
+            Auto-Map Suggestions &amp; Review
+          </DialogTitle>
+
+          <DialogDescription className="text-muted-foreground text-xs">
+            Evaluated {totalScanned} unmapped field{totalScanned !== 1 ? 's' : ''}.
+            {preview.existingCount > 0 ? (
+              <>
+                {' '}
+                <strong className="text-foreground font-medium">
+                  {preview.existingCount} existing mapping
+                  {preview.existingCount !== 1 ? 's' : ''}
+                </strong>{' '}
+                will remain completely untouched.
+              </>
+            ) : (
+              ' Review matched pairs and medium-confidence suggestions before applying.'
+            )}
+          </DialogDescription>
         </DialogHeader>
 
         <ScrollArea className="min-h-0 flex-1">
-          <div className="flex flex-col gap-6 px-6 py-4">
-            <div className="grid grid-cols-3 gap-2.5">
-              <Card className="ring-border gap-4 py-4 shadow-none ring-1">
-                <CardContent className="px-4">
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-2xl font-extrabold">
-                      {preview.matched.length}
-                    </span>
-                    <span className="bg-success size-2 rounded-full" />
-                  </div>
-                  <div className="text-muted-foreground mt-0.5 text-xs font-semibold">
+          <div className="flex flex-col gap-4 px-6 py-4">
+            {/* Compact Segmented Summary Bar (replacing bulky cards) */}
+            <div className="grid grid-cols-3 gap-2 rounded-xl border border-border/70 bg-muted/40 p-1.5 text-xs dark:bg-muted/20">
+              <button
+                type="button"
+                onClick={() =>
+                  setActiveFilter((prev) =>
+                    prev === 'matched' ? 'all' : 'matched',
+                  )
+                }
+                className={cn(
+                  'flex items-center justify-between rounded-lg px-3 py-2 text-left transition-all',
+                  activeFilter === 'matched'
+                    ? 'bg-card font-semibold ring-1 ring-border shadow-xs'
+                    : 'hover:bg-card/60',
+                )}
+              >
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="bg-success size-2 shrink-0 rounded-full" />
+                  <span className="text-muted-foreground truncate">
                     Matched automatically
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="ring-border gap-4 py-4 shadow-none ring-1">
-                <CardContent className="px-4">
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-2xl font-extrabold">
-                      {preview.review.length}
-                    </span>
-                    <span className="bg-primary size-2 rounded-full" />
-                  </div>
-                  <div className="text-muted-foreground mt-0.5 text-xs font-semibold">
-                    To review
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="ring-border gap-4 py-4 shadow-none ring-1">
-                <CardContent className="px-4">
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-2xl font-extrabold">
-                      {preview.unmatched.length}
-                    </span>
-                    <span className="bg-muted-foreground size-2 rounded-full" />
-                  </div>
-                  <div className="text-muted-foreground mt-0.5 text-xs font-semibold">
-                    No match
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {preview.matched.length > 0 && (
-              <div>
-                <div className="mb-2.5 flex items-center gap-2">
-                  <CheckCircle2 className="text-success size-4" />
-                  <span className="text-sm font-bold">
-                    Matched automatically
-                  </span>
-                  <span className="text-muted-foreground text-xs">
-                    high confidence — applied
                   </span>
                 </div>
-                <div className="divide-y overflow-hidden rounded-4xl border">
-                  {preview.matched.map((m) => (
-                    <div
-                      key={m.source.key}
-                      className="flex items-center gap-3 px-3.5 py-2.5 text-sm"
-                    >
-                      <span className="min-w-0 flex-1 truncate font-semibold">
-                        {m.source.label || m.source.key}
-                      </span>
-                      <ArrowRight className="text-muted-foreground size-3.5 shrink-0" />
-                      <span className="min-w-0 flex-1 truncate text-right font-semibold">
-                        {m.dest.label || m.dest.key}
-                      </span>
-                      <span className="text-muted-foreground w-32 shrink-0 text-right text-xs">
-                        {m.reason}
-                      </span>
-                      <span className="text-success w-10 shrink-0 text-right text-xs font-bold">
-                        {m.score}%
-                      </span>
-                    </div>
-                  ))}
+                <span className="text-foreground ml-2 text-sm font-bold">
+                  {preview.matched.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setActiveFilter((prev) =>
+                    prev === 'review' ? 'all' : 'review',
+                  )
+                }
+                className={cn(
+                  'flex items-center justify-between rounded-lg px-3 py-2 text-left transition-all',
+                  activeFilter === 'review'
+                    ? 'bg-card font-semibold ring-1 ring-border shadow-xs'
+                    : 'hover:bg-card/60',
+                )}
+              >
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="bg-primary size-2 shrink-0 rounded-full" />
+                  <span className="text-muted-foreground truncate">To review</span>
+                </div>
+                <div className="ml-2 flex items-center gap-1.5">
+                  {acceptedReview.length > 0 && (
+                    <span className="text-success text-[10px] font-semibold">
+                      {acceptedReview.length} accepted
+                    </span>
+                  )}
+                  <span className="text-foreground text-sm font-bold">
+                    {preview.review.length}
+                  </span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setActiveFilter((prev) =>
+                    prev === 'unmatched' ? 'all' : 'unmatched',
+                  )
+                }
+                className={cn(
+                  'flex items-center justify-between rounded-lg px-3 py-2 text-left transition-all',
+                  activeFilter === 'unmatched'
+                    ? 'bg-card font-semibold ring-1 ring-border shadow-xs'
+                    : 'hover:bg-card/60',
+                )}
+              >
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="bg-muted-foreground/60 size-2 shrink-0 rounded-full" />
+                  <span className="text-muted-foreground truncate">No match</span>
+                </div>
+                <span className="text-foreground ml-2 text-sm font-bold">
+                  {preview.unmatched.length}
+                </span>
+              </button>
+            </div>
+
+            {/* Reassurance Callout */}
+            {preview.existingCount > 0 && (
+              <div className="border-success/20 bg-success/[0.06] dark:bg-success/[0.08] flex items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-xs">
+                <ShieldCheck className="text-success size-4 shrink-0" />
+                <div className="text-muted-foreground min-w-0 flex-1">
+                  <strong className="text-foreground font-semibold">
+                    Safe &amp; Non-destructive:
+                  </strong>{' '}
+                  Your{' '}
+                  <strong className="text-foreground font-semibold">
+                    {preview.existingCount} existing mapping
+                    {preview.existingCount !== 1 ? 's' : ''}
+                  </strong>{' '}
+                  will not be changed or overwritten. Auto-map only introduces
+                  pairs for unmapped fields.
                 </div>
               </div>
             )}
 
-            {preview.review.length > 0 && (
-              <div>
-                <div className="mb-2.5 flex items-center gap-2">
-                  <span className="bg-primary size-2 rounded-full" />
-                  <span className="text-sm font-bold">
-                    Review these suggestions
-                  </span>
-                  <span className="text-muted-foreground text-xs">
-                    medium confidence — your call
-                  </span>
+            {/* Section 1: Review Suggestions (Flattened High-Density List) */}
+            {showReview && (
+              <div className="border-border/70 bg-card divide-border/60 overflow-hidden rounded-xl border divide-y">
+                <div className="bg-muted/40 px-4 py-2.5 flex items-center justify-between dark:bg-muted/20">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-primary size-2 rounded-full" />
+                    <span className="text-foreground text-xs font-bold tracking-wide uppercase">
+                      Review Suggestions ({preview.review.length})
+                    </span>
+                    <span className="text-muted-foreground hidden text-xs sm:inline">
+                      — medium confidence, accept or repoint
+                    </span>
+                  </div>
+
+                  {preview.review.length > 1 && (
+                    <div className="flex items-center gap-1.5">
+                      {acceptedReview.length < preview.review.length ? (
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          className="text-primary hover:text-primary hover:bg-primary/10 h-7 text-xs font-medium"
+                          onClick={handleAcceptAll}
+                        >
+                          <Check className="mr-1 size-3" />
+                          Accept all ({preview.review.length})
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          className="text-muted-foreground hover:text-foreground h-7 text-xs"
+                          onClick={handleResetAll}
+                        >
+                          <RotateCcw className="mr-1 size-3" />
+                          Reset all
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <div className="flex flex-col gap-2.5">
+
+                <div className="divide-border/50 divide-y">
                   {preview.review.map((r) => {
                     const state = reviewState[r.source.key];
                     const options = destFields.filter(
@@ -221,19 +362,44 @@ export default function AutoMapReviewDialog({
                       state.destKey;
 
                     return (
-                      <Card
+                      <div
                         key={r.source.key}
-                        className="ring-border gap-4 py-4 shadow-none ring-1"
+                        className={cn(
+                          'flex flex-col gap-2.5 p-3.5 transition-colors sm:flex-row sm:items-center sm:justify-between',
+                          state.status === 'accepted'
+                            ? 'bg-success/[0.04] dark:bg-success/[0.06]'
+                            : 'hover:bg-muted/25',
+                        )}
                       >
-                        <CardContent className="flex flex-col gap-2.5 px-4">
-                          <div className="flex items-center gap-3">
-                            <span className="min-w-0 flex-1 truncate text-sm font-semibold">
-                              {r.source.label || r.source.key}
-                            </span>
-                            <ArrowRight className="text-muted-foreground size-3.5 shrink-0" />
+                        {/* Mapping Pair: Source -> Destination */}
+                        <div className="flex min-w-0 flex-1 items-center gap-3">
+                          {/* Source Field */}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-foreground truncate text-sm font-semibold">
+                                {r.source.label || r.source.key}
+                              </span>
+                              {r.source.type && (
+                                <Badge
+                                  variant="secondary"
+                                  size="xs"
+                                  className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground font-normal shrink-0"
+                                >
+                                  {r.source.type}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-muted-foreground truncate font-mono text-[10.5px]">
+                              {r.source.key}
+                            </div>
+                          </div>
 
+                          <ArrowRight className="text-muted-foreground size-4 shrink-0" />
+
+                          {/* Destination Field (Display or Select) */}
+                          <div className="min-w-0 flex-1">
                             {state.status === 'editing' ? (
-                              <>
+                              <div className="flex items-center gap-1.5">
                                 <Select
                                   value={state.destKey}
                                   onValueChange={(destKey) =>
@@ -248,7 +414,7 @@ export default function AutoMapReviewDialog({
                                 >
                                   <SelectTrigger
                                     size="sm"
-                                    className="h-8 flex-1"
+                                    className="h-8 flex-1 text-xs"
                                   >
                                     <SelectValue />
                                   </SelectTrigger>
@@ -263,7 +429,7 @@ export default function AutoMapReviewDialog({
                                 <Button
                                   variant="outline"
                                   size="icon-sm"
-                                  className="shrink-0"
+                                  className="h-8 w-8 shrink-0"
                                   aria-label="Cancel change"
                                   onClick={() =>
                                     setReviewState((prev) => ({
@@ -275,18 +441,23 @@ export default function AutoMapReviewDialog({
                                     }))
                                   }
                                 >
-                                  <X />
+                                  <X className="size-3.5" />
                                 </Button>
-                              </>
+                              </div>
                             ) : (
-                              <div className="flex min-w-0 flex-1 items-center gap-2">
-                                <span className="truncate text-sm font-semibold">
-                                  {destLabel}
-                                </span>
+                              <div className="flex min-w-0 items-center gap-2">
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-foreground truncate text-sm font-semibold">
+                                    {destLabel}
+                                  </div>
+                                  <div className="text-muted-foreground truncate font-mono text-[10.5px]">
+                                    {state.destKey}
+                                  </div>
+                                </div>
                                 {state.status === 'accepted' && (
                                   <span
                                     role="status"
-                                    className="text-success inline-flex shrink-0 items-center gap-1 text-xs font-medium"
+                                    className="text-success inline-flex shrink-0 items-center gap-1 text-xs font-semibold"
                                   >
                                     <CheckCircle2
                                       aria-hidden="true"
@@ -297,132 +468,237 @@ export default function AutoMapReviewDialog({
                                 )}
                               </div>
                             )}
-
-                            {state.status === 'accepted' ? (
-                              <div className="flex shrink-0 gap-1.5">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() =>
-                                    setReviewState((prev) => ({
-                                      ...prev,
-                                      [r.source.key]: {
-                                        status: 'pending',
-                                        destKey: r.dest.key,
-                                      },
-                                    }))
-                                  }
-                                  className="w-16"
-                                >
-                                  Undo
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() =>
-                                    setReviewState((prev) => ({
-                                      ...prev,
-                                      [r.source.key]: {
-                                        ...prev[r.source.key],
-                                        status: 'editing',
-                                      },
-                                    }))
-                                  }
-                                >
-                                  Change
-                                </Button>
-                              </div>
-                            ) : state.status === 'pending' ? (
-                              <div className="flex shrink-0 gap-1.5">
-                                <Button
-                                  size="sm"
-                                  className="w-16"
-                                  onClick={() =>
-                                    setReviewState((prev) => ({
-                                      ...prev,
-                                      [r.source.key]: {
-                                        status: 'accepted',
-                                        destKey: prev[r.source.key].destKey,
-                                      },
-                                    }))
-                                  }
-                                >
-                                  Accept
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() =>
-                                    setReviewState((prev) => ({
-                                      ...prev,
-                                      [r.source.key]: {
-                                        ...prev[r.source.key],
-                                        status: 'editing',
-                                      },
-                                    }))
-                                  }
-                                >
-                                  Change
-                                </Button>
-                              </div>
-                            ) : (
-                              <div className="flex shrink-0 gap-1.5">
-                                <Button
-                                  size="sm"
-                                  className="w-16"
-                                  onClick={() =>
-                                    setReviewState((prev) => ({
-                                      ...prev,
-                                      [r.source.key]: {
-                                        status: 'accepted',
-                                        destKey: prev[r.source.key].destKey,
-                                      },
-                                    }))
-                                  }
-                                >
-                                  Accept
-                                </Button>
-                              </div>
-                            )}
                           </div>
-                          <div className="flex items-center gap-2.5">
-                            <Progress
-                              value={r.score}
-                              className="h-1.5 max-w-40"
-                            />
-                            <span className="text-primary text-xs font-bold">
-                              {r.score}% match
-                            </span>
-                            <span className="text-muted-foreground text-xs">
+                        </div>
+
+                        {/* Match Quality & Actions */}
+                        <div className="border-border/40 flex items-center justify-between gap-3 border-t pt-2 shrink-0 sm:border-t-0 sm:pt-0">
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <Badge
+                              variant="secondary"
+                              size="xs"
+                              className="font-mono font-bold"
+                            >
+                              {r.score}%
+                            </Badge>
+                            <span
+                              className="text-muted-foreground max-w-32 truncate text-[11px] sm:max-w-40"
+                              title={r.reason}
+                            >
                               · {r.reason}
                             </span>
                           </div>
-                        </CardContent>
-                      </Card>
+
+                          {state.status === 'accepted' ? (
+                            <div className="flex shrink-0 gap-1.5">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  setReviewState((prev) => ({
+                                    ...prev,
+                                    [r.source.key]: {
+                                      status: 'pending',
+                                      destKey: r.dest.key,
+                                    },
+                                  }))
+                                }
+                                className="w-16 h-8 text-xs"
+                              >
+                                Undo
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 text-xs"
+                                onClick={() =>
+                                  setReviewState((prev) => ({
+                                    ...prev,
+                                    [r.source.key]: {
+                                      ...prev[r.source.key],
+                                      status: 'editing',
+                                    },
+                                  }))
+                                }
+                              >
+                                Change
+                              </Button>
+                            </div>
+                          ) : state.status === 'pending' ? (
+                            <div className="flex shrink-0 gap-1.5">
+                              <Button
+                                size="sm"
+                                className="w-16 h-8 text-xs"
+                                onClick={() =>
+                                  setReviewState((prev) => ({
+                                    ...prev,
+                                    [r.source.key]: {
+                                      status: 'accepted',
+                                      destKey: prev[r.source.key].destKey,
+                                    },
+                                  }))
+                                }
+                              >
+                                Accept
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 text-xs"
+                                onClick={() =>
+                                  setReviewState((prev) => ({
+                                    ...prev,
+                                    [r.source.key]: {
+                                      ...prev[r.source.key],
+                                      status: 'editing',
+                                    },
+                                  }))
+                                }
+                              >
+                                Change
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex shrink-0 gap-1.5">
+                              <Button
+                                size="sm"
+                                className="w-16 h-8 text-xs"
+                                onClick={() =>
+                                  setReviewState((prev) => ({
+                                    ...prev,
+                                    [r.source.key]: {
+                                      status: 'accepted',
+                                      destKey: prev[r.source.key].destKey,
+                                    },
+                                  }))
+                                }
+                              >
+                                Accept
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
               </div>
             )}
 
-            {preview.unmatched.length > 0 && (
-              <div>
-                <div className="mb-2.5 flex items-center gap-2">
-                  <span className="bg-muted-foreground size-2 rounded-full" />
-                  <span className="text-sm font-bold">No confident match</span>
-                  <span className="text-muted-foreground text-xs">
-                    map manually after applying
-                  </span>
+            {/* Section 2: Matched Automatically (High Confidence) */}
+            {showMatched && (
+              <div className="border-border/70 bg-card divide-border/60 overflow-hidden rounded-xl border divide-y">
+                <div
+                  className="bg-muted/40 px-4 py-2.5 flex cursor-pointer items-center justify-between dark:bg-muted/20"
+                  onClick={() => setMatchedExpanded((prev) => !prev)}
+                >
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="text-success size-4 shrink-0" />
+                    <span className="text-foreground text-xs font-bold tracking-wide uppercase">
+                      Matched Automatically ({preview.matched.length})
+                    </span>
+                    <span className="text-muted-foreground hidden text-xs sm:inline">
+                      — high confidence matches applied automatically
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant="secondary"
+                      size="xs"
+                      className="gap-1 font-medium"
+                    >
+                      <CheckCircle2 className="size-3 text-success shrink-0" />
+                      <span>Applied</span>
+                    </Badge>
+                    {matchedExpanded ? (
+                      <ChevronUp className="text-muted-foreground size-4" />
+                    ) : (
+                      <ChevronDown className="text-muted-foreground size-4" />
+                    )}
+                  </div>
                 </div>
-                <div className="divide-y overflow-hidden rounded-4xl border">
+
+                {matchedExpanded && (
+                  <div className="divide-border/50 max-h-[260px] divide-y overflow-y-auto">
+                    {preview.matched.map((m) => (
+                      <div
+                        key={m.source.key}
+                        className="hover:bg-muted/20 flex items-center gap-3 px-4 py-2 text-xs transition-colors"
+                      >
+                        <div className="min-w-0 flex-1 truncate">
+                          <span className="text-foreground font-semibold">
+                            {m.source.label || m.source.key}
+                          </span>
+                          <span className="text-muted-foreground ml-1.5 font-mono text-[10px]">
+                            ({m.source.key})
+                          </span>
+                        </div>
+                        <ArrowRight className="text-muted-foreground size-3.5 shrink-0" />
+                        <div className="min-w-0 flex-1 truncate text-right">
+                          <span className="text-foreground font-semibold">
+                            {m.dest.label || m.dest.key}
+                          </span>
+                          <span className="text-muted-foreground ml-1.5 font-mono text-[10px]">
+                            ({m.dest.key})
+                          </span>
+                        </div>
+                        <span
+                          className="text-muted-foreground w-28 shrink-0 truncate text-right text-[11px]"
+                          title={m.reason}
+                        >
+                          {m.reason}
+                        </span>
+                        <Badge
+                          variant="secondary"
+                          size="xs"
+                          className="w-12 shrink-0 justify-center font-mono font-bold"
+                        >
+                          {m.score}%
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Section 3: No Match (Unmatched Fields) */}
+            {showUnmatched && (
+              <div className="border-border/70 bg-card divide-border/60 overflow-hidden rounded-xl border divide-y">
+                <div className="bg-muted/40 px-4 py-2.5 flex items-center justify-between dark:bg-muted/20">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-muted-foreground/60 size-2 shrink-0 rounded-full" />
+                    <span className="text-foreground text-xs font-bold tracking-wide uppercase">
+                      No Confident Match ({preview.unmatched.length})
+                    </span>
+                    <span className="text-muted-foreground hidden text-xs sm:inline">
+                      — will remain unmapped; map manually anytime
+                    </span>
+                  </div>
+                  <Badge variant="secondary" size="xs">
+                    Manual
+                  </Badge>
+                </div>
+
+                <div className="divide-border/50 max-h-[200px] divide-y overflow-y-auto">
                   {preview.unmatched.map((f) => (
                     <div
                       key={f.key}
-                      className="flex items-center justify-between gap-3 px-3.5 py-2.5 text-sm"
+                      className="hover:bg-muted/20 flex items-center justify-between gap-3 px-4 py-2 text-xs transition-colors"
                     >
-                      <span className="font-semibold">{f.label || f.key}</span>
-                      <Badge variant="outline" className="text-[10.5px]">
-                        Manual
+                      <div className="min-w-0 flex-1 truncate">
+                        <span className="text-foreground font-semibold">
+                          {f.label || f.key}
+                        </span>
+                        <span className="text-muted-foreground ml-1.5 font-mono text-[10px]">
+                          ({f.key})
+                        </span>
+                      </div>
+                      <Badge
+                        variant="secondary"
+                        size="xs"
+                      >
+                        Unmapped
                       </Badge>
                     </div>
                   ))}
@@ -432,15 +708,27 @@ export default function AutoMapReviewDialog({
           </div>
         </ScrollArea>
 
-        <DialogFooter className="flex-row items-center justify-between gap-3 border-t px-6 py-4 sm:justify-between">
-          <span className="text-muted-foreground text-xs">
-            Matched by name, known aliases &amp; field type
-          </span>
-          <div className="flex gap-2.5">
-            <Button variant="outline" onClick={onCancel}>
+        <DialogFooter className="bg-muted/30 border-border/70 flex-col gap-3 border-t px-6 py-3 shrink-0 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-muted-foreground flex items-center gap-2 text-xs">
+            <ShieldCheck className="text-success size-4 shrink-0" />
+            <span>
+              {preview.existingCount > 0
+                ? `Existing ${preview.existingCount} mapping${preview.existingCount !== 1 ? 's' : ''} preserved intact.`
+                : 'Matched by name, aliases & data type.'}
+            </span>
+          </div>
+
+          <div className="flex gap-2.5 shrink-0">
+            <Button variant="outline" size="sm" onClick={onCancel}>
               Cancel
             </Button>
-            <Button onClick={handleApply} disabled={applyCount === 0}>
+            <Button
+              size="sm"
+              onClick={handleApply}
+              disabled={applyCount === 0}
+              className="gap-1.5"
+            >
+              <Sparkles className="size-3.5" />
               Apply {applyCount} Mapping{applyCount !== 1 ? 's' : ''}
             </Button>
           </div>

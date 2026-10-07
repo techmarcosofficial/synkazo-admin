@@ -2,7 +2,7 @@ import { AlertCircle, Building2, Mail, Users } from 'lucide-react';
 
 import PlanBadge from '@/components/shared/PlanBadge';
 import StatusBadge from '@/components/shared/StatusBadge';
-import { Skeleton } from '@/components/ui/skeleton';
+import HeadingPair from '@/components/shared/HeadingPair';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { cn } from '@/lib/utils';
 import { usageTone } from '@/pages/organisation/billing/lib/billingDisplay';
@@ -49,29 +49,18 @@ export default function OrganizationHeader() {
   const tone = usageTone(rawPct, over);
 
   return (
-    <div className="flex flex-col gap-5 px-6 py-5 lg:flex-row lg:items-start lg:justify-between">
+    <div className="flex flex-col gap-4 px-4 py-4 lg:flex-row lg:items-start lg:justify-between">
       <div className="flex min-w-0 items-start gap-4">
         <div className="bg-muted flex size-12 shrink-0 items-center justify-center rounded-2xl">
           <Building2 className="text-muted-foreground size-6" />
         </div>
 
         <div className="min-w-0 space-y-1">
-          <h1 className="truncate text-2xl font-bold tracking-tight">
-            Organization
-          </h1>
-
-          {orgQuery.isLoading ? (
-            <Skeleton className="h-5 w-40" />
-          ) : (
-            org?.name && (
-              <p className="truncate text-sm font-medium">{org.name}</p>
-            )
-          )}
-
-          <p className="text-muted-foreground text-sm leading-5">
-            Manage your organization's information, members, access, and
-            subscription.
-          </p>
+          <HeadingPair
+            level="h1"
+            title={org?.name || 'Organization'}
+            subtitle="Manage your organization's information, members, access, and subscription."
+          />
 
           <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 pt-0.5 text-sm">
             {memberCount != null && (
@@ -103,7 +92,7 @@ export default function OrganizationHeader() {
           {showUsage && (
             <span
               className={cn(
-                'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium',
+                'flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium',
                 over
                   ? 'bg-destructive/10 text-destructive'
                   : 'bg-warning/10 text-warning',

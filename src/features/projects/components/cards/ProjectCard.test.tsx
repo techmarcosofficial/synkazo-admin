@@ -62,4 +62,45 @@ describe('ProjectCard', () => {
       screen.queryByRole('img', { name: /two-way sync/i }),
     ).not.toBeInTheDocument();
   });
+
+  it('renders Sandbox environment badge linking directly to environment settings', () => {
+    render(
+      <MemoryRouter>
+        <ProjectCard
+          project={{ ...draftProject, activeEnvironment: 'sandbox' }}
+          jobCount={1}
+        />
+      </MemoryRouter>,
+    );
+
+    const badge = screen.getByText('Sandbox');
+    expect(badge).toBeInTheDocument();
+
+    const envLink = badge.closest('a');
+    expect(envLink).toHaveAttribute(
+      'href',
+      '/projects/project-1?tab=settings&section=environments',
+    );
+  });
+
+  it('renders Production environment badge linking directly to environment settings', () => {
+    render(
+      <MemoryRouter>
+        <ProjectCard
+          project={{ ...draftProject, activeEnvironment: 'production' }}
+          jobCount={1}
+        />
+      </MemoryRouter>,
+    );
+
+    const badge = screen.getByText('Production');
+    expect(badge).toBeInTheDocument();
+
+    const envLink = badge.closest('a');
+    expect(envLink).toHaveAttribute(
+      'href',
+      '/projects/project-1?tab=settings&section=environments',
+    );
+  });
 });
+

@@ -1,4 +1,5 @@
 import {
+  AlertCircle,
   Info,
   Plus,
   SearchCheck,
@@ -27,6 +28,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { cn } from '@/lib/utils';
 
 import type { ConditionOperator, ExcludeCondition } from '@/types/conditions';
 
@@ -75,6 +77,7 @@ export function validateExcludeConditions(
   conditions: ExcludeCondition[],
 ): string | null {
   for (const c of conditions) {
+    if (c.enabled === false) continue;
     if (!c.field) return 'Every condition needs a field selected.';
     if (!c.operator) return 'Every condition needs an operator selected.';
     if (
@@ -108,6 +111,8 @@ export default function ExcludeConditionsEditor({
   onPreview,
   previewing = false,
   layout = 'stacked',
+  embedded = false,
+  mappedFieldKeys,
 }: {
   sourceFields: FieldDef[];
   conditions: ExcludeCondition[];
@@ -122,6 +127,8 @@ export default function ExcludeConditionsEditor({
   /** The job-detail workspace uses an aligned grid; the creation wizard keeps
    *  the established stacked editor until that workflow is refined separately. */
   layout?: 'stacked' | 'grid';
+  embedded?: boolean;
+  mappedFieldKeys?: string[];
 }) {
   const update = (index: number, patch: Partial<ExcludeCondition>) => {
     const next = conditions.map((c, i) =>
@@ -177,7 +184,13 @@ export default function ExcludeConditionsEditor({
   if (layout === 'grid') {
     return (
       <div className="flex flex-col gap-3">
-        <div className="bg-muted/40 flex items-start gap-3 rounded-4xl px-4 py-3">
+        <div
+          className={
+            embedded
+              ? 'hidden'
+              : 'bg-muted/40 flex items-start gap-3 rounded-4xl px-4 py-3'
+          }
+        >
           <Info className="text-primary mt-0.5 size-4 shrink-0" />
           <div className="min-w-0">
             <p className="text-foreground text-xs font-medium">
@@ -191,37 +204,68 @@ export default function ExcludeConditionsEditor({
           </div>
         </div>
 
-        <section className="border-border bg-card overflow-hidden rounded-4xl border">
-          <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex min-w-0 items-center gap-2.5">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-semibold">Skip conditions</h3>
-                  <Badge variant="secondary" className="font-normal">
-                    {conditions.length}
-                  </Badge>
-                </div>
-                <p className="text-muted-foreground mt-0.5 text-xs">
-                  {conditions.length === 0
-                    ? 'No records are currently excluded.'
-                    : conditionLogic === 'AND'
-                      ? 'A record is skipped only when every condition matches.'
-                      : 'A record is skipped when any condition matches.'}
-                </p>
-              </div>
+        <section
+          className={
+            embedded
+              ? 'space-y-0 rounded-none border-0 bg-transparent shadow-none'
+              : 'border-border bg-card overflow-hidden rounded-2xl border'
+          }
+        >
+          <div
+            className={cn(
+              'flex flex-col gap-2.5 pb-2 sm:flex-row sm:items-center sm:justify-between',
+              embedded
+                ? 'border-0 bg-transparent px-0'
+                : 'bg-muted/20 border-border/60 border-b px-4 py-3',
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-semibold">Source conditions</h3>
+              <Badge variant="secondary" className="text-[11px] font-normal">
+                {conditions.length}
+              </Badge>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground text-xs">
-                Combine with
-              </span>
+            <div className="border-border/80 bg-muted/40 inline-flex rounded-xl border p-0.5 text-xs">
+              <button
+                type="button"
+                onClick={() => onChange(conditions, 'AND')}
+                aria-pressed={conditionLogic === 'AND'}
+                className={cn(
+                  'cursor-pointer rounded-lg px-2.5 py-1 text-xs font-semibold transition-all select-none',
+                  conditionLogic === 'AND'
+                    ? 'bg-background text-foreground shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                ALL Match (AND)
+              </button>
+              <button
+                type="button"
+                onClick={() => onChange(conditions, 'OR')}
+                aria-pressed={conditionLogic === 'OR'}
+                className={cn(
+                  'cursor-pointer rounded-lg px-2.5 py-1 text-xs font-semibold transition-all select-none',
+                  conditionLogic === 'OR'
+                    ? 'bg-background text-foreground shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                ANY Matches (OR)
+              </button>
+            </div>
+            <div className="sr-only">
               <Select
                 value={conditionLogic}
                 onValueChange={(value) =>
                   onChange(conditions, value as 'AND' | 'OR')
                 }
               >
-                <SelectTrigger size="sm" className="w-24">
+                <SelectTrigger
+                  size="sm"
+                  className="w-24"
+                  aria-label="Combine source conditions with"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -232,294 +276,372 @@ export default function ExcludeConditionsEditor({
             </div>
           </div>
 
-          {visibleConditions.map(({ condition: cond, index }) => {
-            const operator = OPERATORS.find(
-              (item) => item.value === cond.operator,
-            );
-            const needsValue = operator?.needsValue ?? true;
-            const isMulti = operator?.multiValue ?? false;
-            const normalization = cond.normalization ?? {};
-            const selectedField = sourceFields.find(
-              (field) => field.key === cond.field,
-            );
-            const missingField = !cond.field;
-            const missingValue =
-              needsValue &&
-              (cond.value === undefined ||
-                cond.value === null ||
-                cond.value === '');
-            const activeNormalizationCount = [
-              normalization.trim,
-              normalization.lowercase,
-              normalization.removeWhitespace,
-            ].filter(Boolean).length;
+          {/* Condition Rows: Clean, borderless list matching QuickFieldMapper */}
+          <div className="space-y-2.5 pt-2">
+            {visibleConditions.map(({ condition: cond, index }) => {
+              const operator = OPERATORS.find(
+                (item) => item.value === cond.operator,
+              );
+              const needsValue = operator?.needsValue ?? true;
+              const isMulti = operator?.multiValue ?? false;
+              const normalization = cond.normalization ?? {};
 
-            return (
-              <div
-                key={index}
-                className="border-border grid min-w-0 gap-3 border-t px-4 py-3 xl:grid-cols-[4.5rem_minmax(13rem,1.15fr)_minmax(11rem,0.8fr)_minmax(13rem,1fr)_10rem_2.5rem] xl:items-start"
-                data-invalid={missingField || missingValue}
-              >
-                <div className="flex h-9 items-center xl:mt-5">
-                  <Badge
-                    variant={index === 0 ? 'secondary' : 'outline'}
-                    className="font-normal"
-                  >
-                    {index === 0 ? 'Where' : conditionLogic}
-                  </Badge>
-                </div>
+              const isFieldMissing = cond.enabled !== false && !cond.field;
+              const isValueMissing =
+                cond.enabled !== false &&
+                needsValue &&
+                (cond.value === undefined ||
+                  cond.value === null ||
+                  (typeof cond.value === 'string' &&
+                    cond.value.trim() === '') ||
+                  (Array.isArray(cond.value) && cond.value.length === 0));
+              const hasRowError = isFieldMissing || isValueMissing;
 
-                <div className="min-w-0">
-                  <p className="text-muted-foreground mb-1 text-[11px] font-medium">
-                    Source field
-                  </p>
-                  <FieldSelect
-                    fields={sourceFields}
-                    value={cond.field}
-                    onChange={(value) => update(index, { field: value })}
-                    placeholder="Select field…"
-                    highlightRequired={false}
-                    className="h-9 text-xs"
-                  />
-                  {selectedField && (
-                    <div className="mt-1 flex min-w-0 items-center gap-1.5">
-                      <span className="text-muted-foreground truncate text-xs">
-                        {selectedField.key}
-                      </span>
+              const activeNormalizationCount = [
+                normalization.trim,
+                normalization.lowercase,
+                normalization.removeWhitespace,
+              ].filter(Boolean).length;
+
+              return (
+                <div
+                  key={index}
+                  className={cn(
+                    'transition-all',
+                    cond.enabled === false && 'opacity-60',
+                  )}
+                >
+                  <div className="flex flex-wrap items-start gap-2">
+                    {/* Logic Badge: uniform h-9, matching component border and background */}
+                    <div className="shrink-0">
                       <Badge
                         variant="outline"
-                        className="h-4 shrink-0 px-1.5 text-[10px] font-normal"
+                        className={cn(
+                          'border-border/70 bg-background h-9 w-14 justify-center rounded-xl border text-[10px] font-semibold tracking-wider uppercase shadow-xs',
+                          hasRowError
+                            ? 'border-destructive/40 text-destructive bg-destructive/5'
+                            : 'text-muted-foreground',
+                        )}
                       >
-                        {selectedField.type || 'Text'}
+                        {index === 0 ? 'Where' : conditionLogic}
                       </Badge>
                     </div>
-                  )}
-                  {missingField && (
-                    <p className="text-destructive mt-1 text-xs">
-                      Select a source field.
-                    </p>
-                  )}
-                </div>
 
-                <div className="min-w-0">
-                  <p className="text-muted-foreground mb-1 text-[11px] font-medium">
-                    Operator
-                  </p>
-                  <Select
-                    value={cond.operator}
-                    onValueChange={(value) =>
-                      update(index, { operator: value as ConditionOperator })
-                    }
-                  >
-                    <SelectTrigger size="sm" className="w-full text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {OPERATORS.map((item) => (
-                        <SelectItem key={item.value} value={item.value}>
-                          {item.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                    {/* Source field selector */}
+                    <div className="min-w-[150px] flex-1">
+                      <div
+                        className={cn(
+                          'rounded-xl transition-all',
+                          isFieldMissing &&
+                            'ring-1.5 ring-destructive/60 border-destructive border',
+                        )}
+                      >
+                        <FieldSelect
+                          fields={sourceFields}
+                          mappedFieldKeys={mappedFieldKeys}
+                          value={cond.field}
+                          onChange={(value) => update(index, { field: value })}
+                          placeholder="Select field…"
+                          highlightRequired={false}
+                          className="border-border/70 bg-background h-9 rounded-xl text-xs shadow-xs"
+                        />
+                      </div>
+                      {isFieldMissing && (
+                        <span className="text-destructive mt-1 flex items-center gap-1 pl-0.5 text-[10px] font-medium">
+                          <AlertCircle className="size-3 shrink-0" />
+                          Please select a field
+                        </span>
+                      )}
+                    </div>
 
-                <div className="min-w-0">
-                  <p className="text-muted-foreground mb-1 text-[11px] font-medium">
-                    Comparison value
-                  </p>
-                  {needsValue ? (
-                    <>
-                      <Input
-                        value={
-                          Array.isArray(cond.value)
-                            ? cond.value.join(', ')
-                            : (cond.value?.toString() ?? '')
-                        }
-                        onChange={(event) =>
+                    {/* Operator selector */}
+                    <div className="w-[135px] shrink-0 pt-0">
+                      <Select
+                        value={cond.operator}
+                        onValueChange={(value) =>
                           update(index, {
-                            value: isMulti
-                              ? event.target.value
-                                  .split(',')
-                                  .map((value) => value.trim())
-                              : event.target.value,
+                            operator: value as ConditionOperator,
                           })
                         }
-                        placeholder={
-                          isMulti ? 'value1, value2, …' : 'Comparison value'
+                      >
+                        <SelectTrigger
+                          size="sm"
+                          className="border-border/70 bg-background h-9 w-full rounded-xl text-xs font-normal shadow-xs"
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {OPERATORS.map((item) => (
+                            <SelectItem key={item.value} value={item.value}>
+                              {item.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Comparison value */}
+                    {needsValue ? (
+                      <div className="min-w-[140px] flex-1">
+                        <Input
+                          value={
+                            Array.isArray(cond.value)
+                              ? cond.value.join(', ')
+                              : (cond.value?.toString() ?? '')
+                          }
+                          onChange={(event) =>
+                            update(index, {
+                              value: isMulti
+                                ? event.target.value
+                                    .split(',')
+                                    .map((val) => val.trim())
+                                : event.target.value,
+                            })
+                          }
+                          placeholder={
+                            isMulti ? 'value1, value2, …' : 'Comparison value'
+                          }
+                          uiSize="sm"
+                          className={cn(
+                            'border-border/70 bg-background h-9 rounded-xl font-mono text-xs shadow-xs',
+                            isValueMissing &&
+                              'border-destructive ring-destructive/50 text-destructive placeholder:text-destructive/50 focus-visible:ring-destructive/50 ring-1.5',
+                          )}
+                        />
+                        {isValueMissing && (
+                          <span className="text-destructive mt-1 flex items-center gap-1 pl-0.5 text-[10px] font-medium">
+                            <AlertCircle className="size-3 shrink-0" />
+                            Comparison value required
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-muted-foreground border-border/50 bg-muted/15 flex h-9 min-w-[140px] flex-1 items-center rounded-xl border border-dashed px-3 text-xs italic">
+                        No value required
+                      </div>
+                    )}
+
+                    {/* Formatting / Normalize Button */}
+                    <div className="shrink-0">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            aria-label={`Normalize condition ${index + 1}`}
+                            className={cn(
+                              'border-border/70 bg-background h-9 gap-1.5 rounded-xl px-2.5 text-xs font-normal shadow-xs',
+                              activeNormalizationCount > 0 &&
+                                'border-primary/50 text-primary bg-primary/5',
+                            )}
+                          >
+                            <SlidersHorizontal className="size-3.5" />
+                            <span className="hidden sm:inline">Normalize</span>
+                            {activeNormalizationCount > 0 && (
+                              <span className="bg-primary size-1.5 rounded-full" />
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent align="end" className="w-72 gap-3 p-4">
+                          <div>
+                            <p className="text-sm font-semibold">
+                              Normalize before comparing
+                            </p>
+                            <p className="text-muted-foreground mt-0.5 text-xs">
+                              Clean the source value before this condition is
+                              evaluated.
+                            </p>
+                          </div>
+                          <label className="mt-2 flex items-center justify-between gap-3">
+                            <span className="text-xs">
+                              Trim outer whitespace
+                            </span>
+                            <Switch
+                              checked={!!normalization.trim}
+                              onCheckedChange={(value) =>
+                                update(index, {
+                                  normalization: {
+                                    ...normalization,
+                                    trim: value,
+                                  },
+                                })
+                              }
+                            />
+                          </label>
+                          <label className="mt-2 flex items-center justify-between gap-3">
+                            <span className="text-xs">Ignore letter case</span>
+                            <Switch
+                              checked={!!normalization.lowercase}
+                              onCheckedChange={(value) =>
+                                update(index, {
+                                  normalization: {
+                                    ...normalization,
+                                    lowercase: value,
+                                  },
+                                })
+                              }
+                              aria-label="Ignore letter case"
+                            />
+                          </label>
+                          <label className="mt-2 flex items-center justify-between gap-3">
+                            <span className="text-xs">
+                              Remove all whitespace
+                            </span>
+                            <Switch
+                              checked={!!normalization.removeWhitespace}
+                              onCheckedChange={(value) =>
+                                update(index, {
+                                  normalization: {
+                                    ...normalization,
+                                    removeWhitespace: value,
+                                  },
+                                })
+                              }
+                            />
+                          </label>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+                    {/* Actions: Switch + Delete Button - 100% aligned with corner plus */}
+                    <div className="flex h-9 shrink-0 items-center gap-2">
+                      <Switch
+                        checked={cond.enabled !== false}
+                        onCheckedChange={(enabled) =>
+                          update(index, { enabled })
                         }
-                        aria-invalid={missingValue}
-                        className="h-9 font-mono text-xs"
+                        aria-label={`Enable condition ${index + 1}`}
+                        title={
+                          cond.enabled !== false
+                            ? 'Condition active'
+                            : 'Condition disabled'
+                        }
                       />
-                      {missingValue && (
-                        <p className="text-destructive mt-1 text-xs">
-                          Enter a comparison value.
-                        </p>
-                      )}
-                    </>
-                  ) : (
-                    <p className="text-muted-foreground flex h-9 items-center text-xs">
-                      No value required
-                    </p>
+                      <div className="flex w-8 items-center justify-center">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive size-8 shrink-0 cursor-pointer rounded-lg"
+                          aria-label={`Remove condition ${index + 1}`}
+                          title="Remove condition"
+                          onClick={() => remove(index)}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Bottom Action Row: condition count on left, Preview + Corner (+) on right in one line */}
+            {conditions.length > 0 && (
+              <div className="flex items-center justify-between pt-1">
+                <div className="text-muted-foreground flex items-center gap-2.5 text-xs">
+                  <span>
+                    {conditions.length} condition
+                    {conditions.length === 1 ? '' : 's'}
+                  </span>
+                  {isDirty && (
+                    <span className="text-foreground flex items-center gap-1.5">
+                      <span className="bg-warning size-1.5 rounded-full" />
+                      Unsaved
+                    </span>
                   )}
                 </div>
-
-                <div className="min-w-0">
-                  <p className="text-muted-foreground mb-1 text-[11px] font-medium">
-                    Formatting
-                  </p>
-                  <Popover>
-                    <PopoverTrigger asChild>
+                <div className="flex items-center gap-2">
+                  {onPreview && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={onPreview}
+                      disabled={
+                        previewing || conditions.length === 0 || !!error
+                      }
+                      aria-label="Preview matches"
+                      title="Preview matches"
+                      className="border-border/70 bg-background h-7.5 cursor-pointer gap-1.5 rounded-lg px-2.5 text-xs font-normal shadow-xs"
+                    >
+                      <SearchCheck className="size-3.5" />
+                      <span className="hidden sm:inline">
+                        {previewing ? 'Previewing…' : 'Preview matches'}
+                      </span>
+                    </Button>
+                  )}
+                  {showAddButton && (
+                    <div className="flex w-8 shrink-0 items-center justify-center">
                       <Button
                         type="button"
                         variant="outline"
-                        size="sm"
-                        className="w-full justify-between font-normal"
+                        size="icon-xs"
+                        onClick={add}
+                        title="Add condition"
+                        aria-label="Add condition"
+                        className="border-primary/40 bg-background text-primary hover:border-primary hover:bg-primary/10 size-7.5 cursor-pointer rounded-lg border-dashed shadow-xs transition-all"
                       >
-                        <span className="flex items-center gap-1.5">
-                          <SlidersHorizontal /> Normalize
-                        </span>
-                        {activeNormalizationCount > 0 && (
-                          <Badge
-                            variant="secondary"
-                            className="h-4 min-w-4 px-1 text-[10px]"
-                          >
-                            {activeNormalizationCount}
-                          </Badge>
-                        )}
+                        <Plus className="size-3.5" />
                       </Button>
-                    </PopoverTrigger>
-                    <PopoverContent align="end" className="w-72 gap-3">
-                      <div>
-                        <p className="text-sm font-semibold">
-                          Normalize before comparing
-                        </p>
-                        <p className="text-muted-foreground mt-0.5 text-xs">
-                          Clean the source value before this condition is
-                          evaluated.
-                        </p>
-                      </div>
-                      <label className="flex items-center justify-between gap-3">
-                        <span className="text-xs">Trim outer whitespace</span>
-                        <Switch
-                          checked={!!normalization.trim}
-                          onCheckedChange={(value) =>
-                            update(index, {
-                              normalization: {
-                                ...normalization,
-                                trim: value,
-                              },
-                            })
-                          }
-                        />
-                      </label>
-                      <label className="flex items-center justify-between gap-3">
-                        <span className="text-xs">Ignore letter case</span>
-                        <Switch
-                          checked={!!normalization.lowercase}
-                          onCheckedChange={(value) =>
-                            update(index, {
-                              normalization: {
-                                ...normalization,
-                                lowercase: value,
-                              },
-                            })
-                          }
-                        />
-                      </label>
-                      <label className="flex items-center justify-between gap-3">
-                        <span className="text-xs">Remove all whitespace</span>
-                        <Switch
-                          checked={!!normalization.removeWhitespace}
-                          onCheckedChange={(value) =>
-                            update(index, {
-                              normalization: {
-                                ...normalization,
-                                removeWhitespace: value,
-                              },
-                            })
-                          }
-                        />
-                      </label>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                <div className="flex h-9 items-center justify-end xl:mt-5">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                    aria-label={`Remove condition ${index + 1}`}
-                    title="Remove condition"
-                    onClick={() => remove(index)}
-                  >
-                    <Trash2 />
-                  </Button>
+                    </div>
+                  )}
                 </div>
               </div>
-            );
-          })}
+            )}
+          </div>
 
           {conditions.length === 0 && (
-            <div className="border-t px-4 py-10 text-center">
-              <p className="text-sm font-medium">No skip conditions</p>
-              <p className="text-muted-foreground mt-1 text-xs">
-                Every source record is currently eligible to sync.
-              </p>
+            <div className="border-border/60 bg-muted/10 flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed px-4 py-8 text-center">
+              <div>
+                <p className="text-sm font-medium">No skip conditions</p>
+                <p className="text-muted-foreground mt-0.5 text-xs">
+                  Every source record is currently eligible to sync.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {onPreview && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={onPreview}
+                    disabled={true}
+                    aria-label="Preview matches"
+                    title="Preview matches"
+                    className="border-border/70 bg-background h-8 cursor-pointer gap-1.5 rounded-lg px-3 text-xs font-medium shadow-xs"
+                  >
+                    <SearchCheck className="size-3.5" />
+                    Preview matches
+                  </Button>
+                )}
+                {showAddButton && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={add}
+                    className="border-border/70 bg-background h-8 cursor-pointer gap-1.5 rounded-lg px-3 text-xs font-medium shadow-xs"
+                  >
+                    <Plus className="size-3.5" />
+                    Add condition
+                  </Button>
+                )}
+              </div>
             </div>
           )}
 
           {normalizedSearch &&
             visibleConditions.length === 0 &&
             conditions.length > 0 && (
-              <div className="border-t px-4 py-10 text-center">
+              <div className="border-border/60 bg-muted/10 rounded-2xl border border-dashed px-4 py-8 text-center text-xs">
                 <p className="text-sm font-medium">No matching conditions</p>
                 <p className="text-muted-foreground mt-1 text-xs">
                   Try a different search term.
                 </p>
               </div>
             )}
-
-          <div className="border-border bg-muted/20 flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="text-muted-foreground flex items-center gap-3 text-xs">
-              <span>
-                {conditions.length} condition
-                {conditions.length === 1 ? '' : 's'}
-              </span>
-              {isDirty && (
-                <span className="text-foreground flex items-center gap-1.5">
-                  <span className="bg-warning size-1.5 rounded-full" />
-                  Unsaved
-                </span>
-              )}
-            </div>
-            <div className="flex items-center justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={onPreview}
-                disabled={
-                  !onPreview || previewing || conditions.length === 0 || !!error
-                }
-              >
-                <SearchCheck />
-                {previewing ? 'Previewing…' : 'Preview matches'}
-              </Button>
-              {showAddButton && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={add}
-                >
-                  <Plus /> Add condition
-                </Button>
-              )}
-            </div>
-          </div>
         </section>
       </div>
     );
@@ -562,17 +684,23 @@ export default function ExcludeConditionsEditor({
           return (
             <div
               key={i}
-              className="bg-muted/30 space-y-2 rounded-4xl border p-3"
+              className={cn(
+                'space-y-2 rounded-4xl border p-3 transition-opacity',
+                cond.enabled === false
+                  ? 'bg-muted/10 opacity-60'
+                  : 'bg-muted/30',
+              )}
               data-invalid={rowIncomplete}
             >
               <div className="flex items-center gap-2">
                 <FieldSelect
                   fields={sourceFields}
+                  mappedFieldKeys={mappedFieldKeys}
                   value={cond.field}
                   onChange={(v) => update(i, { field: v })}
                   placeholder="Select field…"
                   highlightRequired={false}
-                  className="h-9 flex-1 text-xs"
+                  className="flex-1"
                 />
 
                 <Select
@@ -581,7 +709,7 @@ export default function ExcludeConditionsEditor({
                     update(i, { operator: v as ConditionOperator })
                   }
                 >
-                  <SelectTrigger className="h-9 w-52 text-xs">
+                  <SelectTrigger className="w-52">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -592,6 +720,17 @@ export default function ExcludeConditionsEditor({
                     ))}
                   </SelectContent>
                 </Select>
+
+                <Switch
+                  checked={cond.enabled !== false}
+                  onCheckedChange={(enabled) => update(i, { enabled })}
+                  aria-label={`Enable condition ${i + 1}`}
+                  title={
+                    cond.enabled !== false
+                      ? 'Condition active'
+                      : 'Condition disabled'
+                  }
+                />
 
                 <Button
                   variant="ghost"
@@ -620,7 +759,7 @@ export default function ExcludeConditionsEditor({
                   placeholder={
                     isMulti ? 'value1, value2, …' : 'Comparison value'
                   }
-                  className="h-9 font-mono text-xs"
+                  className="font-mono"
                 />
               )}
 

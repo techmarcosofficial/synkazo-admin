@@ -112,6 +112,7 @@ export default function EmptyValuePolicy({
   fieldType: fieldTypeOverride,
   fieldOptions,
   fieldLabel: fieldLabelOverride,
+  defaultOnly = false,
 }: {
   reasons: RequiredReason[];
   value: EmptyValuePolicyValue;
@@ -131,6 +132,9 @@ export default function EmptyValuePolicy({
   fieldType?: string;
   fieldOptions?: { value: string; label: string }[];
   fieldLabel?: string;
+  /** Render only the fallback value input. Used by Default Mappings, where
+   * skipping belongs in Skip Record rather than being an empty-value policy. */
+  defaultOnly?: boolean;
 }) {
   // Mapping updates travel through the parent field-mapping draft. Keep a local
   // text draft for the native input so a parent render that is one update behind
@@ -213,7 +217,6 @@ export default function EmptyValuePolicy({
         placeholder={`Default value for ${fieldLabel}`}
         aria-label={`Default value for ${fieldLabel}`}
         aria-invalid={showInvalid}
-        className="h-9 text-xs"
       />
     );
 
@@ -226,6 +229,15 @@ export default function EmptyValuePolicy({
           : 'Enter a value.'}
     </p>
   ) : null;
+
+  if (defaultOnly) {
+    return (
+      <div className={cn('min-w-0', className)}>
+        {defaultValueControl}
+        {invalidMessage}
+      </div>
+    );
+  }
 
   if (compact) {
     return (

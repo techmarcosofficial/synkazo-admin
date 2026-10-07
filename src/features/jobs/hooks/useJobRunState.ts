@@ -7,16 +7,9 @@ import { jobsApi } from '@/api/jobs';
 import { notificationsApi } from '@/api/notificationsApi';
 import { syncLogsApi } from '@/api/syncLogs';
 import { sseClient } from '@/lib/sseClient';
+import { mergeSyncProgress } from '@/lib/mergeSyncProgress';
 import { showToast } from '@/lib/toast';
-import type { Job } from '@/types';
-
-interface LiveProgress {
-  jobId?: string | number;
-  totalRecords?: number;
-  recordsProcessed?: number;
-  etaSeconds?: number;
-  ratePerSec?: number;
-}
+import type { Job, SyncProgressEvent } from '@/types';
 
 interface UseJobRunStateInput {
   projectId: string;
@@ -50,7 +43,9 @@ export function useJobRunState({
   const [scheduleToggling, setScheduleToggling] = useState(false);
   const [cancellingQueue, setCancellingQueue] = useState(false);
   const [retryingQueue, setRetryingQueue] = useState(false);
-  const [liveProgress, setLiveProgress] = useState<LiveProgress | null>(null);
+  const [liveProgress, setLiveProgress] = useState<SyncProgressEvent | null>(
+    null,
+  );
   const [upgradeDialog, setUpgradeDialog] = useState<{
     open: boolean;
     message: string;
@@ -59,8 +54,12 @@ export function useJobRunState({
 
   useEffect(() => {
     const handler = (data: unknown) => {
-      const d = data as LiveProgress;
-      if (String(d.jobId) === String(jobId)) setLiveProgress(d);
+      if (!data || typeof data !== 'object') return;
+      const d = data as SyncProgressEvent;
+      if (String(d.jobId) !== String(jobId)) return;
+      setLiveProgress((previous) => {
+        return mergeSyncProgress(previous, d);
+      });
     };
     sseClient.on('sync:progress', handler);
     return () => {
@@ -128,6 +127,7 @@ export function useJobRunState({
   // Full Resync trigger the API call, and by LimitSyncModal's onDone (which
   // triggers its own run API call before handing control back here).
   const beginTracking = useCallback(async () => {
+    setLiveProgress(null);
     setActiveRunLog({
       id: undefined,
       status: 'running',
@@ -144,6 +144,14 @@ export function useJobRunState({
   const handleRunNow = async () => {
     setRunning(true);
     try {
+      if (!job?.isEnabled) {
+        try {
+          const updated = (await jobsApi.toggleJob(projectId, jobId)) as ExtJob;
+          patchJob(updated);
+        } catch {
+          // continue
+        }
+      }
       const resp = (await jobsApi.runJob(projectId, jobId)) as {
         alreadyRunning?: boolean;
       } | null;
@@ -182,16 +190,27 @@ export function useJobRunState({
   ) => {
     setFullResyncing(true);
     try {
+      if (!job?.isEnabled) {
+        try {
+          const updated = (await jobsApi.toggleJob(projectId, jobId)) as ExtJob;
+          patchJob(updated);
+        } catch {
+          // continue
+        }
+      }
       // A syncAllPage left over from an interrupted previous Sync All means resume from
       // there instead of restarting at page 1 (item 36) — the same button just picks up
       // where it left off, mirroring how the incremental "Run" button already resumes from
       // job.checkpointPage without a separate control. Only reuse the job's persisted range
       // when actually resuming (syncAllPage set) — otherwise a fresh trigger with no explicit
       // range must not silently inherit a stale range left over from a completed prior run.
-      const isResume = job?.syncAllPage != null;
+      const isResume =
+        job?.syncAllPage != null &&
+        range?.startDate === undefined &&
+        range?.endDate === undefined;
       const resp = (await jobsApi.runJob(projectId, jobId, {
         full: true,
-        startPage: job?.syncAllPage ?? undefined,
+        startPage: isResume ? (job?.syncAllPage ?? undefined) : undefined,
         startDate:
           range?.startDate ??
           (isResume ? (job?.syncAllRangeStart ?? undefined) : undefined),

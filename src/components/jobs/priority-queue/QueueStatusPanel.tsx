@@ -201,10 +201,8 @@ export default function QueueStatusPanel({
           </div>
         )}
 
-        {(nextQueueJob ||
-          (activeCycle && queue.associationQueueEnabled) ||
-          (activeCycle && queue.companyOwnerSyncEnabled)) && (
-          <div className="grid gap-3 border-t pt-3 sm:grid-cols-3">
+        {(nextQueueJob || (activeCycle && queue.associationQueueEnabled)) && (
+          <div className="grid gap-3 border-t pt-3 sm:grid-cols-2">
             {nextQueueJob && (
               <div>
                 <p className="text-muted-foreground text-xs">Next Job</p>
@@ -236,22 +234,6 @@ export default function QueueStatusPanel({
               </div>
             )}
 
-            {activeCycle && queue.companyOwnerSyncEnabled && (
-              <div>
-                <p className="text-muted-foreground text-xs">
-                  Company Owner Sync
-                </p>
-                <p className="mt-0.5 text-xs font-medium">
-                  {STAGE_LABEL[activeCycle.companyOwnerSyncStatus]}
-                </p>
-                {activeCycle.companyOwnerSyncErrorMessage &&
-                  activeCycle.companyOwnerSyncStatus === 'failed' && (
-                    <p className="text-destructive mt-0.5 text-xs">
-                      {activeCycle.companyOwnerSyncErrorMessage}
-                    </p>
-                  )}
-              </div>
-            )}
           </div>
         )}
       </CardContent>

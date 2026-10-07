@@ -6,7 +6,7 @@ import {
   hasScheduleDefinition,
 } from './ScheduleTab';
 
-describe('Sync & Schedule summary cards', () => {
+describe('Job Overview summary cards', () => {
   it('does not invent a schedule when required schedule values are missing', () => {
     expect(
       hasScheduleDefinition({

@@ -76,8 +76,7 @@ export default function KpiStatCard({
     <Card
       className={cn(
         'h-full min-h-[228px] transition-all duration-200 ease-out',
-        href &&
-          'hover:border-foreground/20 cursor-pointer hover:-translate-y-0.5 hover:shadow-md',
+        href && 'hover:border-foreground/20 hover:bg-accent/20 cursor-pointer',
       )}
     >
       <CardContent className="flex h-full flex-1 flex-col">
