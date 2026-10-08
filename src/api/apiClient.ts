@@ -75,6 +75,7 @@ apiClient.interceptors.response.use(
       error.response?.status === 401 &&
       !original._retry &&
       !original.url?.includes('/auth/login') &&
+      !original.url?.includes('/auth/logout') &&
       !original.url?.includes('/auth/verify-email') &&
       !original.url?.includes('/marketplace/hubspot/handoff')
     ) {

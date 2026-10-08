@@ -1,6 +1,5 @@
 import { Lock, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 import PasswordInput from '@/components/auth/PasswordInput';
 import PasswordStrength from '@/components/auth/PasswordStrength';
@@ -34,7 +33,6 @@ const errorMessage = (err: unknown, fallback: string) =>
  */
 export default function SecurityTab() {
   const { logout } = useSynkazoAuth();
-  const navigate = useNavigate();
   const changePasswordMutation = useChangePasswordMutation();
   const deleteMeMutation = useDeleteMeMutation();
   const ownershipSummaryQuery = useMyOwnershipSummaryQuery();
@@ -72,7 +70,6 @@ export default function SecurityTab() {
     try {
       await deleteMeMutation.mutateAsync();
       logout();
-      navigate('/login');
     } catch (err) {
       showToast.error(errorMessage(err, 'Failed to delete account'));
     }
