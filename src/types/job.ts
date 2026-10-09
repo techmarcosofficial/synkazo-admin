@@ -3,6 +3,11 @@ import type { DestinationSkipCondition, ExcludeCondition } from './conditions';
 export type JobStatus =
   'active' | 'paused' | 'error' | 'idle' | 'running' | 'draft';
 
+export interface DefaultValuesConfig {
+  destination?: Record<string, unknown>;
+  source?: Record<string, unknown>;
+}
+
 export interface Job {
   id: string;
   projectId: string;
@@ -52,6 +57,7 @@ export interface Job {
   scheduleState?: string;
   destPipelineId?: string | null;
   statusMapping?: Record<string, string> | null;
+  defaultValues?: DefaultValuesConfig | null;
   /** When true, the raw source status is used directly as the HubSpot pipeline
    *  stage label (created automatically if it doesn't already exist) instead
    *  of consulting statusMapping. Default false keeps existing behavior. */

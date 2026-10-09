@@ -684,6 +684,7 @@ export function FieldSelect({
   placeholder,
   highlightRequired = true,
   mappedFieldKeys,
+  showMappingStatus = false,
   className,
   'aria-label': ariaLabel,
 }: {
@@ -697,6 +698,7 @@ export function FieldSelect({
   /** Optional list of field keys that are actively mapped in this job.
    *  When provided, surfaces a dedicated "Mapped in this Job" group at the top. */
   mappedFieldKeys?: string[];
+  showMappingStatus?: boolean;
   className?: string;
   'aria-label'?: string;
 }) {
@@ -754,6 +756,14 @@ export function FieldSelect({
             </span>
           )}
         </div>
+        {showMappingStatus && (
+          <Badge
+            variant={mappedSet.has(f.key) ? 'secondary' : 'outline'}
+            size="xs"
+          >
+            {mappedSet.has(f.key) ? 'Mapped' : 'Unmapped'}
+          </Badge>
+        )}
         <TypeChip type={f.type} />
       </div>
       {f.key === value && (
@@ -3542,7 +3552,7 @@ export default function FieldMappingCanvas({
                                         <Badge
                                           variant="secondary"
                                           size="xs"
-                                          className="border-0 bg-primary/10 text-primary gap-1 font-medium"
+                                          className="bg-primary/10 text-primary gap-1 border-0 font-medium"
                                         >
                                           <Sparkles className="text-primary size-2.5 shrink-0" />
                                           <span>Auto-mapped</span>
@@ -3551,7 +3561,7 @@ export default function FieldMappingCanvas({
                                         <Badge
                                           variant="secondary"
                                           size="xs"
-                                          className="border-0 bg-primary/15 text-primary font-semibold"
+                                          className="bg-primary/15 text-primary border-0 font-semibold"
                                         >
                                           New
                                         </Badge>
@@ -3560,7 +3570,7 @@ export default function FieldMappingCanvas({
                                         <Badge
                                           variant="secondary"
                                           size="xs"
-                                          className="border-0 bg-muted/60 text-muted-foreground font-medium"
+                                          className="bg-muted/60 text-muted-foreground border-0 font-medium"
                                         >
                                           Combined
                                         </Badge>
@@ -3606,7 +3616,7 @@ export default function FieldMappingCanvas({
                           </TableCell>
 
                           {/* Column 2: Destination Field */}
-                          <TableCell className="min-w-0 py-2 px-2 align-middle">
+                          <TableCell className="min-w-0 px-2 py-2 align-middle">
                             {isEditing ? (
                               <FieldSelect
                                 fields={destFields.filter((f) => !f.readOnly)}
@@ -3634,7 +3644,7 @@ export default function FieldMappingCanvas({
                                     <Badge
                                       variant="secondary"
                                       size="xs"
-                                      className="border-0 bg-primary/10 text-primary hover:bg-primary/20 shrink-0 cursor-pointer gap-1 font-medium"
+                                      className="bg-primary/10 text-primary hover:bg-primary/20 shrink-0 cursor-pointer gap-1 border-0 font-medium"
                                       onClick={() =>
                                         openSettingsDrawer(
                                           m.sourceField,
@@ -3644,15 +3654,19 @@ export default function FieldMappingCanvas({
                                       }
                                       title="View and edit transform rules"
                                     >
-                                      <Zap className="size-2.5 shrink-0 text-primary" />
-                                      <span>{ruleCount > 1 ? `${ruleCount} Rules` : 'Rule'}</span>
+                                      <Zap className="text-primary size-2.5 shrink-0" />
+                                      <span>
+                                        {ruleCount > 1
+                                          ? `${ruleCount} Rules`
+                                          : 'Rule'}
+                                      </span>
                                     </Badge>
                                   )}
                                   {onEmpty !== 'none' && (
                                     <Badge
                                       variant="secondary"
                                       size="xs"
-                                      className="border-0 bg-muted/60 text-muted-foreground hover:bg-muted/80 shrink-0 cursor-pointer gap-1 font-normal"
+                                      className="bg-muted/60 text-muted-foreground hover:bg-muted/80 shrink-0 cursor-pointer gap-1 border-0 font-normal"
                                       onClick={() =>
                                         openSettingsDrawer(
                                           m.sourceField,
@@ -3675,7 +3689,7 @@ export default function FieldMappingCanvas({
                                     <Badge
                                       variant="secondary"
                                       size="xs"
-                                      className="border-0 bg-warning/15 text-warning-foreground hover:bg-warning/25 shrink-0 cursor-pointer gap-1 font-normal"
+                                      className="bg-warning/15 text-warning-foreground hover:bg-warning/25 shrink-0 cursor-pointer gap-1 border-0 font-normal"
                                       onClick={() =>
                                         openSettingsDrawer(
                                           m.sourceField,
@@ -3700,12 +3714,12 @@ export default function FieldMappingCanvas({
 
                           {/* Column 3: Direction (if bidirectional) */}
                           {showDirectionToggle && (
-                            <TableCell className="w-28 py-2 px-2 align-middle">
+                            <TableCell className="w-28 px-2 py-2 align-middle">
                               {rowDirectionReadOnly ? (
                                 <Badge
                                   variant="secondary"
                                   size="xs"
-                                  className="border-0 bg-muted/60 text-muted-foreground gap-1 whitespace-nowrap"
+                                  className="bg-muted/60 text-muted-foreground gap-1 border-0 whitespace-nowrap"
                                 >
                                   <ArrowLeftRight className="text-muted-foreground size-3" />
                                   <span>
@@ -3749,13 +3763,13 @@ export default function FieldMappingCanvas({
                           )}
 
                           {/* Column 4: Identifier */}
-                          <TableCell className="w-32 py-2 px-2 align-middle">
+                          <TableCell className="w-32 px-2 py-2 align-middle">
                             {!isEditing &&
                               (isMatch ? (
                                 <Badge
                                   variant="secondary"
                                   size="xs"
-                                  className="border-0 bg-primary/10 text-primary hover:bg-primary/20 shrink-0 cursor-pointer gap-1.5 font-medium"
+                                  className="bg-primary/10 text-primary hover:bg-primary/20 shrink-0 cursor-pointer gap-1.5 border-0 font-medium"
                                   onClick={() => toggleMatch(m.sourceField, dk)}
                                   title={
                                     isNewlySetIdentifier
@@ -3787,7 +3801,7 @@ export default function FieldMappingCanvas({
                           </TableCell>
 
                           {/* Column 7: Actions */}
-                          <TableCell className="relative py-2 pr-4 pl-2 text-right align-middle whitespace-nowrap overflow-hidden">
+                          <TableCell className="relative overflow-hidden py-2 pr-4 pl-2 text-right align-middle whitespace-nowrap">
                             {isEditing ? (
                               <div className="flex items-center justify-end gap-2">
                                 <Button
@@ -3836,16 +3850,14 @@ export default function FieldMappingCanvas({
                                   <DropdownMenu
                                     open={openDropdownPair === pairKey}
                                     onOpenChange={(open) =>
-                                      setOpenDropdownPair(
-                                        open ? pairKey : null,
-                                      )
+                                      setOpenDropdownPair(open ? pairKey : null)
                                     }
                                   >
                                     <DropdownMenuTrigger asChild>
                                       <button
                                         type="button"
                                         className={cn(
-                                          'text-muted-foreground hover:text-foreground hover:bg-muted/70 flex size-7 cursor-pointer items-center justify-center rounded-lg outline-none transition-all duration-200 ease-out',
+                                          'text-muted-foreground hover:text-foreground hover:bg-muted/70 flex size-7 cursor-pointer items-center justify-center rounded-lg transition-all duration-200 ease-out outline-none',
                                           'opacity-0 group-hover/row:opacity-100',
                                           openDropdownPair === pairKey &&
                                             'opacity-100',
@@ -3955,7 +3967,9 @@ export default function FieldMappingCanvas({
 
                                       <DropdownMenuItem
                                         className="text-destructive focus:text-destructive focus:bg-destructive/10 gap-2 text-xs"
-                                        onClick={() => remove(m.sourceField, dk)}
+                                        onClick={() =>
+                                          remove(m.sourceField, dk)
+                                        }
                                       >
                                         <X className="size-3.5" />
                                         <span>Remove Mapping</span>
@@ -3985,12 +3999,12 @@ export default function FieldMappingCanvas({
                                       className="gap-1.5 border-0"
                                       onClick={() => {
                                         if (
-                                          primaryIssue.actionType === 'value_map'
+                                          primaryIssue.actionType ===
+                                          'value_map'
                                         ) {
                                           if (canUseTransforms) {
-                                            const existingRules = (m.destRules?.[
-                                              dk
-                                            ] ?? []) as Rule[];
+                                            const existingRules = (m
+                                              .destRules?.[dk] ?? []) as Rule[];
                                             if (
                                               !existingRules.some(
                                                 (r) =>
@@ -4182,7 +4196,9 @@ export default function FieldMappingCanvas({
                                         variant="outline"
                                         size="icon-xs"
                                         className="border-destructive/40 bg-background text-destructive hover:border-destructive hover:bg-destructive/10 size-7 cursor-pointer rounded-lg border-dashed shadow-xs transition-all"
-                                        onClick={() => remove(m.sourceField, dk)}
+                                        onClick={() =>
+                                          remove(m.sourceField, dk)
+                                        }
                                         aria-label="Remove mapping"
                                         title="Remove mapping"
                                       >
