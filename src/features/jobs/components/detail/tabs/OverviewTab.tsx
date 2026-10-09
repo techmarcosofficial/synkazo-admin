@@ -536,6 +536,7 @@ export default function OverviewTab() {
           jobId={job.id}
           job={job}
           environment={activeEnvironment}
+          sourcePlatformId={project?.sourcePlatformId}
           hasBaseline={Boolean(
             job.lastSyncedAt ||
             runLogs.some(

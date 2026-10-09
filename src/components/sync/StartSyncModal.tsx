@@ -26,6 +26,7 @@ interface StartSyncModalProps {
   job: ExtJob;
   hasBaseline: boolean;
   environment?: ProjectEnvironment;
+  sourcePlatformId?: string | null;
   pipelineRequired?: boolean;
   pipelineConfigured?: boolean;
   onGoToPipeline: () => void;
@@ -45,6 +46,7 @@ function ManualSyncContent({
   job,
   hasBaseline,
   environment,
+  sourcePlatformId,
   pipelineRequired = false,
   pipelineConfigured = true,
   onGoToPipeline,
@@ -72,21 +74,22 @@ function ManualSyncContent({
   return (
     <div className="space-y-3">
       {!job?.isEnabled && !isLimitRunningOrDone && (
-        <Alert className="border-primary/30 bg-primary/5 text-foreground py-2 px-3">
-          <Info className="size-4 text-primary shrink-0" />
+        <Alert className="border-primary/30 bg-primary/5 text-foreground px-3 py-2">
+          <Info className="text-primary size-4 shrink-0" />
           <AlertDescription className="text-xs">
-            <strong className="font-semibold text-foreground">
+            <strong className="text-foreground font-semibold">
               Automatic activation on sync:
             </strong>{' '}
             This sync job is currently inactive. Starting this sync will
-            automatically activate the job so records can sync between your platforms.
+            automatically activate the job so records can sync between your
+            platforms.
           </AlertDescription>
         </Alert>
       )}
 
       {!isLimitRunningOrDone && (
         <div className="space-y-1.5">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
             What records do you want to sync?
           </p>
 
@@ -142,6 +145,7 @@ function ManualSyncContent({
             embedded
             compact
             environment={environment}
+            sourcePlatformId={sourcePlatformId}
             projectId={projectId}
             jobId={jobId}
             job={job}
@@ -185,12 +189,12 @@ export default function StartSyncModal(props: StartSyncModalProps) {
 
   if (props.embedded) {
     return (
-      <div className="flex flex-col flex-1 min-h-0">
-        <div className="flex-1 min-h-0 overflow-y-auto">
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="min-h-0 flex-1 overflow-y-auto">
           <ManualSyncContent {...props} onFooterChange={setFooterContent} />
         </div>
         {footerContent && (
-          <div className="shrink-0 border-t border-border/60 bg-muted/20 px-5 py-3 mt-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <div className="border-border/60 bg-muted/20 mt-3 flex shrink-0 flex-col-reverse gap-2 border-t px-5 py-3 sm:flex-row sm:justify-end">
             {footerContent}
           </div>
         )}
@@ -209,7 +213,7 @@ export default function StartSyncModal(props: StartSyncModalProps) {
         <DialogHeader className="shrink-0 flex-row items-center justify-between gap-4 border-b px-5 py-3">
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             <div className="flex items-center gap-2">
-              <DialogTitle className="text-base font-semibold leading-tight">
+              <DialogTitle className="text-base leading-tight font-semibold">
                 Run manually
               </DialogTitle>
               {props.environment && (
@@ -227,7 +231,7 @@ export default function StartSyncModal(props: StartSyncModalProps) {
                 />
               )}
             </div>
-            <DialogDescription className="text-xs text-muted-foreground">
+            <DialogDescription className="text-muted-foreground text-xs">
               Sync data now without changing the automatic schedule.
             </DialogDescription>
           </div>
@@ -247,7 +251,7 @@ export default function StartSyncModal(props: StartSyncModalProps) {
         </div>
 
         {footerContent && (
-          <DialogFooter className="shrink-0 border-t bg-muted/20 px-5 py-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <DialogFooter className="bg-muted/20 flex shrink-0 flex-col-reverse gap-2 border-t px-5 py-3 sm:flex-row sm:justify-end">
             {footerContent}
           </DialogFooter>
         )}
