@@ -151,6 +151,10 @@ export function RecordReason({
 
   const reason = rec.skipReason || rec.failReason;
   const detail = rec.skipReasonDetail || rec.failReasonDetail;
+  const readableDetail = detail?.replace(
+    /logic=(AND|OR)\b/g,
+    (_match, logic: string) => (logic === 'AND' ? 'Match All' : 'Match Any'),
+  );
 
   if (!reason && !detail) {
     return <span className="text-muted-foreground">—</span>;
@@ -313,7 +317,7 @@ export function RecordReason({
           {detail && (
             <DetailSection title="Reason">
               <p className="bg-muted/50 rounded-xl px-3 py-2 text-xs leading-relaxed break-words whitespace-pre-wrap">
-                {detail}
+                {readableDetail}
               </p>
             </DetailSection>
           )}

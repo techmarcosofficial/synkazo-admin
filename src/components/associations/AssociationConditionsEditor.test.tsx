@@ -140,7 +140,7 @@ describe('AssociationConditionsEditor', () => {
     expect(screen.getByText('Trim outer whitespace')).toBeInTheDocument();
   });
 
-  it('shows the AND/OR selector only once there are multiple conditions', () => {
+  it('shows the match logic selector only once there are multiple conditions', () => {
     const { rerender } = render(
       <AssociationConditionsEditor
         fields={FIELDS}
@@ -165,6 +165,7 @@ describe('AssociationConditionsEditor', () => {
       />,
     );
     expect(screen.getByText(/combine conditions with/i)).toBeInTheDocument();
+    expect(screen.getAllByText('Match All').length).toBeGreaterThan(1);
   });
 
   it('shows a validation error for an incomplete condition', () => {

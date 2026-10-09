@@ -2500,7 +2500,7 @@ export default function FieldMappingCanvas({
                     onClick={() => setMatchMode('and')}
                     title="All selected identifier keys must match"
                   >
-                    AND
+                    Match All
                   </button>
                   <button
                     type="button"
@@ -2513,7 +2513,7 @@ export default function FieldMappingCanvas({
                     onClick={() => setMatchMode('or')}
                     title="Try identifier keys in priority order; first match wins"
                   >
-                    OR
+                    Match Any
                   </button>
                 </div>
               )}
@@ -2736,7 +2736,7 @@ export default function FieldMappingCanvas({
                     onClick={() => setMatchMode('and')}
                     title="All selected identifier keys must match"
                   >
-                    AND
+                    Match All
                   </button>
                   <button
                     type="button"
@@ -2749,7 +2749,7 @@ export default function FieldMappingCanvas({
                     onClick={() => setMatchMode('or')}
                     title="Try identifier keys in priority order; first match wins"
                   >
-                    OR
+                    Match Any
                   </button>
                 </div>
               )}
@@ -3362,6 +3362,9 @@ export default function FieldMappingCanvas({
                                           ? candidate.destField[0]
                                           : candidate.destField;
                                         toggleMatch(candidate.sourceField, dk);
+                                        setJustAddedKey(
+                                          `${candidate.sourceField}-${dk}`,
+                                        );
                                         toast.success(
                                           `Set ${candidate.sourceField} as identifier.`,
                                         );

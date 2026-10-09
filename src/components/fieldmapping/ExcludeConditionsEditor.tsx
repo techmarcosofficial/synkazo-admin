@@ -238,7 +238,7 @@ export default function ExcludeConditionsEditor({
                     : 'text-muted-foreground hover:text-foreground',
                 )}
               >
-                ALL Match (AND)
+                Match All
               </button>
               <button
                 type="button"
@@ -251,7 +251,7 @@ export default function ExcludeConditionsEditor({
                     : 'text-muted-foreground hover:text-foreground',
                 )}
               >
-                ANY Matches (OR)
+                Match Any
               </button>
             </div>
             <div className="sr-only">
@@ -269,8 +269,8 @@ export default function ExcludeConditionsEditor({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="AND">AND</SelectItem>
-                  <SelectItem value="OR">OR</SelectItem>
+                  <SelectItem value="AND">Match All</SelectItem>
+                  <SelectItem value="OR">Match Any</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -317,13 +317,17 @@ export default function ExcludeConditionsEditor({
                       <Badge
                         variant="outline"
                         className={cn(
-                          'border-border/70 bg-background h-9 w-14 justify-center rounded-xl border text-[10px] font-semibold tracking-wider uppercase shadow-xs',
+                          'border-border/70 bg-background h-9 min-w-20 justify-center rounded-xl border px-2 text-[10px] font-semibold shadow-xs',
                           hasRowError
                             ? 'border-destructive/40 text-destructive bg-destructive/5'
                             : 'text-muted-foreground',
                         )}
                       >
-                        {index === 0 ? 'Where' : conditionLogic}
+                        {index === 0
+                          ? 'Where'
+                          : conditionLogic === 'AND'
+                            ? 'Match All'
+                            : 'Match Any'}
                       </Badge>
                     </div>
 
@@ -666,8 +670,8 @@ export default function ExcludeConditionsEditor({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="AND">AND</SelectItem>
-              <SelectItem value="OR">OR</SelectItem>
+              <SelectItem value="AND">Match All</SelectItem>
+              <SelectItem value="OR">Match Any</SelectItem>
             </SelectContent>
           </Select>
         </Field>

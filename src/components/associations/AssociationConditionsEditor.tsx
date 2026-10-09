@@ -171,8 +171,8 @@ export default function AssociationConditionsEditor({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="AND">AND</SelectItem>
-                <SelectItem value="OR">OR</SelectItem>
+                <SelectItem value="AND">Match All</SelectItem>
+                <SelectItem value="OR">Match Any</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -198,7 +198,7 @@ export default function AssociationConditionsEditor({
         return (
           <div
             key={i}
-            className="grid gap-2 border-t px-4 py-3 md:grid-cols-[3.5rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_4.5rem] md:items-end"
+            className="grid gap-2 border-t px-4 py-3 md:grid-cols-[6rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_4.5rem] md:items-end"
             data-invalid={!cond.field || !cond.operator || missingValue}
           >
             <div className="flex h-9 items-center">
@@ -206,7 +206,11 @@ export default function AssociationConditionsEditor({
                 variant={i === 0 ? 'secondary' : 'outline'}
                 className="font-normal"
               >
-                {i === 0 ? 'Where' : conditionLogic}
+                {i === 0
+                  ? 'Where'
+                  : conditionLogic === 'AND'
+                    ? 'Match All'
+                    : 'Match Any'}
               </Badge>
             </div>
 

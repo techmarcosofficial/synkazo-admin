@@ -228,7 +228,7 @@ describe('RecordReason', () => {
     fireEvent.focus(trigger);
 
     const tooltip = await screen.findByRole('tooltip');
-    expect(tooltip).toHaveTextContent('logic=OR');
+    expect(tooltip).toHaveTextContent('Match Any');
     expect(tooltip).toHaveTextContent('email is empty');
     expect(tooltip).toHaveTextContent('actual=<empty>');
   });
