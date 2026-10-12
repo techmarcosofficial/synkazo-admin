@@ -222,7 +222,8 @@ export default function OrganisationProjectAssociationsPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
-                      {(rule.conditions?.length ?? 0)} · {rule.conditionLogic ?? 'AND'}
+                      {(rule.conditions?.length ?? 0)} ·{' '}
+                      {rule.conditionLogic === 'OR' ? 'Match Any' : 'Match All'}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {rule.updatedAt

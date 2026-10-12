@@ -123,8 +123,9 @@ export function SynkazoAuthProvider({ children }: { children: ReactNode }) {
       .catch(() => {});
     tokenStorage.clearTokens();
     queryClientInstance.clear();
-    setCurrentUser(null);
-    window.location.href = '/login';
+    // A single full navigation clears the in-memory auth state and app shell.
+    // Updating React state first briefly renders login before the navigation.
+    window.location.replace('/login');
   };
 
   const refreshUser = async (): Promise<User> => {

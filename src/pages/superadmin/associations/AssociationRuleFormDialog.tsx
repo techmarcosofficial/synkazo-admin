@@ -357,8 +357,8 @@ export default function AssociationRuleFormDialog({
               }
               className="border-input bg-background h-9 rounded-md border px-3 text-sm"
             >
-              <option value="AND">AND</option>
-              <option value="OR">OR</option>
+              <option value="AND">Match All</option>
+              <option value="OR">Match Any</option>
             </select>
           </div>
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { ChevronsUpDown, LogOut, Moon, Settings2 } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 import { useTheme } from '@/components/theme-provider';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -29,7 +29,6 @@ interface UserMenuProps {
 }
 export function NavUser({ variant = 'sidebar' }: UserMenuProps) {
   const { currentUser, logout } = useSynkazoAuth();
-  const navigate = useNavigate();
   const { isMobile } = useSidebar();
   const { confirm } = useConfirmDialog();
   const { theme, setTheme } = useTheme();
@@ -166,7 +165,6 @@ export function NavUser({ variant = 'sidebar' }: UserMenuProps) {
                   confirmLabel: 'Sign Out',
                   onConfirm: () => {
                     logout();
-                    navigate('/login');
                   },
                 });
               }}

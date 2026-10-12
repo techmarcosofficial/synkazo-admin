@@ -1,6 +1,8 @@
+import { format } from 'date-fns';
 import {
   AlertTriangle,
   ArrowRight,
+  Calendar as CalendarIcon,
   ChevronRight,
   Info,
   Play,
@@ -15,7 +17,9 @@ import UpgradeRequiredDialog from '@/components/shared/UpgradeRequiredDialog';
 import SyncRunProgress from '@/components/sync/SyncRunProgress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -25,6 +29,11 @@ import {
 } from '@/components/ui/dialog';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { Spinner } from '@/components/ui/spinner';
 import { sseClient } from '@/lib/sseClient';
 import { mergeSyncProgress } from '@/lib/mergeSyncProgress';
@@ -39,11 +48,19 @@ import type {
 const MAX_POLL_COUNT = 180;
 const STUCK_THRESHOLD = 30;
 
+function combineDateTime(date: Date, time: string): Date {
+  const [hours, minutes] = time.split(':').map(Number);
+  const combined = new Date(date);
+  combined.setHours(hours, minutes, 0, 0);
+  return combined;
+}
+
 interface LimitSyncModalProps {
   projectId: string;
   jobId: string;
   job?: Job;
   environment?: ProjectEnvironment;
+  sourcePlatformId?: string | null;
   onStarted?: () => void;
   onDone?: () => void;
   onClose: () => void;
@@ -107,7 +124,7 @@ function Frame({
         onEscapeKeyDown={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
       >
-        <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {children}
         </div>
       </DialogContent>
@@ -120,6 +137,7 @@ export default function LimitSyncModal({
   jobId,
   job,
   environment,
+  sourcePlatformId,
   onStarted,
   onDone,
   onClose,
@@ -149,6 +167,9 @@ export default function LimitSyncModal({
         ? 'the Production destination'
         : 'the destination';
   const pipelineBlocked = pipelineRequired && !pipelineConfigured;
+  const contactDateRequired =
+    sourcePlatformId === 'servicetitan' &&
+    job?.sourceObject?.toLowerCase() === 'contacts';
   const [step, setStep] = useState('config');
 
   useEffect(() => {
@@ -158,6 +179,12 @@ export default function LimitSyncModal({
   const [limit, setLimit] = useState<number>(!job?.lastSyncedAt ? 5 : 100);
   const [startPage, setStartPage] = useState<number>(1);
   const [batchSize, setBatchSize] = useState<number>(100);
+  const [filterByDate, setFilterByDate] = useState(contactDateRequired);
+  const dateFilterEnabled = contactDateRequired || filterByDate;
+  const [startDate, setStartDate] = useState<Date | undefined>();
+  const [startTime, setStartTime] = useState('00:00');
+  const [endDate, setEndDate] = useState<Date | undefined>();
+  const [endTime, setEndTime] = useState('23:59');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [runLog, setRunLog] = useState<SyncRun | null>(null);
@@ -201,7 +228,7 @@ export default function LimitSyncModal({
   const safeBatch = Math.max(10, Math.min(500, batchSize || 100));
   const safeStart = Math.max(1, startPage || 1);
   const estBatches = Math.ceil(safeLimit / safeBatch);
-  const estSrcPages = Math.ceil(safeLimit / 500);
+  const estSrcPages = Math.ceil(safeLimit / 100);
   const srcPageEnd = safeStart + estSrcPages - 1;
   const progress =
     liveProgress && (!runLog || liveProgress.runId === runLog.id)
@@ -238,6 +265,19 @@ export default function LimitSyncModal({
     if (startPage < 1) e.startPage = 'Must be at least 1';
     if (batchSize < 10) e.batchSize = 'Min batch size is 10';
     if (batchSize > 500) e.batchSize = 'Max batch size is 500';
+    if (dateFilterEnabled) {
+      if (contactDateRequired && !startDate)
+        e.startDate =
+          'Start Date is required for ServiceTitan Customer Contacts';
+      if (!startDate && !endDate && !contactDateRequired)
+        e.startDate = 'Select a Start Date or End Date';
+      const start = startDate
+        ? combineDateTime(startDate, startTime)
+        : undefined;
+      const end = endDate ? combineDateTime(endDate, endTime) : undefined;
+      if (start && end && start > end)
+        e.endDate = 'End Date must be after Start Date';
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -348,6 +388,14 @@ export default function LimitSyncModal({
         limit: safeLimit,
         startPage: safeStart,
         batchSize: safeBatch,
+        ...(dateFilterEnabled &&
+          startDate && {
+            startDate: combineDateTime(startDate, startTime).toISOString(),
+          }),
+        ...(dateFilterEnabled &&
+          endDate && {
+            endDate: combineDateTime(endDate, endTime).toISOString(),
+          }),
       })) as { alreadyRunning?: boolean } | undefined;
       if (resp?.alreadyRunning) {
         setStep('config');
@@ -402,15 +450,13 @@ export default function LimitSyncModal({
     onDone?.();
   };
 
-  const isFinished = step === 'running' && !!runLog && runLog.status !== 'running';
+  const isFinished =
+    step === 'running' && !!runLog && runLog.status !== 'running';
 
   const footerNode = (
-    <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end w-full">
+    <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end">
       {step === 'config' ? (
-        <Button
-          onClick={handleStart}
-          disabled={pipelineBlocked || disabled}
-        >
+        <Button onClick={handleStart} disabled={pipelineBlocked || disabled}>
           <Play /> {runButtonLabel}
         </Button>
       ) : isFinished ? (
@@ -425,9 +471,7 @@ export default function LimitSyncModal({
           >
             Run another sync
           </Button>
-          <Button onClick={onClose}>
-            Close
-          </Button>
+          <Button onClick={onClose}>Close</Button>
         </>
       ) : (
         <Button variant="outline" onClick={onClose}>
@@ -447,6 +491,11 @@ export default function LimitSyncModal({
     safeLimit,
     safeStart,
     safeBatch,
+    dateFilterEnabled,
+    startDate,
+    startTime,
+    endDate,
+    endTime,
     pipelineBlocked,
     disabled,
     runButtonLabel,
@@ -460,9 +509,12 @@ export default function LimitSyncModal({
         {step === 'config' && (
           <>
             {!compact && (
-              <div className="px-6 pt-6 pb-4 border-b border-border/60 shrink-0">
+              <div className="border-border/60 shrink-0 border-b px-6 pt-6 pb-4">
                 <DialogHeader>
-                  <Title embedded={embedded} className="flex items-center gap-3">
+                  <Title
+                    embedded={embedded}
+                    className="flex items-center gap-3"
+                  >
                     <div className="bg-primary/10 flex size-8 items-center justify-center rounded-lg">
                       <Sliders className="text-primary size-4" />
                     </div>
@@ -484,14 +536,14 @@ export default function LimitSyncModal({
 
             <div
               className={cn(
-                'flex-1 min-h-0 space-y-2.5 overflow-y-auto',
+                'min-h-0 flex-1 space-y-2.5 overflow-y-auto',
                 !embedded && 'px-5 py-3.5',
               )}
             >
               {pipelineBlocked && (
-                <Alert variant="destructive" className="py-2 px-3">
+                <Alert variant="destructive" className="px-3 py-2">
                   <AlertTriangle className="size-4 shrink-0" />
-                  <AlertDescription className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between text-xs [&_p:not(:last-child)]:mb-0">
+                  <AlertDescription className="flex flex-col gap-1.5 text-xs sm:flex-row sm:items-center sm:justify-between [&_p:not(:last-child)]:mb-0">
                     <div className="space-y-0.5">
                       <p className="text-foreground font-semibold">
                         Pipeline not configured
@@ -515,7 +567,7 @@ export default function LimitSyncModal({
                 </Alert>
               )}
 
-              <Alert className="bg-primary/5 border-primary/20 py-2 px-3">
+              <Alert className="bg-primary/5 border-primary/20 px-3 py-2">
                 <Info className="text-primary size-4 shrink-0" />
                 <AlertDescription className="space-y-0.5 text-xs [&_p:not(:last-child)]:mb-0">
                   <p className="text-foreground font-semibold">
@@ -532,7 +584,7 @@ export default function LimitSyncModal({
               </Alert>
 
               <div className="space-y-1">
-                <p className="text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
+                <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
                   Quick Record Limits
                 </p>
                 <div className="flex flex-wrap gap-1.5">
@@ -544,7 +596,7 @@ export default function LimitSyncModal({
                       setLimit(5);
                       setErrors((e) => ({ ...e, limit: '' }));
                     }}
-                    className="h-6.5 text-[11px] px-2.5"
+                    className="h-6.5 px-2.5 text-[11px]"
                   >
                     {isSandboxTest
                       ? '5 Records (Recommended Test)'
@@ -558,7 +610,7 @@ export default function LimitSyncModal({
                       setLimit(50);
                       setErrors((e) => ({ ...e, limit: '' }));
                     }}
-                    className="h-6.5 text-[11px] px-2.5"
+                    className="h-6.5 px-2.5 text-[11px]"
                   >
                     50 Records
                   </Button>
@@ -570,7 +622,7 @@ export default function LimitSyncModal({
                       setLimit(100);
                       setErrors((e) => ({ ...e, limit: '' }));
                     }}
-                    className="h-6.5 text-[11px] px-2.5"
+                    className="h-6.5 px-2.5 text-[11px]"
                   >
                     100 Records
                   </Button>
@@ -654,6 +706,127 @@ export default function LimitSyncModal({
                 </Field>
               </FieldGroup>
 
+              <div className="border-border/60 space-y-2 rounded-xl border p-3">
+                <div className="flex items-start gap-2">
+                  <Checkbox
+                    id="limited-date-filter"
+                    checked={dateFilterEnabled}
+                    disabled={contactDateRequired}
+                    onCheckedChange={(checked) =>
+                      setFilterByDate(checked === true)
+                    }
+                  />
+                  <div className="space-y-0.5">
+                    <FieldLabel
+                      htmlFor="limited-date-filter"
+                      className="text-xs"
+                    >
+                      Filter by date range
+                    </FieldLabel>
+                    {contactDateRequired && (
+                      <p className="text-muted-foreground text-[10px]">
+                        Required by ServiceTitan for Customer Contacts. Select a
+                        Start Date.
+                      </p>
+                    )}
+                  </div>
+                </div>
+                {dateFilterEnabled && (
+                  <FieldGroup className="grid gap-2 sm:grid-cols-2">
+                    <Field
+                      data-invalid={!!errors.startDate}
+                      className="space-y-1"
+                    >
+                      <FieldLabel className="text-xs">Start Date</FieldLabel>
+                      <div className="flex gap-2">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="h-8 min-w-0 flex-1 justify-start text-xs font-normal"
+                            >
+                              <CalendarIcon className="size-3.5 shrink-0" />
+                              {startDate
+                                ? format(startDate, 'MMM d, yyyy')
+                                : 'Start date'}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0">
+                            <Calendar
+                              mode="single"
+                              selected={startDate}
+                              onSelect={setStartDate}
+                              disabled={(date) =>
+                                date > new Date() ||
+                                (!!endDate && date > endDate)
+                              }
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <Input
+                          type="time"
+                          aria-label="Start time"
+                          className="h-8 w-24 shrink-0 text-xs"
+                          value={startTime}
+                          onChange={(event) => setStartTime(event.target.value)}
+                          disabled={!startDate}
+                        />
+                      </div>
+                      {errors.startDate && (
+                        <p className="text-destructive text-xs">
+                          {errors.startDate}
+                        </p>
+                      )}
+                    </Field>
+                    <Field
+                      data-invalid={!!errors.endDate}
+                      className="space-y-1"
+                    >
+                      <FieldLabel className="text-xs">End Date</FieldLabel>
+                      <div className="flex gap-2">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="h-8 min-w-0 flex-1 justify-start text-xs font-normal"
+                            >
+                              <CalendarIcon className="size-3.5 shrink-0" />
+                              {endDate
+                                ? format(endDate, 'MMM d, yyyy')
+                                : 'End date'}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0">
+                            <Calendar
+                              mode="single"
+                              selected={endDate}
+                              onSelect={setEndDate}
+                              disabled={(date) =>
+                                date > new Date() ||
+                                (!!startDate && date < startDate)
+                              }
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <Input
+                          type="time"
+                          aria-label="End time"
+                          className="h-8 w-24 shrink-0 text-xs"
+                          value={endTime}
+                          onChange={(event) => setEndTime(event.target.value)}
+                          disabled={!endDate}
+                        />
+                      </div>
+                      {errors.endDate && (
+                        <p className="text-destructive text-xs">
+                          {errors.endDate}
+                        </p>
+                      )}
+                    </Field>
+                  </FieldGroup>
+                )}
+              </div>
+
               <Card className="bg-muted/30 border-muted py-0">
                 <CardContent className="space-y-1.5 p-3">
                   <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
@@ -685,8 +858,8 @@ export default function LimitSyncModal({
                       <ChevronRight className="text-muted-foreground size-3" />
                       <span className="text-xs font-semibold">
                         {safeStart === srcPageEnd
-                           ? safeStart
-                           : `${safeStart}–${srcPageEnd}`}
+                          ? safeStart
+                          : `${safeStart}–${srcPageEnd}`}
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5">
@@ -706,7 +879,7 @@ export default function LimitSyncModal({
             </div>
 
             {!compact && !embedded ? (
-              <DialogFooter className="shrink-0 border-t bg-muted/20 px-6 py-4">
+              <DialogFooter className="bg-muted/20 shrink-0 border-t px-6 py-4">
                 <Button variant="outline" onClick={onClose} className="flex-1">
                   Cancel
                 </Button>
@@ -719,7 +892,7 @@ export default function LimitSyncModal({
                 </Button>
               </DialogFooter>
             ) : !onFooterChange ? (
-              <div className="border-t border-border/60 -mx-6 -mb-6 mt-6 px-6 py-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end bg-muted/20">
+              <div className="border-border/60 bg-muted/20 -mx-6 mt-6 -mb-6 flex flex-col-reverse gap-2 border-t px-6 py-4 sm:flex-row sm:justify-end">
                 <Button
                   onClick={handleStart}
                   disabled={pipelineBlocked || disabled}
@@ -765,18 +938,20 @@ export default function LimitSyncModal({
               stopping={stopping}
             />
 
-            {stuckWarning && !timedOut && (!runLog || runLog.status === 'running') && (
-              <Alert className="bg-warning/10 border-warning/25 py-2">
-                <AlertTriangle className="text-warning size-3.5" />
-                <AlertDescription className="text-warning text-xs">
-                  No progress in the last 60 seconds — the run may be stuck. You
-                  can stop it below.
-                </AlertDescription>
-              </Alert>
-            )}
+            {stuckWarning &&
+              !timedOut &&
+              (!runLog || runLog.status === 'running') && (
+                <Alert className="bg-warning/10 border-warning/25 py-2">
+                  <AlertTriangle className="text-warning size-3.5" />
+                  <AlertDescription className="text-warning text-xs">
+                    No progress in the last 60 seconds — the run may be stuck.
+                    You can stop it below.
+                  </AlertDescription>
+                </Alert>
+              )}
 
             {!compact && !embedded && (
-              <DialogFooter className="shrink-0 border-t bg-muted/20 px-6 py-4">
+              <DialogFooter className="bg-muted/20 shrink-0 border-t px-6 py-4">
                 {isFinished && (
                   <Button
                     variant="outline"
@@ -790,10 +965,7 @@ export default function LimitSyncModal({
                     Run another sync
                   </Button>
                 )}
-                <Button
-                  onClick={onClose}
-                  className="flex-1"
-                >
+                <Button onClick={onClose} className="flex-1">
                   Close
                 </Button>
               </DialogFooter>

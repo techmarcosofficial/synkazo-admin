@@ -33,6 +33,31 @@ describe('validateExcludeConditions', () => {
 });
 
 describe('ExcludeConditionsEditor grid', () => {
+  it('uses plain-language match labels while preserving rule values', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <ExcludeConditionsEditor
+        layout="grid"
+        sourceFields={SOURCE_FIELDS}
+        conditions={[
+          { field: 'status', operator: 'is_empty' },
+          { field: 'email_address', operator: 'is_empty' },
+        ]}
+        conditionLogic="AND"
+        onChange={onChange}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Match All' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getAllByText('Match All').length).toBeGreaterThan(1);
+    await user.click(screen.getByRole('button', { name: 'Match Any' }));
+    expect(onChange).toHaveBeenCalledWith(expect.any(Array), 'OR');
+  });
+
   it('shows the empty state without creating a condition', () => {
     render(
       <ExcludeConditionsEditor
