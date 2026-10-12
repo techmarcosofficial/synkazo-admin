@@ -31,6 +31,8 @@ interface LimitSyncOptions {
   limit?: number;
   startPage?: number;
   batchSize?: number;
+  startDate?: string;
+  endDate?: string;
 }
 interface PriorityUpdate {
   id: string;
@@ -107,11 +109,18 @@ export const jobsApi = {
   limitSync: (
     projectId: string,
     jobId: string,
-    { limit, startPage = 1, batchSize = 100 }: LimitSyncOptions = {},
+    {
+      limit,
+      startPage = 1,
+      batchSize = 100,
+      startDate,
+      endDate,
+    }: LimitSyncOptions = {},
   ): Promise<unknown> =>
     apiClient
       .post(
         `/projects/${projectId}/jobs/${jobId}/run?limit=${limit}&startPage=${startPage}&batchSize=${batchSize}`,
+        startDate || endDate ? { startDate, endDate } : undefined,
       )
       .then((r) => r.data),
 

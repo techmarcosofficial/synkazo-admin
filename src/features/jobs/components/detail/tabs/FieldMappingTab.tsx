@@ -6,6 +6,7 @@ import {
   Link2,
   RotateCcw,
   ShieldCheck,
+  Sparkles,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -18,6 +19,7 @@ import { connectionsApi } from '@/api/connections';
 import { jobsApi } from '@/api/jobs';
 import type { CrossObjectProperty } from '@/api/jobs';
 import CrossObjectPropertiesDialog from '@/components/fieldmapping/CrossObjectPropertiesDialog';
+import DefaultValuesDialog from '@/components/fieldmapping/DefaultValuesDialog';
 import { validateDestinationSkipConditions } from '@/components/fieldmapping/DestinationSkipConditionsEditor';
 import { validateExcludeConditions } from '@/components/fieldmapping/ExcludeConditionsEditor';
 import FieldMappingCanvas, {
@@ -320,6 +322,7 @@ export default function FieldMappingTab() {
   // Dialog Controls
   const [showJobFiltersDialog, setShowJobFiltersDialog] = useState(false);
   const [showCrossObjectDialog, setShowCrossObjectDialog] = useState(false);
+  const [showDefaultValuesDialog, setShowDefaultValuesDialog] = useState(false);
 
   const [loadingMappings, setLoadingMappings] = useState(true);
   const [mappingMode, setMappingMode] = useState<'edit' | 'fresh-setup'>(
@@ -759,6 +762,11 @@ export default function FieldMappingTab() {
     mappingMode === 'fresh-setup' && fieldMappings.length === 0;
   const totalFiltersCount =
     excludeConditions.length + destinationSkipConditions.length;
+  const defaultValuesCount =
+    Object.keys(job.defaultValues?.destination ?? {}).length +
+    (job.syncDirection === 'two_way'
+      ? Object.keys(job.defaultValues?.source ?? {}).length
+      : 0);
 
   return (
     <div
@@ -843,6 +851,26 @@ export default function FieldMappingTab() {
                   )}
                 </Button>
               )}
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDefaultValuesDialog(true)}
+                className="h-8 gap-1.5 text-xs font-medium"
+              >
+                <Sparkles className="text-primary size-3.5" />
+                <span>Default Values</span>
+                {defaultValuesCount > 0 && (
+                  <Badge
+                    variant="secondary"
+                    size="xs"
+                    className="ml-1 text-[10px]"
+                  >
+                    {defaultValuesCount}
+                  </Badge>
+                )}
+              </Button>
 
               {/* Portal mount for FieldMappingCanvas controls */}
               <div
@@ -1025,21 +1053,23 @@ export default function FieldMappingTab() {
       {/* Floating Save Draft Bar */}
       {anyDirty && (
         <div
-          className={`fixed right-0 bottom-0 left-0 z-40 max-w-full overflow-x-clip border-t border-border/60 dark:border-white/10 bg-card/35 dark:bg-card/40 backdrop-blur-md shadow-[0_-4px_20px_rgba(0,0,0,0.05)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)] transition-all duration-200 ${
+          className={`border-border/60 bg-card/35 dark:bg-card/40 fixed right-0 bottom-0 left-0 z-40 max-w-full overflow-x-clip border-t shadow-[0_-4px_20px_rgba(0,0,0,0.05)] backdrop-blur-md transition-all duration-200 dark:border-white/10 dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)] ${
             sidebarState === 'collapsed'
               ? 'md:left-(--sidebar-width-icon)'
               : 'md:left-(--sidebar-width)'
           }`}
         >
-          <div className="container mx-auto flex min-w-0 max-w-full flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:px-5 lg:px-6">
+          <div className="container mx-auto flex max-w-full min-w-0 flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:px-5 lg:px-6">
             <div className="flex min-w-0 flex-1 items-start gap-3">
               <div className="relative mt-1 flex size-2.5 shrink-0 items-center justify-center">
                 <span className="bg-warning/75 absolute inline-flex size-full animate-ping rounded-full opacity-75" />
                 <span className="bg-warning relative inline-flex size-2 rounded-full shadow-xs" />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-foreground leading-snug">Unsaved draft</p>
-                <p className="text-muted-foreground text-xs leading-normal mt-0.5">
+                <p className="text-foreground text-sm leading-snug font-semibold">
+                  Unsaved draft
+                </p>
+                <p className="text-muted-foreground mt-0.5 text-xs leading-normal">
                   Your changes are auto-saved locally. Save to apply them to
                   your sync job, or discard to restore saved state.
                 </p>
@@ -1051,7 +1081,7 @@ export default function FieldMappingTab() {
                 variant="outline"
                 onClick={handleDiscard}
                 disabled={saving}
-                className="bg-background/60 hover:bg-background border-border/80 dark:bg-background/30 dark:hover:bg-background/60 shadow-2xs cursor-pointer"
+                className="bg-background/60 hover:bg-background border-border/80 dark:bg-background/30 dark:hover:bg-background/60 cursor-pointer shadow-2xs"
               >
                 <RotateCcw className="size-3.5" /> Discard changes
               </Button>
@@ -1059,7 +1089,7 @@ export default function FieldMappingTab() {
                 onClick={handleSave}
                 disabled={!anyDirty || saving}
                 variant={anyDirty ? 'default' : 'outline'}
-                className="shadow-xs cursor-pointer"
+                className="cursor-pointer shadow-xs"
               >
                 {saving ? <Spinner /> : <Check className="size-3.5" />}
                 {saving ? 'Saving...' : saved ? 'Saved!' : 'Save changes'}
@@ -1070,6 +1100,24 @@ export default function FieldMappingTab() {
       )}
 
       {/* Job Filters Dialog */}
+      <DefaultValuesDialog
+        open={showDefaultValuesDialog}
+        onOpenChange={setShowDefaultValuesDialog}
+        projectId={projectId}
+        job={job}
+        sourceFields={sourceFields as unknown as CanvasFieldDef[]}
+        destinationFields={destFields as unknown as CanvasFieldDef[]}
+        sourcePlatform={srcPlatform}
+        destinationPlatform={dstPlatform}
+        mappedSourceKeys={mappedSourceKeys}
+        mappedDestinationKeys={mappedDestKeys}
+        mappings={fieldMappings}
+        onSaved={(updated) => {
+          patchJob({ defaultValues: updated.defaultValues });
+          refetch();
+        }}
+      />
+
       <JobFiltersDialog
         open={showJobFiltersDialog}
         onOpenChange={setShowJobFiltersDialog}
