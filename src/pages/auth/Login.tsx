@@ -34,6 +34,8 @@ import { showToast } from '@/lib/toast';
 import { tokenStorage } from '@/lib/tokenStorage';
 import { authPagesSettingsApi } from '@/api/auth-pages-settings';
 import { PlatformIcon } from '@/components/platform';
+import { postLoginPath, workspaceForUser } from '@/lib/workspace';
+import type { User } from '@/types';
 
 const HUBSPOT_ERROR_MESSAGES: Record<string, string> = {
   access_denied: 'HubSpot login was cancelled. No changes were made.',
@@ -141,11 +143,13 @@ export default function Login() {
     };
   }, []);
 
-  const resumeTarget = () => {
+  const resumeTarget = (user: User) => {
     const pending = consumePendingPlan();
-    return pending
-      ? `/checkout?plan=${pending.plan}&interval=${pending.interval}`
-      : '/dashboard';
+    const checkout =
+      pending && workspaceForUser(user) === 'tenant'
+        ? `/checkout?plan=${encodeURIComponent(pending.plan)}&interval=${pending.interval}`
+        : null;
+    return postLoginPath(user, checkout);
   };
 
   useEffect(() => {
@@ -163,7 +167,7 @@ export default function Login() {
       window.location.reload();
       return;
     }
-    navigate(resumeTarget(), { replace: true });
+    navigate(resumeTarget(currentUser), { replace: true });
   }, [currentUser, isLoading, navigate, redirectTo]);
 
   if (isLoading || currentUser) return null;
@@ -172,11 +176,14 @@ export default function Login() {
     setError('');
     setUnverifiedEmail('');
     try {
-      await login(values.email, values.password, values.remember);
+      const user = await login(values.email, values.password, values.remember);
       showToast.success("Welcome back! You've logged in successfully.");
-      navigate(redirectTo ?? resumeTarget(), {
-        replace: true,
-      });
+      navigate(
+        redirectTo ? postLoginPath(user, redirectTo) : resumeTarget(user),
+        {
+          replace: true,
+        },
+      );
     } catch (err) {
       const e = err as { response?: { data?: { message?: string } } };
       const msg = e?.response?.data?.message || '';
@@ -197,7 +204,7 @@ export default function Login() {
       redirectTo ??
       (pending
         ? `/checkout?plan=${encodeURIComponent(pending.plan)}&interval=${pending.interval}`
-        : '/dashboard');
+        : '/');
     const apiBase =
       import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
     window.location.assign(

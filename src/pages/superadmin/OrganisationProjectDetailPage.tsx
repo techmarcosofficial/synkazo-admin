@@ -1,5 +1,5 @@
 import { formatDistanceToNow } from 'date-fns';
-import { ArrowLeft, Database, FolderOpen, Link2, Pause, Play } from 'lucide-react';
+import { Database, FolderOpen, Link2, Pause, Play } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
@@ -13,6 +13,14 @@ import PageHeader from '@/components/shared/PageHeader';
 import SkeletonList from '@/components/shared/skeletons/SkeletonList';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { ProjectPlatformPair } from '@/features/projects/components/cards';
 import {
   Table,
   TableBody,
@@ -47,8 +55,7 @@ interface JobRowProps {
   organisationId: string;
   projectId: string;
   job: ReturnType<typeof useSuperAdminJobsQuery>['data'] extends
-    | infer T
-    | undefined
+    infer T | undefined
     ? T extends readonly (infer U)[]
       ? U
       : never
@@ -57,10 +64,23 @@ interface JobRowProps {
   runDisabled: boolean;
 }
 
-function JobRow({ job, onRun, runDisabled }: JobRowProps) {
+function JobRow({
+  organisationId,
+  projectId,
+  job,
+  onRun,
+  runDisabled,
+}: JobRowProps) {
   return (
     <TableRow key={job.id}>
-      <TableCell className="font-medium">{job.name}</TableCell>
+      <TableCell className="font-medium">
+        <Link
+          to={`/super-admin/organisations/${organisationId}/projects/${projectId}/jobs/${job.id}`}
+          className="text-foreground hover:text-primary hover:underline"
+        >
+          {job.name}
+        </Link>
+      </TableCell>
       <TableCell>
         <Badge variant="outline">{job.syncDirection}</Badge>
       </TableCell>
@@ -142,7 +162,6 @@ export default function OrganisationProjectDetailPage() {
     organisationId: string;
     projectId: string;
   }>();
-
   const orgQuery = useSuperAdminOrganisationQuery(organisationId);
   const projectQuery = useSuperAdminProjectQuery(
     organisationId ?? '',
@@ -233,60 +252,94 @@ export default function OrganisationProjectDetailPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <Link
-          to={`/super-admin/organisations/${organisationId}/projects`}
-          className="text-muted-foreground hover:text-foreground mb-2 inline-flex items-center gap-1 text-sm"
-        >
-          <ArrowLeft className="size-3.5" aria-hidden />
-          All projects
-        </Link>
+      <div className="space-y-4">
         <PageHeader
           title={project.name}
-          description={orgQuery.data?.name ?? organisationId}
+          description={
+            project.description ?? orgQuery.data?.name ?? organisationId
+          }
+          backTo={{
+            label: 'All projects',
+            to: `/super-admin/organisations/${organisationId}/projects`,
+          }}
         />
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <Badge variant="secondary">{project.status}</Badge>
-          <Badge variant="outline">{project.syncMode}</Badge>
-          <Badge variant="outline">
-            {project.sourcePlatformId} → {project.destPlatformId}
-          </Badge>
-          <Badge variant="outline">{project.schedulerMode}</Badge>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Button asChild size="sm" variant="outline">
-            <Link
-              to={`/super-admin/organisations/${organisationId}/projects/${projectId}/associations`}
-            >
-              <Link2 className="size-3.5" aria-hidden />
-              Association rules
-            </Link>
-          </Button>
-          <Button asChild size="sm" variant="outline">
-            <Link
-              to={`/super-admin/organisations/${organisationId}/projects/${projectId}/migration`}
-            >
-              <Database className="size-3.5" aria-hidden />
-              Environment migration
-            </Link>
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setHoldKind('hold')}
-          >
-            <Pause className="size-3.5" aria-hidden />
-            Hold project
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setHoldKind('resume')}
-          >
-            <Play className="size-3.5" aria-hidden />
-            Resume project
-          </Button>
-        </div>
+        <Card>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap items-center gap-4">
+              <ProjectPlatformPair
+                sourcePlatformId={project.sourcePlatformId}
+                destPlatformId={project.destPlatformId}
+                syncMode={
+                  project.syncMode === 'two_way' ? 'two_way' : 'one_way'
+                }
+                size="2xl"
+              />
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="secondary">{project.status}</Badge>
+                <Badge variant="outline">{project.syncMode}</Badge>
+                <Badge variant="outline">{project.schedulerMode}</Badge>
+              </div>
+            </div>
+            <div className="grid gap-3 border-t pt-4 sm:grid-cols-3">
+              <div>
+                <p className="text-muted-foreground text-xs">Jobs enabled</p>
+                <p className="text-lg font-semibold">
+                  {project.enabledJobCount} / {project.jobCount}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-xs">Records synced</p>
+                <p className="text-lg font-semibold">
+                  {project.totalRecordsSynced.toLocaleString()}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-xs">Last sync</p>
+                <p className="text-sm font-medium">
+                  {project.lastSyncedAt
+                    ? formatDistanceToNow(new Date(project.lastSyncedAt), {
+                        addSuffix: true,
+                      })
+                    : 'Never'}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 border-t pt-4">
+              <Button asChild size="sm" variant="outline">
+                <Link
+                  to={`/super-admin/organisations/${organisationId}/projects/${projectId}/associations`}
+                >
+                  <Link2 className="size-3.5" aria-hidden />
+                  Association rules
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link
+                  to={`/super-admin/organisations/${organisationId}/projects/${projectId}/migration`}
+                >
+                  <Database className="size-3.5" aria-hidden />
+                  Environment migration
+                </Link>
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setHoldKind('hold')}
+              >
+                <Pause className="size-3.5" aria-hidden />
+                Hold project
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setHoldKind('resume')}
+              >
+                <Play className="size-3.5" aria-hidden />
+                Resume project
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {activeRun ? (
@@ -299,127 +352,143 @@ export default function OrganisationProjectDetailPage() {
         />
       ) : null}
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold">Jobs</h2>
-        {jobsQuery.isLoading ? (
-          <SkeletonList count={3} />
-        ) : jobsQuery.isError ? (
-          <ErrorState
-            title="Could not load jobs"
-            description={extractErrorMessage(jobsQuery.error)}
-            onRetry={() => jobsQuery.refetch()}
-          />
-        ) : jobs.length === 0 ? (
-          <EmptyState
-            icon={FolderOpen}
-            title="No jobs in this project"
-            description="Members can create jobs from the tenant workspace."
-          />
-        ) : (
-          <div className="bg-card overflow-hidden rounded-lg border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Direction</TableHead>
-                  <TableHead>Enabled</TableHead>
-                  <TableHead>Schedule</TableHead>
-                  <TableHead>Live</TableHead>
-                  <TableHead>Last sync</TableHead>
-                  <TableHead>Next run</TableHead>
-                  <TableHead>Checkpoint</TableHead>
-                  <TableHead className="w-24 text-right"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {jobs.map((job) => (
-                  <JobRow
-                    key={job.id}
-                    organisationId={organisationId}
-                    projectId={projectId}
-                    job={job}
-                    onRun={startRun}
-                    runDisabled={!!activeRun}
-                  />
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold">Platform connections</h2>
-        {connectionsQuery.isLoading ? (
-          <SkeletonList count={2} />
-        ) : connectionsQuery.isError ? (
-          <ErrorState
-            title="Could not load connections"
-            description={extractErrorMessage(connectionsQuery.error)}
-            onRetry={() => connectionsQuery.refetch()}
-          />
-        ) : (connectionsQuery.data?.length ?? 0) === 0 ? (
-          <EmptyState
-            icon={FolderOpen}
-            title="No connections"
-            description="This project has not connected any platforms yet."
-          />
-        ) : (
-          <div className="bg-card overflow-hidden rounded-lg border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Platform</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Environment</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Account</TableHead>
-                  <TableHead>Last checked</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {connectionsQuery.data!.map((c) => (
-                  <TableRow key={c.id}>
-                    <TableCell className="font-medium">{c.platformId}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{c.connectionType}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{c.environment}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        className={
-                          c.status === 'connected'
-                            ? 'bg-emerald-100 text-emerald-900'
-                            : c.status === 'error'
-                              ? 'bg-red-100 text-red-900'
-                              : 'bg-muted text-muted-foreground'
-                        }
-                      >
-                        {c.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {c.accountName ?? '—'}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {c.lastCheckedAt
-                        ? formatDistanceToNow(new Date(c.lastCheckedAt), {
-                            addSuffix: true,
-                          })
-                        : '—'}
-                    </TableCell>
+      <Card>
+        <CardHeader visualLevel="section">
+          <CardTitle>Jobs</CardTitle>
+          <CardDescription>
+            Inspect sync jobs and queue a run for this project.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {jobsQuery.isLoading ? (
+            <SkeletonList count={3} />
+          ) : jobsQuery.isError ? (
+            <ErrorState
+              title="Could not load jobs"
+              description={extractErrorMessage(jobsQuery.error)}
+              onRetry={() => jobsQuery.refetch()}
+            />
+          ) : jobs.length === 0 ? (
+            <EmptyState
+              icon={FolderOpen}
+              title="No jobs in this project"
+              description="Members can create jobs from the tenant workspace."
+            />
+          ) : (
+            <div className="overflow-x-auto rounded-3xl border">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted hover:bg-muted/50">
+                    <TableHead>Name</TableHead>
+                    <TableHead>Direction</TableHead>
+                    <TableHead>Enabled</TableHead>
+                    <TableHead>Schedule</TableHead>
+                    <TableHead>Live</TableHead>
+                    <TableHead>Last sync</TableHead>
+                    <TableHead>Next run</TableHead>
+                    <TableHead>Checkpoint</TableHead>
+                    <TableHead className="w-24 text-right"></TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {jobs.map((job) => (
+                    <JobRow
+                      key={job.id}
+                      organisationId={organisationId}
+                      projectId={projectId}
+                      job={job}
+                      onRun={startRun}
+                      runDisabled={!!activeRun}
+                    />
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader visualLevel="section">
+          <CardTitle>Platform connections</CardTitle>
+          <CardDescription>
+            Connected accounts and their current health.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {connectionsQuery.isLoading ? (
+            <SkeletonList count={2} />
+          ) : connectionsQuery.isError ? (
+            <ErrorState
+              title="Could not load connections"
+              description={extractErrorMessage(connectionsQuery.error)}
+              onRetry={() => connectionsQuery.refetch()}
+            />
+          ) : (connectionsQuery.data?.length ?? 0) === 0 ? (
+            <EmptyState
+              icon={FolderOpen}
+              title="No connections"
+              description="This project has not connected any platforms yet."
+            />
+          ) : (
+            <div className="overflow-x-auto rounded-3xl border">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted hover:bg-muted/50">
+                    <TableHead>Platform</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Environment</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Account</TableHead>
+                    <TableHead>Last checked</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {connectionsQuery.data!.map((c) => (
+                    <TableRow key={c.id}>
+                      <TableCell className="font-medium">
+                        {c.platformId}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{c.connectionType}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{c.environment}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          className={
+                            c.status === 'connected'
+                              ? 'bg-emerald-100 text-emerald-900'
+                              : c.status === 'error'
+                                ? 'bg-red-100 text-red-900'
+                                : 'bg-muted text-muted-foreground'
+                          }
+                        >
+                          {c.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {c.accountName ?? '—'}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {c.lastCheckedAt
+                          ? formatDistanceToNow(new Date(c.lastCheckedAt), {
+                              addSuffix: true,
+                            })
+                          : '—'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+          <div className="text-muted-foreground text-xs">
+            Credentials are never shown. Only platform identity + health state.
           </div>
-        )}
-        <div className="text-muted-foreground text-xs">
-          Credentials are never shown. Only platform identity + health state.
-        </div>
-      </section>
+        </CardContent>
+      </Card>
 
       <RunJobDialog
         open={!!runDialog}
@@ -435,7 +504,9 @@ export default function OrganisationProjectDetailPage() {
       <LifecycleConfirmDialog
         open={holdKind !== null}
         onOpenChange={(o) => (o ? undefined : setHoldKind(null))}
-        title={holdKind === 'hold' ? 'Hold every active job' : 'Resume held jobs'}
+        title={
+          holdKind === 'hold' ? 'Hold every active job' : 'Resume held jobs'
+        }
         description={
           holdKind === 'hold'
             ? 'Every active job on this project flips to HELD and stops scheduling until explicitly resumed.'
@@ -468,7 +539,9 @@ export default function OrganisationProjectDetailPage() {
                 holdKind === 'hold'
                   ? (data as { heldJobs: number }).heldJobs
                   : (data as { resumedJobs: number }).resumedJobs;
-              showToast.success(`${count} job${count === 1 ? '' : 's'} ${verb}.`);
+              showToast.success(
+                `${count} job${count === 1 ? '' : 's'} ${verb}.`,
+              );
               setHoldKind(null);
             },
           });

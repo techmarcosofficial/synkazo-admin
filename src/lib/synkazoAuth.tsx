@@ -40,7 +40,7 @@ export function SynkazoAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (currentUser) sseClient.connect();
+    if (currentUser && currentUser.role !== 'super_admin') sseClient.connect();
     else sseClient.disconnect();
   }, [currentUser]);
 
@@ -130,6 +130,14 @@ export function SynkazoAuthProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = async (): Promise<User> => {
     const { data } = await apiClient.get<{ data: User }>('/auth/me');
+    if (
+      currentUser &&
+      (currentUser.id !== data.data.id ||
+        currentUser.role !== data.data.role ||
+        currentUser.organisationId !== data.data.organisationId)
+    ) {
+      queryClientInstance.clear();
+    }
     setCurrentUser(data.data);
     return data.data;
   };

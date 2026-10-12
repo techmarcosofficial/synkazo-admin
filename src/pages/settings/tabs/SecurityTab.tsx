@@ -31,7 +31,11 @@ const errorMessage = (err: unknown, fallback: string) =>
 /**
  * Password and account-lifecycle sections composed into Profile & Account.
  */
-export default function SecurityTab() {
+export default function SecurityTab({
+  allowDeleteAccount = true,
+}: {
+  allowDeleteAccount?: boolean;
+}) {
   const { logout } = useSynkazoAuth();
   const changePasswordMutation = useChangePasswordMutation();
   const deleteMeMutation = useDeleteMeMutation();
@@ -251,33 +255,35 @@ export default function SecurityTab() {
         </CardContent>
       </Card>
 
-      <Card className="border-destructive/30 lg:col-span-2">
-        <CardHeader visualLevel="section">
-          <CardTitle className="text-destructive flex items-center gap-2">
-            <ShieldAlert className="size-4" /> Danger Zone
-          </CardTitle>
-          <CardDescription>
-            Destructive account actions cannot be undone.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="border-destructive/20 bg-destructive/5 flex flex-col gap-3 rounded-3xl border p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-medium">Delete Account</p>
-              <p className="text-muted-foreground text-xs">
-                Permanently delete your account and all associated access.
-              </p>
+      {allowDeleteAccount && (
+        <Card className="border-destructive/30 lg:col-span-2">
+          <CardHeader visualLevel="section">
+            <CardTitle className="text-destructive flex items-center gap-2">
+              <ShieldAlert className="size-4" /> Danger Zone
+            </CardTitle>
+            <CardDescription>
+              Destructive account actions cannot be undone.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="border-destructive/20 bg-destructive/5 flex flex-col gap-3 rounded-3xl border p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-medium">Delete Account</p>
+                <p className="text-muted-foreground text-xs">
+                  Permanently delete your account and all associated access.
+                </p>
+              </div>
+              <Button
+                className="w-fit shrink-0"
+                variant="destructive"
+                onClick={handleDeleteAccount}
+              >
+                Delete Account
+              </Button>
             </div>
-            <Button
-              className="w-fit shrink-0"
-              variant="destructive"
-              onClick={handleDeleteAccount}
-            >
-              Delete Account
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </>
   );
 }

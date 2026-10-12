@@ -1,16 +1,22 @@
-import { formatDistanceToNow } from 'date-fns';
 import { Plus, Shield, ShieldAlert } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import LifecycleConfirmDialog from './lifecycle/LifecycleConfirmDialog';
+import PeopleDirectory, {
+  comparePeople,
+  type PeopleSortKey,
+  type PersonView,
+} from './people/PeopleDirectory';
+import PeopleToolbar from './people/PeopleToolbar';
 
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
-import PageHeader from '@/components/shared/PageHeader';
+import HeadingPair from '@/components/shared/HeadingPair';
+import PaginationBar from '@/components/shared/PaginationBar';
 import SkeletonList from '@/components/shared/skeletons/SkeletonList';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -21,16 +27,18 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { usePagination } from '@/hooks/usePagination';
+import { useSort } from '@/hooks/useSort';
 import { createIdempotencyKey } from '@/lib/idempotency';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { showToast } from '@/lib/toast';
 import {
   useCreateSuperAdminMutation,
@@ -184,6 +192,7 @@ function CreateSuperAdminDialog({
 }
 
 export default function SuperAdminsPage() {
+  const { currentUser } = useSynkazoAuth();
   const query = useSuperAdminDirectoryQuery();
   const createMutation = useCreateSuperAdminMutation();
   const deactivateMutation = useDeactivateSuperAdminMutation();
@@ -194,101 +203,154 @@ export default function SuperAdminsPage() {
     useState<SuperAdminDirectoryEntry | null>(null);
   const [reactivateTarget, setReactivateTarget] =
     useState<SuperAdminDirectoryEntry | null>(null);
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState<'all' | 'active' | 'inactive'>('all');
 
-  const rows = query.data ?? [];
+  const rows = useMemo(() => query.data ?? [], [query.data]);
   const activeCount = rows.filter((r) => r.isActive).length;
+  const filtered = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    return rows.filter(
+      (row) =>
+        (!needle ||
+          row.fullName.toLowerCase().includes(needle) ||
+          row.email.toLowerCase().includes(needle)) &&
+        (status === 'all' ||
+          (status === 'active' ? row.isActive : !row.isActive)),
+    );
+  }, [rows, search, status]);
+  const people: PersonView[] = filtered.map((row) => {
+    const cannotDeactivate = row.id === currentUser?.id || activeCount <= 1;
+    return {
+      id: row.id,
+      name: row.fullName,
+      email: row.email,
+      role: 'Super Admin',
+      organisation: 'Platform',
+      isActive: row.isActive,
+      createdAt: row.createdAt,
+      actions: row.isActive ? (
+        <Button
+          size="sm"
+          variant="ghost"
+          className="text-destructive"
+          onClick={() => setDeactivateTarget(row)}
+          disabled={cannotDeactivate}
+          title={
+            row.id === currentUser?.id
+              ? 'You cannot deactivate your own account'
+              : activeCount <= 1
+                ? 'At least one active super admin is required'
+                : undefined
+          }
+        >
+          <ShieldAlert className="size-3.5" aria-hidden /> Deactivate
+        </Button>
+      ) : (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setReactivateTarget(row)}
+        >
+          Reactivate
+        </Button>
+      ),
+    };
+  });
+  const { sorted, sortKey, direction, toggleSort } = useSort<
+    PersonView,
+    PeopleSortKey
+  >(people, comparePeople);
+  const { page, setPage, pageSize, setPageSize, totalPages, pageItems, total } =
+    usePagination(sorted, 10);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, status, setPage]);
 
   return (
-    <div className="animate-fade-in-up flex flex-col gap-6">
-      <PageHeader
-        title="Super Admins"
-        description="Manage platform-administrator accounts. The last active super admin can never be deactivated."
+    <div className="space-y-5">
+      <Card>
+        <CardContent className="space-y-5">
+          <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
+            <HeadingPair
+              title="Super Admins"
+              subtitle={`${activeCount} active · ${rows.length - activeCount} inactive`}
+            />
+            <PeopleToolbar
+              searchValue={search}
+              onSearchChange={setSearch}
+              filters={
+                <>
+                  <Select
+                    value={status}
+                    onValueChange={(value: typeof status) => setStatus(value)}
+                  >
+                    <SelectTrigger
+                      className="bg-muted sm:w-36"
+                      aria-label="Filter super admins by status"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All statuses</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </>
+              }
+              action={
+                <Button size="sm" onClick={() => setCreateOpen(true)}>
+                  <Plus className="size-3.5" aria-hidden />
+                  New super admin
+                </Button>
+              }
+            />
+          </div>
+          {query.isLoading ? (
+            <SkeletonList count={3} />
+          ) : query.isError ? (
+            <ErrorState
+              title="Could not load super admins"
+              description={extractErrorMessage(query.error)}
+              onRetry={() => query.refetch()}
+            />
+          ) : people.length === 0 ? (
+            <EmptyState
+              icon={Shield}
+              title={
+                rows.length === 0
+                  ? 'No super admins'
+                  : 'No matching super admins'
+              }
+              description={
+                rows.length === 0
+                  ? 'Create the first platform administrator account.'
+                  : 'Try a different search or status.'
+              }
+            />
+          ) : (
+            <PeopleDirectory
+              people={pageItems}
+              sortKey={sortKey}
+              direction={direction}
+              onSort={toggleSort}
+            />
+          )}
+        </CardContent>
+      </Card>
+      <PaginationBar
+        page={page}
+        totalPages={totalPages}
+        total={total}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={(size) => {
+          setPageSize(size);
+          setPage(1);
+        }}
       />
-
-      <div className="flex items-center justify-between">
-        <div className="text-muted-foreground text-sm">
-          {activeCount} active · {rows.length - activeCount} inactive
-        </div>
-        <Button size="sm" onClick={() => setCreateOpen(true)}>
-          <Plus className="size-3.5" aria-hidden />
-          New super admin
-        </Button>
-      </div>
-
-      {query.isLoading ? (
-        <SkeletonList count={3} />
-      ) : query.isError ? (
-        <ErrorState
-          title="Could not load super admins"
-          description={extractErrorMessage(query.error)}
-          onRetry={() => query.refetch()}
-        />
-      ) : rows.length === 0 ? (
-        <EmptyState
-          icon={Shield}
-          title="No super admins"
-          description="Create the first platform administrator account."
-        />
-      ) : (
-        <div className="bg-card overflow-hidden rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="w-40 text-right"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell className="font-medium">{row.fullName}</TableCell>
-                  <TableCell className="text-sm">{row.email}</TableCell>
-                  <TableCell>
-                    {row.isActive ? (
-                      <Badge className="bg-emerald-100 text-emerald-900">
-                        Active
-                      </Badge>
-                    ) : (
-                      <Badge className="bg-muted text-muted-foreground">
-                        Inactive
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {formatDistanceToNow(new Date(row.createdAt), {
-                      addSuffix: true,
-                    })}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {row.isActive ? (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-destructive"
-                        onClick={() => setDeactivateTarget(row)}
-                      >
-                        <ShieldAlert className="size-3.5" aria-hidden />
-                        Deactivate
-                      </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setReactivateTarget(row)}
-                      >
-                        Reactivate
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
 
       <CreateSuperAdminDialog
         open={createOpen}

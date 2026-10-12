@@ -15,7 +15,7 @@ export default function AuthCallback() {
     const redirect =
       rawRedirect?.startsWith('/') && !rawRedirect.startsWith('//')
         ? rawRedirect
-        : '/dashboard';
+        : '/';
 
     if (!handoff) {
       navigate('/login', { replace: true });

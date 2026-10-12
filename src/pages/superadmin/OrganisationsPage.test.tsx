@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -73,26 +73,32 @@ afterEach(() => {
 });
 
 describe('OrganisationsPage', () => {
-  it('renders the table and links each row to the detail page', async () => {
+  it('opens organisation details from the default card and the list view', async () => {
     renderAt('/super-admin/organisations');
 
     expect(await screen.findByText('Northwind HVAC')).toBeInTheDocument();
-    expect(screen.getByText('owner@northwind.example')).toBeInTheDocument();
-    expect(screen.getByText('Pro')).toBeInTheDocument();
+    expect(
+      screen.getByText('Owner: owner@northwind.example'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Plan: Pro')).toBeInTheDocument();
+    expect(screen.getByText('View organisation')).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
 
     const nameLink = screen.getByText('Northwind HVAC').closest('a');
     expect(nameLink).toHaveAttribute(
       'href',
       '/super-admin/organisations/org-1/overview',
     );
+
+    fireEvent.click(screen.getByLabelText('List view'));
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.getByText('owner@northwind.example')).toBeInTheDocument();
   });
 
   it('forwards status URL params to the query so deep-links pre-filter', async () => {
     renderAt('/super-admin/organisations?status=suspended');
     await screen.findByText('Northwind HVAC');
-    expect((mocks.lastParams as { status?: string })?.status).toBe(
-      'suspended',
-    );
+    expect((mocks.lastParams as { status?: string })?.status).toBe('suspended');
   });
 
   it('forwards subscriptionStatus URL params to the query', async () => {
@@ -120,8 +126,6 @@ describe('OrganisationsPage', () => {
 
     renderAt('/super-admin/organisations');
 
-    expect(
-      await screen.findByText('No organisations match your filters'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('No organisations yet')).toBeInTheDocument();
   });
 });

@@ -138,7 +138,9 @@ export default function OrganisationDetailPage() {
                 <Badge className="bg-red-100 text-red-900">Payment hold</Badge>
               ) : null}
               {org.manualHoldReason ? (
-                <Badge className="bg-amber-100 text-amber-900">Manual hold</Badge>
+                <Badge className="bg-amber-100 text-amber-900">
+                  Manual hold
+                </Badge>
               ) : null}
             </div>
           </div>
@@ -214,8 +216,8 @@ export default function OrganisationDetailPage() {
           <AlertTitle>Organisation is archived</AlertTitle>
           <AlertDescription>
             Soft-deleted. Retained for the recovery window then hard-deleted by
-            the reaper. Unarchive routes through suspended first — you cannot
-            go straight back to active.
+            the reaper. Unarchive routes through suspended first — you cannot go
+            straight back to active.
           </AlertDescription>
         </Alert>
       ) : null}
@@ -380,7 +382,7 @@ export default function OrganisationDetailPage() {
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-medium">{entry.action}</div>
                   <div className="text-muted-foreground truncate text-xs">
-                    {entry.userEmail ?? 'system'}
+                    {entry.actor?.email ?? 'system'}
                     {' · '}
                     {formatDistanceToNow(new Date(entry.createdAt), {
                       addSuffix: true,

@@ -201,12 +201,10 @@ export interface SuperAdminInvoiceListItem {
 export interface SuperAdminActivityEntry {
   id: string;
   action: string;
-  resource: string;
+  resource: string | null;
   resourceId: string | null;
   severity: 'INFO' | 'WARNING' | 'ERROR';
-  userId: string | null;
-  userEmail: string | null;
-  organisationId: string;
+  actor: { id: string | null; email: string | null } | null;
   details: Record<string, unknown> | null;
   createdAt: string;
 }

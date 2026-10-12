@@ -1,14 +1,27 @@
 import { formatDistanceToNow } from 'date-fns';
-import { ArrowLeft, ExternalLink, FolderOpen } from 'lucide-react';
+import { ArrowRight, FolderOpen } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
+import HeadingPair from '@/components/shared/HeadingPair';
+import ManagementToolbar from '@/components/shared/ManagementToolbar';
 import PageHeader from '@/components/shared/PageHeader';
 import PaginationBar from '@/components/shared/PaginationBar';
 import SkeletonList from '@/components/shared/skeletons/SkeletonList';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { ProjectPlatformPair } from '@/features/projects/components/cards';
+import ProjectSummaryCard from '@/features/projects/components/cards/ProjectSummaryCard';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import {
   Table,
   TableBody,
@@ -31,11 +44,19 @@ export default function OrganisationProjectsPage() {
   const { organisationId } = useParams<{ organisationId: string }>();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState<'all' | 'active' | 'setup' | 'archived'>(
+    'all',
+  );
+  const debouncedSearch = useDebouncedValue(search.trim(), 300);
 
   const orgQuery = useSuperAdminOrganisationQuery(organisationId);
   const projectsQuery = useSuperAdminProjectsQuery(organisationId ?? '', {
     page,
     limit: pageSize,
+    search: debouncedSearch || undefined,
+    status: status === 'all' ? undefined : status,
     sortBy: 'lastSyncedAt',
     sortOrder: 'desc',
   });
@@ -55,97 +76,201 @@ export default function OrganisationProjectsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <Link
-          to={`/super-admin/organisations/${organisationId}/overview`}
-          className="text-muted-foreground hover:text-foreground mb-2 inline-flex items-center gap-1 text-sm"
-        >
-          <ArrowLeft className="size-3.5" aria-hidden />
-          Back to organisation
-        </Link>
-        <PageHeader
-          title="Projects"
-          description={orgQuery.data?.name ?? organisationId}
-        />
-      </div>
+      <PageHeader
+        title="Projects"
+        description={`Explore sync projects in ${orgQuery.data?.name ?? 'this organisation'}.`}
+      />
 
-      {projectsQuery.isLoading ? (
-        <SkeletonList count={5} />
-      ) : projectsQuery.isError ? (
-        <ErrorState
-          title="Could not load projects"
-          description={extractErrorMessage(projectsQuery.error)}
-          onRetry={() => projectsQuery.refetch()}
-        />
-      ) : projects.length === 0 ? (
-        <EmptyState
-          icon={FolderOpen}
-          title="No projects yet"
-          description="This organisation has not created any sync projects."
-        />
-      ) : (
-        <div className="bg-card overflow-hidden rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Project</TableHead>
-                <TableHead>Source → Destination</TableHead>
-                <TableHead>Sync mode</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Jobs</TableHead>
-                <TableHead>Last sync</TableHead>
-                <TableHead className="w-8"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {projects.map((project) => (
-                <TableRow key={project.id}>
-                  <TableCell>
-                    <Link
-                      to={`/super-admin/organisations/${organisationId}/projects/${project.id}`}
-                      className="hover:text-primary flex flex-col"
-                    >
-                      <span className="font-medium">{project.name}</span>
-                      {project.description ? (
-                        <span className="text-muted-foreground truncate text-xs">
-                          {project.description}
-                        </span>
-                      ) : null}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    <span className="font-mono text-xs">
-                      {project.sourcePlatformId} → {project.destPlatformId}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-sm">{project.syncMode}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{project.status}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right font-mono text-sm">
-                    {project.enabledJobCount}/{project.jobCount}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {project.lastSyncedAt
-                      ? formatDistanceToNow(new Date(project.lastSyncedAt), {
-                          addSuffix: true,
-                        })
-                      : 'Never'}
-                  </TableCell>
-                  <TableCell>
-                    <Link
-                      to={`/super-admin/organisations/${organisationId}/projects/${project.id}`}
-                      aria-label={`Open ${project.name}`}
-                    >
-                      <ExternalLink className="text-muted-foreground size-3.5" />
-                    </Link>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+      <Card>
+        <CardContent className="space-y-5">
+          <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
+            <HeadingPair
+              title="Project directory"
+              subtitle="Search and open a project to inspect its jobs and connections."
+            />
+            <ManagementToolbar
+              searchValue={search}
+              onSearchChange={(value) => {
+                setSearch(value);
+                setPage(1);
+              }}
+              searchPlaceholder="Search projects…"
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+              filters={
+                <Select
+                  value={status}
+                  onValueChange={(value: typeof status) => {
+                    setStatus(value);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger
+                    className="bg-muted sm:w-40"
+                    aria-label="Filter projects by status"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All statuses</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="setup">Setup</SelectItem>
+                    <SelectItem value="archived">Archived</SelectItem>
+                  </SelectContent>
+                </Select>
+              }
+            />
+          </div>
+
+          {projectsQuery.isLoading ? (
+            <SkeletonList count={5} />
+          ) : projectsQuery.isError ? (
+            <ErrorState
+              title="Could not load projects"
+              description={extractErrorMessage(projectsQuery.error)}
+              onRetry={() => projectsQuery.refetch()}
+            />
+          ) : projects.length === 0 ? (
+            <EmptyState
+              icon={FolderOpen}
+              title={
+                search || status !== 'all'
+                  ? 'No matching projects'
+                  : 'No projects yet'
+              }
+              description={
+                search || status !== 'all'
+                  ? 'Try another search or status.'
+                  : 'This organisation has not created any sync projects.'
+              }
+            />
+          ) : viewMode === 'card' ? (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {projects.map((project) => {
+                const path = `/super-admin/organisations/${organisationId}/projects/${project.id}`;
+                return (
+                  <ProjectSummaryCard
+                    key={project.id}
+                    name={project.name}
+                    description={project.description}
+                    to={path}
+                    sourcePlatformId={project.sourcePlatformId}
+                    destPlatformId={project.destPlatformId}
+                    syncMode={
+                      project.syncMode === 'two_way' ? 'two_way' : 'one_way'
+                    }
+                    status={project.status}
+                    statusBadge={
+                      <Badge
+                        variant={
+                          project.status === 'active' ? 'secondary' : 'outline'
+                        }
+                      >
+                        {project.status}
+                      </Badge>
+                    }
+                    activityLabel={
+                      project.lastSyncedAt
+                        ? `Synced ${formatDistanceToNow(new Date(project.lastSyncedAt), { addSuffix: true })}`
+                        : 'Not synced yet'
+                    }
+                    metrics={[
+                      { label: 'Sync jobs', value: project.jobCount },
+                      { label: 'Enabled jobs', value: project.enabledJobCount },
+                    ]}
+                  />
+                );
+              })}
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-3xl border">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted hover:bg-muted/50">
+                    <TableHead>Project</TableHead>
+                    <TableHead>Platforms</TableHead>
+                    <TableHead>Sync mode</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Jobs</TableHead>
+                    <TableHead>Last sync</TableHead>
+                    <TableHead className="w-8">
+                      <span className="sr-only">Open</span>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {projects.map((project) => (
+                    <TableRow key={project.id}>
+                      <TableCell>
+                        <Link
+                          to={`/super-admin/organisations/${organisationId}/projects/${project.id}`}
+                          className="hover:text-primary flex flex-col gap-0.5"
+                        >
+                          <span className="font-medium">{project.name}</span>
+                          {project.description ? (
+                            <span className="text-muted-foreground truncate text-xs">
+                              {project.description}
+                            </span>
+                          ) : null}
+                        </Link>
+                      </TableCell>
+                      <TableCell>
+                        <ProjectPlatformPair
+                          sourcePlatformId={project.sourcePlatformId}
+                          destPlatformId={project.destPlatformId}
+                          syncMode={
+                            project.syncMode === 'two_way'
+                              ? 'two_way'
+                              : 'one_way'
+                          }
+                        />
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {project.syncMode}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            project.status === 'active'
+                              ? 'secondary'
+                              : 'outline'
+                          }
+                        >
+                          {project.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-sm">
+                        {project.enabledJobCount}/{project.jobCount}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {project.lastSyncedAt
+                          ? formatDistanceToNow(
+                              new Date(project.lastSyncedAt),
+                              {
+                                addSuffix: true,
+                              },
+                            )
+                          : 'Never'}
+                      </TableCell>
+                      <TableCell>
+                        <Link
+                          to={`/super-admin/organisations/${organisationId}/projects/${project.id}`}
+                          aria-label={`Open ${project.name}`}
+                        >
+                          <ArrowRight
+                            className="text-muted-foreground size-4"
+                            aria-hidden
+                          />
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <PaginationBar
         page={page}
