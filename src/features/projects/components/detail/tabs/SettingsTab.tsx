@@ -3,6 +3,7 @@ import { lazy, Suspense, type ComponentType } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { useProjectDetailContext } from '../context';
+import ProjectSettingsNavigation from '../ProjectSettingsNavigation';
 import {
   DangerZoneCard,
   GeneralSettingsCard,
@@ -12,15 +13,7 @@ import {
 import ConnectionEnvDropdown from '@/components/connections/ConnectionEnvToggle';
 import EmptyState from '@/components/shared/EmptyState';
 import HeadingPair from '@/components/shared/HeadingPair';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   useProjectSettingsSections,
@@ -179,82 +172,24 @@ export default function SettingsTab() {
 
   return (
     <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[250px_minmax(0,1fr)]">
-      <aside className="min-w-0" aria-label="Project settings">
-        <Card
-          size="sm"
-          className="top-[calc(var(--detail-sticky-top)+var(--detail-header-height)+(--spacing(4)))] gap-0 py-0 lg:sticky"
-        >
-          <CardHeader className="px-3.5 py-3">
-            <CardTitle>
-              Project settings
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-2.5 pb-2.5">
-            <div className="space-y-2 lg:hidden">
-              <label
-                htmlFor="project-settings-section"
-                className="text-sm font-medium"
-              >
-                Settings section
-              </label>
-              <Select
-                value={activeSection.id}
-                onValueChange={(value) =>
-                  handleSectionChange(value as ProjectSettingsSectionId)
-                }
-              >
-                <SelectTrigger
-                  id="project-settings-section"
-                  className="w-full"
-                  aria-label="Settings section"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {sections.map((section) => {
-                    const Icon = SECTION_ICONS[section.id];
-                    return (
-                      <SelectItem key={section.id} value={section.id}>
-                        <Icon />
-                        {section.label}
-                        {section.locked && <Lock className="ml-auto" />}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <nav className="hidden space-y-1 lg:block">
-              {sections.map((section) => {
-                const Icon = SECTION_ICONS[section.id];
-                const active = section.id === activeSection.id;
-                return (
-                  <Button
-                    key={section.id}
-                    asChild
-                    variant={active ? 'secondary' : 'ghost'}
-                    className="h-8 w-full justify-start px-2.5 text-xs"
-                  >
-                    <Link
-                      to={sectionHref(section.id)}
-                      aria-current={active ? 'page' : undefined}
-                    >
-                      <Icon />
-                      <span className="min-w-0 flex-1 truncate text-left">
-                        {section.label}
-                      </span>
-                      {section.locked && (
-                        <Lock className="text-muted-foreground" />
-                      )}
-                    </Link>
-                  </Button>
-                );
-              })}
-            </nav>
-          </CardContent>
-        </Card>
-      </aside>
+      <ProjectSettingsNavigation
+        activeId={activeSection.id}
+        items={sections.map((section) => ({
+          id: section.id,
+          label: section.label,
+          icon: SECTION_ICONS[section.id],
+          locked: section.locked,
+        }))}
+        onSelect={(id) => handleSectionChange(id as ProjectSettingsSectionId)}
+        renderLink={(item, children) => (
+          <Link
+            to={sectionHref(item.id as ProjectSettingsSectionId)}
+            aria-current={item.id === activeSection.id ? 'page' : undefined}
+          >
+            {children}
+          </Link>
+        )}
+      />
 
       {activeSection.id === 'associations' ? (
         <section className="min-w-0" aria-label="Associations settings">

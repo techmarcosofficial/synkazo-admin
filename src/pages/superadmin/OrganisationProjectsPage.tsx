@@ -151,10 +151,18 @@ export default function OrganisationProjectsPage() {
                 return (
                   <ProjectSummaryCard
                     key={project.id}
+                    to={path}
                     name={project.name}
                     description={project.description}
                     footerAction={
                       <span className="flex flex-wrap justify-end gap-x-3 gap-y-1 text-sm font-medium">
+                        <Link
+                          className="text-primary hover:underline"
+                          to={path}
+                        >
+                          View project
+                          <span className="sr-only"> {project.name}</span>
+                        </Link>
                         <Link
                           className="text-primary hover:underline"
                           to={`${path}/associations`}
@@ -266,6 +274,13 @@ export default function OrganisationProjectsPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex flex-wrap justify-end gap-x-3 gap-y-1 text-sm">
+                          <Link
+                            to={`/super-admin/organisations/${organisationId}/projects/${project.id}`}
+                            className="text-primary hover:underline"
+                          >
+                            View project
+                            <span className="sr-only"> {project.name}</span>
+                          </Link>
                           <Link
                             to={`/super-admin/organisations/${organisationId}/projects/${project.id}/associations`}
                             className="text-primary hover:underline"

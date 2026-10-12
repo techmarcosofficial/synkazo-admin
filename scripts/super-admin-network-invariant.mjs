@@ -419,6 +419,7 @@ try {
     '/super-admin/organisations?status=suspended',
     '/super-admin/organisations/org-1/projects',
     '/super-admin/organisations/org-1/projects/project-1',
+    '/super-admin/organisations/org-1/projects/project-1?tab=settings',
     '/super-admin/organisations/org-1/projects/project-1/jobs/job-1',
     '/super-admin/organisations/org-1/activity',
     '/super-admin/organisations/org-1/support',
@@ -427,6 +428,7 @@ try {
     '/super-admin/super-admins',
     ...tenantRoutes,
   ]) {
+    const requestStart = requests.length;
     await cdp.send('Page.navigate', {
       url: `http://127.0.0.1:${appPort}${route}`,
     });
@@ -436,7 +438,8 @@ try {
       ['/super-admin/organisations', 'Test Organisation'],
       ['/super-admin/projects', 'Test Organisation'],
       ['/super-admin/organisations?status=suspended', 'Test Organisation'],
-      ['/super-admin/organisations/org-1/projects/project-1', 'Scoped project'],
+      ['/super-admin/organisations/org-1/projects/project-1', 'Scoped job'],
+      ['/super-admin/organisations/org-1/projects/project-1?tab=settings', 'Support operations'],
       [
         '/super-admin/organisations/org-1/projects/project-1/jobs/job-1',
         'Resume checkpoint',
@@ -465,9 +468,7 @@ try {
           ? '/super-admin/users'
           : route === '/super-admin/projects'
             ? '/super-admin/organisations'
-            : route === '/super-admin/organisations/org-1/projects/project-1'
-              ? '/super-admin/organisations/org-1/projects'
-              : new URL(route, 'http://example.test').pathname;
+            : new URL(route, 'http://example.test').pathname;
       if (
         state?.path === expectedPath &&
         (route !== '/super-admin/super-admins' ||
@@ -489,9 +490,7 @@ try {
         ? '/super-admin/users'
         : route === '/super-admin/projects'
           ? '/super-admin/organisations'
-          : route === '/super-admin/organisations/org-1/projects/project-1'
-            ? '/super-admin/organisations/org-1/projects'
-            : new URL(route, 'http://example.test').pathname;
+          : new URL(route, 'http://example.test').pathname;
     if (!tenantRoutes.includes(route) && state?.path !== expectedPath)
       throw new Error(
         `Wrong route for ${route}: ${state?.path}; recent requests: ${requests.slice(-8).join(', ')}`,
@@ -508,18 +507,56 @@ try {
       throw new Error(
         `Scoped page content missing at ${route}: ${expectedContent}`,
       );
+    if (route.startsWith('/super-admin/organisations/org-1/projects/project-1')) {
+      const mutations = requests
+        .slice(requestStart)
+        .filter((request) => /^(POST|PATCH|PUT|DELETE) \/api\//.test(request));
+      if (mutations.length)
+        throw new Error(`Project detail mutated on load: ${mutations.join(', ')}`);
+    }
+    if (
+      process.env.SCREENSHOT_DIR &&
+      (route === '/super-admin/organisations/org-1/projects/project-1' ||
+        route === '/super-admin/organisations/org-1/projects/project-1?tab=settings')
+    ) {
+      const screenshotName = route.includes('tab=settings')
+        ? 'project-settings'
+        : 'project-detail';
+      const desktop = await cdp.send('Page.captureScreenshot', {
+        format: 'png',
+        captureBeyondViewport: false,
+      });
+      await writeFile(
+        `${process.env.SCREENSHOT_DIR}/${screenshotName}-desktop.png`,
+        Buffer.from(desktop.data, 'base64'),
+      );
+      await cdp.send('Emulation.setDeviceMetricsOverride', {
+        width: 390,
+        height: 844,
+        deviceScaleFactor: 1,
+        mobile: true,
+      });
+      await wait(150);
+      const mobile = await cdp.send('Page.captureScreenshot', {
+        format: 'png',
+        captureBeyondViewport: false,
+      });
+      await writeFile(
+        `${process.env.SCREENSHOT_DIR}/${screenshotName}-mobile.png`,
+        Buffer.from(mobile.data, 'base64'),
+      );
+      await cdp.send('Emulation.clearDeviceMetricsOverride');
+    }
     if (route === '/super-admin/organisations/org-1/projects') {
-      const hasRemovedDetailLink = (
+      const hasDetailLink = (
         await cdp.send('Runtime.evaluate', {
           expression:
             'Boolean(document.querySelector("main a[href=\\"/super-admin/organisations/org-1/projects/project-1\\"]"))',
           returnByValue: true,
         })
       ).result.value;
-      if (hasRemovedDetailLink)
-        throw new Error(
-          'Project directory still links to the removed detail screen',
-        );
+      if (!hasDetailLink)
+        throw new Error('Project directory has no detail entry link');
       if (
         !state.mainText.includes('Association rules') ||
         !state.mainText.includes('Migration')

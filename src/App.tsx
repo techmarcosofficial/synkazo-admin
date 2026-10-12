@@ -59,6 +59,9 @@ const OrganisationMembersPage = lazy(
 const OrganisationProjectsPage = lazy(
   () => import('@/pages/superadmin/OrganisationProjectsPage'),
 );
+const OrganisationProjectDetailPage = lazy(
+  () => import('@/pages/superadmin/OrganisationProjectDetailPage'),
+);
 const OrganisationProjectAssociationsPage = lazy(
   () =>
     import('@/pages/superadmin/associations/OrganisationProjectAssociationsPage'),
@@ -343,7 +346,7 @@ function App() {
                     />
                     <Route
                       path="projects/:projectId"
-                      element={<Navigate to="../projects" replace />}
+                      element={<OrganisationProjectDetailPage />}
                     />
                     <Route
                       path="projects/:projectId/jobs/:jobId"

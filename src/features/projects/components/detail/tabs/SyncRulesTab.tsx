@@ -5,8 +5,6 @@ import {
   ArrowRight,
   CalendarClock,
   CheckCircle2,
-  ChevronDown,
-  Clock,
   Database,
   Lock,
   Plus,
@@ -15,24 +13,13 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 
 import { useProjectDetailContext } from '../context';
+import SyncFlowCard from '../SyncFlowCard';
+import SyncFlowMetrics, { syncFlowMetricCellClass } from '../SyncFlowMetrics';
+import SyncFlowPanel from '../SyncFlowPanel';
 
 import EmptyState from '@/components/shared/EmptyState';
 import { usePlanUpgradePrompt } from '@/components/shared/PlanGate';
-import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
-import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateJobDialog } from '@/features/jobs/components/create';
 import { useJobDetailQuery, type JobDetailData } from '@/features/jobs/hooks';
@@ -148,17 +135,6 @@ export function getJobLifecycle(
   };
 }
 
-function metricCellClass(index: number): string {
-  return cn(
-    'flex min-w-0 items-center gap-3 px-4 py-3',
-    index % 2 === 1 && 'border-l',
-    index >= 2 && 'border-t md:border-t-0',
-    index > 0 && 'md:border-l',
-  );
-}
-
-
-
 function SyncJobCard({
   job,
   projectId,
@@ -175,35 +151,16 @@ function SyncJobCard({
   const hasAnyRun = hasAnySyncRun(job, runs);
   const twoWay = job.syncDirection === 'two_way';
   const DirectionIcon = twoWay ? ArrowLeftRight : ArrowRight;
-
   const lifecycle = getJobLifecycle(job, detailQuery.data, projectId);
   const isNeedsMapping = lifecycle.statusKey === 'needs_mapping';
+  const backTo = '/projects/' + projectId + '?tab=sync-rules';
+  const linkState = { jobBackTo: backTo, jobBackLabel: 'Back to Sync Jobs' };
 
   const metrics = [
-    {
-      label: 'Records synced',
-      value: formatNum(job.recordsSynced),
-      description: 'Total records synced',
-      icon: Database,
-    },
-    {
-      label: 'Avg duration',
-      value: formatDurationMs(summary.averageDurationMs),
-      description: 'Average time per recent run',
-      icon: Timer,
-    },
-    {
-      label: 'Last sync',
-      value: formatLastSync(summary.lastSyncAt),
-      description: 'Most recent run',
-      icon: CalendarClock,
-    },
-    {
-      label: 'Success rate',
-      value: formatSuccessRate(summary.successRate),
-      description: 'Successful recent runs',
-      icon: CheckCircle2,
-    },
+    { label: 'Records synced', value: formatNum(job.recordsSynced), description: 'Total records synced', icon: Database },
+    { label: 'Avg duration', value: formatDurationMs(summary.averageDurationMs), description: 'Average time per recent run', icon: Timer },
+    { label: 'Last sync', value: formatLastSync(summary.lastSyncAt), description: 'Most recent run', icon: CalendarClock },
+    { label: 'Success rate', value: formatSuccessRate(summary.successRate), description: 'Successful recent runs', icon: CheckCircle2 },
   ];
 
   let guidanceMessage: React.ReactNode;
@@ -211,179 +168,92 @@ function SyncJobCard({
     guidanceMessage = (
       <>
         Choose which information moves between platforms so it arrives in the
-        right place. Select{' '}
-        <span className="font-semibold text-foreground">Configure Mapping</span>{' '}
-        above to begin.
+        right place. Select <span className="font-semibold text-foreground">Configure Mapping</span> above to begin.
       </>
     );
   } else if (detailQuery.data?.pipelineRequired && !detailQuery.data.pipelineConfigured) {
-    guidanceMessage =
-      'Choose where this flow should place data in the destination. Open the flow to finish setup before syncing.';
+    guidanceMessage = 'Choose where this flow should place data in the destination. Open the flow to finish setup before syncing.';
   } else if (lifecycle.statusKey === 'ready_to_test') {
     guidanceMessage = (
       <>
-        Everything is set for a first test. Select{' '}
-        <span className="font-semibold text-foreground">
-          Test &amp; Activate
-        </span>{' '}
-        above to check the result.
+        Everything is set for a first test. Select <span className="font-semibold text-foreground">Test &amp; Activate</span> above to check the result.
       </>
     );
   } else {
     guidanceMessage = 'Open this flow to finish setup and run a first test.';
   }
 
-  const handleRowClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    if ((event.target as HTMLElement).closest('a, button')) return;
-    setOpen((current) => !current);
-  };
-
-  return (
-    <Collapsible open={open} onOpenChange={setOpen}>
-      <Card surface="inner" className="gap-0 py-0 transition-colors">
-        <div
-          className="hover:bg-muted/30 flex cursor-pointer flex-col gap-4 px-4 py-4 transition-colors sm:px-5 lg:flex-row lg:items-center"
-          onClick={handleRowClick}
-        >
-          <div className="flex min-w-0 flex-1 items-center gap-3.5">
-            <div className="bg-muted text-muted-foreground flex size-10 shrink-0 items-center justify-center rounded-xl transition-colors">
-              <DirectionIcon className="size-4.5" aria-hidden="true" />
-            </div>
-            <div className="min-w-0">
-              <Link
-                to={lifecycle.targetUrl}
-                state={{
-                  jobBackTo: `/projects/${projectId}?tab=sync-rules`,
-                  jobBackLabel: 'Back to Sync Jobs',
-                }}
-                className="hover:text-primary hover:underline block truncate text-sm font-semibold text-foreground transition-colors"
-              >
-                {job.name}
-              </Link>
-              <p className="text-muted-foreground mt-1 flex items-center gap-1 truncate text-xs">
-                <span className="truncate">
-                  {formatEntityLabel(job.sourceObject)}
-                </span>
-                <DirectionIcon className="size-3 shrink-0" aria-hidden="true" />
-                <span className="truncate">
-                  {formatEntityLabel(job.destObject)}
-                </span>
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3 sm:justify-end lg:flex-nowrap">
-            <span className="text-muted-foreground flex items-center gap-1.5 text-xs whitespace-nowrap">
-              <Clock className="size-3.5" aria-hidden="true" />
-              {lifecycle.scheduleText}
-            </span>
-            <StatusBadge status={lifecycle.statusKey} size="sm" />
-            <Separator
-              orientation="vertical"
-              className="h-6 data-vertical:self-center"
-            />
-            <Button
-              asChild
-              variant={lifecycle.actionVariant}
-              size="sm"
-              data-flow-next-action={
-                lifecycle.isActionable ? 'true' : undefined
-              }
-              className={cn(
-                lifecycle.actionVariant === 'default' &&
-                  'font-medium shadow-xs',
-                lifecycle.actionVariant === 'outline' &&
-                  lifecycle.isActionable &&
-                  'font-medium border-primary/30 text-primary hover:bg-primary/5',
-                lifecycle.actionVariant === 'outline' &&
-                  !lifecycle.isActionable &&
-                  'font-medium border-border/80 text-foreground hover:bg-muted/50',
-              )}
-            >
-              <Link
-                to={lifecycle.targetUrl}
-                state={{
-                  jobBackTo: `/projects/${projectId}?tab=sync-rules`,
-                  jobBackLabel: 'Back to Sync Jobs',
-                }}
-              >
-                {lifecycle.actionLabel}
-                <ArrowRight data-icon="inline-end" />
-              </Link>
-            </Button>
-            <CollapsibleTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon-sm"
-                shape="pill"
-                aria-label={
-                  open ? `Collapse ${job.name}` : `Expand ${job.name}`
-                }
-              >
-                <ChevronDown
-                  className={`size-4 transition-transform ${open ? 'rotate-180' : ''}`}
-                />
-              </Button>
-            </CollapsibleTrigger>
+  const details = !hasAnyRun ? (
+    <p className="text-muted-foreground text-xs leading-normal">{guidanceMessage}</p>
+  ) : detailQuery.isLoading ? (
+    <div className="grid grid-cols-2 md:grid-cols-4">
+      {Array.from({ length: 4 }).map((_, index) => (
+        <div key={index} className={syncFlowMetricCellClass(index)}>
+          <Skeleton className="size-10 shrink-0 rounded-xl" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <Skeleton className="h-5 w-16" />
+            <Skeleton className="h-3 w-20" />
           </div>
         </div>
+      ))}
+    </div>
+  ) : detailQuery.isError || !detailQuery.data ? (
+    <p className="text-muted-foreground px-4 text-sm" role="status">
+      Job setup details are temporarily unavailable.
+    </p>
+  ) : (
+    <SyncFlowMetrics metrics={metrics} />
+  );
 
-        <CollapsibleContent>
-          <div
-            className={cn(
-              'border-t',
-              hasAnyRun
-                ? 'bg-muted space-y-2 px-1.5 py-2'
-                : 'bg-muted/30 px-4 py-2',
-            )}
-          >
-            {!hasAnyRun ? (
-              <p className="text-muted-foreground text-xs leading-normal">
-                {guidanceMessage}
-              </p>
-            ) : detailQuery.isLoading ? (
-              <div className="grid grid-cols-2 md:grid-cols-4">
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <div key={index} className={metricCellClass(index)}>
-                    <Skeleton className="size-10 shrink-0 rounded-xl" />
-                    <div className="min-w-0 flex-1 space-y-2">
-                      <Skeleton className="h-5 w-16" />
-                      <Skeleton className="h-3 w-20" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : detailQuery.isError || !detailQuery.data ? (
-              <p className="text-muted-foreground px-4 text-sm" role="status">
-                Job setup details are temporarily unavailable.
-              </p>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-4">
-                {metrics.map((metric, index) => (
-                  <div key={metric.label} className={metricCellClass(index)}>
-                    <span className="bg-card text-card-foreground flex size-10 shrink-0 items-center justify-center rounded-xl">
-                      <metric.icon className="size-4.5" aria-hidden="true" />
-                    </span>
-                    <div className="min-w-0">
-                      <div className="truncate text-lg font-bold tracking-tight">
-                        {metric.value}
-                      </div>
-                      <div className="text-muted-foreground truncate text-xs font-medium">
-                        {metric.label}
-                      </div>
-                      <div className="text-muted-foreground truncate text-[11px]">
-                        {metric.description}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </CollapsibleContent>
-      </Card>
-    </Collapsible>
+  return (
+    <SyncFlowCard
+      name={job.name}
+      twoWay={twoWay}
+      scheduleText={lifecycle.scheduleText}
+      status={lifecycle.statusKey}
+      open={open}
+      onOpenChange={setOpen}
+      hasMetrics={hasAnyRun}
+      titleLink={
+        <Link
+          to={lifecycle.targetUrl}
+          state={linkState}
+          className="hover:text-primary hover:underline block truncate text-sm font-semibold text-foreground transition-colors"
+        >
+          {job.name}
+        </Link>
+      }
+      subtitle={
+        <>
+          <span className="truncate">{formatEntityLabel(job.sourceObject)}</span>
+          <DirectionIcon className="size-3 shrink-0" aria-hidden="true" />
+          <span className="truncate">{formatEntityLabel(job.destObject)}</span>
+        </>
+      }
+      action={
+        <Button
+          asChild
+          variant={lifecycle.actionVariant}
+          size="sm"
+          data-flow-next-action={lifecycle.isActionable ? 'true' : undefined}
+          className={cn(
+            lifecycle.actionVariant === 'default' && 'font-medium shadow-xs',
+            lifecycle.actionVariant === 'outline' &&
+              lifecycle.isActionable &&
+              'font-medium border-primary/30 text-primary hover:bg-primary/5',
+            lifecycle.actionVariant === 'outline' &&
+              !lifecycle.isActionable &&
+              'font-medium border-border/80 text-foreground hover:bg-muted/50',
+          )}
+        >
+          <Link to={lifecycle.targetUrl} state={linkState}>
+            {lifecycle.actionLabel}
+            <ArrowRight data-icon="inline-end" />
+          </Link>
+        </Button>
+      }
+      details={details}
+    />
   );
 }
 
@@ -439,15 +309,9 @@ export default function SyncRulesTab() {
         />
       )}
 
-      <Card>
-        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0 space-y-1">
-            <CardTitle visualLevel="section">Sync flows</CardTitle>
-            <CardDescription visualLevel="section">
-              View each data flow and expand a sync flow to review its recent
-              performance.
-            </CardDescription>
-          </div>
+      <SyncFlowPanel
+        hasFlows={jobs.length > 0}
+        action={
           <ActionTooltip
             tooltip={tooltipExplanation}
             disabled={isBlockedByRole || isBlockedByPlan}
@@ -463,9 +327,8 @@ export default function SyncRulesTab() {
               Create Sync Flow
             </Button>
           </ActionTooltip>
-        </CardHeader>
-
-        <CardContent className={jobs.length > 0 ? 'space-y-3' : undefined}>
+        }
+      >
           {jobs.length === 0 ? (
             <EmptyState
               icon={ArrowLeftRight}
@@ -502,8 +365,7 @@ export default function SyncRulesTab() {
               );
             })
           )}
-        </CardContent>
-      </Card>
+      </SyncFlowPanel>
     </div>
   );
 }
