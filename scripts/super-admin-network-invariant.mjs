@@ -415,6 +415,7 @@ try {
     '/super-admin/overview',
     '/super-admin/profile',
     '/super-admin/organisations',
+    '/super-admin/projects',
     '/super-admin/organisations?status=suspended',
     '/super-admin/organisations/org-1/projects',
     '/super-admin/organisations/org-1/projects/project-1',
@@ -433,8 +434,9 @@ try {
     const expectedContent = new Map([
       ['/super-admin/organisations/org-1/projects', 'Scoped project'],
       ['/super-admin/organisations', 'Test Organisation'],
+      ['/super-admin/projects', 'Test Organisation'],
       ['/super-admin/organisations?status=suspended', 'Test Organisation'],
-      ['/super-admin/organisations/org-1/projects/project-1', 'Scoped job'],
+      ['/super-admin/organisations/org-1/projects/project-1', 'Scoped project'],
       [
         '/super-admin/organisations/org-1/projects/project-1/jobs/job-1',
         'Resume checkpoint',
@@ -461,7 +463,11 @@ try {
         ? '/super-admin/overview'
         : route === '/super-admin/super-admins'
           ? '/super-admin/users'
-          : new URL(route, 'http://example.test').pathname;
+          : route === '/super-admin/projects'
+            ? '/super-admin/organisations'
+            : route === '/super-admin/organisations/org-1/projects/project-1'
+              ? '/super-admin/organisations/org-1/projects'
+              : new URL(route, 'http://example.test').pathname;
       if (
         state?.path === expectedPath &&
         (route !== '/super-admin/super-admins' ||
@@ -481,7 +487,11 @@ try {
     const expectedPath =
       route === '/super-admin/super-admins'
         ? '/super-admin/users'
-        : new URL(route, 'http://example.test').pathname;
+        : route === '/super-admin/projects'
+          ? '/super-admin/organisations'
+          : route === '/super-admin/organisations/org-1/projects/project-1'
+            ? '/super-admin/organisations/org-1/projects'
+            : new URL(route, 'http://example.test').pathname;
     if (!tenantRoutes.includes(route) && state?.path !== expectedPath)
       throw new Error(
         `Wrong route for ${route}: ${state?.path}; recent requests: ${requests.slice(-8).join(', ')}`,
@@ -498,6 +508,24 @@ try {
       throw new Error(
         `Scoped page content missing at ${route}: ${expectedContent}`,
       );
+    if (route === '/super-admin/organisations/org-1/projects') {
+      const hasRemovedDetailLink = (
+        await cdp.send('Runtime.evaluate', {
+          expression:
+            'Boolean(document.querySelector("main a[href=\\"/super-admin/organisations/org-1/projects/project-1\\"]"))',
+          returnByValue: true,
+        })
+      ).result.value;
+      if (hasRemovedDetailLink)
+        throw new Error(
+          'Project directory still links to the removed detail screen',
+        );
+      if (
+        !state.mainText.includes('Association rules') ||
+        !state.mainText.includes('Migration')
+      )
+        throw new Error('Project support tools are missing from the directory');
+    }
     if (
       route === '/super-admin/users' &&
       state.mainText.includes('admin@example.test')

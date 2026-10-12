@@ -16,7 +16,8 @@ import type { ProjectSyncMode } from '@/types';
 interface ProjectSummaryCardProps {
   name: string;
   description?: string | null;
-  to: string;
+  to?: string;
+  footerAction?: ReactNode;
   sourcePlatformId: string | null;
   destPlatformId: string;
   syncMode?: ProjectSyncMode | null;
@@ -35,6 +36,7 @@ export default function ProjectSummaryCard({
   name,
   description,
   to,
+  footerAction,
   sourcePlatformId,
   destPlatformId,
   syncMode,
@@ -64,15 +66,21 @@ export default function ProjectSummaryCard({
         </div>
 
         <div className="space-y-1">
-          <Link
-            to={to}
-            className={cn(
-              'hover:text-primary focus-visible:ring-ring block truncate rounded-sm transition-colors outline-none focus-visible:ring-2',
-              headingTitleStyles.section,
-            )}
-          >
-            {name}
-          </Link>
+          {to ? (
+            <Link
+              to={to}
+              className={cn(
+                'hover:text-primary focus-visible:ring-ring block truncate rounded-sm transition-colors outline-none focus-visible:ring-2',
+                headingTitleStyles.section,
+              )}
+            >
+              {name}
+            </Link>
+          ) : (
+            <div className={cn('truncate', headingTitleStyles.section)}>
+              {name}
+            </div>
+          )}
           {description && (
             <p
               className={cn(
@@ -104,13 +112,16 @@ export default function ProjectSummaryCard({
           <Clock className="size-3 shrink-0" aria-hidden="true" />
           <span className="truncate">{activityLabel}</span>
         </span>
-        <Link
-          to={to}
-          className="text-primary focus-visible:ring-ring inline-flex shrink-0 items-center gap-1 rounded-sm text-sm font-medium outline-none hover:underline focus-visible:ring-2"
-        >
-          View project
-          <ArrowRight className="size-3.5" aria-hidden="true" />
-        </Link>
+        {footerAction ??
+          (to ? (
+            <Link
+              to={to}
+              className="text-primary focus-visible:ring-ring inline-flex shrink-0 items-center gap-1 rounded-sm text-sm font-medium outline-none hover:underline focus-visible:ring-2"
+            >
+              View project
+              <ArrowRight className="size-3.5" aria-hidden="true" />
+            </Link>
+          ) : null)}
       </CardFooter>
     </Card>
   );

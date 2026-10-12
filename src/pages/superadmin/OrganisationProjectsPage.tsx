@@ -1,5 +1,5 @@
 import { formatDistanceToNow } from 'date-fns';
-import { ArrowRight, FolderOpen } from 'lucide-react';
+import { FolderOpen } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
@@ -86,7 +86,7 @@ export default function OrganisationProjectsPage() {
           <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
             <HeadingPair
               title="Project directory"
-              subtitle="Search and open a project to inspect its jobs and connections."
+              subtitle="Search projects and open the available support tools."
             />
             <ManagementToolbar
               searchValue={search}
@@ -153,7 +153,24 @@ export default function OrganisationProjectsPage() {
                     key={project.id}
                     name={project.name}
                     description={project.description}
-                    to={path}
+                    footerAction={
+                      <span className="flex flex-wrap justify-end gap-x-3 gap-y-1 text-sm font-medium">
+                        <Link
+                          className="text-primary hover:underline"
+                          to={`${path}/associations`}
+                        >
+                          Association rules
+                          <span className="sr-only"> for {project.name}</span>
+                        </Link>
+                        <Link
+                          className="text-primary hover:underline"
+                          to={`${path}/migration`}
+                        >
+                          Migration
+                          <span className="sr-only"> for {project.name}</span>
+                        </Link>
+                      </span>
+                    }
                     sourcePlatformId={project.sourcePlatformId}
                     destPlatformId={project.destPlatformId}
                     syncMode={
@@ -193,26 +210,21 @@ export default function OrganisationProjectsPage() {
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Jobs</TableHead>
                     <TableHead>Last sync</TableHead>
-                    <TableHead className="w-8">
-                      <span className="sr-only">Open</span>
-                    </TableHead>
+                    <TableHead className="text-right">Support tools</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {projects.map((project) => (
                     <TableRow key={project.id}>
                       <TableCell>
-                        <Link
-                          to={`/super-admin/organisations/${organisationId}/projects/${project.id}`}
-                          className="hover:text-primary flex flex-col gap-0.5"
-                        >
+                        <div className="flex flex-col gap-0.5">
                           <span className="font-medium">{project.name}</span>
                           {project.description ? (
                             <span className="text-muted-foreground truncate text-xs">
                               {project.description}
                             </span>
                           ) : null}
-                        </Link>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <ProjectPlatformPair
@@ -252,16 +264,23 @@ export default function OrganisationProjectsPage() {
                             )
                           : 'Never'}
                       </TableCell>
-                      <TableCell>
-                        <Link
-                          to={`/super-admin/organisations/${organisationId}/projects/${project.id}`}
-                          aria-label={`Open ${project.name}`}
-                        >
-                          <ArrowRight
-                            className="text-muted-foreground size-4"
-                            aria-hidden
-                          />
-                        </Link>
+                      <TableCell className="text-right">
+                        <div className="flex flex-wrap justify-end gap-x-3 gap-y-1 text-sm">
+                          <Link
+                            to={`/super-admin/organisations/${organisationId}/projects/${project.id}/associations`}
+                            className="text-primary hover:underline"
+                          >
+                            Associations
+                            <span className="sr-only"> for {project.name}</span>
+                          </Link>
+                          <Link
+                            to={`/super-admin/organisations/${organisationId}/projects/${project.id}/migration`}
+                            className="text-primary hover:underline"
+                          >
+                            Migration
+                            <span className="sr-only"> for {project.name}</span>
+                          </Link>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

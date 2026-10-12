@@ -1,5 +1,11 @@
 import { formatDistanceToNow } from 'date-fns';
-import { AlertTriangle, ArrowLeft, ArrowRight, Database, Play } from 'lucide-react';
+import {
+  AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
+  Database,
+  Play,
+} from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
@@ -54,10 +60,11 @@ function DiffSection({
   if (items.length === 0) return null;
   return (
     <div className="flex flex-col gap-2">
-      <h3 className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+      <h3 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
         {title}
         <span className="ml-2 normal-case">
-          {promotable.length} promotable · {items.length - promotable.length} in sync
+          {promotable.length} promotable · {items.length - promotable.length} in
+          sync
         </span>
       </h3>
       <div className="bg-card overflow-hidden rounded-lg border">
@@ -166,9 +173,11 @@ export default function OrganisationProjectMigrationPage() {
 
   const allPromotable = useMemo(() => {
     if (!diff) return [] as SuperAdminMigrationDiffItem[];
-    return [...diff.customObjects, ...diff.properties, ...diff.associations].filter(
-      (i) => i.status !== 'in_sync',
-    );
+    return [
+      ...diff.customObjects,
+      ...diff.properties,
+      ...diff.associations,
+    ].filter((i) => i.status !== 'in_sync');
   }, [diff]);
 
   const toggle = (key: string) => {
@@ -229,11 +238,11 @@ export default function OrganisationProjectMigrationPage() {
     <div className="flex flex-col gap-6">
       <div>
         <Link
-          to={`/super-admin/organisations/${organisationId}/projects/${projectId}`}
+          to={`/super-admin/organisations/${organisationId}/projects`}
           className="text-muted-foreground hover:text-foreground mb-2 inline-flex items-center gap-1 text-sm"
         >
           <ArrowLeft className="size-3.5" aria-hidden />
-          Back to project
+          All projects
         </Link>
         <PageHeader
           title="Environment migration"
@@ -246,7 +255,7 @@ export default function OrganisationProjectMigrationPage() {
       </div>
 
       <section className="flex flex-col gap-3">
-        <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
+        <div className="bg-card flex items-center gap-3 rounded-lg border p-3">
           <div className="flex items-center gap-2 text-sm">
             <label htmlFor="mig-from">From</label>
             <select
@@ -306,8 +315,8 @@ export default function OrganisationProjectMigrationPage() {
               {diff.message ??
                 'Both environments must be connected before a migration can run.'}
               <span className="ml-2 text-xs">
-                sandbox: {diff.sandboxConnected ? 'connected' : 'missing'} · production:{' '}
-                {diff.productionConnected ? 'connected' : 'missing'}
+                sandbox: {diff.sandboxConnected ? 'connected' : 'missing'} ·
+                production: {diff.productionConnected ? 'connected' : 'missing'}
               </span>
             </AlertDescription>
           </Alert>
@@ -434,7 +443,8 @@ export default function OrganisationProjectMigrationPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
-                          {run.succeeded}✓ · {run.skipped}↷ · {run.failed}✗ / {run.totalItems}
+                          {run.succeeded}✓ · {run.skipped}↷ · {run.failed}✗ /{' '}
+                          {run.totalItems}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
                           {duration != null ? `${duration.toFixed(1)}s` : '—'}
@@ -485,8 +495,12 @@ export default function OrganisationProjectMigrationPage() {
                                     >
                                       {item.status}
                                     </Badge>
-                                    <span className="font-medium">{item.displayName}</span>
-                                    <span className="text-muted-foreground">· {item.kind}</span>
+                                    <span className="font-medium">
+                                      {item.displayName}
+                                    </span>
+                                    <span className="text-muted-foreground">
+                                      · {item.kind}
+                                    </span>
                                     {item.errorMessage ? (
                                       <span className="text-destructive ml-2 truncate">
                                         {item.errorMessage}

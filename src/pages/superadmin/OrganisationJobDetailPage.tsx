@@ -47,7 +47,8 @@ export default function OrganisationJobDetailPage() {
   }>();
   const projectQuery = useSuperAdminProjectQuery(organisationId, projectId);
   const jobQuery = useSuperAdminJobQuery(organisationId, projectId, jobId);
-  const projectPath = `/super-admin/organisations/${organisationId}/projects/${projectId}`;
+  const projectsPath = `/super-admin/organisations/${organisationId}/projects`;
+  const projectPath = `${projectsPath}/${projectId}`;
 
   if (!organisationId || !projectId || !jobId) {
     return (
@@ -86,7 +87,7 @@ export default function OrganisationJobDetailPage() {
       <PageHeader
         title={job.name}
         description={projectQuery.data?.name ?? 'Sync job'}
-        backTo={{ label: 'Back to project', to: projectPath }}
+        backTo={{ label: 'All projects', to: projectsPath }}
         badge={
           <Badge variant={job.isEnabled ? 'secondary' : 'outline'}>
             {job.isEnabled ? 'Enabled' : 'Disabled'}

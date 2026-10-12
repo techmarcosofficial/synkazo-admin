@@ -145,11 +145,11 @@ export default function OrganisationProjectAssociationsPage() {
     <div className="flex flex-col gap-6">
       <div>
         <Link
-          to={`/super-admin/organisations/${organisationId}/projects/${projectId}`}
+          to={`/super-admin/organisations/${organisationId}/projects`}
           className="text-muted-foreground hover:text-foreground mb-2 inline-flex items-center gap-1 text-sm"
         >
           <ArrowLeft className="size-3.5" aria-hidden />
-          Back to project
+          All projects
         </Link>
         <PageHeader
           title="Association rules"
@@ -208,21 +208,31 @@ export default function OrganisationProjectAssociationsPage() {
                     </TableCell>
                     <TableCell className="text-sm">
                       {rule.sourceObject}
-                      <span className="text-muted-foreground"> · {rule.sourceMatchField}</span>
+                      <span className="text-muted-foreground">
+                        {' '}
+                        · {rule.sourceMatchField}
+                      </span>
                     </TableCell>
                     <TableCell className="text-sm">
                       {rule.targetObject}
-                      <span className="text-muted-foreground"> · {rule.targetMatchField}</span>
+                      <span className="text-muted-foreground">
+                        {' '}
+                        · {rule.targetMatchField}
+                      </span>
                     </TableCell>
                     <TableCell>
                       {rule.isEnabled ? (
-                        <Badge className="bg-emerald-100 text-emerald-900">Enabled</Badge>
+                        <Badge className="bg-emerald-100 text-emerald-900">
+                          Enabled
+                        </Badge>
                       ) : (
-                        <Badge className="bg-muted text-muted-foreground">Disabled</Badge>
+                        <Badge className="bg-muted text-muted-foreground">
+                          Disabled
+                        </Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
-                      {(rule.conditions?.length ?? 0)} ·{' '}
+                      {rule.conditions?.length ?? 0} ·{' '}
                       {rule.conditionLogic === 'OR' ? 'Match Any' : 'Match All'}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
@@ -293,14 +303,20 @@ export default function OrganisationProjectAssociationsPage() {
                       <TableCell className="text-sm">
                         <div>{row.sourceId}</div>
                         {row.sourceHsId ? (
-                          <div className="text-muted-foreground text-xs">HS: {row.sourceHsId}</div>
+                          <div className="text-muted-foreground text-xs">
+                            HS: {row.sourceHsId}
+                          </div>
                         ) : null}
                       </TableCell>
-                      <TableCell className="text-sm">{row.targetMatchValue}</TableCell>
+                      <TableCell className="text-sm">
+                        {row.targetMatchValue}
+                      </TableCell>
                       <TableCell>
                         <Badge variant="outline">{row.status}</Badge>
                       </TableCell>
-                      <TableCell className="text-sm">{row.retryCount}</TableCell>
+                      <TableCell className="text-sm">
+                        {row.retryCount}
+                      </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
                         {row.lastAttemptedAt
                           ? formatDistanceToNow(new Date(row.lastAttemptedAt), {
@@ -318,7 +334,8 @@ export default function OrganisationProjectAssociationsPage() {
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">
-                {pendingQuery.data!.total} total · page {pendingQuery.data!.page}
+                {pendingQuery.data!.total} total · page{' '}
+                {pendingQuery.data!.page}
               </span>
               <div className="flex gap-2">
                 <Button
@@ -376,7 +393,9 @@ export default function OrganisationProjectAssociationsPage() {
         reasonPlaceholder="Why is this rule being removed?"
         isSubmitting={deleteMutation.isPending}
         errorMessage={
-          deleteMutation.isError ? extractErrorMessage(deleteMutation.error) : null
+          deleteMutation.isError
+            ? extractErrorMessage(deleteMutation.error)
+            : null
         }
         onSubmit={handleDelete}
       />

@@ -59,9 +59,6 @@ const OrganisationMembersPage = lazy(
 const OrganisationProjectsPage = lazy(
   () => import('@/pages/superadmin/OrganisationProjectsPage'),
 );
-const OrganisationProjectDetailPage = lazy(
-  () => import('@/pages/superadmin/OrganisationProjectDetailPage'),
-);
 const OrganisationProjectAssociationsPage = lazy(
   () =>
     import('@/pages/superadmin/associations/OrganisationProjectAssociationsPage'),
@@ -74,9 +71,6 @@ const OrganisationBillingPage = lazy(
 );
 const UsersPage = lazy(() => import('@/pages/superadmin/UsersPage'));
 const MarketingPage = lazy(() => import('@/pages/superadmin/MarketingPage'));
-const SuperAdminProjectsPage = lazy(
-  () => import('@/pages/superadmin/ProjectsPage'),
-);
 const PlanManagementPage = lazy(
   () => import('@/pages/admin/PlanManagementPage'),
 );
@@ -349,7 +343,7 @@ function App() {
                     />
                     <Route
                       path="projects/:projectId"
-                      element={<OrganisationProjectDetailPage />}
+                      element={<Navigate to="../projects" replace />}
                     />
                     <Route
                       path="projects/:projectId/jobs/:jobId"
@@ -387,7 +381,12 @@ function App() {
                     }
                   />
                   <Route path="marketing" element={<MarketingPage />} />
-                  <Route path="projects" element={<SuperAdminProjectsPage />} />
+                  <Route
+                    path="projects"
+                    element={
+                      <Navigate to="/super-admin/organisations" replace />
+                    }
+                  />
                   <Route path="plans" element={<PlanManagementPage />} />
                   <Route
                     path="discounts"
