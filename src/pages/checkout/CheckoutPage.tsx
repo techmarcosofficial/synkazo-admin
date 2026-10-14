@@ -248,6 +248,7 @@ export default function CheckoutPage() {
                 }}
               >
                 <CheckoutForm
+                  planId={plan.id}
                   price={price}
                   onSuccess={onPurchaseSuccess}
                   couponCode={couponCode}

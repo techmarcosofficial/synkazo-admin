@@ -23,6 +23,7 @@ export function usePlanQuery(options?: { enabled?: boolean }) {
     queryKey: queryKeys.billing.plan,
     queryFn: billingApi.getPlan,
     enabled: options?.enabled ?? true,
+    refetchInterval: 30000,
   });
 }
 
@@ -267,10 +268,13 @@ export function useAssignPlanMutation() {
     mutationFn: ({
       organisationId,
       planId,
+      reason,
     }: {
       organisationId: string;
       planId: string;
-    }) => billingAdminApi.assignPlanToOrganisation(organisationId, planId),
+      reason: string;
+    }) =>
+      billingAdminApi.assignPlanToOrganisation(organisationId, planId, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.organisations.all });
     },

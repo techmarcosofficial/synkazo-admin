@@ -15,10 +15,10 @@ import {
   useTwoWaySyncIntervalsQuery,
 } from '@/queries/useTwoWaySync';
 
-// Super-admin "Two-Way Sync Time" — per source platform polling interval. This
+// Super-admin "Schedule & Time" — per source platform polling interval. This
 // is the only place two-way sync cadence can be tuned; regular users cannot
 // schedule two-way sync at all (item 5).
-export default function TwoWaySyncSettingsCard() {
+export default function ScheduleAndTimeSettingsCard() {
   const query = useTwoWaySyncIntervalsQuery();
   const setMutation = useSetTwoWaySyncIntervalMutation();
   const resetMutation = useResetTwoWaySyncIntervalMutation();
@@ -73,7 +73,7 @@ export default function TwoWaySyncSettingsCard() {
       <CardHeader visualLevel="section">
         <CardTitle className="flex items-center gap-2 font-semibold">
           <Timer className="size-4" />
-          Two-Way Sync Time
+          Schedule &amp; Time
         </CardTitle>
         <p className="text-muted-foreground text-sm">
           Two-way syncs run on a fixed, automatic interval — users can't

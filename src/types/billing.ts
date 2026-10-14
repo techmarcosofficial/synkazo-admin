@@ -67,6 +67,9 @@ export interface OverLimitSummary {
 export type BillingInterval = 'month' | 'year' | 'day';
 
 export interface PlanStatus {
+  planAccessSource?: 'free' | 'stripe_subscription' | 'manual_override';
+  paymentHoldActive?: boolean;
+  pastDueStartedAt?: string | null;
   planId: PlanId;
   planName: string;
   subscriptionStatus: SubscriptionStatus;
@@ -163,7 +166,7 @@ export interface SubscriptionDetail {
 
 export interface UpgradeResult {
   subscriptionId: string;
-  status: 'active' | 'requires_action';
+  status: 'active' | 'requires_action' | 'pending';
   clientSecret: string | null; // present when 3-D Secure confirmation is required
 }
 
@@ -211,6 +214,8 @@ export interface Paginated<T> {
 }
 
 export interface HistoryItem {
+  id?: string;
+  attemptCount?: number;
   eventType: string;
   oldStatus: string | null;
   newStatus: string | null;

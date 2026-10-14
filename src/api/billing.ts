@@ -166,9 +166,13 @@ export const billingAdminApi = {
   assignPlanToOrganisation: (
     organisationId: string,
     planId: string,
+    reason: string,
   ): Promise<Organisation> =>
     apiClient
-      .patch(`/super-admin/billing/organisations/${organisationId}/plan`, { planId })
+      .patch(`/super-admin/billing/organisations/${organisationId}/plan`, {
+        planId,
+        reason,
+      })
       .then(d),
 
   // ── Coupons + discount settings ─────────────────────────────────────────────
