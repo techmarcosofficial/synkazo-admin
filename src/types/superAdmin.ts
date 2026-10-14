@@ -161,6 +161,9 @@ export interface SuperAdminRunStatus {
 
 export interface SuperAdminBillingOverview {
   plan: {
+    planAccessSource?: 'free' | 'stripe_subscription' | 'manual_override';
+    pastDueStartedAt?: string | null;
+    paymentHoldActive?: boolean;
     planId: string | null;
     planName: string;
     subscriptionStatus: SubscriptionStatus;

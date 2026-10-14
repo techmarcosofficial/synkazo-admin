@@ -14,12 +14,16 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getUserFriendlyError } from '@/lib/errorMessages';
 import { showToast } from '@/lib/toast';
-import { usePaymentMethodsQuery } from '@/queries/useBilling';
+import {
+  usePaymentMethodsQuery,
+  useRefreshPlanMutation,
+} from '@/queries/useBilling';
 import type { ApiPrice, EmbeddedCheckoutRequest } from '@/types';
 
 const NEW_CARD = '__new__';
 
 interface CheckoutFormProps {
+  planId: string;
   price: ApiPrice;
   onSuccess: () => void | Promise<void>;
   /** Applied promo code (owned by CheckoutPage) — the server re-validates it before charging. */
@@ -39,12 +43,14 @@ interface CheckoutFormProps {
  * creating the subscription, exactly like the original flow.
  */
 export function CheckoutForm({
+  planId,
   price,
   onSuccess,
   couponCode,
   onCouponRejected,
 }: CheckoutFormProps) {
   const stripe = useStripe();
+  const refreshPlan = useRefreshPlanMutation();
   const elements = useElements();
   const { data: cards, isLoading: cardsLoading } = usePaymentMethodsQuery();
   const [billingDetails, setBillingDetails] =
@@ -162,6 +168,17 @@ export function CheckoutForm({
 
       // Show the success message on-screen (not a toast) and hold briefly before handing off,
       // so the user actually reads it before the route changes.
+      const confirmedPlan = await refreshPlan.mutateAsync();
+      if (
+        confirmedPlan.paymentHoldActive ||
+        confirmedPlan.planId !== planId ||
+        !['active', 'trialing'].includes(confirmedPlan.subscriptionStatus)
+      ) {
+        showToast.error(
+          'Payment confirmation is still pending. Paid access will become available after your payment is confirmed.',
+        );
+        return;
+      }
       setSucceeded(true);
       setTimeout(() => {
         void onSuccess();

@@ -1,6 +1,7 @@
 import type { AxiosResponse } from 'axios';
 
 import apiClient from './apiClient';
+import { createIdempotencyKey } from '@/lib/idempotency';
 
 import type {
   RetryInvoiceDto,
@@ -60,11 +61,13 @@ export const superAdminBillingApi = {
     organisationId: string,
     invoiceId: string,
     dto: RetryInvoiceDto,
+    idempotencyKey = createIdempotencyKey(),
   ): Promise<RetryInvoiceResponse> =>
     apiClient
       .post<{ data: RetryInvoiceResponse }>(
         `/super-admin/organisations/${organisationId}/billing/invoices/${invoiceId}/retry`,
         dto,
+        { headers: { 'Idempotency-Key': idempotencyKey } },
       )
       .then(d),
 
@@ -77,11 +80,14 @@ export const superAdminBillingApi = {
   assignPlan: (
     organisationId: string,
     planId: string,
+    reason: string,
+    idempotencyKey = createIdempotencyKey(),
   ): Promise<{ planId: string; planName?: string }> =>
     apiClient
       .patch<{ data: { planId: string; planName?: string } }>(
         `/super-admin/organisations/${organisationId}/billing/plan`,
-        { planId },
+        { planId, reason },
+        { headers: { 'Idempotency-Key': idempotencyKey } },
       )
       .then(d),
 };
