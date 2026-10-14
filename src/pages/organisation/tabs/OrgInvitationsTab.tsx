@@ -3,7 +3,7 @@ import { Clock, Mail, Plus, RefreshCw } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import type { Invitation } from '@/api/invitations';
-import EditPermissionsDialog from '@/components/organisation/EditPermissionsDialog';
+import MemberDetailDrawer from '@/components/organisation/MemberDetailDrawer';
 import InviteMemberDialog from '@/components/organisation/InviteMemberDialog';
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
@@ -53,7 +53,6 @@ import {
   useRevokeInvitationMutation,
 } from '@/queries/useInvitations';
 import { useUsersQuery } from '@/queries/useUsers';
-import { useHeaderStore } from '@/stores/useHeaderStore';
 import type { User, UserRole } from '@/types';
 
 type InvitationExtended = Invitation & { invitedByEmail?: string };
@@ -126,28 +125,6 @@ export default function OrgInvitationsTab() {
   const [search, setSearch] = useState('');
   const [editingUser, setEditingUser] = useState<User | null>(null);
 
-  const setActions = useHeaderStore((state) => state.setActions);
-  const clearActions = useHeaderStore((state) => state.clearActions);
-
-  useEffect(() => {
-    setActions(
-      <>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => invitationsQuery.refetch()}
-          aria-label="Refresh invitations"
-        >
-          <RefreshCw />
-        </Button>
-        <Button onClick={() => setShowForm(true)}>
-          <Plus /> Send Invitation
-        </Button>
-      </>,
-    );
-    return () => clearActions();
-  }, [setActions, clearActions]);
-
   const run = async (
     action: () => Promise<unknown>,
     success: string,
@@ -212,39 +189,81 @@ export default function OrgInvitationsTab() {
 
   return (
     <Card>
-      <CardHeader visualLevel="section">
-        <CardTitle className="flex items-center gap-2">
-          <Mail className="text-muted-foreground size-4" /> Invitations
-        </CardTitle>
-        <CardDescription>
-          Manage pending and previous invitations to your organization.
-        </CardDescription>
-      </CardHeader>
+      <div className="flex flex-col gap-4 border-b border-border/60 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Mail className="text-muted-foreground size-4" />
+            <h3 className="text-sm font-semibold text-foreground tracking-tight">
+              Invitations
+            </h3>
+            {invitations.length > 0 && (
+              <Badge
+                variant="secondary"
+                className="text-[11px] py-0 px-1.5 font-normal"
+              >
+                {invitations.length}
+              </Badge>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Manage pending and previous invitations to your organization.
+          </p>
+        </div>
 
-      <CardContent className="space-y-4">
-        <ManagementToolbar
-          searchValue={search}
-          onSearchChange={setSearch}
-          searchPlaceholder="Search invitations…"
-          filters={
-            <Select
-              value={filter}
-              onValueChange={(v: StatusFilter) => setFilter(v)}
-            >
-              <SelectTrigger className="bg-muted sm:w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="accepted">Accepted</SelectItem>
-                <SelectItem value="expired">Expired</SelectItem>
-                <SelectItem value="revoked">Revoked</SelectItem>
-              </SelectContent>
-            </Select>
-          }
-        />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <ManagementToolbar
+            searchValue={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="Search invitations…"
+            filters={
+              <Select
+                value={filter}
+                onValueChange={(v: StatusFilter) => setFilter(v)}
+              >
+                <SelectTrigger className="bg-muted sm:w-36 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All statuses</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="accepted">Accepted</SelectItem>
+                  <SelectItem value="expired">Expired</SelectItem>
+                  <SelectItem value="revoked">Revoked</SelectItem>
+                </SelectContent>
+              </Select>
+            }
+            action={
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="size-9 shrink-0"
+                  onClick={() => invitationsQuery.refetch()}
+                  aria-label="Refresh invitations"
+                  title="Refresh invitations"
+                >
+                  <RefreshCw
+                    className={cn(
+                      'size-3.5',
+                      invitationsQuery.isFetching && 'animate-spin',
+                    )}
+                  />
+                </Button>
+                <Button
+                  size="sm"
+                  className="h-9 gap-1.5 shrink-0"
+                  onClick={() => setShowForm(true)}
+                >
+                  <Plus className="size-4" />
+                  Send Invitation
+                </Button>
+              </div>
+            }
+          />
+        </div>
+      </div>
 
+      <CardContent className="space-y-4 pt-4">
         {invitationsQuery.isLoading ? (
           <SkeletonList count={5} />
         ) : invitationsQuery.isError ? (
@@ -273,7 +292,7 @@ export default function OrgInvitationsTab() {
           <div className="border-border overflow-x-auto rounded-3xl border">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted hover:bg-muted/50">
+                <TableRow>
                   <SortableTableHead
                     active={sortKey === 'email'}
                     direction={direction}
@@ -489,9 +508,27 @@ export default function OrgInvitationsTab() {
       )}
 
       <InviteMemberDialog open={showForm} onOpenChange={setShowForm} />
-      <EditPermissionsDialog
-        user={editingUser}
-        onClose={() => setEditingUser(null)}
+      <MemberDetailDrawer
+        open={editingUser !== null}
+        onOpenChange={(open) => !open && setEditingUser(null)}
+        member={
+          editingUser
+            ? {
+                id: editingUser.id,
+                email: editingUser.email,
+                fullName: editingUser.fullName,
+                role: editingUser.role,
+                isActive: editingUser.isActive !== false,
+                organisationId: currentUser?.organisationId,
+                department: editingUser.department,
+                isEmailVerified: editingUser.isEmailVerified,
+                lastLoginAt: editingUser.lastLoginAt,
+                createdAt: editingUser.createdAt,
+                permissions: editingUser.permissions,
+              }
+            : null
+        }
+        isSuperAdmin={false}
       />
     </Card>
   );

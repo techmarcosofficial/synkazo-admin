@@ -369,9 +369,9 @@ export default function RecentActivityCard({
           </Empty>
         ) : (
           <div className="border-border/80 dark:border-border/80 overflow-hidden rounded-3xl border">
-            <div className="bg-muted/70 border-border/80 text-muted-foreground dark:border-border dark:bg-secondary hidden grid-cols-[110px_minmax(220px,1.45fr)_minmax(190px,1.1fr)_130px_110px_24px] items-center gap-x-5 border-b px-5 py-2.5 text-xs font-semibold tracking-wider uppercase xl:grid">
+            <div className="bg-muted/70 border-border/80 text-muted-foreground dark:border-border hidden grid-cols-[110px_minmax(220px,1.45fr)_minmax(190px,1.1fr)_130px_110px_24px] items-center gap-x-5 border-b px-5 py-2.5 text-xs font-semibold xl:grid dark:bg-white/[0.04]">
               <span>Status</span>
-              <span>Sync Job</span>
+              <span>Sync job</span>
               <span>Data flow</span>
               <span>Result</span>
               <span className="text-right">Time</span>

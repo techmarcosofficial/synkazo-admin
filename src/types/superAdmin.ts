@@ -81,6 +81,9 @@ export interface SuperAdminMemberListItem {
   // Optional for forward-compat with older cached responses that
   // predate the flag.
   isOwner?: boolean;
+  department?: string | null;
+  isEmailVerified?: boolean;
+  permissions?: string[] | null;
   lastLoginAt: string | null;
   createdAt: string;
 }
@@ -123,9 +126,12 @@ export interface SuperAdminJobListItem {
   projectId: string;
   organisationId: string;
   name: string;
+  sourceObject: string;
+  destObject: string;
   isEnabled: boolean;
   syncEnabled: boolean;
   isRunning: boolean;
+  recordsSynced: number;
   status: string;
   scheduleState: string;
   syncDirection: string;
@@ -143,13 +149,123 @@ export interface SuperAdminJobListItem {
 }
 
 export interface SuperAdminJobDetail extends SuperAdminJobListItem {
+  sourceObject: string;
+  destObject: string;
+  sourceOfTruth: string | null;
+  conflictResolutionStrategy: string;
+  deleteHandling: string;
+  syncTrigger: string;
+  idMappingSourceField: string | null;
+  idMappingDestField: string | null;
+  hubspotWebhookEnabled: boolean;
+  destPipelineId: string | null;
+  statusMapping: Record<string, string> | null;
+  defaultValues: {
+    destination?: Record<string, unknown>;
+    source?: Record<string, unknown>;
+  } | null;
+  excludeConditions: import('./conditions').ExcludeCondition[] | null;
+  excludeConditionLogic: 'AND' | 'OR';
+  destinationSkipConditions: import('./conditions').DestinationSkipCondition[] | null;
+  skipUpdateOnMatch: boolean;
+  maxRetries: number;
+  retryBackoffBaseSec: number;
   scheduleMode: string | null;
+  scheduleTimes: string[] | null;
   intervalMinutes: number | null;
-  sourceObjectId: string | null;
-  destObjectId: string | null;
+  scheduleDays: number[] | null;
+  timezone: string | null;
+  cronExpression: string | null;
   dependsOnJobId: string | null;
+  fieldMappings?: SuperAdminFieldMapping[];
   // GAP-050 / SA-602 — last 5 failed sync runs; omitted on list.
   recentFailures?: SuperAdminJobRecentFailure[];
+}
+
+export interface SuperAdminFieldMapping {
+  id: string;
+  sourceField: string;
+  destField: string;
+  direction: string | null;
+  onEmpty: string | null;
+  isRequired: boolean;
+  isMatchField: boolean;
+  defaultValue: string | null;
+  reverseOnEmpty: string | null;
+  reverseDefaultValue: string | null;
+  matchPriority: number | null;
+  updatePolicy: string;
+  conflictScope: string | null;
+  transformType: string | null;
+  transformConfig: Record<string, unknown> | null;
+}
+
+export interface SuperAdminDiscoveredObject {
+  id: string;
+  label: string;
+  tier?: 'core' | 'extended' | 'custom';
+  module?: string;
+  group?: string;
+  isCustom?: boolean;
+  scopeGranted?: { read: boolean; write: boolean };
+}
+
+export interface SuperAdminDiscoveredField {
+  name: string;
+  label: string;
+  type: string;
+  required?: boolean;
+  isCustom?: boolean;
+  readOnly?: boolean;
+  groupName?: string;
+  options?: Array<{ value: string; label: string }>;
+  hasUniqueValue?: boolean;
+}
+
+export interface SuperAdminCreateJobDto {
+  name: string;
+  sourceObject: string;
+  destObject: string;
+  syncDirection?: 'one_way' | 'two_way';
+  syncTrigger?: 'new' | 'updated' | 'both';
+  sourceOfTruth?: string;
+  deleteHandling?: 'ignore' | 'soft_archive' | 'hard_delete';
+  hubspotWebhookEnabled?: boolean;
+  idMappingSourceField?: string;
+  idMappingDestField?: string;
+  scheduleMode?: 'daily_time' | 'interval' | 'day_specific' | null;
+  scheduleTimes?: string[] | null;
+  scheduleDays?: number[] | null;
+  intervalMinutes?: number | null;
+  timezone?: string;
+  destPipelineId?: string;
+  statusMapping?: Record<string, string>;
+  skipUpdateOnMatch?: boolean;
+  maxRetries?: number;
+  retryBackoffBaseSec?: number;
+  defaultValues?: import('./job').DefaultValuesConfig | null;
+  excludeConditions?: import('./conditions').ExcludeCondition[] | null;
+  excludeConditionLogic?: 'AND' | 'OR';
+  destinationSkipConditions?: import('./conditions').DestinationSkipCondition[] | null;
+}
+
+export type SuperAdminFieldMappingInput = import('./job').FieldMapping;
+
+export interface SuperAdminJobRunListItem {
+  id: string;
+  jobId: string;
+  projectId: string;
+  status: string;
+  executionStatus: string;
+  triggeredBy: string;
+  startedAt: string;
+  finishedAt: string | null;
+  durationMs: number | null;
+  totalFetched: number;
+  createdCount: number;
+  updatedCount: number;
+  skippedCount: number;
+  failedCount: number;
 }
 
 export interface SuperAdminRunStatus {

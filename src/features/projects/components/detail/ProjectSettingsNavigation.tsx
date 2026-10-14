@@ -23,29 +23,33 @@ export default function ProjectSettingsNavigation({
   items,
   onSelect,
   renderLink,
+  title = 'Project settings',
+  selectId = 'project-settings-section',
 }: {
   activeId: string;
   items: readonly ProjectSettingsNavItem[];
   onSelect: (id: string) => void;
   renderLink: (item: ProjectSettingsNavItem, children: ReactNode) => ReactNode;
+  title?: string;
+  selectId?: string;
 }) {
   return (
-    <aside className="min-w-0" aria-label="Project settings">
+    <aside className="min-w-0" aria-label={title}>
       <Card
         size="sm"
         className="top-[calc(var(--detail-sticky-top)+var(--detail-header-height)+(--spacing(4)))] gap-0 py-0 lg:sticky"
       >
         <CardHeader className="px-3.5 py-3">
-          <CardTitle>Project settings</CardTitle>
+          <CardTitle>{title}</CardTitle>
         </CardHeader>
         <CardContent className="px-2.5 pb-2.5">
           <div className="space-y-2 lg:hidden">
-            <label htmlFor="project-settings-section" className="text-sm font-medium">
+            <label htmlFor={selectId} className="text-sm font-medium">
               Settings section
             </label>
             <Select value={activeId} onValueChange={onSelect}>
               <SelectTrigger
-                id="project-settings-section"
+                id={selectId}
                 className="w-full"
                 aria-label="Settings section"
               >
@@ -84,7 +88,9 @@ export default function ProjectSettingsNavigation({
                       <span className="min-w-0 flex-1 truncate text-left">
                         {item.label}
                       </span>
-                      {item.locked && <Lock className="text-muted-foreground" />}
+                      {item.locked && (
+                        <Lock className="text-muted-foreground" />
+                      )}
                     </>,
                   )}
                 </Button>

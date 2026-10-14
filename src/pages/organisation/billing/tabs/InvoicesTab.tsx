@@ -57,7 +57,7 @@ export default function InvoicesTab() {
           <div className="overflow-hidden rounded-3xl border">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted hover:bg-muted/50">
+                <TableRow>
                   <TableHead>Date</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Status</TableHead>

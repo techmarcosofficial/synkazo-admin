@@ -76,11 +76,6 @@ export default function OrganisationProjectsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
-        title="Projects"
-        description={`Explore sync projects in ${orgQuery.data?.name ?? 'this organisation'}.`}
-      />
-
       <Card>
         <CardContent className="space-y-5">
           <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
@@ -211,7 +206,7 @@ export default function OrganisationProjectsPage() {
             <div className="overflow-x-auto rounded-3xl border">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-muted hover:bg-muted/50">
+                  <TableRow>
                     <TableHead>Project</TableHead>
                     <TableHead>Platforms</TableHead>
                     <TableHead>Sync mode</TableHead>

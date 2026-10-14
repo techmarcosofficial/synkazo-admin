@@ -23,6 +23,8 @@ export interface SyncDirectionFieldsProps {
   sourceConnection: Connection | undefined;
   destConnection: Connection | undefined;
   projectId: string;
+  /** Supply null on a scoped platform route to avoid tenant connection lookups. */
+  twoWayNotice?: ReactNode;
   onSyncDirectionChange: (value: string) => void;
   onSourceOfTruthChange: (value: string) => void;
   onDeleteHandlingChange: (value: string) => void;
@@ -92,6 +94,7 @@ export default function SyncDirectionFields({
   sourceConnection,
   destConnection,
   projectId,
+  twoWayNotice,
   onSyncDirectionChange,
   onSourceOfTruthChange,
   onDeleteHandlingChange,
@@ -189,24 +192,27 @@ export default function SyncDirectionFields({
             </Alert>
           )}
 
-          <TwoWayAuthNotice
-            projectId={projectId}
-            hubspotConnection={
-              sourcePlatform === 'hubspot'
-                ? sourceConnection
-                : destPlatform === 'hubspot'
-                  ? destConnection
-                  : undefined
-            }
-          />
+          {twoWayNotice === undefined ? (
+            <TwoWayAuthNotice
+              projectId={projectId}
+              hubspotConnection={
+                sourcePlatform === 'hubspot'
+                  ? sourceConnection
+                  : destPlatform === 'hubspot'
+                    ? destConnection
+                    : undefined
+              }
+            />
+          ) : (
+            twoWayNotice
+          )}
 
           <Field>
-            <FieldLabel>
-              Primary System (Source of Truth)
-            </FieldLabel>
+            <FieldLabel>Primary System (Source of Truth)</FieldLabel>
             {!readOnly && (
               <p className="text-muted-foreground -mt-1 mb-2 text-xs">
-                When a record changes in both systems at the same time, this system wins the conflict.
+                When a record changes in both systems at the same time, this
+                system wins the conflict.
               </p>
             )}
             {readOnly ? (

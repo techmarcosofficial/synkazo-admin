@@ -7,7 +7,6 @@ import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
 import HeadingPair from '@/components/shared/HeadingPair';
 import ManagementToolbar from '@/components/shared/ManagementToolbar';
-import PageHeader from '@/components/shared/PageHeader';
 import PaginationBar from '@/components/shared/PaginationBar';
 import SkeletonList from '@/components/shared/skeletons/SkeletonList';
 import { Badge } from '@/components/ui/badge';
@@ -50,10 +49,6 @@ export default function OrganisationActivityPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Activity"
-        description="Privileged and tenant activity recorded for this organisation."
-      />
       <Card>
         <CardContent className="space-y-5">
           <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
@@ -114,7 +109,7 @@ export default function OrganisationActivityPage() {
             <div className="overflow-x-auto rounded-3xl border">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-muted hover:bg-muted/50">
+                  <TableRow>
                     <TableHead>Action</TableHead>
                     <TableHead>Resource</TableHead>
                     <TableHead>Actor</TableHead>

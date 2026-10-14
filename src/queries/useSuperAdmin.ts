@@ -40,6 +40,8 @@ import type {
   ResumeSubscriptionDto,
   RetryInvoiceDto,
   SuperAdminConnectionEnvironment,
+  SuperAdminCreateJobDto,
+  SuperAdminFieldMappingInput,
   SuperAdminCreateAssociationRuleDto,
   SuperAdminDeleteAssociationRuleDto,
   SuperAdminInviteMemberDto,
@@ -341,6 +343,17 @@ export function useSuperAdminMembersQuery(
   });
 }
 
+export function useSuperAdminMemberQuery(
+  organisationId: string,
+  userId: string,
+) {
+  return useQuery({
+    queryKey: queryKeys.superAdmin.members.detail(organisationId, userId),
+    queryFn: () => superAdminMembersApi.getMember(organisationId, userId),
+    enabled: !!organisationId && !!userId,
+  });
+}
+
 export function useSuperAdminInvitationsQuery(
   organisationId: string,
   params: ListInvitationsParams = {},
@@ -469,6 +482,275 @@ export function useSuperAdminJobQuery(
       : ['superAdmin', organisationId, 'jobs', 'missing'],
     queryFn: () =>
       superAdminOperationsApi.getJob(organisationId, projectId, jobId!),
+    enabled: !!organisationId && !!projectId && !!jobId,
+  });
+}
+
+export function useSuperAdminDiscoveredObjectsQuery(
+  organisationId: string,
+  projectId: string,
+  platform: string,
+) {
+  return useQuery({
+    queryKey: [
+      'superAdmin',
+      organisationId,
+      'projects',
+      projectId,
+      'discovery',
+      platform,
+      'objects',
+    ],
+    queryFn: () =>
+      superAdminOperationsApi.discoverObjects(
+        organisationId,
+        projectId,
+        platform,
+      ),
+    enabled: !!organisationId && !!projectId && !!platform,
+  });
+}
+
+export function useSuperAdminDiscoveredFieldsQuery(
+  organisationId: string,
+  projectId: string,
+  platform: string,
+  objectType: string,
+) {
+  return useQuery({
+    queryKey: [
+      'superAdmin',
+      organisationId,
+      'projects',
+      projectId,
+      'discovery',
+      platform,
+      objectType,
+      'properties',
+    ],
+    queryFn: () =>
+      superAdminOperationsApi.discoverFields(
+        organisationId,
+        projectId,
+        platform,
+        objectType,
+      ),
+    enabled: !!organisationId && !!projectId && !!platform && !!objectType,
+  });
+}
+
+export function useSuperAdminPipelinesQuery(
+  organisationId: string,
+  projectId: string,
+  objectType: string,
+) {
+  return useQuery({
+    queryKey: [
+      'superAdmin',
+      organisationId,
+      'projects',
+      projectId,
+      'discovery',
+      'hubspot',
+      'pipelines',
+      objectType,
+    ],
+    queryFn: () =>
+      superAdminOperationsApi.discoverPipelines(
+        organisationId,
+        projectId,
+        objectType,
+      ),
+    enabled: !!organisationId && !!projectId && !!objectType,
+  });
+}
+
+export function useSuperAdminStatusesQuery(
+  organisationId: string,
+  projectId: string,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: [
+      'superAdmin',
+      organisationId,
+      'projects',
+      projectId,
+      'discovery',
+      'servicetitan',
+      'statuses',
+    ],
+    queryFn: () =>
+      superAdminOperationsApi.discoverStatuses(organisationId, projectId),
+    enabled: !!organisationId && !!projectId && enabled,
+  });
+}
+
+export function useCreateSuperAdminJobMutation(
+  organisationId: string,
+  projectId: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: SuperAdminCreateJobDto) =>
+      superAdminOperationsApi.createJob(organisationId, projectId, dto),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.superAdmin.operations.jobs(
+          organisationId,
+          projectId,
+        ),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.superAdmin.operations.project(
+          organisationId,
+          projectId,
+        ),
+      });
+    },
+  });
+}
+
+export function useUpdateSuperAdminJobMutation(
+  organisationId: string,
+  projectId: string,
+  jobId: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: Partial<SuperAdminCreateJobDto>) =>
+      superAdminOperationsApi.updateJob(organisationId, projectId, jobId, dto),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.superAdmin.operations.job(
+          organisationId,
+          projectId,
+          jobId,
+        ),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.superAdmin.operations.jobs(
+          organisationId,
+          projectId,
+        ),
+      });
+    },
+  });
+}
+
+export function useSetSuperAdminJobEnabledMutation(
+  organisationId: string,
+  projectId: string,
+  jobId: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (enabled: boolean) =>
+      superAdminOperationsApi.setJobEnabled(
+        organisationId,
+        projectId,
+        jobId,
+        enabled,
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.superAdmin.operations.job(
+          organisationId,
+          projectId,
+          jobId,
+        ),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.superAdmin.operations.jobs(
+          organisationId,
+          projectId,
+        ),
+      });
+    },
+  });
+}
+
+export function useSetSuperAdminJobSyncEnabledMutation(
+  organisationId: string,
+  projectId: string,
+  jobId: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (enabled: boolean) =>
+      superAdminOperationsApi.setJobSyncEnabled(
+        organisationId,
+        projectId,
+        jobId,
+        enabled,
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.superAdmin.operations.job(
+          organisationId,
+          projectId,
+          jobId,
+        ),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.superAdmin.operations.jobs(
+          organisationId,
+          projectId,
+        ),
+      });
+    },
+  });
+}
+
+export function useReplaceSuperAdminJobMappingsMutation(
+  organisationId: string,
+  projectId: string,
+  jobId: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (mappings: SuperAdminFieldMappingInput[]) =>
+      superAdminOperationsApi.replaceJobMappings(
+        organisationId,
+        projectId,
+        jobId,
+        mappings,
+      ),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.superAdmin.operations.job(
+          organisationId,
+          projectId,
+          jobId,
+        ),
+      }),
+  });
+}
+
+export function useSuperAdminJobRunsQuery(
+  organisationId: string,
+  projectId: string,
+  jobId: string,
+  page: number,
+) {
+  return useQuery({
+    queryKey: [
+      'superAdmin',
+      organisationId,
+      'projects',
+      projectId,
+      'jobs',
+      jobId,
+      'sync-logs',
+      page,
+    ],
+    queryFn: () =>
+      superAdminOperationsApi.listJobRuns(
+        organisationId,
+        projectId,
+        jobId,
+        page,
+      ),
     enabled: !!organisationId && !!projectId && !!jobId,
   });
 }

@@ -33,6 +33,18 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import { toCanvasField, type CanvasField } from '@/features/jobs/utils';
 
+export interface CrossObjectPropertyActions {
+  loadOptions: () => Promise<{ objects: CrossObjectPropertyOption[] }>;
+  loadRelatedFields: (relatedObject: string) => Promise<CanvasField[]>;
+  create: (data: {
+    relatedObject: string;
+    lookupMode: 'id' | 'name';
+    lookupField: string;
+    importedProperty: string;
+  }) => Promise<CrossObjectProperty>;
+  remove: (propertyId: string) => Promise<void>;
+}
+
 export default function CrossObjectPropertiesPanel({
   projectId,
   jobId,
@@ -41,6 +53,7 @@ export default function CrossObjectPropertiesPanel({
   sourceFields,
   properties,
   onPropertiesChange,
+  actions,
 }: {
   projectId: string;
   jobId: string;
@@ -49,6 +62,7 @@ export default function CrossObjectPropertiesPanel({
   sourceFields: FieldDef[];
   properties: CrossObjectProperty[];
   onPropertiesChange: (properties: CrossObjectProperty[]) => void;
+  actions?: CrossObjectPropertyActions;
 }) {
   const [objects, setObjects] = useState<CrossObjectPropertyOption[]>([]);
   const [relatedObject, setRelatedObject] = useState('');
@@ -60,22 +74,20 @@ export default function CrossObjectPropertiesPanel({
   const [removing, setRemoving] = useState<CrossObjectProperty | null>(null);
 
   useEffect(() => {
-    jobsApi
-      .getCrossObjectPropertyOptions(projectId, jobId)
+    (actions?.loadOptions() ?? jobsApi.getCrossObjectPropertyOptions(projectId, jobId))
       .then((result) => setObjects(result.objects))
       .catch(() => setObjects([]));
-  }, [projectId, jobId]);
+  }, [projectId, jobId, actions]);
 
   useEffect(() => {
     if (!relatedObject) {
       setRelatedFields([]);
       return;
     }
-    connectionsApi
-      .getProperties(projectId, platformId, relatedObject)
-      .then((fields) => setRelatedFields(fields.map(toCanvasField)))
+    (actions?.loadRelatedFields(relatedObject) ?? connectionsApi.getProperties(projectId, platformId, relatedObject).then((fields) => fields.map(toCanvasField)))
+      .then(setRelatedFields)
       .catch(() => setRelatedFields([]));
-  }, [platformId, projectId, relatedObject]);
+  }, [platformId, projectId, relatedObject, actions]);
 
   const selectedObject = objects.find(
     (object) => object.objectType === relatedObject,
@@ -90,11 +102,10 @@ export default function CrossObjectPropertiesPanel({
       return;
     setBusy(true);
     try {
-      const created = await jobsApi.createCrossObjectProperty(
-        projectId,
-        jobId,
-        { relatedObject, lookupMode, lookupField, importedProperty },
-      );
+      const data = { relatedObject, lookupMode, lookupField, importedProperty };
+      const created = actions
+        ? await actions.create(data)
+        : await jobsApi.createCrossObjectProperty(projectId, jobId, data);
       onPropertiesChange([...properties, created]);
       setImportedProperty('');
       toast.success('Cross-object property added.');
@@ -314,11 +325,8 @@ export default function CrossObjectPropertiesPanel({
               onClick={async () => {
                 if (!removing) return;
                 try {
-                  await jobsApi.deleteCrossObjectProperty(
-                    projectId,
-                    jobId,
-                    removing.id,
-                  );
+                  if (actions) await actions.remove(removing.id);
+                  else await jobsApi.deleteCrossObjectProperty(projectId, jobId, removing.id);
                   onPropertiesChange(
                     properties.filter((item) => item.id !== removing.id),
                   );

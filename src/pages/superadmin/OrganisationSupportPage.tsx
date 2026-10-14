@@ -1,7 +1,6 @@
 import { useParams } from 'react-router-dom';
 
 import EmptyState from '@/components/shared/EmptyState';
-import PageHeader from '@/components/shared/PageHeader';
 import { LifeBuoy } from 'lucide-react';
 import OrganisationNotesCard from '@/pages/superadmin/organisations/OrganisationNotesCard';
 
@@ -20,10 +19,6 @@ export default function OrganisationSupportPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Support"
-        description="Record support context for the selected organisation."
-      />
       <OrganisationNotesCard
         organisationId={organisationId}
         category="support"

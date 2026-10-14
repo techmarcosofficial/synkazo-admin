@@ -25,8 +25,15 @@ export interface User {
   role: UserRole;
   permissions?: Permission[];
   organisationId?: string;
+  organisation?: {
+    id: string;
+    name: string;
+    slug?: string;
+  };
   status?: 'active' | 'invited' | 'suspended';
   isActive?: boolean;
+  isEmailVerified?: boolean;
+  lastLoginAt?: string | null;
   avatarInitials?: string;
   department?: string;
   /**
@@ -43,6 +50,7 @@ export interface User {
 export interface Organisation {
   id: string;
   name: string;
+  ownerId?: string;
   description?: string;
   plan?: string;
   createdAt?: string;

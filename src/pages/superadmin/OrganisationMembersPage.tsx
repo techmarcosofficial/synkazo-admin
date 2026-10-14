@@ -1,16 +1,17 @@
 import { formatDistanceToNow } from 'date-fns';
-import { ArrowLeft, Send, Trash2, UserPlus, Users } from 'lucide-react';
+import { Eye, Send, Trash2, UserPlus, Users } from 'lucide-react';
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 
+import MemberDetailDrawer from '@/components/organisation/MemberDetailDrawer';
 import InviteMemberDialog from './members/InviteMemberDialog';
 import LifecycleConfirmDialog from './lifecycle/LifecycleConfirmDialog';
 
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
-import PageHeader from '@/components/shared/PageHeader';
 import PaginationBar from '@/components/shared/PaginationBar';
 import SkeletonList from '@/components/shared/skeletons/SkeletonList';
+import StatusBadge from '@/components/shared/StatusBadge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -66,10 +67,10 @@ export default function OrganisationMembersPage() {
     page: memberPage,
     limit: memberPageSize,
   });
-  const invitationsQuery = useSuperAdminInvitationsQuery(
-    organisationId ?? '',
-    { page: 1, limit: 20 },
-  );
+  const invitationsQuery = useSuperAdminInvitationsQuery(organisationId ?? '', {
+    page: 1,
+    limit: 20,
+  });
 
   const inviteMutation = useInviteSuperAdminMemberMutation(
     organisationId ?? '',
@@ -102,6 +103,8 @@ export default function OrganisationMembersPage() {
     nextRole: 'org_admin' | 'editor';
   } | null>(null);
   const [ownershipTarget, setOwnershipTarget] =
+    useState<SuperAdminMemberListItem | null>(null);
+  const [detailMember, setDetailMember] =
     useState<SuperAdminMemberListItem | null>(null);
 
   if (!organisationId) {
@@ -148,19 +151,13 @@ export default function OrganisationMembersPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <Link
-          to={`/super-admin/organisations/${organisationId}/overview`}
-          className="text-muted-foreground hover:text-foreground mb-2 inline-flex items-center gap-1 text-sm"
-        >
-          <ArrowLeft className="size-3.5" aria-hidden />
-          Back to organisation
-        </Link>
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <PageHeader
-            title="Members and invitations"
-            description={org?.name ?? organisationId}
-          />
+      <section className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="flex items-center gap-2 text-sm font-semibold">
+            <Users className="size-4" aria-hidden />
+            Members
+            <Badge variant="secondary">{totalMembers}</Badge>
+          </h2>
           <Button
             onClick={openInvite}
             disabled={!orgIsOperational}
@@ -173,14 +170,6 @@ export default function OrganisationMembersPage() {
             <UserPlus className="size-4" aria-hidden />
             Invite member
           </Button>
-        </div>
-      </div>
-
-      <section className="flex flex-col gap-3">
-        <div className="flex items-center gap-2 text-sm font-semibold">
-          <Users className="size-4" aria-hidden />
-          Members
-          <Badge variant="outline">{totalMembers}</Badge>
         </div>
 
         {membersQuery.isLoading ? (
@@ -213,29 +202,33 @@ export default function OrganisationMembersPage() {
               </TableHeader>
               <TableBody>
                 {members.map((member) => (
-                  <TableRow key={member.id}>
+                  <TableRow
+                    key={member.id}
+                    className="cursor-pointer"
+                    onClick={() => setDetailMember(member)}
+                  >
                     <TableCell className="font-medium">
                       {member.email}
                       {member.isOwner ? (
-                        <Badge className="ml-1 bg-amber-100 text-amber-900">
+                        <Badge
+                          variant="secondary"
+                          className="ml-1 px-1.5 py-0 text-[10px] font-medium"
+                        >
                           Owner
                         </Badge>
                       ) : null}
                     </TableCell>
                     <TableCell>{member.fullName ?? '—'}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">{roleLabel(member.role)}</Badge>
+                      <Badge variant="secondary">
+                        {roleLabel(member.role)}
+                      </Badge>
                     </TableCell>
                     <TableCell>
-                      {member.isActive ? (
-                        <Badge className="bg-emerald-100 text-emerald-900">
-                          Active
-                        </Badge>
-                      ) : (
-                        <Badge className="bg-amber-100 text-amber-900">
-                          Deactivated
-                        </Badge>
-                      )}
+                      <StatusBadge
+                        status={member.isActive ? 'active' : 'inactive'}
+                        size="sm"
+                      />
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {member.lastLoginAt
@@ -249,7 +242,18 @@ export default function OrganisationMembersPage() {
                         addSuffix: true,
                       })}
                     </TableCell>
-                    <TableCell className="space-x-1 text-right">
+                    <TableCell
+                      className="space-x-1 text-right"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setDetailMember(member)}
+                        title="View member profile"
+                      >
+                        <Eye className="size-3.5" />
+                      </Button>
                       {member.role !== 'super_admin' && !member.isOwner ? (
                         <Button
                           size="sm"
@@ -264,9 +268,7 @@ export default function OrganisationMembersPage() {
                             })
                           }
                         >
-                          {member.role === 'org_admin'
-                            ? 'Demote'
-                            : 'Promote'}
+                          {member.role === 'org_admin' ? 'Demote' : 'Promote'}
                         </Button>
                       ) : null}
                       {!member.isOwner &&
@@ -324,7 +326,7 @@ export default function OrganisationMembersPage() {
       <section className="flex flex-col gap-3">
         <div className="flex items-center gap-2 text-sm font-semibold">
           Pending invitations
-          <Badge variant="outline">{pendingInvitations.length}</Badge>
+          <Badge variant="secondary">{pendingInvitations.length}</Badge>
         </div>
 
         {invitationsQuery.isLoading ? (
@@ -360,7 +362,7 @@ export default function OrganisationMembersPage() {
                       {invitation.email}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">
+                      <Badge variant="secondary">
                         {roleLabel(invitation.role)}
                       </Badge>
                     </TableCell>
@@ -551,11 +553,17 @@ export default function OrganisationMembersPage() {
       <LifecycleConfirmDialog
         open={roleTarget !== null}
         onOpenChange={(o) => (o ? undefined : setRoleTarget(null))}
-        title={roleTarget?.nextRole === 'org_admin' ? 'Promote to org admin' : 'Demote to editor'}
+        title={
+          roleTarget?.nextRole === 'org_admin'
+            ? 'Promote to org admin'
+            : 'Demote to editor'
+        }
         description={
           roleTarget
             ? `${roleTarget.member.email} will become ${
-                roleTarget.nextRole === 'org_admin' ? 'an org admin' : 'an editor'
+                roleTarget.nextRole === 'org_admin'
+                  ? 'an org admin'
+                  : 'an editor'
               }. Owner demotion and last-admin demotion are blocked server-side.`
             : ''
         }
@@ -631,6 +639,32 @@ export default function OrganisationMembersPage() {
             },
           );
         }}
+      />
+
+      <MemberDetailDrawer
+        open={detailMember !== null}
+        onOpenChange={(o) => (!o ? setDetailMember(null) : undefined)}
+        member={
+          detailMember
+            ? {
+                id: detailMember.id,
+                email: detailMember.email,
+                fullName: detailMember.fullName,
+                role: detailMember.role,
+                isActive: detailMember.isActive,
+                isOwner: detailMember.isOwner,
+                organisationId,
+                organisationName: org?.name ?? organisationId,
+                department: detailMember.department,
+                isEmailVerified: detailMember.isEmailVerified,
+                lastLoginAt: detailMember.lastLoginAt,
+                createdAt: detailMember.createdAt,
+                permissions: detailMember.permissions,
+              }
+            : null
+        }
+        isSuperAdmin={true}
+        onTransferOwnership={(m) => setOwnershipTarget(detailMember)}
       />
     </div>
   );

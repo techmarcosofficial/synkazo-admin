@@ -26,6 +26,14 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Spinner } from '@/components/ui/spinner';
 import { showToast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
@@ -118,29 +126,28 @@ function describeSource(change: WebhookPropertyChange): string {
 function ChangedProperties({ changes }: { changes: WebhookPropertyChange[] }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-left text-xs">
-        <thead className="text-muted-foreground">
-          <tr>
-            <th className="py-1 pr-3 font-medium">Property</th>
-            <th className="py-1 pr-3 font-medium">Previous</th>
-            <th className="py-1 pr-3 font-medium">New</th>
-            <th className="py-1 font-medium">Changed by</th>
-          </tr>
-        </thead>
-        <tbody>
+      <Table className="w-full text-left text-xs">
+        <TableHeader>
+          <TableRow>
+            <TableHead className="px-2 py-1.5">Property</TableHead>
+            <TableHead className="px-2 py-1.5">Previous</TableHead>
+            <TableHead className="px-2 py-1.5">New</TableHead>
+            <TableHead className="px-2 py-1.5">Changed by</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {changes.map((c) => (
-            <tr
-              key={c.property}
-              className="border-border/60 border-t align-top"
-            >
-              <td className="py-1.5 pr-3 font-mono">{c.property}</td>
-              <td className="text-muted-foreground py-1.5 pr-3 font-mono">
+            <TableRow key={c.property} className="align-top">
+              <TableCell className="px-2 py-1.5 font-mono break-words whitespace-normal">
+                {c.property}
+              </TableCell>
+              <TableCell className="text-muted-foreground px-2 py-1.5 font-mono break-words whitespace-normal">
                 {c.oldValue ?? <span className="italic">empty</span>}
-              </td>
-              <td className="py-1.5 pr-3 font-mono">
+              </TableCell>
+              <TableCell className="px-2 py-1.5 font-mono break-words whitespace-normal">
                 {c.newValue ?? <span className="italic">empty</span>}
-              </td>
-              <td className="py-1.5">
+              </TableCell>
+              <TableCell className="px-2 py-1.5 whitespace-normal">
                 <span className={cn(c.isOwnWrite && 'text-muted-foreground')}>
                   {describeSource(c)}
                 </span>
@@ -149,11 +156,11 @@ function ChangedProperties({ changes }: { changes: WebhookPropertyChange[] }) {
                     {format(new Date(c.changedAt), 'MMM d, HH:mm:ss')}
                   </span>
                 )}
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }

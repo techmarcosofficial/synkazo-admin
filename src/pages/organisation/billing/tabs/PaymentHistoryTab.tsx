@@ -91,7 +91,7 @@ export default function PaymentHistoryTab() {
           <div className="overflow-hidden rounded-3xl border">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted hover:bg-muted/50">
+                <TableRow>
                   <TableHead>Date</TableHead>
                   <TableHead>Event</TableHead>
                   <TableHead>Amount</TableHead>

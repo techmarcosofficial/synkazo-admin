@@ -5,10 +5,8 @@ import {
   type CreateJobFormHandle,
   type CreateJobFormState,
 } from './CreateJobForm';
+import CreateJobDialogFrame from './CreateJobDialogFrame';
 
-import FormDialog from '@/components/form/FormDialog';
-import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/ui/spinner';
 
 const DEFAULT_STATE: CreateJobFormState = {
   canGoBack: false,
@@ -42,46 +40,23 @@ export default function CreateJobDialog({
   }, [open]);
 
   return (
-    <FormDialog
+    <CreateJobDialogFrame
       open={open}
-      onOpenChange={(next) => !next && onClose()}
-      title="Create New Sync Job"
-      description="Choose what to sync and how records should move."
-      size="md"
+      onClose={onClose}
       isDirty={state.isDirty}
+      isSaving={state.saving}
+      onBack={state.canGoBack ? () => formRef.current?.back() : undefined}
+      onSubmit={() =>
+        void (state.isLastStep
+          ? formRef.current?.save()
+          : formRef.current?.next())
+      }
+      submitLabel={state.isLastStep ? 'Create Sync Job' : 'Next'}
       currentStep={
         state.stepLabels.length > 1 ? state.stepIndex + 1 : undefined
       }
       totalSteps={state.stepLabels.length > 1 ? state.totalSteps : undefined}
       stepLabels={state.stepLabels.length > 1 ? state.stepLabels : undefined}
-      footer={(requestClose) => (
-        <>
-          <Button
-            variant="outline"
-            onClick={() =>
-              state.canGoBack ? formRef.current?.back() : requestClose()
-            }
-            disabled={state.saving}
-          >
-            {state.canGoBack ? 'Back' : 'Cancel'}
-          </Button>
-          <Button
-            onClick={() =>
-              void (state.isLastStep
-                ? formRef.current?.save()
-                : formRef.current?.next())
-            }
-            disabled={state.saving}
-          >
-            {state.saving && <Spinner />}
-            {state.saving
-              ? 'Saving…'
-              : state.isLastStep
-                ? 'Create Sync Job'
-                : 'Next'}
-          </Button>
-        </>
-      )}
     >
       <CreateJobForm
         ref={formRef}
@@ -90,6 +65,6 @@ export default function CreateJobDialog({
         onStateChange={setState}
         detailsOnly
       />
-    </FormDialog>
+    </CreateJobDialogFrame>
   );
 }

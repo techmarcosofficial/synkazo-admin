@@ -1,5 +1,6 @@
 import {
   ArrowRight,
+  Eye,
   MoreVertical,
   Pencil,
   UserCheck,
@@ -17,6 +18,7 @@ import PeopleDirectory, {
 import PeopleToolbar from './PeopleToolbar';
 import LifecycleConfirmDialog from '../lifecycle/LifecycleConfirmDialog';
 
+import MemberDetailDrawer from '@/components/organisation/MemberDetailDrawer';
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
 import HeadingPair from '@/components/shared/HeadingPair';
@@ -76,6 +78,8 @@ export default function TenantUsersPanel() {
   const [role, setRole] = useState<TenantRole>('all');
   const [status, setStatus] = useState<Status>('all');
   const [memberAction, setMemberAction] = useState<MemberAction | null>(null);
+  const [detailUser, setDetailUser] = useState<User | null>(null);
+
   const actionOrganisationId = memberAction?.user.organisationId ?? '';
   const roleMutation =
     useChangeSuperAdminMemberRoleMutation(actionOrganisationId);
@@ -102,24 +106,28 @@ export default function TenantUsersPanel() {
     () => tenantUsersForDirectory(query.data ?? []),
     [query.data],
   );
-  const organisationIds = useMemo(
-    () =>
-      [
-        ...new Set(
-          tenantUsers
-            .map((user) => user.organisationId)
-            .filter((id): id is string => !!id),
-        ),
-      ].sort(),
-    [tenantUsers],
-  );
+  const organisations = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const u of tenantUsers) {
+      if (u.organisationId) {
+        const name =
+          u.organisation?.name || `Organisation ${u.organisationId.slice(0, 8)}`;
+        map.set(u.organisationId, name);
+      }
+    }
+    return Array.from(map.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [tenantUsers]);
+
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
     return tenantUsers.filter(
       (user) =>
         (!needle ||
           user.fullName?.toLowerCase().includes(needle) ||
-          user.email.toLowerCase().includes(needle)) &&
+          user.email.toLowerCase().includes(needle) ||
+          user.organisation?.name?.toLowerCase().includes(needle)) &&
         (organisation === 'all' ||
           (organisation === 'unassigned'
             ? !user.organisationId
@@ -133,6 +141,9 @@ export default function TenantUsersPanel() {
   }, [tenantUsers, search, organisation, role, status]);
   const people: PersonView[] = filtered.map((user) => {
     const orgId = user.organisationId;
+    const orgName =
+      user.organisation?.name ||
+      (orgId ? `Organisation ${orgId.slice(0, 8)}` : 'Unassigned');
     const organisationTo = orgId
       ? `/super-admin/organisations/${orgId}/members`
       : undefined;
@@ -141,11 +152,11 @@ export default function TenantUsersPanel() {
       name: user.fullName || '',
       email: user.email,
       role: roleLabel(user.role),
-      organisation: orgId ? `Organisation ${orgId.slice(0, 8)}` : 'Unassigned',
+      organisation: orgName,
       organisationTo,
       isActive: user.isActive !== false,
       createdAt: user.createdAt ?? null,
-      actions: organisationTo ? (
+      actions: (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -157,45 +168,61 @@ export default function TenantUsersPanel() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem asChild>
-              <Link to={organisationTo}>
-                <ArrowRight className="size-4" />
-                Open members
-              </Link>
+            <DropdownMenuItem onClick={() => setDetailUser(user)}>
+              <Eye className="size-4" />
+              View profile
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() =>
-                openAction({
-                  kind: 'role',
-                  user,
-                  nextRole: user.role === 'org_admin' ? 'editor' : 'org_admin',
-                })
-              }
-            >
-              <Pencil className="size-4" />
-              {user.role === 'org_admin'
-                ? 'Demote to Editor'
-                : 'Promote to Org Admin'}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() =>
-                openAction({
-                  kind: user.isActive === false ? 'reactivate' : 'deactivate',
-                  user,
-                })
-              }
-              disabled={user.id === currentUser?.id}
-            >
-              {user.isActive === false ? (
-                <UserCheck className="size-4" />
-              ) : (
-                <UserX className="size-4" />
-              )}
-              {user.isActive === false ? 'Reactivate' : 'Deactivate'}
-            </DropdownMenuItem>
+            {organisationTo && (
+              <DropdownMenuItem asChild>
+                <Link to={organisationTo}>
+                  <ArrowRight className="size-4" />
+                  Open members
+                </Link>
+              </DropdownMenuItem>
+            )}
+            {organisationTo && (
+              <DropdownMenuItem
+                onClick={() =>
+                  openAction({
+                    kind: 'role',
+                    user,
+                    nextRole: user.role === 'org_admin' ? 'editor' : 'org_admin',
+                  })
+                }
+              >
+                <Pencil className="size-4" />
+                {user.role === 'org_admin'
+                  ? 'Demote to Editor'
+                  : 'Promote to Org Admin'}
+              </DropdownMenuItem>
+            )}
+            {organisationTo && user.role === 'editor' && (
+              <DropdownMenuItem onClick={() => setDetailUser(user)}>
+                <Pencil className="size-4" />
+                Edit permissions
+              </DropdownMenuItem>
+            )}
+            {organisationTo && (
+              <DropdownMenuItem
+                onClick={() =>
+                  openAction({
+                    kind: user.isActive === false ? 'reactivate' : 'deactivate',
+                    user,
+                  })
+                }
+                disabled={user.id === currentUser?.id}
+              >
+                {user.isActive === false ? (
+                  <UserCheck className="size-4" />
+                ) : (
+                  <UserX className="size-4" />
+                )}
+                {user.isActive === false ? 'Reactivate' : 'Deactivate'}
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
-      ) : null,
+      ),
     };
   });
   const { sorted, sortKey, direction, toggleSort } = useSort<
@@ -225,7 +252,7 @@ export default function TenantUsersPanel() {
                 <>
                   <Select value={organisation} onValueChange={setOrganisation}>
                     <SelectTrigger
-                      className="bg-muted sm:w-48"
+                      className="bg-muted sm:w-56"
                       aria-label="Filter users by organisation"
                     >
                       <SelectValue />
@@ -235,9 +262,9 @@ export default function TenantUsersPanel() {
                       {tenantUsers.some((user) => !user.organisationId) && (
                         <SelectItem value="unassigned">Unassigned</SelectItem>
                       )}
-                      {organisationIds.map((id) => (
+                      {organisations.map(({ id, name }) => (
                         <SelectItem key={id} value={id}>
-                          {id.slice(0, 8)}…
+                          {name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -305,6 +332,10 @@ export default function TenantUsersPanel() {
               sortKey={sortKey}
               direction={direction}
               onSort={toggleSort}
+              onSelectPerson={(person) => {
+                const u = tenantUsers.find((x) => x.id === person.id);
+                if (u) setDetailUser(u);
+              }}
             />
           )}
         </CardContent>
@@ -387,6 +418,33 @@ export default function TenantUsersPanel() {
             );
           }
         }}
+      />
+      <MemberDetailDrawer
+        open={detailUser !== null}
+        onOpenChange={(open) => !open && setDetailUser(null)}
+        member={
+          detailUser
+            ? {
+                id: detailUser.id,
+                email: detailUser.email,
+                fullName: detailUser.fullName,
+                role: detailUser.role,
+                isActive: detailUser.isActive !== false,
+                organisationId: detailUser.organisationId ?? undefined,
+                organisationName:
+                  detailUser.organisation?.name ||
+                  (detailUser.organisationId
+                    ? `Organisation ${detailUser.organisationId.slice(0, 8)}…`
+                    : 'Unassigned'),
+                department: detailUser.department,
+                isEmailVerified: detailUser.isEmailVerified,
+                lastLoginAt: detailUser.lastLoginAt,
+                createdAt: detailUser.createdAt,
+                permissions: detailUser.permissions,
+              }
+            : null
+        }
+        isSuperAdmin={true}
       />
     </div>
   );

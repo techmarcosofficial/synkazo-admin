@@ -34,7 +34,6 @@ import {
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import TimeInput from '@/features/jobs/components/TimeInput';
-import type { ExtJob } from '@/features/jobs/hooks/useJobDetail';
 import {
   buildScheduleUpdatePayload,
   getIntervalMinutes,
@@ -50,10 +49,19 @@ import { usePriorityQueueQuery } from '@/queries/usePriorityQueue';
 interface JobScheduleModalProps {
   projectId: string;
   jobId: string;
-  job: ExtJob;
+  job: {
+    syncDirection?: string;
+    scheduleMode?: string | null;
+    scheduleTimes?: string[] | null;
+    scheduleDays?: number[] | null;
+    intervalMinutes?: number | null;
+  };
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved?: () => void;
+  saveSchedule?: (payload: ReturnType<typeof buildScheduleUpdatePayload>) => Promise<unknown>;
+  minIntervalMinutesOverride?: number;
+  skipPriorityQueue?: boolean;
 }
 
 const DISPLAY_WEEKDAYS = [
@@ -103,9 +111,12 @@ export default function JobScheduleModal({
   open,
   onOpenChange,
   onSaved,
+  saveSchedule,
+  minIntervalMinutesOverride,
+  skipPriorityQueue = false,
 }: JobScheduleModalProps) {
   const isTwoWay = job.syncDirection === 'two_way';
-  const priorityQueueQuery = usePriorityQueueQuery(projectId);
+  const priorityQueueQuery = usePriorityQueueQuery(skipPriorityQueue ? '' : projectId);
   const priorityModeActive =
     priorityQueueQuery.data?.schedulerMode === 'priority';
 
@@ -147,7 +158,7 @@ export default function JobScheduleModal({
 
   const entitlements = useEntitlements();
   const intervalMinutes = getIntervalMinutes(interval);
-  const minIntervalMinutes = entitlements.minIntervalMinutes;
+  const minIntervalMinutes = minIntervalMinutesOverride ?? entitlements.minIntervalMinutes;
   const minIntervalAmount =
     interval.unit === 'hours'
       ? Math.max(1, Math.ceil(minIntervalMinutes / 60))
@@ -195,11 +206,9 @@ export default function JobScheduleModal({
     setSaving(true);
     try {
       const currentDraft: ScheduleDraft = { mode, times, days, interval };
-      await jobsApi.updateJob(
-        projectId,
-        jobId,
-        buildScheduleUpdatePayload(currentDraft, BROWSER_TIMEZONE),
-      );
+      const payload = buildScheduleUpdatePayload(currentDraft, BROWSER_TIMEZONE);
+      if (saveSchedule) await saveSchedule(payload);
+      else await jobsApi.updateJob(projectId, jobId, payload);
       showToast.success('Schedule updated successfully.');
       onSaved?.();
       onOpenChange(false);

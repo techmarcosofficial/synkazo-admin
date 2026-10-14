@@ -1,4 +1,4 @@
-import { format, formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import {
   ArrowLeftRight,
   ArrowRight,
@@ -13,22 +13,25 @@ import {
   Settings2,
 } from 'lucide-react';
 import { useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from 'react-router-dom';
 import { toast } from 'sonner';
 
 import LifecycleConfirmDialog from './lifecycle/LifecycleConfirmDialog';
+import OrganisationCreateJobDialog from './OrganisationCreateJobDialog';
 
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
 import SkeletonList from '@/components/shared/skeletons/SkeletonList';
-import StickyDetailHeader from '@/components/shared/StickyDetailHeader';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs } from '@/components/ui/tabs';
-import ProjectIdentityHeader from '@/features/projects/components/detail/ProjectIdentityHeader';
 import ProjectSettingsNavigation from '@/features/projects/components/detail/ProjectSettingsNavigation';
-import ProjectTabs from '@/features/projects/components/detail/ProjectTabs';
 import SyncFlowCard from '@/features/projects/components/detail/SyncFlowCard';
 import SyncFlowMetrics from '@/features/projects/components/detail/SyncFlowMetrics';
 import SyncFlowPanel from '@/features/projects/components/detail/SyncFlowPanel';
@@ -93,13 +96,15 @@ function PlatformSyncFlow({
         <Link
           to={detailPath}
           state={linkState}
-          className="hover:text-primary hover:underline block truncate text-sm font-semibold text-foreground transition-colors"
+          className="hover:text-primary text-foreground block truncate text-sm font-semibold transition-colors hover:underline"
         >
           {job.name}
         </Link>
       }
       subtitle={
-        <span className="truncate">{twoWay ? 'Two-way sync' : 'One-way sync'}</span>
+        <span className="truncate">
+          {twoWay ? 'Two-way sync' : 'One-way sync'}
+        </span>
       }
       action={
         <Button asChild variant="outline" size="sm">
@@ -190,10 +195,10 @@ export default function OrganisationProjectDetailPage() {
   }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const [holdKind, setHoldKind] = useState<'hold' | 'resume' | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
   const orgId = organisationId ?? '';
   const id = projectId ?? '';
   const projectPath = `/super-admin/organisations/${orgId}/projects/${id}`;
-  const projectsPath = `/super-admin/organisations/${orgId}/projects`;
   const tab: ProjectTab =
     searchParams.get('tab') === 'settings' ? 'settings' : 'sync-rules';
 
@@ -226,11 +231,6 @@ export default function OrganisationProjectDetailPage() {
 
   const project = projectQuery.data;
   const organisationName = orgQuery.data?.name ?? 'Selected organisation';
-  const created = project.createdAt
-    ? format(new Date(project.createdAt), 'MMM d, yyyy')
-    : null;
-  const subtitle = `${organisationName}${created ? ` · Created ${created}` : ''} · ${project.lastSyncedAt ? `Last synced ${timeLabel(project.lastSyncedAt)}` : 'Not synced yet'}`;
-
   const submitHold = async ({ reason }: { reason: string }) => {
     if (!holdKind) return;
     try {
@@ -265,34 +265,13 @@ export default function OrganisationProjectDetailPage() {
       }}
       className="gap-0"
     >
-      <StickyDetailHeader
-        backLabel="Back to Projects"
-        backTo={projectsPath}
-        header={
-          <Card className="gap-0 space-y-2 overflow-hidden py-0">
-            <ProjectIdentityHeader
-              name={project.name}
-              sourcePlatformId={project.sourcePlatformId}
-              destPlatformId={project.destPlatformId}
-              syncMode={project.syncMode}
-              activeEnvironment={project.activeEnvironment}
-              subtitle={subtitle}
-              statusControl={<Badge variant="secondary">{project.status}</Badge>}
-            />
-            <div className="overflow-x-auto px-4">
-              <ProjectTabs
-                tabs={[
-                  { id: 'sync-rules', label: 'Sync Flows' },
-                  { id: 'settings', label: 'Settings' },
-                ]}
-              />
-            </div>
-          </Card>
-        }
-      >
+      <div className="space-y-4">
         {tab === 'sync-rules' ? (
           <div className="space-y-4">
-            <SyncFlowPanel hasFlows={(jobsQuery.data?.length ?? 0) > 0}>
+            <SyncFlowPanel
+              hasFlows={(jobsQuery.data?.length ?? 0) > 0}
+              action={<Button onClick={() => setCreateOpen(true)}>Create Sync Flow</Button>}
+            >
               {jobsQuery.isLoading ? (
                 <SkeletonList count={3} />
               ) : jobsQuery.isError ? (
@@ -340,8 +319,10 @@ export default function OrganisationProjectDetailPage() {
                 { id: 'environments', label: 'Environments', icon: Layers3 },
               ]}
               onSelect={(section) => {
-                if (section === 'associations') navigate(`${projectPath}/associations`);
-                if (section === 'environments') navigate(`${projectPath}/migration`);
+                if (section === 'associations')
+                  navigate(`${projectPath}/associations`);
+                if (section === 'environments')
+                  navigate(`${projectPath}/migration`);
               }}
               renderLink={(item, children) => (
                 <Link
@@ -369,7 +350,10 @@ export default function OrganisationProjectDetailPage() {
                       { label: 'Project status', value: project.status },
                       {
                         label: 'Sync mode',
-                        value: project.syncMode === 'two_way' ? 'Two-way' : 'One-way',
+                        value:
+                          project.syncMode === 'two_way'
+                            ? 'Two-way'
+                            : 'One-way',
                       },
                       {
                         label: 'Scheduler mode',
@@ -380,7 +364,10 @@ export default function OrganisationProjectDetailPage() {
                         value: project.activeEnvironment || 'Not activated',
                       },
                     ].map((item) => (
-                      <div key={item.label} className="bg-muted/40 rounded-2xl border p-3">
+                      <div
+                        key={item.label}
+                        className="bg-muted/40 rounded-2xl border p-3"
+                      >
                         <dt className="text-muted-foreground text-xs font-medium">
                           {item.label}
                         </dt>
@@ -393,17 +380,28 @@ export default function OrganisationProjectDetailPage() {
                 </CardContent>
               </Card>
               <Card className="gap-0 py-0">
-                <CardHeader className="px-4 py-3"><CardTitle>Support operations</CardTitle></CardHeader>
+                <CardHeader className="px-4 py-3">
+                  <CardTitle>Support operations</CardTitle>
+                </CardHeader>
                 <CardContent className="space-y-3 px-4 pb-4">
                   <p className="text-muted-foreground text-sm">
-                    Hold active jobs on this project or resume jobs held by a platform operator.
-                    Jobs paused by the customer are not resumed.
+                    Hold active jobs on this project or resume jobs held by a
+                    platform operator. Jobs paused by the customer are not
+                    resumed.
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    <Button variant="outline" onClick={() => openHoldDialog('hold')} disabled={hold.isPending || resume.isPending}>
+                    <Button
+                      variant="outline"
+                      onClick={() => openHoldDialog('hold')}
+                      disabled={hold.isPending || resume.isPending}
+                    >
                       <Pause /> Hold active jobs
                     </Button>
-                    <Button variant="outline" onClick={() => openHoldDialog('resume')} disabled={hold.isPending || resume.isPending}>
+                    <Button
+                      variant="outline"
+                      onClick={() => openHoldDialog('resume')}
+                      disabled={hold.isPending || resume.isPending}
+                    >
                       <Play /> Resume held jobs
                     </Button>
                   </div>
@@ -412,14 +410,36 @@ export default function OrganisationProjectDetailPage() {
             </div>
           </div>
         )}
-      </StickyDetailHeader>
+      </div>
+      {createOpen && (
+        <OrganisationCreateJobDialog
+          organisationId={orgId}
+          project={project}
+          connections={connectionsQuery.data ?? []}
+          jobs={jobsQuery.data ?? []}
+          onClose={() => setCreateOpen(false)}
+          onCreated={(jobId) => {
+            setCreateOpen(false);
+            navigate(`${projectPath}/jobs/${jobId}`, {
+              state: {
+                jobBackTo: `${projectPath}?tab=sync-rules`,
+                jobBackLabel: 'Back to Sync Flows',
+              },
+            });
+          }}
+        />
+      )}
 
       <LifecycleConfirmDialog
         open={holdKind !== null}
         onOpenChange={(open) => {
           if (!open) setHoldKind(null);
         }}
-        title={holdKind === 'hold' ? 'Hold active project jobs' : 'Resume held project jobs'}
+        title={
+          holdKind === 'hold'
+            ? 'Hold active project jobs'
+            : 'Resume held project jobs'
+        }
         description={`${organisationName} · ${project.name}`}
         bodyWarning={
           holdKind === 'hold'

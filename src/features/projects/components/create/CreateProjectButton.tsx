@@ -45,7 +45,7 @@ export default function CreateProjectButton({
         disabled={isBlockedByRole || isBlockedByPlan}
       >
         <Button
-          size="lg"
+          size="sm"
           variant={variant}
           disabled={isBlockedByRole}
           onClick={() => {

@@ -56,7 +56,7 @@ export default function PaginationBar({
         Showing {start}–{end} of {total}
       </p>
 
-      <div className="flex items-center gap-4">
+      <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-x-4 gap-y-2 sm:w-auto">
         {onPageSizeChange && (
           <div className="flex items-center gap-2 text-sm">
             <span className="text-muted-foreground">{pageSizeLabel}</span>

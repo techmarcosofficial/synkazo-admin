@@ -13,15 +13,14 @@ import OrganisationDirectoryCard, {
 
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
-import HeadingPair from '@/components/shared/HeadingPair';
+import ManagementCardHeader from '@/components/shared/ManagementCardHeader';
 import ManagementToolbar from '@/components/shared/ManagementToolbar';
-import PageHeader from '@/components/shared/PageHeader';
 import PaginationBar from '@/components/shared/PaginationBar';
 import SkeletonCardGrid from '@/components/shared/skeletons/SkeletonCardGrid';
 import SkeletonTable from '@/components/shared/skeletons/SkeletonTable';
 import SortableTableHead from '@/components/shared/SortableTableHead';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -169,7 +168,7 @@ export default function OrganisationsPage() {
   };
 
   const provisionButton = (
-    <Button onClick={() => setProvisionOpen(true)}>
+    <Button size="sm" onClick={() => setProvisionOpen(true)}>
       <Plus className="size-4" aria-hidden />
       Provision organisation
     </Button>
@@ -177,161 +176,180 @@ export default function OrganisationsPage() {
 
   return (
     <div className="w-full space-y-6">
-      <PageHeader
-        title="Organisations"
-        description={
-          query.isLoading
-            ? 'Find and manage customer organisations.'
-            : `${total} organisation${total !== 1 ? 's' : ''} · review status, billing, and workspaces`
-        }
-        actions={provisionButton}
-      />
-
-      <Card>
-        <CardContent className="space-y-6">
-          <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-start">
-            <HeadingPair
-              title="Manage organisations"
-              subtitle="Find by name, slug, or owner; open an operator workspace."
-            />
-            <ManagementToolbar
-              searchValue={search}
-              onSearchChange={(value) => setParam('search', value, true)}
-              searchPlaceholder="Search organisations…"
-              viewMode={viewMode}
-              onViewModeChange={setViewMode}
-              filters={
-                <>
-                  <Select
-                    value={status}
-                    onValueChange={(value: OrgStatus | 'all') =>
-                      setParam('status', value)
-                    }
+      <section className="space-y-3" aria-label="Organisation results">
+        <ManagementCardHeader
+          title="Organisations"
+          subtitle="Review status, billing, and customer workspaces."
+          icon={Building2}
+          count={total}
+          countLabel={total === 1 ? 'organisation' : 'organisations'}
+          isLoading={query.isLoading}
+          action={provisionButton}
+        >
+          <ManagementToolbar
+            directoryLayout
+            filterCount={2}
+            searchValue={search}
+            onSearchChange={(value) => setParam('search', value, true)}
+            searchPlaceholder="Search organisations…"
+            searchLabel="Search organisations"
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            filters={
+              <>
+                <Select
+                  value={status}
+                  onValueChange={(value: OrgStatus | 'all') =>
+                    setParam('status', value)
+                  }
+                >
+                  <SelectTrigger
+                    size="sm"
+                    className="border-border/80 bg-card hover:border-foreground/25 dark:bg-card w-full min-w-0 gap-1 px-1.5 sm:px-2.5 [&_[data-slot=select-value]]:truncate"
+                    aria-label="Filter organisations by status"
                   >
-                    <SelectTrigger
-                      className="bg-muted sm:w-40"
-                      aria-label="Filter organisations by status"
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(
-                        Object.keys(ORG_STATUS_LABELS) as Array<
-                          keyof typeof ORG_STATUS_LABELS
-                        >
-                      ).map((key) => (
-                        <SelectItem key={key} value={key}>
-                          {ORG_STATUS_LABELS[key]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  <Select
-                    value={subscriptionStatus}
-                    onValueChange={(value: SubscriptionStatus | 'all') =>
-                      setParam('subscriptionStatus', value)
-                    }
-                  >
-                    <SelectTrigger
-                      className="bg-muted sm:w-40"
-                      aria-label="Filter organisations by billing status"
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(
-                        Object.keys(SUBSCRIPTION_LABELS) as Array<
-                          keyof typeof SUBSCRIPTION_LABELS
-                        >
-                      ).map((key) => (
-                        <SelectItem key={key} value={key}>
-                          {SUBSCRIPTION_LABELS[key]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  {viewMode === 'card' && (
-                    <Select
-                      value={`${sortBy}-${sortOrder}`}
-                      onValueChange={(value) => {
-                        const option = CARD_SORT_OPTIONS.find(
-                          (candidate) => candidate.value === value,
-                        );
-                        if (option) setSort(option.sortBy, option.sortOrder);
-                      }}
-                    >
-                      <SelectTrigger
-                        className="bg-muted sm:w-44"
-                        aria-label="Sort organisations"
+                    <SelectValue>
+                      <span className="sm:hidden">
+                        {status === 'all'
+                          ? 'Status'
+                          : ORG_STATUS_LABELS[status]}
+                      </span>
+                      <span className="hidden sm:inline">
+                        {ORG_STATUS_LABELS[status]}
+                      </span>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(
+                      Object.keys(ORG_STATUS_LABELS) as Array<
+                        keyof typeof ORG_STATUS_LABELS
                       >
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CARD_SORT_OPTIONS.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </>
-              }
-            />
-          </div>
+                    ).map((key) => (
+                      <SelectItem key={key} value={key}>
+                        {ORG_STATUS_LABELS[key]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-          {hasActiveFilters && (
-            <Button variant="ghost" size="sm" onClick={clearFilters}>
-              Clear filters
-            </Button>
-          )}
+                <Select
+                  value={subscriptionStatus}
+                  onValueChange={(value: SubscriptionStatus | 'all') =>
+                    setParam('subscriptionStatus', value)
+                  }
+                >
+                  <SelectTrigger
+                    size="sm"
+                    className="border-border/80 bg-card hover:border-foreground/25 dark:bg-card w-full min-w-0 gap-1 px-1.5 sm:px-2.5 [&_[data-slot=select-value]]:truncate"
+                    aria-label="Filter organisations by billing status"
+                  >
+                    <SelectValue>
+                      <span className="sm:hidden">
+                        {subscriptionStatus === 'all'
+                          ? 'Billing'
+                          : SUBSCRIPTION_LABELS[subscriptionStatus]}
+                      </span>
+                      <span className="hidden sm:inline">
+                        {SUBSCRIPTION_LABELS[subscriptionStatus]}
+                      </span>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(
+                      Object.keys(SUBSCRIPTION_LABELS) as Array<
+                        keyof typeof SUBSCRIPTION_LABELS
+                      >
+                    ).map((key) => (
+                      <SelectItem key={key} value={key}>
+                        {SUBSCRIPTION_LABELS[key]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            }
+            sort={
+              viewMode === 'card' ? (
+                <Select
+                  value={`${sortBy}-${sortOrder}`}
+                  onValueChange={(value) => {
+                    const option = CARD_SORT_OPTIONS.find(
+                      (candidate) => candidate.value === value,
+                    );
+                    if (option) setSort(option.sortBy, option.sortOrder);
+                  }}
+                >
+                  <SelectTrigger
+                    size="sm"
+                    className="border-border/80 bg-card hover:border-foreground/25 dark:bg-card w-full min-w-0"
+                    aria-label="Sort organisations"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CARD_SORT_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : undefined
+            }
+          />
+        </ManagementCardHeader>
 
-          {query.isLoading ? (
-            viewMode === 'table' ? (
-              <Card className="overflow-hidden py-0">
-                <SkeletonTable rows={6} columns={8} />
-              </Card>
-            ) : (
-              <SkeletonCardGrid count={6} />
-            )
-          ) : query.isError ? (
-            <ErrorState
-              title="Could not load organisations"
-              description={
-                (query.error as Error)?.message ??
-                'The Super Admin organisations endpoint returned an error.'
-              }
-              onRetry={() => query.refetch()}
-            />
-          ) : rows.length === 0 ? (
-            <EmptyState
-              icon={Building2}
-              title={
-                hasActiveFilters
-                  ? 'No organisations match your filters'
-                  : 'No organisations yet'
-              }
-              description={
-                hasActiveFilters
-                  ? 'Try clearing filters or searching for something else.'
-                  : 'Customer organisations will appear here when provisioned.'
-              }
-              action={
-                hasActiveFilters
-                  ? { label: 'Clear filters', onClick: clearFilters }
-                  : {
-                      label: 'Provision organisation',
-                      onClick: () => setProvisionOpen(true),
-                    }
-              }
-            />
-          ) : viewMode === 'table' ? (
-            <div className="border-border overflow-x-auto rounded-3xl border">
+        {hasActiveFilters && (
+          <Button variant="ghost" size="sm" onClick={clearFilters}>
+            Clear filters
+          </Button>
+        )}
+
+        {query.isLoading ? (
+          viewMode === 'table' ? (
+            <Card className="overflow-hidden py-0">
+              <SkeletonTable rows={6} columns={8} />
+            </Card>
+          ) : (
+            <SkeletonCardGrid count={6} />
+          )
+        ) : query.isError ? (
+          <ErrorState
+            title="Could not load organisations"
+            description={
+              (query.error as Error)?.message ??
+              'The Super Admin organisations endpoint returned an error.'
+            }
+            onRetry={() => query.refetch()}
+          />
+        ) : rows.length === 0 ? (
+          <EmptyState
+            icon={Building2}
+            title={
+              hasActiveFilters
+                ? 'No organisations match your filters'
+                : 'No organisations yet'
+            }
+            description={
+              hasActiveFilters
+                ? 'Try clearing filters or searching for something else.'
+                : 'Customer organisations will appear here when provisioned.'
+            }
+            action={
+              hasActiveFilters
+                ? { label: 'Clear filters', onClick: clearFilters }
+                : {
+                    label: 'Provision organisation',
+                    onClick: () => setProvisionOpen(true),
+                  }
+            }
+          />
+        ) : viewMode === 'table' ? (
+          <Card size="sm" className="py-0">
+            <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-muted hover:bg-muted/50">
+                  <TableRow>
                     <SortableTableHead
                       active={sortBy === 'name'}
                       direction={sortOrder}
@@ -418,35 +436,35 @@ export default function OrganisationsPage() {
                 </TableBody>
               </Table>
             </div>
-          ) : null}
-        </CardContent>
-      </Card>
+          </Card>
+        ) : null}
 
-      {!query.isLoading &&
-        !query.isError &&
-        rows.length > 0 &&
-        viewMode === 'card' && (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {rows.map((row) => (
-              <OrganisationDirectoryCard key={row.id} organisation={row} />
-            ))}
-          </div>
+        {!query.isLoading &&
+          !query.isError &&
+          rows.length > 0 &&
+          viewMode === 'card' && (
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,20rem),1fr))] gap-4">
+              {rows.map((row) => (
+                <OrganisationDirectoryCard key={row.id} organisation={row} />
+              ))}
+            </div>
+          )}
+
+        {!query.isLoading && !query.isError && total > 0 && (
+          <PaginationBar
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setPage(1);
+            }}
+            pageSizeLabel="Organisations per page"
+          />
         )}
-
-      {!query.isLoading && !query.isError && total > 0 && (
-        <PaginationBar
-          page={page}
-          totalPages={totalPages}
-          total={total}
-          pageSize={pageSize}
-          onPageChange={setPage}
-          onPageSizeChange={(size) => {
-            setPageSize(size);
-            setPage(1);
-          }}
-          pageSizeLabel="Organisations per page"
-        />
-      )}
+      </section>
 
       <ProvisionOrganisationDialog
         open={provisionOpen}

@@ -1,6 +1,5 @@
 import { format, formatDistanceToNow } from 'date-fns';
 import {
-  ArrowLeft,
   ArrowRightLeft,
   CreditCard,
   Database,
@@ -9,12 +8,11 @@ import {
   Package,
   Users,
 } from 'lucide-react';
-import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useState, type ReactNode } from 'react';
+import { useParams } from 'react-router-dom';
 
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
-import PageHeader from '@/components/shared/PageHeader';
 import PaginationBar from '@/components/shared/PaginationBar';
 import SkeletonList from '@/components/shared/skeletons/SkeletonList';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -94,8 +92,10 @@ function StatCard({
 
 function BillingOverviewSection({
   overview,
+  actions,
 }: {
   overview: SuperAdminBillingOverview;
+  actions?: ReactNode;
 }) {
   const { plan, usage } = overview;
   const limitLabel = (n: number | null) =>
@@ -104,7 +104,10 @@ function BillingOverviewSection({
   return (
     <>
       <section className="bg-card rounded-lg border p-4">
-        <h2 className="mb-3 text-sm font-semibold">Subscription</h2>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold">Subscription</h2>
+          {actions}
+        </div>
         <dl className="grid gap-3 sm:grid-cols-2">
           <div>
             <dt className="text-muted-foreground text-xs">Plan</dt>
@@ -246,42 +249,6 @@ export default function OrganisationBillingPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <Link
-          to={`/super-admin/organisations/${organisationId}/overview`}
-          className="text-muted-foreground hover:text-foreground mb-2 inline-flex items-center gap-1 text-sm"
-        >
-          <ArrowLeft className="size-3.5" aria-hidden />
-          Back to organisation
-        </Link>
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <PageHeader
-            title="Billing"
-            description={orgQuery.data?.name ?? organisationId}
-          />
-          {orgQuery.data && overviewQuery.data ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setAssignPlanError(null);
-                  setAssignPlanOpen(true);
-                }}
-              >
-                <ArrowRightLeft className="size-4" aria-hidden />
-                Assign plan
-              </Button>
-              <SubscriptionActions
-                organisation={orgQuery.data}
-                subscriptionStatus={overviewQuery.data.plan.subscriptionStatus}
-                cancelAtPeriodEnd={overviewQuery.data.plan.cancelAtPeriodEnd}
-              />
-            </div>
-          ) : null}
-        </div>
-      </div>
-
       {overviewQuery.data ? (
         <AssignPlanDialog
           open={assignPlanOpen}
@@ -319,7 +286,33 @@ export default function OrganisationBillingPage() {
           onRetry={() => overviewQuery.refetch()}
         />
       ) : overviewQuery.data ? (
-        <BillingOverviewSection overview={overviewQuery.data} />
+        <BillingOverviewSection
+          overview={overviewQuery.data}
+          actions={
+            orgQuery.data ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setAssignPlanError(null);
+                    setAssignPlanOpen(true);
+                  }}
+                >
+                  <ArrowRightLeft className="size-4" aria-hidden />
+                  Assign plan
+                </Button>
+                <SubscriptionActions
+                  organisation={orgQuery.data}
+                  subscriptionStatus={
+                    overviewQuery.data.plan.subscriptionStatus
+                  }
+                  cancelAtPeriodEnd={overviewQuery.data.plan.cancelAtPeriodEnd}
+                />
+              </div>
+            ) : undefined
+          }
+        />
       ) : null}
 
       <section className="flex flex-col gap-3">

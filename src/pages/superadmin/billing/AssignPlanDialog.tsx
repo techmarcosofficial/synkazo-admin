@@ -20,6 +20,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 import type { AdminApiPlan } from '@/types/billing';
 
@@ -156,8 +164,8 @@ export default function AssignPlanDialog({
           <DialogTitle>Assign plan</DialogTitle>
           <DialogDescription>
             Move the organisation to a different plan. The change takes effect
-            immediately for entitlement checks; provider-side proration
-            depends on the plan's Stripe subscription state.
+            immediately for entitlement checks; provider-side proration depends
+            on the plan's Stripe subscription state.
           </DialogDescription>
         </DialogHeader>
 
@@ -176,10 +184,7 @@ export default function AssignPlanDialog({
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="assign-plan-select">New plan</Label>
-            <Select
-              value={selectedPlanId}
-              onValueChange={setSelectedPlanId}
-            >
+            <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
               <SelectTrigger id="assign-plan-select">
                 <SelectValue placeholder="Choose a plan…" />
               </SelectTrigger>
@@ -206,27 +211,31 @@ export default function AssignPlanDialog({
                 Limits comparison
               </div>
               <div className="max-h-56 overflow-y-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted text-muted-foreground text-xs">
-                    <tr>
-                      <th className="px-3 py-2 text-left">Feature</th>
-                      <th className="px-3 py-2 text-left">Current</th>
-                      <th className="px-3 py-2 text-left">New</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <Table className="w-full text-sm">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="py-2">Feature</TableHead>
+                      <TableHead className="py-2">Current</TableHead>
+                      <TableHead className="py-2">New</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {diff.map((row) => (
-                      <tr
+                      <TableRow
                         key={row.key}
-                        className={row.changed ? 'bg-amber-50' : ''}
+                        className={
+                          row.changed
+                            ? 'bg-warning/10 hover:bg-warning/15'
+                            : undefined
+                        }
                       >
-                        <td className="px-3 py-1.5 font-medium">
+                        <TableCell className="py-1.5 font-medium whitespace-normal">
                           {row.label}
-                        </td>
-                        <td className="text-muted-foreground px-3 py-1.5">
+                        </TableCell>
+                        <TableCell className="text-muted-foreground py-1.5 whitespace-normal">
                           {row.currentValue}
-                        </td>
-                        <td className="px-3 py-1.5">
+                        </TableCell>
+                        <TableCell className="py-1.5 whitespace-normal">
                           {row.changed ? (
                             <span className="font-medium">{row.newValue}</span>
                           ) : (
@@ -234,13 +243,13 @@ export default function AssignPlanDialog({
                               {row.newValue}
                             </span>
                           )}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
-              <div className="border-t px-3 py-1.5 text-xs text-amber-900 bg-amber-50">
+              <div className="border-t bg-amber-50 px-3 py-1.5 text-xs text-amber-900">
                 <AlertTriangle
                   className="mr-1 inline size-3.5 -translate-y-0.5"
                   aria-hidden

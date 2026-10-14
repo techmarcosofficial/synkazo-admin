@@ -1,8 +1,8 @@
-import { Plus, Users } from 'lucide-react';
+import { Eye, Plus, RefreshCw, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import EditPermissionsDialog from '@/components/organisation/EditPermissionsDialog';
 import InviteMemberDialog from '@/components/organisation/InviteMemberDialog';
+import MemberDetailDrawer from '@/components/organisation/MemberDetailDrawer';
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
 import ManagementToolbar from '@/components/shared/ManagementToolbar';
@@ -17,11 +17,15 @@ import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -35,6 +39,7 @@ import { useSort } from '@/hooks/useSort';
 import { roleLabel } from '@/lib/permissions';
 import { useSectionAccess } from '@/lib/sectionAccess';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
+import { cn } from '@/lib/utils';
 import { useSetMemberActive } from '@/pages/organisation/hooks/useSetMemberActive';
 import {
   compareMembers,
@@ -43,8 +48,8 @@ import {
   normalizeRole,
   type MemberSortKey,
 } from '@/pages/organisation/lib/members';
+import { useMyOrgQuery } from '@/queries/useOrganisations';
 import { useUsersQuery } from '@/queries/useUsers';
-import { useHeaderStore } from '@/stores/useHeaderStore';
 import type { User } from '@/types';
 
 /**
@@ -57,38 +62,23 @@ import type { User } from '@/types';
 export default function OrgMembersTab() {
   const { currentUser } = useSynkazoAuth();
   const { canEdit } = useSectionAccess();
+  const myOrgQuery = useMyOrgQuery();
+  const ownerId = myOrgQuery.data?.ownerId;
   const usersQuery = useUsersQuery(currentUser?.organisationId);
   const members = usersQuery.data ?? [];
 
-  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [detailUser, setDetailUser] = useState<User | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'org_admin' | 'editor'>('all');
   const { setMemberActive } = useSetMemberActive();
 
-  const setActions = useHeaderStore((state) => state.setActions);
-  const clearActions = useHeaderStore((state) => state.clearActions);
-
-  useEffect(() => {
-    setActions(
-      <ActionTooltip
-        tooltip={
-          !canEdit
-            ? 'Organization Admin role required to invite team members.'
-            : undefined
-        }
-      >
-        <Button
-          onClick={() => canEdit && setInviteOpen(true)}
-          disabled={!canEdit}
-        >
-          <Plus /> Invite Member
-        </Button>
-      </ActionTooltip>,
-    );
-    return () => clearActions();
-  }, [canEdit, setActions, clearActions]);
-
-  const filteredMembers = members.filter((m) => matchesMemberSearch(m, search));
+  const filteredMembers = members.filter((m) => {
+    const matchesSearch = matchesMemberSearch(m, search);
+    const matchesRole =
+      roleFilter === 'all' || normalizeRole(m.role) === roleFilter;
+    return matchesSearch && matchesRole;
+  });
 
   const { sorted, sortKey, direction, toggleSort } = useSort<
     User,
@@ -98,26 +88,94 @@ export default function OrgMembersTab() {
   const { page, setPage, pageSize, setPageSize, totalPages, pageItems, total } =
     usePagination(sorted, 10);
 
-  useEffect(() => setPage(1), [search, setPage]);
+  useEffect(() => setPage(1), [search, roleFilter, setPage]);
 
   return (
     <Card>
-      <CardHeader visualLevel="section">
-        <CardTitle className="flex items-center gap-2">
-          <Users className="text-muted-foreground size-4" /> Members
-        </CardTitle>
-        <CardDescription>
-          Manage people who have access to this organization.
-        </CardDescription>
-      </CardHeader>
+      <div className="flex flex-col gap-4 border-b border-border/60 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Users className="text-muted-foreground size-4" />
+            <h3 className="text-sm font-semibold text-foreground tracking-tight">
+              Members
+            </h3>
+            {members.length > 0 && (
+              <Badge
+                variant="secondary"
+                className="text-[11px] py-0 px-1.5 font-normal"
+              >
+                {members.length}
+              </Badge>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Manage people who have access to this organization.
+          </p>
+        </div>
 
-      <CardContent className="space-y-4">
-        <ManagementToolbar
-          searchValue={search}
-          onSearchChange={setSearch}
-          searchPlaceholder="Search members…"
-        />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <ManagementToolbar
+            searchValue={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="Search members…"
+            filters={
+              <Select
+                value={roleFilter}
+                onValueChange={(v: 'all' | 'org_admin' | 'editor') =>
+                  setRoleFilter(v)
+                }
+              >
+                <SelectTrigger className="bg-muted sm:w-36 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All roles</SelectItem>
+                  <SelectItem value="org_admin">Org Admin</SelectItem>
+                  <SelectItem value="editor">Editor</SelectItem>
+                </SelectContent>
+              </Select>
+            }
+            action={
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="size-9 shrink-0"
+                  onClick={() => usersQuery.refetch()}
+                  aria-label="Refresh members"
+                  title="Refresh members"
+                >
+                  <RefreshCw
+                    className={cn(
+                      'size-3.5',
+                      usersQuery.isFetching && 'animate-spin',
+                    )}
+                  />
+                </Button>
+                <ActionTooltip
+                  tooltip={
+                    !canEdit
+                      ? 'Organization Admin role required to invite team members.'
+                      : undefined
+                  }
+                >
+                  <Button
+                    size="sm"
+                    className="h-9 gap-1.5 shrink-0"
+                    onClick={() => canEdit && setInviteOpen(true)}
+                    disabled={!canEdit}
+                  >
+                    <Plus className="size-4" />
+                    Invite Member
+                  </Button>
+                </ActionTooltip>
+              </div>
+            }
+          />
+        </div>
+      </div>
 
+      <CardContent className="space-y-4 pt-4">
         {usersQuery.isLoading ? (
           <SkeletonList count={4} />
         ) : usersQuery.isError ? (
@@ -150,7 +208,7 @@ export default function OrgMembersTab() {
           <div className="border-border overflow-x-auto rounded-3xl border">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted hover:bg-muted/50">
+                <TableRow>
                   <SortableTableHead
                     active={sortKey === 'name'}
                     direction={direction}
@@ -183,7 +241,11 @@ export default function OrgMembersTab() {
                   const rawRole = normalizeRole(m.role);
                   const isCurrent = m.id === currentUser?.id;
                   return (
-                    <TableRow key={m.id}>
+                    <TableRow
+                      key={m.id}
+                      className="cursor-pointer"
+                      onClick={() => setDetailUser(m)}
+                    >
                       <TableCell className="min-w-64">
                         <div className="flex items-center gap-3">
                           <Avatar className="size-8">
@@ -192,12 +254,20 @@ export default function OrgMembersTab() {
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <div className="font-medium">
+                            <div className="flex items-center font-medium">
                               {m.fullName || '—'}
                               {isCurrent && (
                                 <span className="text-muted-foreground ml-1 text-xs">
                                   (You)
                                 </span>
+                              )}
+                              {m.id === ownerId && (
+                                <Badge
+                                  variant="default"
+                                  className="ml-1.5 text-[10px] py-0 px-1.5 bg-primary/90"
+                                >
+                                  Owner
+                                </Badge>
                               )}
                             </div>
                             <div className="text-muted-foreground text-xs">
@@ -221,13 +291,24 @@ export default function OrgMembersTab() {
                           : '—'}
                       </TableCell>
                       {canEdit && (
-                        <TableCell className="text-right">
+                        <TableCell
+                          className="text-right"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setDetailUser(m)}
+                              title="View member profile"
+                            >
+                              <Eye className="size-3.5" />
+                            </Button>
                             {rawRole === 'editor' && (
                               <Button
                                 variant="secondary"
                                 size="sm"
-                                onClick={() => setEditingUser(m)}
+                                onClick={() => setDetailUser(m)}
                               >
                                 Edit Permissions
                               </Button>
@@ -242,6 +323,12 @@ export default function OrgMembersTab() {
                                   m.isActive === false
                                     ? ''
                                     : 'text-destructive hover:bg-destructive/10'
+                                }
+                                disabled={m.id === ownerId}
+                                title={
+                                  m.id === ownerId
+                                    ? 'Cannot deactivate organisation owner'
+                                    : undefined
                                 }
                                 onClick={() =>
                                   setMemberActive(m, m.isActive === false)
@@ -278,14 +365,32 @@ export default function OrgMembersTab() {
       )}
 
       {canEdit && (
-        <>
-          <InviteMemberDialog open={inviteOpen} onOpenChange={setInviteOpen} />
-          <EditPermissionsDialog
-            user={editingUser}
-            onClose={() => setEditingUser(null)}
-          />
-        </>
+        <InviteMemberDialog open={inviteOpen} onOpenChange={setInviteOpen} />
       )}
+
+      <MemberDetailDrawer
+        open={detailUser !== null}
+        onOpenChange={(open) => !open && setDetailUser(null)}
+        member={
+          detailUser
+            ? {
+                id: detailUser.id,
+                email: detailUser.email,
+                fullName: detailUser.fullName,
+                role: detailUser.role,
+                isActive: detailUser.isActive !== false,
+                isOwner: detailUser.id === ownerId,
+                organisationId: currentUser?.organisationId,
+                department: detailUser.department,
+                isEmailVerified: detailUser.isEmailVerified,
+                lastLoginAt: detailUser.lastLoginAt,
+                createdAt: detailUser.createdAt,
+                permissions: detailUser.permissions,
+              }
+            : null
+        }
+        isSuperAdmin={false}
+      />
     </Card>
   );
 }

@@ -1,71 +1,138 @@
 import { format, formatDistanceToNow } from 'date-fns';
 import {
-  ArrowLeft,
-  Building2,
-  Calendar,
-  CreditCard,
+  ArrowUpRight,
+  CalendarDays,
   Database,
   FolderOpen,
-  Package,
   Pencil,
-  ShieldCheck,
-  User,
+  TriangleAlert,
   Users,
+  Workflow,
 } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
-import PageHeader from '@/components/shared/PageHeader';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 import { Spinner } from '@/components/ui/spinner';
+import { ProjectPlatformPair } from '@/features/projects/components/cards';
 import { showToast } from '@/lib/toast';
 import EditOrganisationMetadataDialog from '@/pages/superadmin/organisations/EditOrganisationMetadataDialog';
 import OrganisationLifecycleActions from '@/pages/superadmin/lifecycle/OrganisationLifecycleActions';
 import {
   useSuperAdminActivityQuery,
+  useSuperAdminBillingOverviewQuery,
   useSuperAdminOrganisationQuery,
+  useSuperAdminProjectsQuery,
   useUpdateSuperAdminOrganisationMutation,
 } from '@/queries/useSuperAdmin';
 
-// SA-405 / SA-406 Phase 4 organisation detail view. Read-only for now;
-// suspend / reactivate / archive controls (SA-408..411) land in a follow-
-// up once the Phase 0 lifecycle backend enum and cascade endpoints exist.
-// Nothing here mutates.
-
-function formatNumber(n: number | null | undefined): string {
-  if (n == null) return '—';
-  return n.toLocaleString();
+function formatNumber(value: number | null | undefined): string {
+  return value == null ? '—' : value.toLocaleString();
 }
 
-function formatLimit(n: number | null): string {
-  return n == null ? 'Unlimited' : formatNumber(n);
+function formatDate(value: string | null | undefined): string {
+  if (!value) return '—';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '—' : format(date, 'PP');
 }
 
-function StatCard({
+function formatRelative(value: string | null | undefined): string {
+  if (!value) return 'Not synced yet';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? 'Date unavailable'
+    : formatDistanceToNow(date, { addSuffix: true });
+}
+
+function UsageMetric({
   icon: Icon,
   label,
-  value,
-  hint,
+  count,
+  limit,
+  detail,
+  to,
+  over = false,
 }: {
   icon: React.ElementType;
   label: string;
-  value: React.ReactNode;
-  hint?: React.ReactNode;
+  count: number;
+  limit: number | null;
+  detail: string;
+  to: string;
+  over?: boolean;
+}) {
+  const percent =
+    limit === null
+      ? null
+      : limit === 0
+        ? count > 0
+          ? 100
+          : 0
+        : Math.min(100, Math.round((count / limit) * 100));
+
+  return (
+    <Link
+      to={to}
+      className="hover:bg-muted/50 focus-visible:ring-ring block rounded-2xl p-2 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+      aria-label={label + ': ' + formatNumber(count) + '. ' + detail}
+    >
+      <div className="text-muted-foreground flex items-center gap-2 text-xs font-medium">
+        <Icon className="size-4" aria-hidden="true" />
+        {label}
+      </div>
+      <div className="mt-2 flex items-baseline gap-1.5">
+        <span className="text-foreground text-2xl leading-none font-semibold tracking-tight">
+          {formatNumber(count)}
+        </span>
+        {limit !== null && (
+          <span className="text-muted-foreground text-xs">
+            / {formatNumber(limit)}
+          </span>
+        )}
+      </div>
+      <div className="text-muted-foreground mt-1 min-h-4 text-xs">
+        {detail}
+        {over && (
+          <span className="text-destructive font-semibold"> · over plan</span>
+        )}
+      </div>
+      {percent !== null && (
+        <Progress
+          value={percent}
+          aria-label={label + ' plan usage'}
+          className={
+            'mt-2 h-1.5 ' +
+            (over
+              ? '[&_[data-slot=progress-indicator]]:bg-destructive'
+              : '[&_[data-slot=progress-indicator]]:bg-[var(--brand-orange)]')
+          }
+        />
+      )}
+    </Link>
+  );
+}
+
+function SectionMessage({
+  message,
+  onRetry,
+}: {
+  message: string;
+  onRetry?: () => void;
 }) {
   return (
-    <div className="bg-card rounded-lg border p-4">
-      <div className="text-muted-foreground flex items-center gap-2 text-xs">
-        <Icon className="size-3.5" aria-hidden />
-        <span>{label}</span>
-      </div>
-      <div className="mt-2 text-2xl font-semibold">{value}</div>
-      {hint ? (
-        <div className="text-muted-foreground mt-1 text-xs">{hint}</div>
-      ) : null}
+    <div className="text-muted-foreground bg-muted/40 flex min-h-20 flex-col items-start justify-center gap-2 rounded-2xl p-4 text-sm">
+      <span>{message}</span>
+      {onRetry && (
+        <Button variant="outline" size="sm" onClick={onRetry}>
+          Retry
+        </Button>
+      )}
     </div>
   );
 }
@@ -73,9 +140,16 @@ function StatCard({
 export default function OrganisationDetailPage() {
   const { organisationId } = useParams<{ organisationId: string }>();
   const orgQuery = useSuperAdminOrganisationQuery(organisationId);
+  const billingQuery = useSuperAdminBillingOverviewQuery(organisationId ?? '');
+  const projectsQuery = useSuperAdminProjectsQuery(organisationId ?? '', {
+    page: 1,
+    limit: 4,
+    sortBy: 'lastSyncedAt',
+    sortOrder: 'desc',
+  });
   const activityQuery = useSuperAdminActivityQuery(organisationId ?? '', {
     page: 1,
-    limit: 5,
+    limit: 4,
   });
   const updateMutation = useUpdateSuperAdminOrganisationMutation(
     organisationId ?? '',
@@ -86,7 +160,7 @@ export default function OrganisationDetailPage() {
   if (!organisationId) {
     return (
       <EmptyState
-        icon={Building2}
+        icon={FolderOpen}
         title="Missing organisation id"
         description="This route requires an organisation identifier in the URL."
       />
@@ -115,52 +189,86 @@ export default function OrganisationDetailPage() {
   }
 
   const org = orgQuery.data!;
+  const basePath = '/super-admin/organisations/' + org.id;
+  const billing = billingQuery.data;
+  const projects = projectsQuery.data?.data ?? [];
   const activity = activityQuery.data?.data ?? [];
+  const overPlanResources = [
+    org.usage.members.limit !== null &&
+    org.usage.members.total > org.usage.members.limit
+      ? 'members'
+      : null,
+    org.usage.projects.over ? 'projects' : null,
+    org.usage.jobs.over ? 'sync flows' : null,
+    org.usage.records.limit !== null &&
+    org.usage.records.used > org.usage.records.limit
+      ? 'records'
+      : null,
+  ].filter((value): value is string => value !== null);
+  const issues: { title: string; detail: string; to: string }[] = [];
+
+  if (org.status === 'suspended') {
+    issues.push({
+      title: 'Organisation is suspended',
+      detail: 'Tenant access is blocked and scheduled jobs remain paused.',
+      to: basePath + '/overview',
+    });
+  } else if (org.status === 'archived') {
+    issues.push({
+      title: 'Organisation is archived',
+      detail: 'The workspace is in its recovery window.',
+      to: basePath + '/overview',
+    });
+  } else if (org.status === 'pending') {
+    issues.push({
+      title: 'Organisation is pending',
+      detail: 'Review account setup and ownership.',
+      to: basePath + '/members',
+    });
+  }
+
+  if (org.paymentHoldActive) {
+    issues.push({
+      title: 'Payment hold active',
+      detail:
+        'The scheduler skips this organisation' +
+        (org.paymentHoldSince
+          ? ' since ' + formatDate(org.paymentHoldSince)
+          : '') +
+        (org.manualHoldReason ? '. Reason: ' + org.manualHoldReason : '.'),
+      to: basePath + '/billing',
+    });
+  }
+
+  if (
+    org.plan.subscriptionStatus !== 'active' &&
+    org.plan.subscriptionStatus !== 'trialing'
+  ) {
+    issues.push({
+      title: 'Subscription ' + org.plan.subscriptionStatus.replace(/_/g, ' '),
+      detail: 'Review the subscription and payment state.',
+      to: basePath + '/billing',
+    });
+  }
+
+  if (overPlanResources.length > 0) {
+    issues.push({
+      title: 'Over plan: ' + overPlanResources.join(', '),
+      detail: 'Review usage and plan limits.',
+      to: basePath + '/billing',
+    });
+  }
+
+  if (!org.owner || !org.owner.isActive) {
+    issues.push({
+      title: org.owner ? 'Owner is inactive' : 'No owner assigned',
+      detail: 'Review the organisation membership.',
+      to: basePath + '/members',
+    });
+  }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <Link
-          to="/super-admin/organisations"
-          className="text-muted-foreground hover:text-foreground mb-2 inline-flex items-center gap-1 text-sm"
-        >
-          <ArrowLeft className="size-3.5" aria-hidden />
-          All organisations
-        </Link>
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <PageHeader title={org.name} description={org.slug} />
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <Badge variant="secondary">{org.status}</Badge>
-              <Badge variant="outline">{org.plan.name}</Badge>
-              <Badge variant="outline">{org.plan.subscriptionStatus}</Badge>
-              {org.paymentHoldActive ? (
-                <Badge className="bg-red-100 text-red-900">Payment hold</Badge>
-              ) : null}
-              {org.manualHoldReason ? (
-                <Badge className="bg-amber-100 text-amber-900">
-                  Manual hold
-                </Badge>
-              ) : null}
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setEditError(null);
-                setEditOpen(true);
-              }}
-            >
-              <Pencil className="size-4" aria-hidden />
-              Edit metadata
-            </Button>
-            <OrganisationLifecycleActions organisation={org} />
-          </div>
-        </div>
-      </div>
-
+    <div className="flex flex-col gap-4">
       <EditOrganisationMetadataDialog
         open={editOpen}
         onOpenChange={setEditOpen}
@@ -172,13 +280,12 @@ export default function OrganisationDetailPage() {
           logoUrl: org.logoUrl ?? null,
           defaultCurrency:
             typeof org.settings?.defaultCurrency === 'string'
-              ? (org.settings.defaultCurrency as string)
+              ? org.settings.defaultCurrency
               : null,
         }}
         onSubmit={async (dto) => {
           setEditError(null);
           if (Object.keys(dto).length === 0) {
-            // No changes — just close without a server round-trip.
             setEditOpen(false);
             return;
           }
@@ -186,217 +293,391 @@ export default function OrganisationDetailPage() {
             await updateMutation.mutateAsync(dto);
             showToast.success('Organisation metadata updated.');
             setEditOpen(false);
-          } catch (err) {
-            const e = err as {
+          } catch (error) {
+            const responseError = error as {
               response?: { data?: { message?: string } };
             };
             setEditError(
-              e?.response?.data?.message ?? 'The update failed. Try again.',
+              responseError?.response?.data?.message ??
+                'The update failed. Try again.',
             );
           }
         }}
       />
 
-      {org.status === 'suspended' ? (
-        <Alert variant="destructive">
-          <ShieldCheck className="size-4" />
-          <AlertTitle>Organisation is suspended</AlertTitle>
-          <AlertDescription>
-            All tenant access is rejected. Scheduled jobs are paused and queued
-            runs were cancelled at the suspension moment. Use the Reactivate
-            action to lift the suspension — jobs stay paused until members
-            re-enable them.
-          </AlertDescription>
-        </Alert>
-      ) : null}
-
-      {org.status === 'archived' ? (
-        <Alert variant="destructive">
-          <ShieldCheck className="size-4" />
-          <AlertTitle>Organisation is archived</AlertTitle>
-          <AlertDescription>
-            Soft-deleted. Retained for the recovery window then hard-deleted by
-            the reaper. Unarchive routes through suspended first — you cannot go
-            straight back to active.
-          </AlertDescription>
-        </Alert>
-      ) : null}
-
-      {org.paymentHoldActive ? (
-        <Alert variant="destructive">
-          <ShieldCheck className="size-4" />
-          <AlertTitle>Payment hold active</AlertTitle>
-          <AlertDescription>
-            Scheduler skipped for this organisation.
-            {org.manualHoldReason ? ` Reason: "${org.manualHoldReason}"` : ''}
-          </AlertDescription>
-        </Alert>
-      ) : null}
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Link
-          to={`/super-admin/organisations/${org.id}/members`}
-          className="block"
-          aria-label="Manage members"
-        >
-          <StatCard
-            icon={Users}
-            label="Members"
-            value={org.usage.members.active}
-            hint={`of ${formatLimit(org.usage.members.limit)} allowed · ${org.usage.members.total} total`}
-          />
-        </Link>
-        <Link
-          to={`/super-admin/organisations/${org.id}/projects`}
-          className="block"
-          aria-label="Manage projects"
-        >
-          <StatCard
-            icon={FolderOpen}
-            label="Projects"
-            value={org.usage.projects.count}
-            hint={`of ${formatLimit(org.usage.projects.limit)} allowed${org.usage.projects.over ? ' · over plan' : ''}`}
-          />
-        </Link>
-        <StatCard
-          icon={Package}
-          label="Jobs"
-          value={org.usage.jobs.count}
-          hint={`of ${formatLimit(org.usage.jobs.limit)} allowed${org.usage.jobs.over ? ' · over plan' : ''}`}
-        />
-        <StatCard
-          icon={Database}
-          label="Records this period"
-          value={formatNumber(org.usage.records.used)}
-          hint={
-            org.usage.records.limit == null
-              ? 'Unlimited'
-              : `${formatNumber(org.usage.records.remaining)} left of ${formatNumber(org.usage.records.limit)}`
+      {issues.length > 0 && (
+        <Alert
+          variant={
+            org.status === 'suspended' ||
+            org.status === 'archived' ||
+            org.paymentHoldActive
+              ? 'destructive'
+              : 'default'
           }
-        />
-      </div>
+          className="rounded-2xl"
+        >
+          <TriangleAlert className="size-4" aria-hidden="true" />
+          <AlertTitle>Needs attention</AlertTitle>
+          <AlertDescription>
+            <ul className="mt-1 grid gap-x-6 gap-y-2 sm:grid-cols-2">
+              {issues.map((issue) => (
+                <li key={issue.title}>
+                  <Link
+                    to={issue.to}
+                    className="focus-visible:ring-ring rounded-sm font-semibold underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                  >
+                    {issue.title}
+                  </Link>
+                  <span className="ml-1">{issue.detail}</span>
+                </li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <section className="bg-card rounded-lg border p-4">
-          <h2 className="mb-3 text-sm font-semibold">Owner</h2>
-          {org.owner ? (
-            <div className="flex items-start gap-3">
-              <div className="bg-muted flex size-10 items-center justify-center rounded-full">
-                <User className="size-4" aria-hidden />
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(19rem,1fr)]">
+        <Card size="sm">
+          <CardContent>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="font-semibold">Workspace usage</h2>
+              <Link
+                to={basePath + '/billing'}
+                className="text-primary focus-visible:ring-ring inline-flex shrink-0 items-center gap-1 rounded-sm text-xs font-medium hover:underline focus-visible:ring-2 focus-visible:outline-none"
+              >
+                View limits{' '}
+                <ArrowUpRight className="size-3.5" aria-hidden="true" />
+              </Link>
+            </div>
+            <div className="mt-2 grid grid-cols-2 gap-1 xl:grid-cols-4">
+              <UsageMetric
+                icon={Users}
+                label="Members"
+                count={org.usage.members.total}
+                limit={org.usage.members.limit}
+                detail={formatNumber(org.usage.members.active) + ' active'}
+                to={basePath + '/members'}
+                over={
+                  org.usage.members.limit !== null &&
+                  org.usage.members.total > org.usage.members.limit
+                }
+              />
+              <UsageMetric
+                icon={FolderOpen}
+                label="Projects"
+                count={org.usage.projects.count}
+                limit={org.usage.projects.limit}
+                detail={
+                  org.usage.projects.limit === null
+                    ? 'Unlimited plan'
+                    : 'of ' +
+                      formatNumber(org.usage.projects.limit) +
+                      ' allowed'
+                }
+                to={basePath + '/projects'}
+                over={org.usage.projects.over}
+              />
+              <UsageMetric
+                icon={Workflow}
+                label="Sync flows"
+                count={org.usage.jobs.count}
+                limit={org.usage.jobs.limit}
+                detail={
+                  org.usage.jobs.limit === null
+                    ? 'Unlimited plan'
+                    : 'of ' + formatNumber(org.usage.jobs.limit) + ' allowed'
+                }
+                to={basePath + '/projects'}
+                over={org.usage.jobs.over}
+              />
+              <UsageMetric
+                icon={Database}
+                label="Records this period"
+                count={org.usage.records.used}
+                limit={org.usage.records.limit}
+                detail={
+                  org.usage.records.limit === null
+                    ? 'Unlimited plan'
+                    : formatNumber(org.usage.records.remaining) + ' remaining'
+                }
+                to={basePath + '/billing'}
+                over={
+                  org.usage.records.limit !== null &&
+                  org.usage.records.used > org.usage.records.limit
+                }
+              />
+            </div>
+            {org.usage.records.periodStart && (
+              <p className="text-muted-foreground mt-2 px-2 text-xs">
+                Record period started{' '}
+                {formatDate(org.usage.records.periodStart)}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card size="sm">
+          <CardContent>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="font-semibold">Account & billing</h2>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  aria-label="Edit organisation metadata"
+                  onClick={() => {
+                    setEditError(null);
+                    setEditOpen(true);
+                  }}
+                >
+                  <Pencil className="size-4" aria-hidden="true" />
+                  Edit
+                </Button>
+                <OrganisationLifecycleActions organisation={org} compact />
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="font-medium">
-                  {org.owner.fullName ?? org.owner.email}
-                </div>
-                <div className="text-muted-foreground truncate text-sm">
-                  {org.owner.email}
-                </div>
-                <div className="mt-1 text-xs">
-                  {org.owner.isActive ? (
-                    <span className="text-emerald-700">Active user</span>
+            </div>
+            {org.description && (
+              <p className="text-muted-foreground mt-2 text-xs leading-5">
+                {org.description}
+              </p>
+            )}
+            <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+              <div className="col-span-2 min-w-0">
+                <dt className="text-muted-foreground text-xs">Owner</dt>
+                <dd className="mt-0.5">
+                  {org.owner ? (
+                    <Link
+                      to={basePath + '/members'}
+                      className="focus-visible:ring-ring block min-w-0 rounded-sm hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                    >
+                      <span className="block truncate font-medium">
+                        {org.owner.fullName ?? org.owner.email}
+                        {!org.owner.isActive && (
+                          <span className="text-destructive ml-1 text-xs">
+                            Inactive
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-muted-foreground block truncate text-xs">
+                        {org.owner.email}
+                      </span>
+                    </Link>
                   ) : (
-                    <span className="text-amber-700">Deactivated user</span>
+                    <span className="text-muted-foreground">Not assigned</span>
                   )}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <p className="text-muted-foreground text-sm">
-              No owner assigned. The organisation is likely in the pending
-              registration window.
-            </p>
-          )}
-        </section>
-
-        <section className="bg-card rounded-lg border p-4">
-          <h2 className="mb-3 text-sm font-semibold">Billing</h2>
-          <dl className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground flex items-center gap-1">
-                <CreditCard className="size-3.5" aria-hidden />
-                Plan
-              </dt>
-              <dd className="font-medium">{org.plan.name}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">Subscription</dt>
-              <dd className="font-medium">{org.plan.subscriptionStatus}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground flex items-center gap-1">
-                <Calendar className="size-3.5" aria-hidden />
-                Created
-              </dt>
-              <dd>{format(new Date(org.createdAt), 'PP')}</dd>
-            </div>
-            {org.updatedAt ? (
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">Last updated</dt>
-                <dd>
-                  {formatDistanceToNow(new Date(org.updatedAt), {
-                    addSuffix: true,
-                  })}
                 </dd>
               </div>
-            ) : null}
-          </dl>
-          <div className="mt-4">
-            <Button asChild variant="outline" size="sm">
-              <Link to={`/super-admin/organisations/${org.id}/billing`}>
-                Open billing
-              </Link>
-            </Button>
-          </div>
-        </section>
+              <div>
+                <dt className="text-muted-foreground text-xs">Plan</dt>
+                <dd className="mt-0.5 truncate font-medium">{org.plan.name}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground text-xs">Subscription</dt>
+                <dd className="mt-0.5">
+                  <Badge variant="outline" className="capitalize">
+                    {org.plan.subscriptionStatus.replace(/_/g, ' ')}
+                  </Badge>
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground text-xs">
+                  {billing?.plan.trialEndsAt ? 'Trial ends' : 'Period ends'}
+                </dt>
+                <dd className="mt-0.5 font-medium">
+                  {billingQuery.isLoading
+                    ? 'Loading…'
+                    : formatDate(
+                        billing?.plan.trialEndsAt ??
+                          billing?.plan.currentPeriodEnd,
+                      )}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground text-xs">Created</dt>
+                <dd className="mt-0.5 font-medium">
+                  {formatDate(org.createdAt)}
+                </dd>
+              </div>
+            </dl>
+            <Link
+              to={basePath + '/billing'}
+              className="text-primary focus-visible:ring-ring mt-3 inline-flex items-center gap-1 rounded-sm text-xs font-medium hover:underline focus-visible:ring-2 focus-visible:outline-none"
+            >
+              Open billing{' '}
+              <ArrowUpRight className="size-3.5" aria-hidden="true" />
+            </Link>
+            {billing?.plan.cancelAtPeriodEnd && (
+              <p className="text-destructive mt-2 text-xs font-medium">
+                Cancellation is scheduled for period end.
+              </p>
+            )}
+            {billingQuery.isError && (
+              <div className="mt-2 flex items-center gap-2 text-xs">
+                <span className="text-muted-foreground">
+                  Billing dates unavailable.
+                </span>
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="h-auto p-0 text-xs"
+                  onClick={() => void billingQuery.refetch()}
+                >
+                  Retry
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      <section className="bg-card rounded-lg border">
-        <div className="flex items-center justify-between border-b px-4 py-3">
-          <h2 className="text-sm font-semibold">Recent activity</h2>
-          <Link
-            to={`/super-admin/organisations/${org.id}/activity`}
-            className="text-primary text-xs hover:underline"
-          >
-            See all →
-          </Link>
-        </div>
-        {activityQuery.isLoading ? (
-          <div className="flex items-center justify-center p-6">
-            <Spinner className="size-4" />
-          </div>
-        ) : activityQuery.isError ? (
-          <p className="text-muted-foreground p-4 text-sm">
-            Could not load activity for this organisation.
-          </p>
-        ) : activity.length === 0 ? (
-          <p className="text-muted-foreground p-4 text-sm">
-            No recorded activity yet.
-          </p>
-        ) : (
-          <ul className="divide-y">
-            {activity.map((entry) => (
-              <li
-                key={entry.id}
-                className="flex items-start gap-3 px-4 py-3 text-sm"
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(19rem,1fr)]">
+        <Card size="sm">
+          <CardContent>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="font-semibold">Recent projects</h2>
+                <p className="text-muted-foreground text-xs">
+                  Latest project sync activity
+                </p>
+              </div>
+              <Link
+                to={basePath + '/projects'}
+                className="text-primary focus-visible:ring-ring inline-flex shrink-0 items-center gap-1 rounded-sm text-xs font-medium hover:underline focus-visible:ring-2 focus-visible:outline-none"
               >
-                <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium">{entry.action}</div>
-                  <div className="text-muted-foreground truncate text-xs">
-                    {entry.actor?.email ?? 'system'}
-                    {' · '}
-                    {formatDistanceToNow(new Date(entry.createdAt), {
-                      addSuffix: true,
-                    })}
-                  </div>
-                </div>
-                <Badge variant="outline" className="text-xs">
-                  {entry.severity}
-                </Badge>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+                All projects{' '}
+                <ArrowUpRight className="size-3.5" aria-hidden="true" />
+              </Link>
+            </div>
+            {projectsQuery.isLoading ? (
+              <div className="flex min-h-28 items-center justify-center">
+                <Spinner className="size-4" />
+                <span className="sr-only">Loading projects</span>
+              </div>
+            ) : projectsQuery.isError ? (
+              <div className="mt-3">
+                <SectionMessage
+                  message="Could not load recent projects."
+                  onRetry={() => void projectsQuery.refetch()}
+                />
+              </div>
+            ) : projects.length === 0 ? (
+              <div className="mt-3">
+                <SectionMessage message="No projects yet. Open Projects to review this organisation's setup." />
+              </div>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {projects.map((project) => (
+                  <li key={project.id}>
+                    <Link
+                      to={basePath + '/projects/' + project.id}
+                      className="bg-surface-inset hover:bg-muted/80 focus-visible:ring-ring flex min-w-0 items-center gap-3 rounded-2xl p-3 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                    >
+                      <div className="shrink-0" aria-hidden="true">
+                        <ProjectPlatformPair
+                          sourcePlatformId={project.sourcePlatformId}
+                          destPlatformId={project.destPlatformId}
+                          syncMode={
+                            project.syncMode === 'two_way'
+                              ? 'two_way'
+                              : 'one_way'
+                          }
+                          size="2xl"
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <span className="truncate font-semibold">
+                            {project.name}
+                          </span>
+                          <Badge variant="outline" className="capitalize">
+                            {project.status}
+                          </Badge>
+                        </div>
+                        <p className="text-muted-foreground mt-0.5 text-xs">
+                          {project.sourcePlatformId} → {project.destPlatformId}
+                          {' · '}
+                          {project.enabledJobCount}/{project.jobCount} flows
+                          enabled
+                        </p>
+                        <p className="text-muted-foreground mt-0.5 text-xs">
+                          Last sync: {formatRelative(project.lastSyncedAt)}
+                        </p>
+                      </div>
+                      <ArrowUpRight
+                        className="text-muted-foreground size-4 shrink-0"
+                        aria-hidden="true"
+                      />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card size="sm">
+          <CardContent>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="font-semibold">Recent activity</h2>
+              <Link
+                to={basePath + '/activity'}
+                className="text-primary focus-visible:ring-ring inline-flex shrink-0 items-center gap-1 rounded-sm text-xs font-medium hover:underline focus-visible:ring-2 focus-visible:outline-none"
+              >
+                All activity{' '}
+                <ArrowUpRight className="size-3.5" aria-hidden="true" />
+              </Link>
+            </div>
+            {activityQuery.isLoading ? (
+              <div className="flex min-h-28 items-center justify-center">
+                <Spinner className="size-4" />
+                <span className="sr-only">Loading activity</span>
+              </div>
+            ) : activityQuery.isError ? (
+              <div className="mt-3">
+                <SectionMessage
+                  message="Could not load recent activity."
+                  onRetry={() => void activityQuery.refetch()}
+                />
+              </div>
+            ) : activity.length === 0 ? (
+              <div className="mt-3">
+                <SectionMessage message="No recorded activity yet." />
+              </div>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {activity.map((entry) => (
+                  <li
+                    key={entry.id}
+                    className="bg-surface-inset min-w-0 rounded-2xl px-3 py-2.5"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="min-w-0 truncate font-medium capitalize">
+                        {entry.action.replace(/[._-]+/g, ' ')}
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className={
+                          'shrink-0 text-[10px] ' +
+                          (entry.severity === 'ERROR'
+                            ? 'border-destructive/30 text-destructive'
+                            : '')
+                        }
+                      >
+                        {entry.severity}
+                      </Badge>
+                    </div>
+                    <p className="text-muted-foreground mt-1 truncate text-xs">
+                      {entry.actor?.email ?? 'System'}
+                      {' · '}
+                      {formatRelative(entry.createdAt)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

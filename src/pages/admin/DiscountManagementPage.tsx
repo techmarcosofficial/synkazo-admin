@@ -953,7 +953,7 @@ function DiscountRulesCard() {
           <div className="overflow-hidden overflow-x-auto rounded-3xl border">
             <Table className="min-w-[760px]">
               <TableHeader>
-                <TableRow className="bg-muted hover:bg-muted/50">
+                <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Applies to</TableHead>
                   <TableHead>Plans</TableHead>
@@ -1274,7 +1274,7 @@ export default function DiscountManagementPage() {
             <div className="overflow-hidden overflow-x-auto rounded-3xl border">
               <Table className="min-w-[860px]">
                 <TableHeader>
-                  <TableRow className="bg-muted hover:bg-muted/50">
+                  <TableRow>
                     <TableHead>Code</TableHead>
                     <TableHead>Value</TableHead>
                     <TableHead>Redeemable on</TableHead>

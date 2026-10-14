@@ -52,6 +52,8 @@ const mime = (file) =>
     '.js': 'text/javascript',
     '.css': 'text/css',
     '.html': 'text/html',
+    '.svg': 'image/svg+xml',
+    '.png': 'image/png',
     '.woff2': 'font/woff2',
   })[extname(file)] || 'application/octet-stream';
 
@@ -218,133 +220,257 @@ function connectCdp(url) {
                           id: 'org-1',
                           name: 'Test Organisation',
                           slug: 'test-org',
+                          description:
+                            'A customer workspace connecting sales and service teams.',
+                          logoUrl: null,
                           status: 'active',
-                          plan: { name: 'Test', subscriptionStatus: 'active' },
+                          owner: {
+                            id: 'owner-1',
+                            email: 'owner@example.test',
+                            fullName: 'Test Owner',
+                            isActive: true,
+                          },
+                          settings: { defaultCurrency: 'USD' },
+                          plan: {
+                            id: 'plan-1',
+                            name: 'Test Plan',
+                            subscriptionStatus: 'active',
+                          },
+                          paymentHoldActive: false,
+                          paymentHoldSince: null,
+                          manualHoldReason: null,
+                          usage: {
+                            members: { total: 3, active: 3, limit: 10 },
+                            projects: { count: 1, limit: 5, over: false },
+                            jobs: { count: 1, limit: 20, over: false },
+                            records: {
+                              used: 1260,
+                              limit: 10000,
+                              remaining: 8740,
+                              periodStart: '2026-10-01T00:00:00.000Z',
+                            },
+                          },
+                          createdAt: '2026-01-01T00:00:00.000Z',
+                          updatedAt: '2026-10-01T00:00:00.000Z',
                         },
                       }
                     : url.pathname ===
-                        '/api/super-admin/organisations/org-1/projects'
+                        '/api/super-admin/organisations/org-1/billing/overview'
                       ? {
-                          data: [
-                            {
-                              id: 'project-1',
-                              organisationId: 'org-1',
-                              name: 'Scoped project',
-                              description: null,
-                              status: 'active',
-                              sourcePlatformId: 'hubspot',
-                              destPlatformId: 'salesforce',
-                              syncMode: 'one_way',
-                              jobCount: 1,
-                              enabledJobCount: 1,
-                              lastSyncedAt: null,
+                          data: {
+                            plan: {
+                              planId: 'plan-1',
+                              planName: 'Test Plan',
+                              subscriptionStatus: 'active',
+                              billingInterval: 'month',
+                              trialEndsAt: null,
+                              trialPendingStart: false,
+                              currentPeriodEnd: '2026-11-01T00:00:00.000Z',
+                              cancelAtPeriodEnd: false,
+                              overLimit: {
+                                projects: { count: 1, limit: 5, over: false },
+                                jobs: { count: 1, limit: 20, over: false },
+                                teamMembers: {
+                                  count: 3,
+                                  limit: 10,
+                                  over: false,
+                                },
+                                records: {
+                                  count: 1260,
+                                  limit: 10000,
+                                  over: false,
+                                },
+                                isOverLimit: false,
+                              },
                             },
-                          ],
-                          total: 1,
-                          page: 1,
-                          limit: 10,
+                            usage: {
+                              recordsSynced: 1260,
+                              maxRecordsPerMonth: 10000,
+                              periodStart: '2026-10-01T00:00:00.000Z',
+                              remaining: 8740,
+                            },
+                          },
                         }
                       : url.pathname ===
-                          '/api/super-admin/organisations/org-1/projects/project-1'
+                          '/api/super-admin/organisations/org-1/projects'
                         ? {
-                            data: {
-                              id: 'project-1',
-                              organisationId: 'org-1',
-                              name: 'Scoped project',
-                              description: null,
-                              status: 'active',
-                              sourcePlatformId: 'hubspot',
-                              destPlatformId: 'salesforce',
-                              syncMode: 'one_way',
-                              jobCount: 1,
-                              enabledJobCount: 1,
-                              lastSyncedAt: null,
-                              schedulerMode: 'interval',
-                              totalRecordsSynced: 12,
-                              totalErrorCount: 0,
-                            },
+                            data: [
+                              {
+                                id: 'project-1',
+                                organisationId: 'org-1',
+                                name: 'Scoped project',
+                                description: null,
+                                status: 'active',
+                                sourcePlatformId: 'hubspot',
+                                destPlatformId: 'salesforce',
+                                syncMode: 'one_way',
+                                jobCount: 1,
+                                enabledJobCount: 1,
+                                lastSyncedAt: null,
+                              },
+                            ],
+                            total: 1,
+                            page: 1,
+                            limit: 10,
                           }
                         : url.pathname ===
-                            '/api/super-admin/organisations/org-1/projects/project-1/jobs'
+                            '/api/super-admin/organisations/org-1/projects/project-1'
                           ? {
-                              data: [
-                                {
-                                  id: 'job-1',
-                                  projectId: 'project-1',
-                                  organisationId: 'org-1',
-                                  name: 'Scoped job',
-                                  status: 'active',
-                                  isEnabled: true,
-                                  syncEnabled: true,
-                                  isRunning: false,
-                                  scheduleState: 'active',
-                                  syncDirection: 'one_way',
-                                  lastSyncedAt: null,
-                                  nextRunAt: null,
-                                  checkpointPage: null,
-                                  checkpointSince: null,
-                                  checkpointRunId: null,
-                                  syncAllPage: null,
-                                },
-                              ],
+                              data: {
+                                id: 'project-1',
+                                organisationId: 'org-1',
+                                name: 'Scoped project',
+                                description: null,
+                                status: 'active',
+                                sourcePlatformId: 'hubspot',
+                                destPlatformId: 'salesforce',
+                                syncMode: 'one_way',
+                                jobCount: 1,
+                                enabledJobCount: 1,
+                                lastSyncedAt: null,
+                                schedulerMode: 'interval',
+                                activeEnvironment: 'production',
+                                totalRecordsSynced: 12,
+                                totalErrorCount: 0,
+                              },
                             }
                           : url.pathname ===
-                              '/api/super-admin/organisations/org-1/projects/project-1/jobs/job-1'
+                              '/api/super-admin/organisations/org-1/projects/project-1/jobs'
                             ? {
-                                data: {
-                                  id: 'job-1',
-                                  projectId: 'project-1',
-                                  organisationId: 'org-1',
-                                  name: 'Scoped job',
-                                  status: 'active',
-                                  isEnabled: true,
-                                  syncEnabled: true,
-                                  isRunning: false,
-                                  scheduleState: 'active',
-                                  syncDirection: 'one_way',
-                                  lastSyncedAt: null,
-                                  nextRunAt: null,
-                                  checkpointPage: null,
-                                  checkpointSince: null,
-                                  checkpointRunId: null,
-                                  syncAllPage: null,
-                                  scheduleMode: 'interval',
-                                  intervalMinutes: 30,
-                                  sourceObjectId: 'contacts',
-                                  destObjectId: 'contacts',
-                                  dependsOnJobId: null,
-                                  recentFailures: [],
-                                },
+                                data: [
+                                  {
+                                    id: 'job-1',
+                                    projectId: 'project-1',
+                                    organisationId: 'org-1',
+                                    name: 'Scoped job',
+                                    status: 'active',
+                                    isEnabled: true,
+                                    syncEnabled: true,
+                                    isRunning: false,
+                                    scheduleState: 'active',
+                                    syncDirection: 'one_way',
+                                    sourceObject: 'contacts',
+                                    destObject: 'contacts',
+                                    lastSyncedAt: null,
+                                    nextRunAt: null,
+                                    checkpointPage: null,
+                                    checkpointSince: null,
+                                    checkpointRunId: null,
+                                    syncAllPage: null,
+                                  },
+                                ],
                               }
                             : url.pathname ===
-                                '/api/super-admin/organisations/org-1/projects/project-1/connections'
-                              ? { data: [] }
+                                '/api/super-admin/organisations/org-1/projects/project-1/jobs/job-1'
+                              ? {
+                                  data: {
+                                    id: 'job-1',
+                                    projectId: 'project-1',
+                                    organisationId: 'org-1',
+                                    name: 'Scoped job',
+                                    status: 'active',
+                                    isEnabled: true,
+                                    syncEnabled: true,
+                                    isRunning: false,
+                                    scheduleState: 'active',
+                                    syncDirection: 'one_way',
+                                    sourceObject: 'contacts',
+                                    destObject: 'contacts',
+                                    lastSyncedAt: null,
+                                    nextRunAt: null,
+                                    checkpointPage: null,
+                                    checkpointSince: null,
+                                    checkpointRunId: null,
+                                    syncAllPage: null,
+                                    scheduleMode: 'interval',
+                                    intervalMinutes: 30,
+                                    fieldMappings: [],
+                                    dependsOnJobId: null,
+                                    recentFailures: [],
+                                  },
+                                }
                               : url.pathname ===
-                                  '/api/super-admin/organisations/org-1/activity'
-                                ? {
-                                    data: [
-                                      {
-                                        id: 'event-1',
-                                        action: 'project.created',
-                                        resource: 'project',
-                                        resourceId: 'project-1',
-                                        severity: 'INFO',
-                                        actor: {
-                                          id: 'user-1',
-                                          email: 'operator@example.test',
-                                        },
-                                        details: null,
-                                        createdAt: new Date().toISOString(),
-                                      },
-                                    ],
-                                    total: 1,
-                                    page: 1,
-                                    limit: 20,
-                                  }
+                                  '/api/super-admin/organisations/org-1/projects/project-1/jobs/job-1/sync-logs'
+                                ? { data: [], total: 0, page: 1, limit: 20 }
                                 : url.pathname ===
-                                    '/api/super-admin/organisations/org-1/notes'
-                                  ? { data: [] }
-                                  : { data: {} };
+                                    '/api/super-admin/organisations/org-1/projects/project-1/discovery/hubspot/contacts/properties'
+                                  ? {
+                                      data: {
+                                        properties: [
+                                          {
+                                            name: 'email',
+                                            label: 'Email',
+                                            type: 'string',
+                                          },
+                                        ],
+                                      },
+                                    }
+                                  : url.pathname ===
+                                      '/api/super-admin/organisations/org-1/projects/project-1/discovery/salesforce/contacts/properties'
+                                    ? {
+                                        data: {
+                                          properties: [
+                                            {
+                                              name: 'Email',
+                                              label: 'Email',
+                                              type: 'string',
+                                            },
+                                          ],
+                                        },
+                                      }
+                                    : url.pathname ===
+                                        '/api/super-admin/organisations/org-1/projects/project-1/discovery/hubspot/objects'
+                                      ? {
+                                          data: [
+                                            {
+                                              id: 'contacts',
+                                              label: 'Contacts',
+                                              tier: 'core',
+                                            },
+                                          ],
+                                        }
+                                      : url.pathname ===
+                                          '/api/super-admin/organisations/org-1/projects/project-1/discovery/salesforce/objects'
+                                        ? {
+                                            data: [
+                                              {
+                                                id: 'contacts',
+                                                label: 'Contacts',
+                                                tier: 'core',
+                                              },
+                                            ],
+                                          }
+                                        : url.pathname ===
+                                            '/api/super-admin/organisations/org-1/projects/project-1/connections'
+                                          ? { data: [] }
+                                          : url.pathname ===
+                                              '/api/super-admin/organisations/org-1/activity'
+                                            ? {
+                                                data: [
+                                                  {
+                                                    id: 'event-1',
+                                                    action: 'project.created',
+                                                    resource: 'project',
+                                                    resourceId: 'project-1',
+                                                    severity: 'INFO',
+                                                    actor: {
+                                                      id: 'user-1',
+                                                      email:
+                                                        'operator@example.test',
+                                                    },
+                                                    details: null,
+                                                    createdAt:
+                                                      new Date().toISOString(),
+                                                  },
+                                                ],
+                                                total: 1,
+                                                page: 1,
+                                                limit: 20,
+                                              }
+                                            : url.pathname ===
+                                                '/api/super-admin/organisations/org-1/notes'
+                                              ? { data: [] }
+                                              : { data: {} };
       const body = Buffer.from(JSON.stringify(data)).toString('base64');
       send('Fetch.fulfillRequest', {
         requestId,
@@ -417,10 +543,13 @@ try {
     '/super-admin/organisations',
     '/super-admin/projects',
     '/super-admin/organisations?status=suspended',
+    '/super-admin/organisations/org-1/overview',
     '/super-admin/organisations/org-1/projects',
     '/super-admin/organisations/org-1/projects/project-1',
     '/super-admin/organisations/org-1/projects/project-1?tab=settings',
     '/super-admin/organisations/org-1/projects/project-1/jobs/job-1',
+    '/super-admin/organisations/org-1/projects/project-1/jobs/job-1?tab=field-mapping',
+    '/super-admin/organisations/org-1/projects/project-1/jobs/job-1?tab=run-history',
     '/super-admin/organisations/org-1/activity',
     '/super-admin/organisations/org-1/support',
     '/super-admin/users',
@@ -438,11 +567,23 @@ try {
       ['/super-admin/organisations', 'Test Organisation'],
       ['/super-admin/projects', 'Test Organisation'],
       ['/super-admin/organisations?status=suspended', 'Test Organisation'],
+      ['/super-admin/organisations/org-1/overview', 'Scoped project'],
       ['/super-admin/organisations/org-1/projects/project-1', 'Scoped job'],
-      ['/super-admin/organisations/org-1/projects/project-1?tab=settings', 'Support operations'],
+      [
+        '/super-admin/organisations/org-1/projects/project-1?tab=settings',
+        'Support operations',
+      ],
       [
         '/super-admin/organisations/org-1/projects/project-1/jobs/job-1',
-        'Resume checkpoint',
+        'Sync overview',
+      ],
+      [
+        '/super-admin/organisations/org-1/projects/project-1/jobs/job-1?tab=field-mapping',
+        'Field Mappings',
+      ],
+      [
+        '/super-admin/organisations/org-1/projects/project-1/jobs/job-1?tab=run-history',
+        'Sync History',
       ],
       ['/super-admin/organisations/org-1/activity', 'project.created'],
       ['/super-admin/organisations/org-1/support', 'Support notes'],
@@ -507,17 +648,131 @@ try {
       throw new Error(
         `Scoped page content missing at ${route}: ${expectedContent}`,
       );
-    if (route.startsWith('/super-admin/organisations/org-1/projects/project-1')) {
+    if (
+      process.env.SUPER_ADMIN_SCREENSHOT_DIR &&
+      (route === '/super-admin/organisations/org-1/overview' ||
+        route === '/super-admin/organisations/org-1/projects/project-1' ||
+        route ===
+          '/super-admin/organisations/org-1/projects/project-1/jobs/job-1')
+    ) {
+      const name = route.endsWith('/overview')
+        ? 'organisation-overview'
+        : route.endsWith('job-1')
+          ? 'job'
+          : 'project';
+      for (const [viewport, width, height] of [
+        ['desktop', 1440, 900],
+        ['mobile', 390, 844],
+      ]) {
+        await cdp.send('Emulation.setDeviceMetricsOverride', {
+          width,
+          height,
+          deviceScaleFactor: 1,
+          mobile: viewport === 'mobile',
+        });
+        await wait(150);
+        const screenshot = await cdp.send('Page.captureScreenshot', {
+          format: 'png',
+          captureBeyondViewport: false,
+        });
+        await writeFile(
+          join(
+            process.env.SUPER_ADMIN_SCREENSHOT_DIR,
+            `${name}-${viewport}.png`,
+          ),
+          Buffer.from(screenshot.data, 'base64'),
+        );
+        if (name === 'organisation-overview' && viewport === 'mobile') {
+          await cdp.send('Runtime.evaluate', {
+            expression: 'window.scrollTo(0, 600)',
+          });
+          await wait(150);
+          const lowerScreenshot = await cdp.send('Page.captureScreenshot', {
+            format: 'png',
+            captureBeyondViewport: false,
+          });
+          await writeFile(
+            join(
+              process.env.SUPER_ADMIN_SCREENSHOT_DIR,
+              'organisation-overview-mobile-lower.png',
+            ),
+            Buffer.from(lowerScreenshot.data, 'base64'),
+          );
+          await cdp.send('Runtime.evaluate', {
+            expression: 'window.scrollTo(0, 0)',
+          });
+        }
+        if (name === 'job' && viewport === 'mobile') {
+          await cdp.send('Runtime.evaluate', {
+            expression: 'window.scrollTo(0, 500)',
+          });
+          await wait(200);
+          const sticky = (
+            await cdp.send('Runtime.evaluate', {
+              expression:
+                '({ stuck: document.querySelector("[data-slot=sticky-detail-header]")?.dataset.stuck, top: document.querySelector("[data-slot=sticky-detail-header]")?.getBoundingClientRect().top, scrollY: window.scrollY })',
+              returnByValue: true,
+            })
+          ).result.value;
+          if (sticky.scrollY < 100 || sticky.stuck !== 'true' || sticky.top < 0)
+            throw new Error(
+              `Context card did not stay sticky on mobile: ${JSON.stringify(sticky)}`,
+            );
+          await cdp.send('Runtime.evaluate', {
+            expression: 'window.scrollTo(0, 0)',
+          });
+        }
+      }
+      await cdp.send('Emulation.clearDeviceMetricsOverride');
+    }
+    if (
+      route.startsWith('/super-admin/organisations/org-1/projects/project-1')
+    ) {
       const mutations = requests
         .slice(requestStart)
         .filter((request) => /^(POST|PATCH|PUT|DELETE) \/api\//.test(request));
       if (mutations.length)
-        throw new Error(`Project detail mutated on load: ${mutations.join(', ')}`);
+        throw new Error(
+          `Project detail mutated on load: ${mutations.join(', ')}`,
+        );
+    }
+    if (route === '/super-admin/organisations/org-1/projects/project-1') {
+      await cdp.send('Runtime.evaluate', {
+        expression:
+          'Array.from(document.querySelectorAll("main button")).find((button) => button.textContent?.includes("Create Sync Flow"))?.click()',
+      });
+      let popupOpen = false;
+      for (let attempt = 0; attempt < 50; attempt++) {
+        popupOpen = Boolean(
+          (
+            await cdp.send('Runtime.evaluate', {
+              expression:
+                'document.body.innerText.includes("Create New Sync Job")',
+              returnByValue: true,
+            })
+          ).result.value,
+        );
+        if (popupOpen) break;
+        await wait(100);
+      }
+      if (!popupOpen)
+        throw new Error('Create Sync Flow did not open the existing job popup');
+      if (
+        !requests
+          .slice(requestStart)
+          .some((request) =>
+            request.includes(
+              '/api/super-admin/organisations/org-1/projects/project-1/discovery/hubspot/objects',
+            ),
+          )
+      )
+        throw new Error('Create popup did not use scoped object discovery');
     }
     if (
       process.env.SCREENSHOT_DIR &&
       (route === '/super-admin/organisations/org-1/projects/project-1' ||
-        route === '/super-admin/organisations/org-1/projects/project-1?tab=settings')
+        route ===
+          '/super-admin/organisations/org-1/projects/project-1?tab=settings')
     ) {
       const screenshotName = route.includes('tab=settings')
         ? 'project-settings'
@@ -622,6 +877,39 @@ try {
           `${process.env.SCREENSHOT_DIR}/organisations-card-mobile.png`,
           Buffer.from(mobile.data, 'base64'),
         );
+        const mobileOverflow = await cdp.send('Runtime.evaluate', {
+          expression:
+            'document.documentElement.scrollWidth > window.innerWidth',
+          returnByValue: true,
+        });
+        if (mobileOverflow.result.value)
+          throw new Error(
+            'Organisation directory overflows the mobile viewport',
+          );
+        await cdp.send('Emulation.setDeviceMetricsOverride', {
+          width: 768,
+          height: 900,
+          deviceScaleFactor: 1,
+          mobile: false,
+        });
+        await wait(150);
+        const tablet = await cdp.send('Page.captureScreenshot', {
+          format: 'png',
+          captureBeyondViewport: false,
+        });
+        await writeFile(
+          `${process.env.SCREENSHOT_DIR}/organisations-card-tablet.png`,
+          Buffer.from(tablet.data, 'base64'),
+        );
+        const tabletOverflow = await cdp.send('Runtime.evaluate', {
+          expression:
+            'document.documentElement.scrollWidth > window.innerWidth',
+          returnByValue: true,
+        });
+        if (tabletOverflow.result.value)
+          throw new Error(
+            'Organisation directory overflows the tablet viewport',
+          );
         await cdp.send('Emulation.clearDeviceMetricsOverride');
         await wait(150);
       }
@@ -743,6 +1031,7 @@ try {
     '/api/super-admin/platform/super-admins',
     '/api/super-admin/organisations/org-1/projects/project-1/jobs/job-1',
     '/api/super-admin/organisations/org-1/activity',
+    '/api/super-admin/organisations/org-1/billing/overview',
     '/api/super-admin/organisations/org-1/notes',
   ]) {
     if (!requests.some((request) => request.includes(path)))

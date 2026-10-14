@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -88,8 +88,39 @@ describe('ProjectsPage - Environment Awareness in Table View', () => {
       </QueryClientProvider>,
     );
 
+    const projectHeading = screen.getByRole('heading', {
+      level: 1,
+      name: 'Projects',
+    });
+    const pageHeader = projectHeading.closest('header');
+    expect(pageHeader).not.toBeNull();
+    const results = screen.getByRole('region', { name: 'Project results' });
+    expect(
+      within(pageHeader as HTMLElement).getByText(
+        'Connect, monitor, and manage your syncs.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(pageHeader as HTMLElement).getByLabelText('2 projects total'),
+    ).toBeInTheDocument();
+    expect(
+      within(results).getByRole('textbox', {
+        name: 'Search projects',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      within(pageHeader as HTMLElement).getByTestId('create-project-btn'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Manage projects')).not.toBeInTheDocument();
+
+    const tableCard = screen.getByRole('table').closest('[data-slot="card"]');
+    expect(tableCard).not.toBeNull();
+    expect(tableCard).not.toContainElement(pageHeader);
+
     // Verify column header
-    expect(screen.getByRole('columnheader', { name: 'Environment' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: 'Environment' }),
+    ).toBeInTheDocument();
 
     // Verify Sandbox badge and link
     const sandboxBadge = screen.getByText('Sandbox (Test Mode)');

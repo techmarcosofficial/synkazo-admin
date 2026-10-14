@@ -4,6 +4,10 @@ import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
+const TableSectionContext = React.createContext<'header' | 'body' | 'footer'>(
+  'body',
+);
+
 function Table({ className, ...props }: React.ComponentProps<'table'>) {
   return (
     <div
@@ -21,46 +25,55 @@ function Table({ className, ...props }: React.ComponentProps<'table'>) {
 
 function TableHeader({ className, ...props }: React.ComponentProps<'thead'>) {
   return (
-    <thead
-      data-slot="table-header"
-      className={cn(
-        'bg-muted/70 border-border dark:border-border dark:bg-secondary border-b [&_tr]:border-b-0',
-        className,
-      )}
-      {...props}
-    />
+    <TableSectionContext.Provider value="header">
+      <thead
+        data-slot="table-header"
+        className={cn(
+          'bg-muted/70 border-border dark:border-border border-b dark:bg-white/[0.04] [&_tr]:border-b-0',
+          className,
+        )}
+        {...props}
+      />
+    </TableSectionContext.Provider>
   );
 }
 
 function TableBody({ className, ...props }: React.ComponentProps<'tbody'>) {
   return (
-    <tbody
-      data-slot="table-body"
-      className={cn('[&_tr:last-child]:border-0', className)}
-      {...props}
-    />
+    <TableSectionContext.Provider value="body">
+      <tbody
+        data-slot="table-body"
+        className={cn('[&_tr:last-child]:border-0', className)}
+        {...props}
+      />
+    </TableSectionContext.Provider>
   );
 }
 
 function TableFooter({ className, ...props }: React.ComponentProps<'tfoot'>) {
   return (
-    <tfoot
-      data-slot="table-footer"
-      className={cn(
-        'bg-muted/50 border-t font-medium [&>tr]:last:border-b-0',
-        className,
-      )}
-      {...props}
-    />
+    <TableSectionContext.Provider value="footer">
+      <tfoot
+        data-slot="table-footer"
+        className={cn(
+          'bg-muted/50 border-t font-medium [&>tr]:last:border-b-0',
+          className,
+        )}
+        {...props}
+      />
+    </TableSectionContext.Provider>
   );
 }
 
 function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
+  const section = React.useContext(TableSectionContext);
   return (
     <tr
       data-slot="table-row"
       className={cn(
-        'hover:bg-muted/40 dark:hover:bg-accent has-aria-expanded:bg-muted/40 data-[state=selected]:bg-muted/60 dark:data-[state=selected]:bg-secondary border-border/70 dark:border-border/70 border-b transition-colors',
+        'data-[state=selected]:bg-muted/60 dark:data-[state=selected]:bg-secondary border-border/70 dark:border-border/70 border-b transition-colors',
+        section === 'body' &&
+          'hover:bg-muted/40 dark:hover:bg-muted/30 focus-within:bg-muted/30 has-aria-expanded:bg-muted/40',
         className,
       )}
       {...props}
@@ -73,7 +86,7 @@ function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
     <th
       data-slot="table-head"
       className={cn(
-        'text-muted-foreground px-3 py-2.5 text-left align-middle text-xs font-semibold tracking-wider whitespace-nowrap uppercase [&:has([role=checkbox])]:pr-0',
+        'text-muted-foreground px-3 py-2.5 text-left align-middle text-xs font-semibold tracking-normal whitespace-nowrap normal-case [&:has([role=checkbox])]:pr-0',
         className,
       )}
       {...props}

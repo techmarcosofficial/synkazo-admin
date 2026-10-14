@@ -12,7 +12,7 @@ import {
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import EditPermissionsDialog from '@/components/organisation/EditPermissionsDialog';
+import MemberDetailDrawer from '@/components/organisation/MemberDetailDrawer';
 import EmptyState from '@/components/shared/EmptyState';
 import ListRow from '@/components/shared/list/ListRow';
 import PageHeader from '@/components/shared/PageHeader';
@@ -340,9 +340,27 @@ export default function OrgAdminDashboard() {
         </TabsContent>
       </Tabs>
 
-      <EditPermissionsDialog
-        user={editingUser}
-        onClose={() => setEditingUser(null)}
+      <MemberDetailDrawer
+        open={editingUser !== null}
+        onOpenChange={(open) => !open && setEditingUser(null)}
+        member={
+          editingUser
+            ? {
+                id: editingUser.id,
+                email: editingUser.email,
+                fullName: editingUser.fullName,
+                role: editingUser.role,
+                isActive: (editingUser as any).isActive !== false,
+                organisationId: currentUser?.organisationId,
+                department: editingUser.department,
+                isEmailVerified: editingUser.isEmailVerified,
+                lastLoginAt: editingUser.lastLoginAt,
+                createdAt: editingUser.createdAt,
+                permissions: editingUser.permissions,
+              }
+            : null
+        }
+        isSuperAdmin={false}
       />
     </div>
   );

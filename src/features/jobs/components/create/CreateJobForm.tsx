@@ -18,6 +18,7 @@ import {
   DefaultValuesStep,
   ScheduleStep,
 } from './steps';
+import { toFieldMappingPayload } from './mappingPayload';
 
 import { connectionsApi } from '@/api/connections';
 import { jobsApi } from '@/api/jobs';
@@ -73,53 +74,6 @@ const getActiveSteps = (
   );
 
 const DRAFT_KEY = (projectId: string) => `sb_draft_${projectId}`;
-
-// Two-way jobs let the user set direction per row in the mapping canvas
-// (defaults to "Both ways" the moment a row is toggled) — this only fills in
-// a default for rows the user never touched, it never overrides an explicit
-// per-row choice. FORWARD_ONLY remains the correct default for one-way jobs
-// (and is what the backend already defaults to if omitted), so this is a
-// no-op for the common case.
-//
-// Also flattens each consolidated row into one entry per (source, dest) pair: the backend's
-// CreateFieldMappingDto.destField is a single string, so a source fanned out to several
-// destinations must become several DTOs, not one DTO carrying an array the backend can't
-// accept. Everything the canvas keys per destination — transform rules, empty-value policy,
-// and matchDestKey (stored per pair as is_match_field) — has to be picked out per pair here;
-// spreading the row would send the whole per-destination map on every pair instead.
-const withDirection = (
-  mappings: MappingRow[],
-  syncDirection: string,
-): FieldMapping[] =>
-  mappings.flatMap((m) => {
-    const dests = Array.isArray(m.destField) ? m.destField : [m.destField];
-    return dests.map((destField) => ({
-      sourceField: m.sourceField,
-      destField,
-      transformType: m.transformType ?? 'direct',
-      transformConfig:
-        m.transformType === 'combine'
-          ? (m.transformConfig ?? null)
-          : m.destRules?.[destField]
-            ? { rules: m.destRules[destField] }
-            : null,
-      isMatchField: m.matchDestKey === destField,
-      matchPriority:
-        m.matchDestKey === destField ? (m.matchOrder ?? null) : null,
-      updatePolicy:
-        m.destUpdatePolicy?.[destField] === 'create_only'
-          ? 'create_only'
-          : 'always',
-      onEmpty: m.destOnEmpty?.[destField] ?? 'none',
-      defaultValue: m.destDefaults?.[destField] ?? null,
-      reverseOnEmpty: m.destReverseOnEmpty?.[destField] ?? 'none',
-      reverseDefaultValue: m.destReverseDefaults?.[destField] ?? null,
-      direction:
-        syncDirection === 'two_way'
-          ? (m.direction ?? 'bidirectional')
-          : m.direction,
-    })) as unknown as FieldMapping[];
-  });
 
 export interface CreateJobFormHandle {
   /** Advances the current sub-step (validating + saving as needed). Resolves to whether it actually advanced. */
@@ -689,7 +643,7 @@ export const CreateJobForm = forwardRef<
           await jobsApi.replaceFieldMappings(
             projectId,
             draftJobId,
-            withDirection(
+            toFieldMappingPayload(
               fieldMappings,
               config.syncDirection,
             ) as FieldMapping[],
@@ -728,7 +682,7 @@ export const CreateJobForm = forwardRef<
           await jobsApi.replaceFieldMappings(
             projectId,
             draftJobId,
-            withDirection(
+            toFieldMappingPayload(
               fieldMappings,
               config.syncDirection,
             ) as FieldMapping[],
@@ -956,7 +910,7 @@ export const CreateJobForm = forwardRef<
           await jobsApi.replaceFieldMappings(
             projectId,
             jobId,
-            withDirection(
+            toFieldMappingPayload(
               fieldMappings,
               config.syncDirection,
             ) as FieldMapping[],

@@ -177,6 +177,8 @@ export const queryKeys = {
           limit,
           filters,
         ] as const,
+      detail: (organisationId: string, userId: string) =>
+        ['superAdmin', organisationId, 'members', userId] as const,
     },
     invitations: {
       list: (

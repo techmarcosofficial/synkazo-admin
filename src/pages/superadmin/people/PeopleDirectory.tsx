@@ -60,7 +60,11 @@ function joinedLabel(value: string | null) {
 
 function OrganisationCell({ person }: { person: PersonView }) {
   return person.organisationTo ? (
-    <Link className="text-primary hover:underline" to={person.organisationTo}>
+    <Link
+      className="text-primary hover:underline"
+      to={person.organisationTo}
+      onClick={(e) => e.stopPropagation()}
+    >
       {person.organisation}
     </Link>
   ) : (
@@ -74,17 +78,19 @@ export default function PeopleDirectory({
   sortKey,
   direction,
   onSort,
+  onSelectPerson,
 }: {
   people: PersonView[];
   sortKey: PeopleSortKey | null;
   direction: SortDirection;
   onSort: (key: PeopleSortKey) => void;
+  onSelectPerson?: (person: PersonView) => void;
 }) {
   return (
     <div className="overflow-x-auto rounded-3xl border">
       <Table>
         <TableHeader>
-          <TableRow className="bg-muted hover:bg-muted/50">
+          <TableRow>
             {(
               [
                 'name',
@@ -118,7 +124,11 @@ export default function PeopleDirectory({
         </TableHeader>
         <TableBody>
           {people.map((person) => (
-            <TableRow key={person.id}>
+            <TableRow
+              key={person.id}
+              className={onSelectPerson ? 'cursor-pointer' : undefined}
+              onClick={() => onSelectPerson?.(person)}
+            >
               <TableCell>
                 <div className="flex min-w-0 items-center gap-3">
                   <Avatar className="size-8">
@@ -147,7 +157,12 @@ export default function PeopleDirectory({
               <TableCell className="text-muted-foreground text-sm">
                 {joinedLabel(person.createdAt)}
               </TableCell>
-              <TableCell className="text-right">{person.actions}</TableCell>
+              <TableCell
+                className="text-right"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {person.actions}
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>

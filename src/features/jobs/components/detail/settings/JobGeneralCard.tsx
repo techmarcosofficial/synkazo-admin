@@ -45,10 +45,12 @@ export default function JobGeneralCard({
   projectId,
   job,
   onUpdated,
+  saveJob,
 }: {
   projectId: string;
-  job: ExtJob;
-  onUpdated: (patch: Partial<ExtJob>) => void;
+  job: Pick<ExtJob, 'id' | 'name' | 'sourceObject' | 'destObject' | 'lastSyncedAt'>;
+  onUpdated: (patch: { name: string }) => void;
+  saveJob?: (name: string) => Promise<unknown>;
 }) {
   const form = useForm<JobGeneralValues>({
     resolver: zodResolver(jobGeneralSchema),
@@ -69,7 +71,8 @@ export default function JobGeneralCard({
 
   const onSubmit = form.handleSubmit(async (values) => {
     try {
-      await jobsApi.updateJob(projectId, job.id, values);
+      if (saveJob) await saveJob(values.name);
+      else await jobsApi.updateJob(projectId, job.id, values);
       showToast.success('Job updated.');
       onUpdated(values);
       form.reset(values);

@@ -60,6 +60,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
 import type { ExtSyncRun } from '@/features/jobs/hooks';
 import { cn } from '@/lib/utils';
@@ -481,39 +489,39 @@ function PageRow({
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px] text-left text-xs">
-                <thead className="bg-muted/60 text-muted-foreground">
-                  <tr>
-                    <th className="w-12 px-3 py-1.5 font-medium">#</th>
-                    <th className="px-3 py-1.5 font-medium">Source ID</th>
-                    <th className="px-3 py-1.5 font-medium">Status</th>
-                    <th className="px-3 py-1.5 font-medium">Destination ID</th>
-                    <th className="px-3 py-1.5 font-medium">Error / reason</th>
-                  </tr>
-                </thead>
-                <tbody className="align-middle">
+              <Table className="w-full min-w-[720px] text-left text-xs">
+                <TableHeader className="bg-muted/60 text-muted-foreground">
+                  <TableRow>
+                    <TableHead className="w-12 py-1.5">#</TableHead>
+                    <TableHead className="py-1.5">Source ID</TableHead>
+                    <TableHead className="py-1.5">Status</TableHead>
+                    <TableHead className="py-1.5">Destination ID</TableHead>
+                    <TableHead className="py-1.5">Error / reason</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="align-middle">
                   {records.map((record, index) => {
                     const actionConfig =
                       ACTION_CONFIG[record.action] || ACTION_CONFIG.created;
                     return (
-                      <tr
+                      <TableRow
                         key={record.id}
                         className={cn(
-                          'border-t align-middle',
+                          'align-middle',
                           record.action === 'failed' &&
-                            'bg-destructive/[0.025]',
+                            'bg-destructive/[0.025] hover:bg-destructive/[0.05]',
                         )}
                       >
-                        <td className="text-muted-foreground px-3 py-1.5 tabular-nums">
+                        <TableCell className="text-muted-foreground px-3 py-1.5 tabular-nums">
                           {(recordPage - 1) * pageSize + index + 1}
-                        </td>
-                        <td
+                        </TableCell>
+                        <TableCell
                           className="max-w-56 truncate px-3 py-1.5 font-mono"
                           title={record.sourceRecordId}
                         >
                           {record.sourceRecordId}
-                        </td>
-                        <td className="px-3 py-1.5">
+                        </TableCell>
+                        <TableCell className="px-3 py-1.5">
                           <Badge
                             variant="outline"
                             className={cn(
@@ -523,26 +531,26 @@ function PageRow({
                           >
                             {actionConfig.label}
                           </Badge>
-                        </td>
-                        <td
+                        </TableCell>
+                        <TableCell
                           className="text-muted-foreground max-w-56 truncate px-3 py-1.5 font-mono"
                           title={record.destRecordId ?? undefined}
                         >
                           {record.destRecordId || '—'}
-                        </td>
-                        <td className="max-w-sm px-3 py-1.5">
+                        </TableCell>
+                        <TableCell className="max-w-sm px-3 py-1.5 whitespace-normal">
                           <RecordReason
                             rec={record}
                             context={recordContext}
                             projectId={projectId}
                             jobId={jobId}
                           />
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     );
                   })}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
 

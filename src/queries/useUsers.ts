@@ -68,6 +68,18 @@ export function useChangePasswordMutation() {
   });
 }
 
+export function useResetPasswordByAdminMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, newPassword }: { id: string; newPassword?: string }) =>
+      usersApi.resetPassword(id, newPassword),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+    },
+  });
+}
+
+
 export function useMyOwnershipSummaryQuery() {
   return useQuery({
     queryKey: queryKeys.users.ownershipSummary,

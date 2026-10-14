@@ -33,6 +33,7 @@ export default function JobStatusDropdown({
   isSyncing = false,
   onStop,
   highlighted = false,
+  canDeactivate = true,
 }: {
   isActive: boolean;
   canActivate: boolean;
@@ -43,6 +44,7 @@ export default function JobStatusDropdown({
   isSyncing?: boolean;
   onStop?: () => void | Promise<void>;
   highlighted?: boolean;
+  canDeactivate?: boolean;
 }) {
   const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false);
 
@@ -96,9 +98,10 @@ export default function JobStatusDropdown({
             </DropdownMenuItem>
 
             <DropdownMenuItem
-              disabled={!isActive}
+              disabled={!isActive || !canDeactivate}
+              title={!canDeactivate ? 'Wait for the current run to finish' : undefined}
               onSelect={(e) => {
-                if (isActive) {
+                if (isActive && canDeactivate) {
                   e.preventDefault();
                   setShowDeactivateConfirm(true);
                 }

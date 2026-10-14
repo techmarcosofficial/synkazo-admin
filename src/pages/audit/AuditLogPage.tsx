@@ -331,7 +331,7 @@ export default function AuditLogPage() {
                       <div className="overflow-hidden rounded-3xl border">
                         <Table>
                           <TableHeader>
-                            <TableRow className="bg-muted hover:bg-muted/50">
+                            <TableRow>
                               {AUDIT_TABLE_HEADERS.map((h) => (
                                 <TableHead key={h} className="font-semibold">
                                   {h}
@@ -439,7 +439,7 @@ export default function AuditLogPage() {
                       <div className="overflow-hidden rounded-3xl border">
                         <Table>
                           <TableHeader>
-                            <TableRow className="bg-muted hover:bg-muted/50">
+                            <TableRow>
                               {SYSTEM_TABLE_HEADERS.map((h) => (
                                 <TableHead key={h} className="font-semibold">
                                   {h}
