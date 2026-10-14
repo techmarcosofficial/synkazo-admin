@@ -85,8 +85,8 @@ export function useRetryInvoiceMutation(organisationId: string) {
 export function useAssignPlanMutation(organisationId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (planId: string) =>
-      superAdminBillingApi.assignPlan(organisationId, planId),
+    mutationFn: ({ planId, reason }: { planId: string; reason: string }) =>
+      superAdminBillingApi.assignPlan(organisationId, planId, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['superAdmin', organisationId],

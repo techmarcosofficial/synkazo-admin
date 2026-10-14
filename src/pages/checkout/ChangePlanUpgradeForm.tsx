@@ -19,6 +19,7 @@ import {
   useUpgradeMutation,
   usePaymentMethodsQuery,
   useUpgradePreviewQuery,
+  useRefreshPlanMutation,
 } from '@/queries/useBilling';
 import type { ApiPlan, ApiPrice } from '@/types';
 
@@ -77,6 +78,7 @@ function ChangePlanForm({ plan, price, onSuccess }: ChangePlanFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const changePlan = useUpgradeMutation();
+  const refreshPlan = useRefreshPlanMutation();
   // Every figure is server-computed from the day-based formula — never re-derived locally, so the
   // displayed total and the actual charge can't drift.
   const {
@@ -154,6 +156,18 @@ function ChangePlanForm({ plan, price, onSuccess }: ChangePlanFormProps) {
         // Re-confirm now the intent is settled, with the SAME resolved card, so the server
         // actually applies the plan change.
         result = await changePlan.mutateAsync(changeArgs);
+      }
+      const confirmedPlan = await refreshPlan.mutateAsync();
+      if (
+        result.status === 'pending' ||
+        confirmedPlan.paymentHoldActive ||
+        confirmedPlan.planId !== plan.id ||
+        !['active', 'trialing'].includes(confirmedPlan.subscriptionStatus)
+      ) {
+        showToast.error(
+          'Your plan change is pending payment confirmation. Check Billing for your current access status.',
+        );
+        return;
       }
       setSucceeded(true);
       setTimeout(() => {

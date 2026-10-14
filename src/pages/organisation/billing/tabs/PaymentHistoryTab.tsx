@@ -12,6 +12,7 @@ import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
 import SkeletonTable from '@/components/shared/skeletons/SkeletonTable';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardAction,
@@ -33,8 +34,7 @@ import { usePaymentHistoryQuery } from '@/queries/useBilling';
 const EVENT_LABEL: Record<string, string> = {
   payment_succeeded: 'Payment succeeded',
   payment_failed: 'Payment failed',
-  'invoice.paid': 'Invoice paid',
-  'invoice.payment_failed': 'Payment failed',
+  payment_pending: 'Payment pending',
 };
 
 const money = (cents: number, currency: string) =>
@@ -44,7 +44,11 @@ const money = (cents: number, currency: string) =>
   }).format(cents / 100);
 
 export default function PaymentHistoryTab() {
-  const { data, isLoading, isError, refetch } = usePaymentHistoryQuery(1, 50);
+  const [page, setPage] = useState(1);
+  const { data, isLoading, isError, refetch } = usePaymentHistoryQuery(
+    page,
+    50,
+  );
   const [view, setView] = useState<BillingHistoryViewMode>('table');
 
   return (
@@ -52,7 +56,7 @@ export default function PaymentHistoryTab() {
       <CardHeader visualLevel="section">
         <CardTitle>Payment history</CardTitle>
         <CardDescription>
-          Every payment attempt — succeeded or failed — with its ID and reason.
+          The final result of each payment, including successful retries.
         </CardDescription>
         {data && data.items.length > 0 && (
           <CardAction>
@@ -74,7 +78,7 @@ export default function PaymentHistoryTab() {
         ) : view === 'timeline' ? (
           <BillingTimeline
             items={data.items.map((ev, i) => ({
-              key: i,
+              key: ev.id ?? `${ev.paymentId}-${i}`,
               date: ev.createdAt,
               title: EVENT_LABEL[ev.eventType] ?? ev.eventType,
               description: ev.description,
@@ -102,7 +106,7 @@ export default function PaymentHistoryTab() {
               </TableHeader>
               <TableBody>
                 {data.items.map((ev, i) => (
-                  <TableRow key={i}>
+                  <TableRow key={ev.id ?? `${ev.paymentId}-${i}`}>
                     <TableCell>
                       {new Date(ev.createdAt).toLocaleString()}
                     </TableCell>
@@ -136,6 +140,27 @@ export default function PaymentHistoryTab() {
                 ))}
               </TableBody>
             </Table>
+          </div>
+        )}
+        {data && (data.total > 50 || page > 1) && (
+          <div className="mt-4 flex items-center justify-between gap-3">
+            <Button
+              variant="outline"
+              disabled={page === 1 || isLoading}
+              onClick={() => setPage((p) => p - 1)}
+            >
+              Previous
+            </Button>
+            <span className="text-muted-foreground text-sm">
+              Page {page} of {Math.max(1, Math.ceil(data.total / 50))}
+            </span>
+            <Button
+              variant="outline"
+              disabled={page * 50 >= data.total || isLoading}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next
+            </Button>
           </div>
         )}
       </CardContent>

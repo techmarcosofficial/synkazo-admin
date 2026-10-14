@@ -4,21 +4,27 @@ import { Flag, Gauge, Lock, Store, Webhook } from 'lucide-react';
 import FeatureFlagsCard from './FeatureFlagsCard';
 import HubspotWebhookSettingsCard from './HubspotWebhookSettingsCard';
 import MarketplaceCatalogCard from './MarketplaceCatalogCard';
-import TwoWaySyncSettingsCard from './TwoWaySyncSettingsCard';
+import ScheduleAndTimeSettingsCard from './ScheduleAndTimeSettingsCard';
 import ManageAuthPagesCard from './ManageAuthPagesCard';
+import BillingRecoveryCard from './BillingRecoveryCard';
 
 import PageHeader from '@/components/shared/PageHeader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-type TabId = 'sync' | 'webhooks' | 'auth' | 'flags' | 'marketplace';
+type TabId = 'sync' | 'webhooks' | 'auth' | 'flags' | 'marketplace' | 'billing';
 
 export default function SystemSettingsPage() {
   const [activeTab, setActiveTab] = useState<TabId>('sync');
 
   const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
     {
+      id: 'billing',
+      label: 'Billing Recovery',
+      icon: <Gauge className="size-4" />,
+    },
+    {
       id: 'sync',
-      label: 'Two-Way Sync',
+      label: 'Schedule & Time',
       icon: <Gauge className="size-4" />,
     },
     {
@@ -52,13 +58,20 @@ export default function SystemSettingsPage() {
       <PageHeader
         backTo={{ label: 'Back to Super Admin', to: '/super-admin' }}
         title="Platform Settings"
-        description="Configure global sync settings, webhooks, authentication pages, feature flags, and marketplace catalog."
+        description="Configure sync schedules, billing recovery, webhooks, authentication pages, feature flags, and marketplace catalog."
       />
 
-      <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as TabId)}>
-        <TabsList className="grid w-full grid-cols-5">
+      <Tabs
+        value={activeTab}
+        onValueChange={(val) => setActiveTab(val as TabId)}
+      >
+        <TabsList className="flex h-auto w-full flex-wrap">
           {tabs.map((tab) => (
-            <TabsTrigger key={tab.id} value={tab.id} className="flex items-center gap-2">
+            <TabsTrigger
+              key={tab.id}
+              value={tab.id}
+              className="flex items-center gap-2"
+            >
               {tab.icon}
               {tab.label}
             </TabsTrigger>
@@ -66,7 +79,10 @@ export default function SystemSettingsPage() {
         </TabsList>
 
         <TabsContent value="sync" className="space-y-6">
-          <TwoWaySyncSettingsCard />
+          <ScheduleAndTimeSettingsCard />
+        </TabsContent>
+        <TabsContent value="billing">
+          <BillingRecoveryCard />
         </TabsContent>
 
         <TabsContent value="webhooks" className="space-y-6">

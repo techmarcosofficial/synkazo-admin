@@ -1,7 +1,7 @@
 // Done
 
 import { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 
 import GlobalLoader, { PageLoader } from '../shared/GlobalLoader';
 import WelcomeGuideModal from '../shared/WelcomeGuideModal';
@@ -16,14 +16,17 @@ import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { PLATFORM_HOME } from '@/lib/workspace';
 import { usePlanQuery } from '@/queries/useBilling';
 
-// Subscription states with no live billing relationship, or where renewal has fully failed
-// (Stripe's retries exhausted) — these are paywalled. `past_due` is Stripe's automatic
-// retry/grace window (card may still succeed on retry) and keeps dashboard access via
-// PastDueBanner instead of a hard lockout. Mirrors CronGateService's own distinction between
-// "syncing paused" (unpaid) and "still retrying" (past_due).
-const PAYWALL_STATUSES = new Set(['none', 'canceled', 'incomplete', 'unpaid']);
+// The API decides when renewal grace expires and returns paymentHoldActive.
+// Billing remains available so an organisation can repair its payment method.
+const ACCESS_STATUSES = new Set([
+  'active',
+  'trialing',
+  'past_due',
+  'pending_cancel',
+]);
 
 export default function AppLayout() {
+  const location = useLocation();
   const { currentUser, isLoading } = useSynkazoAuth();
   const [showWelcome, setShowWelcome] = useState(false);
 
@@ -53,7 +56,11 @@ export default function AppLayout() {
   if (planQuery.isLoading) {
     return <PageLoader className="z-[70]" label="Loading subscription" />;
   }
-  if (PAYWALL_STATUSES.has(planQuery.data?.subscriptionStatus ?? 'none')) {
+  if (
+    !location.pathname.startsWith('/organization/billing') &&
+    (planQuery.data?.paymentHoldActive ||
+      !ACCESS_STATUSES.has(planQuery.data?.subscriptionStatus ?? 'none'))
+  ) {
     return <SubscriptionPaywall />;
   }
 

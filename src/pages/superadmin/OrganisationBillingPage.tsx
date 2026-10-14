@@ -112,6 +112,16 @@ function BillingOverviewSection({
           <div>
             <dt className="text-muted-foreground text-xs">Plan</dt>
             <dd className="font-medium">{plan.planName}</dd>
+            {plan.planAccessSource && (
+              <dd className="text-muted-foreground text-sm">
+                Access source:{' '}
+                {plan.planAccessSource === 'manual_override'
+                  ? 'Super Admin assignment'
+                  : plan.planAccessSource === 'stripe_subscription'
+                    ? 'Stripe subscription'
+                    : 'Free'}
+              </dd>
+            )}
           </div>
           <div>
             <dt className="text-muted-foreground text-xs">Status</dt>
@@ -258,10 +268,10 @@ export default function OrganisationBillingPage() {
           currentPlanName={overviewQuery.data.plan.planName}
           isSubmitting={assignPlanMutation.isPending}
           errorMessage={assignPlanError}
-          onSubmit={async (planId, _reason) => {
+          onSubmit={async (planId, reason) => {
             setAssignPlanError(null);
             try {
-              await assignPlanMutation.mutateAsync(planId);
+              await assignPlanMutation.mutateAsync({ planId, reason });
               showToast.success('Plan assigned.');
               setAssignPlanOpen(false);
             } catch (err) {
