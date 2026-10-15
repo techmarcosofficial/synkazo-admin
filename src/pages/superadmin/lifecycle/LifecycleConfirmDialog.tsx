@@ -33,6 +33,7 @@ interface LifecycleConfirmDialogProps {
   tone: LifecycleTone;
   organisationName: string;
   requiresNameConfirm: boolean;
+  caseSensitiveNameConfirm?: boolean;
   minReasonLength: number;
   reasonPlaceholder?: string;
   isSubmitting: boolean;
@@ -50,6 +51,7 @@ export default function LifecycleConfirmDialog({
   tone,
   organisationName,
   requiresNameConfirm,
+  caseSensitiveNameConfirm = false,
   minReasonLength,
   reasonPlaceholder,
   isSubmitting,
@@ -68,7 +70,10 @@ export default function LifecycleConfirmDialog({
 
   const nameMatches =
     !requiresNameConfirm ||
-    nameInput.trim().toLowerCase() === organisationName.trim().toLowerCase();
+    (caseSensitiveNameConfirm
+      ? nameInput === organisationName
+      : nameInput.trim().toLowerCase() ===
+        organisationName.trim().toLowerCase());
   const reasonLongEnough = reasonInput.trim().length >= minReasonLength;
   const canSubmit = nameMatches && reasonLongEnough && !isSubmitting;
 

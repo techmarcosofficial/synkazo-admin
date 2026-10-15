@@ -1,6 +1,11 @@
 import type { AxiosResponse } from 'axios';
 
 import apiClient from './apiClient';
+import type {
+  AssociationRecord,
+  AssociationRuleStats,
+  AssociationRunLog,
+} from './associations';
 
 import type {
   SuperAdminAssociationRule,
@@ -107,4 +112,135 @@ export const superAdminAssociationsApi = {
         { params },
       )
       .then(paginated<SuperAdminPendingAssociation>),
+
+  listRuns: (
+    organisationId: string,
+    projectId: string,
+    params: {
+      ruleId?: string;
+      page?: number;
+      limit?: number;
+      status?: string;
+      result?: string;
+      search?: string;
+    } = {},
+  ): Promise<SuperAdminPage<AssociationRunLog>> =>
+    apiClient
+      .get<PaginatedEnvelope<AssociationRunLog>>(
+        `${base(organisationId, projectId)}/runs`,
+        { params },
+      )
+      .then(paginated<AssociationRunLog>),
+
+  getRuleStats: (
+    organisationId: string,
+    projectId: string,
+    ruleId: string,
+  ): Promise<AssociationRuleStats> =>
+    apiClient
+      .get<{ data: AssociationRuleStats }>(
+        `${base(organisationId, projectId)}/rules/${ruleId}/stats`,
+      )
+      .then(d),
+
+  getRuleRecords: (
+    organisationId: string,
+    projectId: string,
+    ruleId: string,
+    params: {
+      page?: number;
+      limit?: number;
+      status?: 'pending' | 'completed' | 'failed';
+      search?: string;
+      runId?: string;
+    } = {},
+  ): Promise<SuperAdminPage<AssociationRecord>> =>
+    apiClient
+      .get<PaginatedEnvelope<AssociationRecord>>(
+        `${base(organisationId, projectId)}/rules/${ruleId}/records`,
+        { params },
+      )
+      .then(paginated<AssociationRecord>),
+
+  getObjects: (
+    organisationId: string,
+    projectId: string,
+  ): Promise<Array<{ sourceObject: string; destObjectType: string }>> =>
+    apiClient
+      .get<{ data: Array<{ sourceObject: string; destObjectType: string }> }>(
+        `${base(organisationId, projectId)}/objects`,
+      )
+      .then(d),
+
+  getObjectFields: (
+    organisationId: string,
+    projectId: string,
+    sourceObject: string,
+  ): Promise<Array<{ field: string; label: string; isArray: boolean }>> =>
+    apiClient
+      .get<{ data: Array<{ field: string; label: string; isArray: boolean }> }>(
+        `${base(organisationId, projectId)}/objects/${encodeURIComponent(sourceObject)}/fields`,
+      )
+      .then(d),
+
+  getOwnerFields: (
+    organisationId: string,
+    projectId: string,
+  ): Promise<Array<{ field: string; label: string; isArray: boolean }>> =>
+    apiClient
+      .get<{ data: Array<{ field: string; label: string; isArray: boolean }> }>(
+        `${base(organisationId, projectId)}/owner-fields`,
+      )
+      .then(d),
+
+  getAssociationTypes: (
+    organisationId: string,
+    projectId: string,
+    fromObjectType: string,
+    toObjectType: string,
+  ): Promise<Array<{ typeId: number; category: string; label: string }>> =>
+    apiClient
+      .get<{
+        data: Array<{ typeId: number; category: string; label: string }>;
+      }>(`${base(organisationId, projectId)}/types`, {
+        params: { fromObjectType, toObjectType },
+      })
+      .then(d),
+
+  runRule: (
+    organisationId: string,
+    projectId: string,
+    ruleId: string,
+    reason: string,
+  ): Promise<{
+    id: string;
+    status: string;
+    succeeded: number;
+    failed: number;
+    pendingCreated: number;
+  }> =>
+    apiClient
+      .post<{
+        data: {
+          id: string;
+          status: string;
+          succeeded: number;
+          failed: number;
+          pendingCreated: number;
+        };
+      }>(`${base(organisationId, projectId)}/rules/${ruleId}/run`, { reason })
+      .then(d),
+
+  retryFailed: (
+    organisationId: string,
+    projectId: string,
+    ruleId: string,
+    reason: string,
+  ): Promise<{ queued: true }> =>
+    apiClient
+      .post<{ data: { queued: true } }>(
+        `${base(organisationId, projectId)}/rules/${ruleId}/retry-failed`,
+        { reason },
+      )
+      .then(d),
 };

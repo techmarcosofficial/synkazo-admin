@@ -221,7 +221,7 @@ describe('OrganisationDetailPage', () => {
     expect(screen.getByText('8')).toBeInTheDocument(); // members total
     expect(screen.getByText('3')).toBeInTheDocument(); // projects count
     expect(await screen.findByText('CRM sync')).toBeInTheDocument();
-    expect(screen.getByText(/2\/3 flows enabled/)).toBeInTheDocument();
+    expect(screen.getByText('Sync flows: 2 enabled of 3')).toBeInTheDocument();
     expect(screen.getByText('Nov 1, 2026')).toBeInTheDocument();
   });
 

@@ -12,6 +12,7 @@ import {
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
+import { getPlatform } from '@/components/platform';
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -48,6 +49,11 @@ function formatRelative(value: string | null | undefined): string {
   return Number.isNaN(date.getTime())
     ? 'Date unavailable'
     : formatDistanceToNow(date, { addSuffix: true });
+}
+
+function formatEventLabel(value: string): string {
+  const label = value.replace(/[._-]+/g, ' ').trim();
+  return label ? label[0].toUpperCase() + label.slice(1) : 'Activity recorded';
 }
 
 function UsageMetric({
@@ -336,347 +342,386 @@ export default function OrganisationDetailPage() {
         </Alert>
       )}
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(19rem,1fr)]">
-        <Card size="sm">
-          <CardContent>
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="font-semibold">Workspace usage</h2>
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(19rem,1fr)] xl:items-start">
+        <div className="flex min-w-0 flex-col gap-4">
+          <Card size="sm">
+            <CardContent>
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="font-semibold">Workspace usage</h2>
+                <Link
+                  to={basePath + '/billing'}
+                  className="text-primary focus-visible:ring-ring inline-flex shrink-0 items-center gap-1 rounded-sm text-xs font-medium hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                >
+                  View limits{' '}
+                  <ArrowUpRight className="size-3.5" aria-hidden="true" />
+                </Link>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-1 xl:grid-cols-4">
+                <UsageMetric
+                  icon={Users}
+                  label="Members"
+                  count={org.usage.members.total}
+                  limit={org.usage.members.limit}
+                  detail={formatNumber(org.usage.members.active) + ' active'}
+                  to={basePath + '/members'}
+                  over={
+                    org.usage.members.limit !== null &&
+                    org.usage.members.total > org.usage.members.limit
+                  }
+                />
+                <UsageMetric
+                  icon={FolderOpen}
+                  label="Projects"
+                  count={org.usage.projects.count}
+                  limit={org.usage.projects.limit}
+                  detail={
+                    org.usage.projects.limit === null
+                      ? 'Unlimited plan'
+                      : 'of ' +
+                        formatNumber(org.usage.projects.limit) +
+                        ' allowed'
+                  }
+                  to={basePath + '/projects'}
+                  over={org.usage.projects.over}
+                />
+                <UsageMetric
+                  icon={Workflow}
+                  label="Sync flows"
+                  count={org.usage.jobs.count}
+                  limit={org.usage.jobs.limit}
+                  detail={
+                    org.usage.jobs.limit === null
+                      ? 'Unlimited plan'
+                      : 'of ' + formatNumber(org.usage.jobs.limit) + ' allowed'
+                  }
+                  to={basePath + '/projects'}
+                  over={org.usage.jobs.over}
+                />
+                <UsageMetric
+                  icon={Database}
+                  label="Records this period"
+                  count={org.usage.records.used}
+                  limit={org.usage.records.limit}
+                  detail={
+                    org.usage.records.limit === null
+                      ? 'Unlimited plan'
+                      : formatNumber(org.usage.records.remaining) + ' remaining'
+                  }
+                  to={basePath + '/billing'}
+                  over={
+                    org.usage.records.limit !== null &&
+                    org.usage.records.used > org.usage.records.limit
+                  }
+                />
+              </div>
+              {org.usage.records.periodStart && (
+                <p className="text-muted-foreground mt-2 px-2 text-xs">
+                  Record period started{' '}
+                  {formatDate(org.usage.records.periodStart)}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+          <Card size="sm">
+            <CardContent>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="font-semibold">Recent projects</h2>
+                  <p className="text-muted-foreground text-xs">
+                    Latest project sync activity
+                  </p>
+                </div>
+                <Link
+                  to={basePath + '/projects'}
+                  className="text-primary focus-visible:ring-ring inline-flex shrink-0 items-center gap-1 rounded-sm text-xs font-medium hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                >
+                  All projects{' '}
+                  <ArrowUpRight className="size-3.5" aria-hidden="true" />
+                </Link>
+              </div>
+              {projectsQuery.isLoading ? (
+                <div className="flex min-h-28 items-center justify-center">
+                  <Spinner className="size-4" />
+                  <span className="sr-only">Loading projects</span>
+                </div>
+              ) : projectsQuery.isError ? (
+                <div className="mt-3">
+                  <SectionMessage
+                    message="Could not load recent projects."
+                    onRetry={() => void projectsQuery.refetch()}
+                  />
+                </div>
+              ) : projects.length === 0 ? (
+                <div className="mt-3">
+                  <SectionMessage message="No projects yet. Open Projects to review this organisation's setup." />
+                </div>
+              ) : (
+                <ul className="mt-3 space-y-2">
+                  {projects.map((project) => (
+                    <li key={project.id}>
+                      <Link
+                        to={basePath + '/projects/' + project.id}
+                        className="group border-border/70 hover:border-foreground/25 hover:bg-muted/20 focus-visible:ring-ring flex min-w-0 items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                      >
+                        <div className="shrink-0" aria-hidden="true">
+                          <ProjectPlatformPair
+                            sourcePlatformId={project.sourcePlatformId}
+                            destPlatformId={project.destPlatformId}
+                            syncMode={
+                              project.syncMode === 'two_way'
+                                ? 'two_way'
+                                : 'one_way'
+                            }
+                            size="md"
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                            <span className="truncate font-semibold">
+                              {project.name}
+                            </span>
+                            <span className="text-muted-foreground shrink-0 text-xs">
+                              {formatEventLabel(project.status)}
+                            </span>
+                          </div>
+                          <p className="text-muted-foreground mt-0.5 text-xs">
+                            {getPlatform(project.sourcePlatformId)?.name ??
+                              formatEventLabel(project.sourcePlatformId)}{' '}
+                            →{' '}
+                            {getPlatform(project.destPlatformId)?.name ??
+                              formatEventLabel(project.destPlatformId)}
+                          </p>
+                          <p className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs">
+                            <span>
+                              {project.jobCount === 0
+                                ? 'No sync flows'
+                                : `Sync flows: ${project.enabledJobCount} enabled of ${project.jobCount}`}
+                            </span>
+                            <span aria-hidden="true">·</span>
+                            <span>
+                              Last sync: {formatRelative(project.lastSyncedAt)}
+                            </span>
+                          </p>
+                        </div>
+                        <ArrowUpRight
+                          className="text-muted-foreground/70 group-hover:text-foreground size-4 shrink-0 transition-colors"
+                          aria-hidden="true"
+                        />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+        <div className="flex min-w-0 flex-col gap-4">
+          <Card size="sm">
+            <CardContent>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="font-semibold">Account & billing</h2>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    aria-label="Edit organisation metadata"
+                    onClick={() => {
+                      setEditError(null);
+                      setEditOpen(true);
+                    }}
+                  >
+                    <Pencil className="size-4" aria-hidden="true" />
+                    Edit
+                  </Button>
+                  <OrganisationLifecycleActions organisation={org} compact />
+                </div>
+              </div>
+              {org.description && (
+                <p className="text-muted-foreground mt-2 text-xs leading-5">
+                  {org.description}
+                </p>
+              )}
+              <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+                <div className="col-span-2 min-w-0">
+                  <dt className="text-muted-foreground text-xs">Owner</dt>
+                  <dd className="mt-0.5">
+                    {org.owner ? (
+                      <Link
+                        to={basePath + '/members'}
+                        className="focus-visible:ring-ring block min-w-0 rounded-sm hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                      >
+                        <span className="block truncate font-medium">
+                          {org.owner.fullName ?? org.owner.email}
+                          {!org.owner.isActive && (
+                            <span className="text-destructive ml-1 text-xs">
+                              Inactive
+                            </span>
+                          )}
+                        </span>
+                        <span className="text-muted-foreground block truncate text-xs">
+                          {org.owner.email}
+                        </span>
+                      </Link>
+                    ) : (
+                      <span className="text-muted-foreground">
+                        Not assigned
+                      </span>
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground text-xs">Plan</dt>
+                  <dd className="mt-0.5 truncate font-medium">
+                    {org.plan.name}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground text-xs">
+                    Subscription
+                  </dt>
+                  <dd className="mt-0.5">
+                    <Badge variant="outline" className="capitalize">
+                      {org.plan.subscriptionStatus.replace(/_/g, ' ')}
+                    </Badge>
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground text-xs">
+                    {billing?.plan.trialEndsAt ? 'Trial ends' : 'Period ends'}
+                  </dt>
+                  <dd className="mt-0.5 font-medium">
+                    {billingQuery.isLoading
+                      ? 'Loading…'
+                      : formatDate(
+                          billing?.plan.trialEndsAt ??
+                            billing?.plan.currentPeriodEnd,
+                        )}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground text-xs">Created</dt>
+                  <dd className="mt-0.5 font-medium">
+                    {formatDate(org.createdAt)}
+                  </dd>
+                </div>
+              </dl>
               <Link
                 to={basePath + '/billing'}
-                className="text-primary focus-visible:ring-ring inline-flex shrink-0 items-center gap-1 rounded-sm text-xs font-medium hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                className="text-primary focus-visible:ring-ring mt-3 inline-flex items-center gap-1 rounded-sm text-xs font-medium hover:underline focus-visible:ring-2 focus-visible:outline-none"
               >
-                View limits{' '}
+                Open billing{' '}
                 <ArrowUpRight className="size-3.5" aria-hidden="true" />
               </Link>
-            </div>
-            <div className="mt-2 grid grid-cols-2 gap-1 xl:grid-cols-4">
-              <UsageMetric
-                icon={Users}
-                label="Members"
-                count={org.usage.members.total}
-                limit={org.usage.members.limit}
-                detail={formatNumber(org.usage.members.active) + ' active'}
-                to={basePath + '/members'}
-                over={
-                  org.usage.members.limit !== null &&
-                  org.usage.members.total > org.usage.members.limit
-                }
-              />
-              <UsageMetric
-                icon={FolderOpen}
-                label="Projects"
-                count={org.usage.projects.count}
-                limit={org.usage.projects.limit}
-                detail={
-                  org.usage.projects.limit === null
-                    ? 'Unlimited plan'
-                    : 'of ' +
-                      formatNumber(org.usage.projects.limit) +
-                      ' allowed'
-                }
-                to={basePath + '/projects'}
-                over={org.usage.projects.over}
-              />
-              <UsageMetric
-                icon={Workflow}
-                label="Sync flows"
-                count={org.usage.jobs.count}
-                limit={org.usage.jobs.limit}
-                detail={
-                  org.usage.jobs.limit === null
-                    ? 'Unlimited plan'
-                    : 'of ' + formatNumber(org.usage.jobs.limit) + ' allowed'
-                }
-                to={basePath + '/projects'}
-                over={org.usage.jobs.over}
-              />
-              <UsageMetric
-                icon={Database}
-                label="Records this period"
-                count={org.usage.records.used}
-                limit={org.usage.records.limit}
-                detail={
-                  org.usage.records.limit === null
-                    ? 'Unlimited plan'
-                    : formatNumber(org.usage.records.remaining) + ' remaining'
-                }
-                to={basePath + '/billing'}
-                over={
-                  org.usage.records.limit !== null &&
-                  org.usage.records.used > org.usage.records.limit
-                }
-              />
-            </div>
-            {org.usage.records.periodStart && (
-              <p className="text-muted-foreground mt-2 px-2 text-xs">
-                Record period started{' '}
-                {formatDate(org.usage.records.periodStart)}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card size="sm">
-          <CardContent>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="font-semibold">Account & billing</h2>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  aria-label="Edit organisation metadata"
-                  onClick={() => {
-                    setEditError(null);
-                    setEditOpen(true);
-                  }}
+              {billing?.plan.cancelAtPeriodEnd && (
+                <p className="text-destructive mt-2 text-xs font-medium">
+                  Cancellation is scheduled for period end.
+                </p>
+              )}
+              {billingQuery.isError && (
+                <div className="mt-2 flex items-center gap-2 text-xs">
+                  <span className="text-muted-foreground">
+                    Billing dates unavailable.
+                  </span>
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0 text-xs"
+                    onClick={() => void billingQuery.refetch()}
+                  >
+                    Retry
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          <Card size="sm">
+            <CardContent>
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="font-semibold">Recent activity</h2>
+                <Link
+                  to={basePath + '/activity'}
+                  className="text-primary focus-visible:ring-ring inline-flex shrink-0 items-center gap-1 rounded-sm text-xs font-medium hover:underline focus-visible:ring-2 focus-visible:outline-none"
                 >
-                  <Pencil className="size-4" aria-hidden="true" />
-                  Edit
-                </Button>
-                <OrganisationLifecycleActions organisation={org} compact />
+                  All activity{' '}
+                  <ArrowUpRight className="size-3.5" aria-hidden="true" />
+                </Link>
               </div>
-            </div>
-            {org.description && (
-              <p className="text-muted-foreground mt-2 text-xs leading-5">
-                {org.description}
-              </p>
-            )}
-            <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
-              <div className="col-span-2 min-w-0">
-                <dt className="text-muted-foreground text-xs">Owner</dt>
-                <dd className="mt-0.5">
-                  {org.owner ? (
-                    <Link
-                      to={basePath + '/members'}
-                      className="focus-visible:ring-ring block min-w-0 rounded-sm hover:underline focus-visible:ring-2 focus-visible:outline-none"
+              {activityQuery.isLoading ? (
+                <div className="flex min-h-28 items-center justify-center">
+                  <Spinner className="size-4" />
+                  <span className="sr-only">Loading activity</span>
+                </div>
+              ) : activityQuery.isError ? (
+                <div className="mt-3">
+                  <SectionMessage
+                    message="Could not load recent activity."
+                    onRetry={() => void activityQuery.refetch()}
+                  />
+                </div>
+              ) : activity.length === 0 ? (
+                <div className="mt-3">
+                  <SectionMessage message="No recorded activity yet." />
+                </div>
+              ) : (
+                <ul className="mt-3 space-y-2">
+                  {activity.map((entry) => (
+                    <li
+                      key={entry.id}
+                      className="border-border/70 min-w-0 rounded-xl border px-3 py-2.5"
                     >
-                      <span className="block truncate font-medium">
-                        {org.owner.fullName ?? org.owner.email}
-                        {!org.owner.isActive && (
-                          <span className="text-destructive ml-1 text-xs">
-                            Inactive
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="min-w-0 text-sm leading-5 font-medium wrap-break-word">
+                          {formatEventLabel(entry.action)}
+                        </span>
+                        {entry.severity !== 'INFO' && (
+                          <span
+                            className={
+                              'inline-flex shrink-0 items-center gap-1.5 text-xs font-medium ' +
+                              (entry.severity === 'ERROR'
+                                ? 'text-destructive'
+                                : 'text-muted-foreground')
+                            }
+                          >
+                            <span
+                              className="size-1.5 rounded-full bg-current"
+                              aria-hidden="true"
+                            />
+                            {entry.severity === 'ERROR' ? 'Error' : 'Warning'}
                           </span>
                         )}
-                      </span>
-                      <span className="text-muted-foreground block truncate text-xs">
-                        {org.owner.email}
-                      </span>
-                    </Link>
-                  ) : (
-                    <span className="text-muted-foreground">Not assigned</span>
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground text-xs">Plan</dt>
-                <dd className="mt-0.5 truncate font-medium">{org.plan.name}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground text-xs">Subscription</dt>
-                <dd className="mt-0.5">
-                  <Badge variant="outline" className="capitalize">
-                    {org.plan.subscriptionStatus.replace(/_/g, ' ')}
-                  </Badge>
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground text-xs">
-                  {billing?.plan.trialEndsAt ? 'Trial ends' : 'Period ends'}
-                </dt>
-                <dd className="mt-0.5 font-medium">
-                  {billingQuery.isLoading
-                    ? 'Loading…'
-                    : formatDate(
-                        billing?.plan.trialEndsAt ??
-                          billing?.plan.currentPeriodEnd,
-                      )}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground text-xs">Created</dt>
-                <dd className="mt-0.5 font-medium">
-                  {formatDate(org.createdAt)}
-                </dd>
-              </div>
-            </dl>
-            <Link
-              to={basePath + '/billing'}
-              className="text-primary focus-visible:ring-ring mt-3 inline-flex items-center gap-1 rounded-sm text-xs font-medium hover:underline focus-visible:ring-2 focus-visible:outline-none"
-            >
-              Open billing{' '}
-              <ArrowUpRight className="size-3.5" aria-hidden="true" />
-            </Link>
-            {billing?.plan.cancelAtPeriodEnd && (
-              <p className="text-destructive mt-2 text-xs font-medium">
-                Cancellation is scheduled for period end.
-              </p>
-            )}
-            {billingQuery.isError && (
-              <div className="mt-2 flex items-center gap-2 text-xs">
-                <span className="text-muted-foreground">
-                  Billing dates unavailable.
-                </span>
-                <Button
-                  variant="link"
-                  size="sm"
-                  className="h-auto p-0 text-xs"
-                  onClick={() => void billingQuery.refetch()}
-                >
-                  Retry
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(19rem,1fr)]">
-        <Card size="sm">
-          <CardContent>
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="font-semibold">Recent projects</h2>
-                <p className="text-muted-foreground text-xs">
-                  Latest project sync activity
-                </p>
-              </div>
-              <Link
-                to={basePath + '/projects'}
-                className="text-primary focus-visible:ring-ring inline-flex shrink-0 items-center gap-1 rounded-sm text-xs font-medium hover:underline focus-visible:ring-2 focus-visible:outline-none"
-              >
-                All projects{' '}
-                <ArrowUpRight className="size-3.5" aria-hidden="true" />
-              </Link>
-            </div>
-            {projectsQuery.isLoading ? (
-              <div className="flex min-h-28 items-center justify-center">
-                <Spinner className="size-4" />
-                <span className="sr-only">Loading projects</span>
-              </div>
-            ) : projectsQuery.isError ? (
-              <div className="mt-3">
-                <SectionMessage
-                  message="Could not load recent projects."
-                  onRetry={() => void projectsQuery.refetch()}
-                />
-              </div>
-            ) : projects.length === 0 ? (
-              <div className="mt-3">
-                <SectionMessage message="No projects yet. Open Projects to review this organisation's setup." />
-              </div>
-            ) : (
-              <ul className="mt-3 space-y-2">
-                {projects.map((project) => (
-                  <li key={project.id}>
-                    <Link
-                      to={basePath + '/projects/' + project.id}
-                      className="bg-surface-inset hover:bg-muted/80 focus-visible:ring-ring flex min-w-0 items-center gap-3 rounded-2xl p-3 transition-colors focus-visible:ring-2 focus-visible:outline-none"
-                    >
-                      <div className="shrink-0" aria-hidden="true">
-                        <ProjectPlatformPair
-                          sourcePlatformId={project.sourcePlatformId}
-                          destPlatformId={project.destPlatformId}
-                          syncMode={
-                            project.syncMode === 'two_way'
-                              ? 'two_way'
-                              : 'one_way'
-                          }
-                          size="2xl"
-                        />
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                          <span className="truncate font-semibold">
-                            {project.name}
-                          </span>
-                          <Badge variant="outline" className="capitalize">
-                            {project.status}
-                          </Badge>
-                        </div>
-                        <p className="text-muted-foreground mt-0.5 text-xs">
-                          {project.sourcePlatformId} → {project.destPlatformId}
-                          {' · '}
-                          {project.enabledJobCount}/{project.jobCount} flows
-                          enabled
-                        </p>
-                        <p className="text-muted-foreground mt-0.5 text-xs">
-                          Last sync: {formatRelative(project.lastSyncedAt)}
-                        </p>
+                      <div className="text-muted-foreground mt-1 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs">
+                        <span
+                          className="min-w-0 truncate"
+                          title={entry.actor?.email ?? undefined}
+                        >
+                          {entry.resource && (
+                            <>
+                              {formatEventLabel(entry.resource)}
+                              <span className="mx-1.5" aria-hidden="true">
+                                ·
+                              </span>
+                            </>
+                          )}
+                          {entry.actor?.email
+                            ? 'by ' + entry.actor.email
+                            : 'by System'}
+                        </span>
+                        <time
+                          dateTime={entry.createdAt}
+                          title={formatDate(entry.createdAt)}
+                          className="shrink-0"
+                        >
+                          {formatRelative(entry.createdAt)}
+                        </time>
                       </div>
-                      <ArrowUpRight
-                        className="text-muted-foreground size-4 shrink-0"
-                        aria-hidden="true"
-                      />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card size="sm">
-          <CardContent>
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="font-semibold">Recent activity</h2>
-              <Link
-                to={basePath + '/activity'}
-                className="text-primary focus-visible:ring-ring inline-flex shrink-0 items-center gap-1 rounded-sm text-xs font-medium hover:underline focus-visible:ring-2 focus-visible:outline-none"
-              >
-                All activity{' '}
-                <ArrowUpRight className="size-3.5" aria-hidden="true" />
-              </Link>
-            </div>
-            {activityQuery.isLoading ? (
-              <div className="flex min-h-28 items-center justify-center">
-                <Spinner className="size-4" />
-                <span className="sr-only">Loading activity</span>
-              </div>
-            ) : activityQuery.isError ? (
-              <div className="mt-3">
-                <SectionMessage
-                  message="Could not load recent activity."
-                  onRetry={() => void activityQuery.refetch()}
-                />
-              </div>
-            ) : activity.length === 0 ? (
-              <div className="mt-3">
-                <SectionMessage message="No recorded activity yet." />
-              </div>
-            ) : (
-              <ul className="mt-3 space-y-2">
-                {activity.map((entry) => (
-                  <li
-                    key={entry.id}
-                    className="bg-surface-inset min-w-0 rounded-2xl px-3 py-2.5"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="min-w-0 truncate font-medium capitalize">
-                        {entry.action.replace(/[._-]+/g, ' ')}
-                      </span>
-                      <Badge
-                        variant="outline"
-                        className={
-                          'shrink-0 text-[10px] ' +
-                          (entry.severity === 'ERROR'
-                            ? 'border-destructive/30 text-destructive'
-                            : '')
-                        }
-                      >
-                        {entry.severity}
-                      </Badge>
-                    </div>
-                    <p className="text-muted-foreground mt-1 truncate text-xs">
-                      {entry.actor?.email ?? 'System'}
-                      {' · '}
-                      {formatRelative(entry.createdAt)}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

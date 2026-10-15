@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import QueueJobList from './QueueJobList';
@@ -68,5 +68,44 @@ describe('QueueJobList', () => {
       screen.queryByRole('button', { name: /^move customers/i }),
     ).not.toBeInTheDocument();
     expect(onReorderLocal).not.toHaveBeenCalled();
+  });
+
+  it('locks the queue list while an existing row is being edited', () => {
+    const onEdit = vi.fn();
+    const onRemove = vi.fn();
+    const onToggleEnabled = vi.fn();
+
+    render(
+      <QueueJobList
+        queueJobs={queueJobs}
+        editingQueueJobId="queue-job-1"
+        onReorderLocal={vi.fn()}
+        onEdit={onEdit}
+        onToggleEnabled={onToggleEnabled}
+        onRetry={vi.fn()}
+        onRemove={onRemove}
+      />,
+    );
+
+    expect(
+      screen.getByRole('button', { name: 'Reorder Customers' }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: 'Edit Customers' }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: 'Remove Customers' }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole('switch', { name: 'Toggle Customers' }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: 'Edit Locations' }),
+    ).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Customers' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Locations' }));
+    expect(onRemove).not.toHaveBeenCalled();
+    expect(onEdit).not.toHaveBeenCalled();
   });
 });

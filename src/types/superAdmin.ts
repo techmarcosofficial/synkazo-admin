@@ -8,11 +8,15 @@
 // this file additionally exports `SuperAdminPage<T>` for the {data, total,
 // page, limit} response envelope every /super-admin/* list endpoint uses.
 
-import type { SubscriptionStatus } from './billing';
+import type {
+  HistoryItem,
+  PaymentMethodView,
+  SubscriptionStatus,
+} from './billing';
 
 export type OrgStatus = 'active' | 'suspended' | 'pending' | 'archived';
 
-export type { SubscriptionStatus };
+export type { HistoryItem, PaymentMethodView, SubscriptionStatus };
 
 export interface SuperAdminOwnerSummary {
   id: string;
@@ -134,6 +138,12 @@ export interface SuperAdminJobListItem {
   recordsSynced: number;
   status: string;
   scheduleState: string;
+  scheduleMode: string | null;
+  scheduleTimes: string[] | null;
+  intervalMinutes: number | null;
+  scheduleDays: number[] | null;
+  timezone: string | null;
+  cronExpression: string | null;
   syncDirection: string;
   lastSyncedAt: string | null;
   nextRunAt: string | null;
@@ -144,6 +154,7 @@ export interface SuperAdminJobListItem {
   checkpointSince: string | null;
   checkpointRunId: string | null;
   syncAllPage: number | null;
+  dataformaStartingCustomerId: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -166,7 +177,8 @@ export interface SuperAdminJobDetail extends SuperAdminJobListItem {
   } | null;
   excludeConditions: import('./conditions').ExcludeCondition[] | null;
   excludeConditionLogic: 'AND' | 'OR';
-  destinationSkipConditions: import('./conditions').DestinationSkipCondition[] | null;
+  destinationSkipConditions:
+    import('./conditions').DestinationSkipCondition[] | null;
   skipUpdateOnMatch: boolean;
   maxRetries: number;
   retryBackoffBaseSec: number;
@@ -226,6 +238,7 @@ export interface SuperAdminCreateJobDto {
   name: string;
   sourceObject: string;
   destObject: string;
+  dataformaStartingCustomerId?: number | null;
   syncDirection?: 'one_way' | 'two_way';
   syncTrigger?: 'new' | 'updated' | 'both';
   sourceOfTruth?: string;
@@ -246,7 +259,8 @@ export interface SuperAdminCreateJobDto {
   defaultValues?: import('./job').DefaultValuesConfig | null;
   excludeConditions?: import('./conditions').ExcludeCondition[] | null;
   excludeConditionLogic?: 'AND' | 'OR';
-  destinationSkipConditions?: import('./conditions').DestinationSkipCondition[] | null;
+  destinationSkipConditions?:
+    import('./conditions').DestinationSkipCondition[] | null;
 }
 
 export type SuperAdminFieldMappingInput = import('./job').FieldMapping;
@@ -308,13 +322,55 @@ export interface SuperAdminInvoiceListItem {
   id: string;
   invoiceNumber: string | null;
   status: string;
+  amount?: number;
+  totalAmount?: number;
   amountDue: number;
   amountPaid: number;
   currency: string;
   createdAt: string;
   paidAt: string | null;
   dueDate: string | null;
+  periodStart?: string | null;
+  periodEnd?: string | null;
+  receiptUrl?: string | null;
   hostedInvoiceUrl: string | null;
+}
+
+export interface SuperAdminInvoiceDetail extends Partial<SuperAdminInvoiceListItem> {
+  id: string;
+  currency: string;
+  status: string;
+  subtotal: number;
+  discountAmount: number;
+  taxAmount: number;
+}
+
+export interface SuperAdminSubscriptionDetail {
+  id: string;
+  planId: string | null;
+  planName: string;
+  status: SubscriptionStatus | string;
+  trialEndAt: string | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+  pendingPlanId: string | null;
+  pendingPriceId: string | null;
+  pendingPlanChangeAt: string | null;
+  creditBalance: number;
+  defaultPaymentMethod: string | null;
+  paymentMethod: PaymentMethodView | null;
+}
+
+export interface SuperAdminUsageDetail {
+  projects: { count: number; limit: number | null; over: boolean };
+  jobs: { count: number; limit: number | null; over: boolean };
+  teamMembers: { count: number; limit: number | null; over: boolean };
+  records: {
+    count: number;
+    limit: number | null;
+    remaining: number | null;
+    periodStart: string;
+  };
 }
 
 export interface SuperAdminActivityEntry {

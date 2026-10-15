@@ -260,7 +260,8 @@ export default function OrganisationContextHeader() {
 
   return (
     <section
-      className="bg-card border-border/70 overflow-hidden rounded-3xl border shadow-sm"
+      data-layout-surface="outer"
+      className="bg-card border-border/70 overflow-hidden rounded-3xl border"
       aria-label="Current workspace"
     >
       <div className="px-4 pt-3 sm:px-5 sm:pt-4">

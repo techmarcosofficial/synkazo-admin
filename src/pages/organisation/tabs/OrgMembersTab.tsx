@@ -5,6 +5,7 @@ import InviteMemberDialog from '@/components/organisation/InviteMemberDialog';
 import MemberDetailDrawer from '@/components/organisation/MemberDetailDrawer';
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
+import ManagementCardHeader from '@/components/shared/ManagementCardHeader';
 import ManagementToolbar from '@/components/shared/ManagementToolbar';
 import PaginationBar from '@/components/shared/PaginationBar';
 import SkeletonList from '@/components/shared/skeletons/SkeletonList';
@@ -14,11 +15,7 @@ import { ActionTooltip } from '@/features/journey';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardFooter,
-} from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -91,33 +88,23 @@ export default function OrgMembersTab() {
   useEffect(() => setPage(1), [search, roleFilter, setPage]);
 
   return (
-    <Card>
-      <div className="flex flex-col gap-4 border-b border-border/60 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Users className="text-muted-foreground size-4" />
-            <h3 className="text-sm font-semibold text-foreground tracking-tight">
-              Members
-            </h3>
-            {members.length > 0 && (
-              <Badge
-                variant="secondary"
-                className="text-[11px] py-0 px-1.5 font-normal"
-              >
-                {members.length}
-              </Badge>
-            )}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Manage people who have access to this organization.
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+    <div className="w-full space-y-6">
+      <section className="space-y-3" aria-label="Organization members">
+        <ManagementCardHeader
+          title="Members"
+          subtitle="Manage people who have access to this organization."
+          icon={Users}
+          count={members.length}
+          countLabel={members.length === 1 ? 'member' : 'members'}
+          isLoading={usersQuery.isLoading}
+        >
           <ManagementToolbar
+            directoryLayout
+            filterCount={1}
             searchValue={search}
             onSearchChange={setSearch}
             searchPlaceholder="Search members…"
+            searchLabel="Search members"
             filters={
               <Select
                 value={roleFilter}
@@ -125,7 +112,11 @@ export default function OrgMembersTab() {
                   setRoleFilter(v)
                 }
               >
-                <SelectTrigger className="bg-muted sm:w-36 text-xs">
+                <SelectTrigger
+                  size="sm"
+                  className="border-border/80 bg-card hover:border-foreground/25 dark:bg-card w-full min-w-0"
+                  aria-label="Filter members by role"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -140,7 +131,7 @@ export default function OrgMembersTab() {
                 <Button
                   variant="outline"
                   size="icon"
-                  className="size-9 shrink-0"
+                  className="size-8 shrink-0"
                   onClick={() => usersQuery.refetch()}
                   aria-label="Refresh members"
                   title="Refresh members"
@@ -161,21 +152,19 @@ export default function OrgMembersTab() {
                 >
                   <Button
                     size="sm"
-                    className="h-9 gap-1.5 shrink-0"
+                    className="h-8 gap-1.5 shrink-0"
                     onClick={() => canEdit && setInviteOpen(true)}
                     disabled={!canEdit}
                   >
-                    <Plus className="size-4" />
+                    <Plus className="size-3.5" />
                     Invite Member
                   </Button>
                 </ActionTooltip>
               </div>
             }
           />
-        </div>
-      </div>
+        </ManagementCardHeader>
 
-      <CardContent className="space-y-4 pt-4">
         {usersQuery.isLoading ? (
           <SkeletonList count={4} />
         ) : usersQuery.isError ? (
@@ -205,8 +194,9 @@ export default function OrgMembersTab() {
             action={{ onClick: () => setSearch(''), label: 'Clear search' }}
           />
         ) : (
-          <div className="border-border overflow-x-auto rounded-3xl border">
-            <Table>
+          <Card size="sm" className="overflow-hidden py-0">
+            <div className="overflow-x-auto">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <SortableTableHead
@@ -347,12 +337,11 @@ export default function OrgMembersTab() {
                 })}
               </TableBody>
             </Table>
-          </div>
+            </div>
+          </Card>
         )}
-      </CardContent>
 
-      {filteredMembers.length > 0 && (
-        <CardFooter>
+        {filteredMembers.length > 0 && (
           <PaginationBar
             page={page}
             totalPages={totalPages}
@@ -361,8 +350,8 @@ export default function OrgMembersTab() {
             onPageChange={setPage}
             onPageSizeChange={setPageSize}
           />
-        </CardFooter>
-      )}
+        )}
+      </section>
 
       {canEdit && (
         <InviteMemberDialog open={inviteOpen} onOpenChange={setInviteOpen} />
@@ -391,6 +380,6 @@ export default function OrgMembersTab() {
         }
         isSuperAdmin={false}
       />
-    </Card>
+    </div>
   );
 }

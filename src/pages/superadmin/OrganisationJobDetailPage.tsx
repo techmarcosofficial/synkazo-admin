@@ -23,6 +23,12 @@ import ErrorState from '@/components/shared/ErrorState';
 import HeadingPair from '@/components/shared/HeadingPair';
 import SkeletonList from '@/components/shared/skeletons/SkeletonList';
 import { Badge } from '@/components/ui/badge';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
@@ -32,10 +38,11 @@ import JobRetryCard from '@/features/jobs/components/detail/settings/JobRetryCar
 import JobSkipUpdateCard from '@/features/jobs/components/detail/settings/JobSkipUpdateCard';
 import SyncDirectionFields from '@/features/jobs/components/SyncDirectionFields';
 import JobScheduleModal from '@/features/jobs/components/schedule/JobScheduleModal';
-import SetupJourneyCard, { type SetupJourneyStep } from '@/features/onboarding/components/SetupJourneyCard';
+import SetupJourneyCard, {
+  type SetupJourneyStep,
+} from '@/features/onboarding/components/SetupJourneyCard';
 import { KNOWN_PIPELINE_OBJECTS } from '@/features/jobs/types';
 import { formatDurationMs } from '@/features/projects/lib/syncJobSummary';
-import ProjectSettingsNavigation from '@/features/projects/components/detail/ProjectSettingsNavigation';
 import {
   useSuperAdminJobQuery,
   useSuperAdminJobRunsQuery,
@@ -46,10 +53,15 @@ import {
   useSetSuperAdminJobSyncEnabledMutation,
   useUpdateSuperAdminJobMutation,
 } from '@/queries/useSuperAdmin';
-import type { SuperAdminJobDetail, SuperAdminJobRunListItem, SuperAdminProjectDetail } from '@/types/superAdmin';
+import type {
+  SuperAdminJobDetail,
+  SuperAdminJobRunListItem,
+  SuperAdminProjectDetail,
+} from '@/types/superAdmin';
 
-type JobTab = 'overview' | 'field-mapping' | 'pipeline' | 'run-history' | 'settings';
-type SettingsSection = 'general' | 'advanced';
+type JobTab =
+  'overview' | 'field-mapping' | 'pipeline' | 'run-history' | 'settings';
+type SettingsSection = 'general' | 'advanced' | 'closed';
 
 function dateLabel(value: string | null): string {
   if (!value) return '—';
@@ -94,8 +106,12 @@ function JobOverview({
         : job.scheduleMode === 'day_specific' && job.scheduleTimes?.length
           ? `${job.scheduleTimes.join(', ')} on selected days`
           : job.cronExpression || 'Not configured';
-  const durations = runs.map((run) => run.durationMs).filter((duration): duration is number => duration != null);
-  const averageDuration = durations.length ? durations.reduce((sum, duration) => sum + duration, 0) / durations.length : null;
+  const durations = runs
+    .map((run) => run.durationMs)
+    .filter((duration): duration is number => duration != null);
+  const averageDuration = durations.length
+    ? durations.reduce((sum, duration) => sum + duration, 0) / durations.length
+    : null;
 
   return (
     <div className="space-y-4">
@@ -119,25 +135,49 @@ function JobOverview({
         <JobSummaryMetric
           icon={History}
           label="Last run"
-          value={job.lastSyncedAt ? formatDistanceToNow(new Date(job.lastSyncedAt), { addSuffix: true }) : 'Never'}
-          description={job.lastSyncedAt ? 'Previous sync execution' : 'No runs recorded yet'}
+          value={
+            job.lastSyncedAt
+              ? formatDistanceToNow(new Date(job.lastSyncedAt), {
+                  addSuffix: true,
+                })
+              : 'Never'
+          }
+          description={
+            job.lastSyncedAt
+              ? 'Previous sync execution'
+              : 'No runs recorded yet'
+          }
         />
         <JobSummaryMetric
           icon={Play}
           label="Next run"
-          value={job.syncEnabled && job.nextRunAt ? dateLabel(job.nextRunAt) : job.syncEnabled ? 'Pending' : 'Paused'}
-          description={job.syncEnabled ? 'Current scheduled time' : 'Schedule is paused'}
+          value={
+            job.syncEnabled && job.nextRunAt
+              ? dateLabel(job.nextRunAt)
+              : job.syncEnabled
+                ? 'Pending'
+                : 'Paused'
+          }
+          description={
+            job.syncEnabled ? 'Current scheduled time' : 'Schedule is paused'
+          }
         />
         <JobSummaryMetric
           icon={CalendarClock}
           label="Schedule at"
           value={schedule}
-          description={job.scheduleMode || job.cronExpression ? 'Current schedule' : 'Configure a schedule'}
+          description={
+            job.scheduleMode || job.cronExpression
+              ? 'Current schedule'
+              : 'Configure a schedule'
+          }
         />
         <JobSummaryMetric
           icon={Timer}
           label="Avg duration"
-          value={averageDuration == null ? '—' : formatDurationMs(averageDuration)}
+          value={
+            averageDuration == null ? '—' : formatDurationMs(averageDuration)
+          }
           description="Based on recent runs"
         />
       </div>
@@ -198,12 +238,28 @@ function JobSetupJourney({
   onTabChange: (tab: JobTab) => void;
   onRun: () => void;
 }) {
-  const mappingReady = Boolean(job.fieldMappings?.length && job.fieldMappings.some((mapping) => mapping.isMatchField));
-  const pipelineReady = !pipelineRequired || Boolean(job.destPipelineId && job.statusMapping && Object.keys(job.statusMapping).length);
-  const testComplete = Boolean(job.lastSyncedAt || runs.some((run) => run.status === 'completed' || run.status === 'success'));
+  const mappingReady = Boolean(
+    job.fieldMappings?.length &&
+    job.fieldMappings.some((mapping) => mapping.isMatchField),
+  );
+  const pipelineReady =
+    !pipelineRequired ||
+    Boolean(
+      job.destPipelineId &&
+      job.statusMapping &&
+      Object.keys(job.statusMapping).length,
+    );
+  const testComplete = Boolean(
+    job.lastSyncedAt ||
+    runs.some((run) => run.status === 'completed' || run.status === 'success'),
+  );
   if (testComplete) return null;
 
-  const stage = !mappingReady ? 'field-mapping' : !pipelineReady ? 'pipeline' : 'overview';
+  const stage = !mappingReady
+    ? 'field-mapping'
+    : !pipelineReady
+      ? 'pipeline'
+      : 'overview';
   const steps: SetupJourneyStep[] = [
     {
       title: 'Field Mapping',
@@ -212,16 +268,26 @@ function JobSetupJourney({
       isCurrentTab: activeTab === 'field-mapping',
       onSelect: () => onTabChange('field-mapping'),
     },
-    ...(pipelineRequired ? [{
-      title: 'Configure Pipeline',
-      description: 'Choose the destination pipeline required by this job.',
-      status: !mappingReady ? 'upcoming' as const : pipelineReady ? 'complete' as const : 'current' as const,
-      isCurrentTab: activeTab === 'pipeline',
-      onSelect: () => onTabChange('pipeline'),
-    }] : []),
+    ...(pipelineRequired
+      ? [
+          {
+            title: 'Configure Pipeline',
+            description:
+              'Choose the destination pipeline required by this job.',
+            status: !mappingReady
+              ? ('upcoming' as const)
+              : pipelineReady
+                ? ('complete' as const)
+                : ('current' as const),
+            isCurrentTab: activeTab === 'pipeline',
+            onSelect: () => onTabChange('pipeline'),
+          },
+        ]
+      : []),
     {
       title: 'Run & Review',
-      description: 'Run a limited sync and review the result before automating it.',
+      description:
+        'Run a limited sync and review the result before automating it.',
       status: mappingReady && pipelineReady ? 'current' : 'upcoming',
       isCurrentTab: activeTab === 'overview',
       onSelect: () => onTabChange('overview'),
@@ -235,15 +301,35 @@ function JobSetupJourney({
       onSelect: () => onTabChange('overview'),
     },
   ];
-  return <SetupJourneyCard
-    compact
-    eyebrow="Job setup"
-    title={stage === 'field-mapping' ? 'Map the fields for this sync job' : stage === 'pipeline' ? 'Finish the required sync configuration' : 'Run your first sync'}
-    description={stage === 'field-mapping' ? 'Map source and destination fields, then choose at least one Match Field.' : stage === 'pipeline' ? 'Choose the destination pipeline required before running this job.' : 'Run a limited sync to verify records move cleanly between platforms.'}
-    steps={steps}
-    actionLabel={stage === 'field-mapping' ? 'Go to Field Mapping' : stage === 'pipeline' ? 'Configure Pipeline' : 'Run Limited Sync'}
-    onContinue={stage === 'overview' ? onRun : () => onTabChange(stage)}
-  />;
+  return (
+    <SetupJourneyCard
+      compact
+      eyebrow="Job setup"
+      title={
+        stage === 'field-mapping'
+          ? 'Map the fields for this sync job'
+          : stage === 'pipeline'
+            ? 'Finish the required sync configuration'
+            : 'Run your first sync'
+      }
+      description={
+        stage === 'field-mapping'
+          ? 'Map source and destination fields, then choose at least one Match Field.'
+          : stage === 'pipeline'
+            ? 'Choose the destination pipeline required before running this job.'
+            : 'Run a limited sync to verify records move cleanly between platforms.'
+      }
+      steps={steps}
+      actionLabel={
+        stage === 'field-mapping'
+          ? 'Go to Field Mapping'
+          : stage === 'pipeline'
+            ? 'Configure Pipeline'
+            : 'Run Limited Sync'
+      }
+      onContinue={stage === 'overview' ? onRun : () => onTabChange(stage)}
+    />
+  );
 }
 
 function JobSettings({
@@ -253,7 +339,6 @@ function JobSettings({
   projectPath,
   section,
   onSectionChange,
-  sectionHref,
   saveName,
   saveWebhook,
   saveRetry,
@@ -265,15 +350,22 @@ function JobSettings({
   projectPath: string;
   section: SettingsSection;
   onSectionChange: (value: string) => void;
-  sectionHref: (value: string) => string;
   saveName: (name: string) => Promise<unknown>;
   saveWebhook: (enabled: boolean) => Promise<unknown>;
-  saveRetry: (patch: { maxRetries: number; retryBackoffBaseSec: number }) => Promise<unknown>;
+  saveRetry: (patch: {
+    maxRetries: number;
+    retryBackoffBaseSec: number;
+  }) => Promise<unknown>;
   saveSkipUpdate: (skipUpdateOnMatch: boolean) => Promise<unknown>;
 }) {
-  const [webhookEnabled, setWebhookEnabled] = useState(job.hubspotWebhookEnabled);
+  const [webhookEnabled, setWebhookEnabled] = useState(
+    job.hubspotWebhookEnabled,
+  );
   const [webhookSaving, setWebhookSaving] = useState(false);
-  useEffect(() => setWebhookEnabled(job.hubspotWebhookEnabled), [job.id, job.hubspotWebhookEnabled]);
+  useEffect(
+    () => setWebhookEnabled(job.hubspotWebhookEnabled),
+    [job.id, job.hubspotWebhookEnabled],
+  );
   const saveWebhookSetting = async () => {
     setWebhookSaving(true);
     try {
@@ -286,188 +378,286 @@ function JobSettings({
     }
   };
   return (
-    <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[250px_minmax(0,1fr)]">
-      <ProjectSettingsNavigation
-        title="Job settings"
-        selectId="job-settings-section"
-        activeId={section}
-        items={[
-          { id: 'general', label: 'General', icon: Settings2 },
-          { id: 'advanced', label: 'Advanced', icon: RotateCcw },
-        ]}
-        onSelect={onSectionChange}
-        renderLink={(item, children) => (
-          <Link
-            to={sectionHref(item.id)}
-            aria-current={item.id === section ? 'page' : undefined}
-          >
-            {children}
-          </Link>
-        )}
-      />
-      {section === 'general' ? (
-        <div className="space-y-4">
-        <Card className="gap-0 py-0"><CardContent className="px-4 py-4"><JobGeneralCard projectId={projectId} job={job} onUpdated={() => undefined} saveJob={saveName} /></CardContent></Card>
-        <Card className="gap-0 py-0"><CardContent className="space-y-4 px-4 py-4">
-          <HeadingPair visualLevel="card" level="h3" title="Sync Direction & Behavior" subtitle="How this job moves records between platforms. Structural fields are locked after creation." />
-          <SyncDirectionFields
-            syncDirection={job.syncDirection}
-            sourceOfTruth={job.sourceOfTruth ?? project.sourcePlatformId}
-            deleteHandling={job.deleteHandling}
-            hubspotWebhookEnabled={webhookEnabled}
-            syncTrigger={job.syncTrigger}
-            sourcePlatform={project.sourcePlatformId}
-            destPlatform={project.destPlatformId}
-            availablePlatforms={[
-              { platformId: project.sourcePlatformId, label: project.sourcePlatformId },
-              { platformId: project.destPlatformId, label: project.destPlatformId },
-            ]}
-            sourceConnection={undefined}
-            destConnection={undefined}
-            projectId={project.id}
-            twoWayNotice={null}
-            onSyncDirectionChange={() => undefined}
-            onSourceOfTruthChange={() => undefined}
-            onDeleteHandlingChange={() => undefined}
-            onHubspotWebhookEnabledChange={setWebhookEnabled}
-            onSyncTriggerChange={() => undefined}
-            fieldMappingLocationLabel="the Field Mapping tab"
-            readOnly
-          />
-          {job.syncDirection === 'two_way' && <Button onClick={() => void saveWebhookSetting()} disabled={webhookSaving || webhookEnabled === job.hubspotWebhookEnabled}>{webhookSaving ? 'Saving…' : 'Save Changes'}</Button>}
-        </CardContent></Card>
-        <Card className="gap-0 py-0">
-          <CardHeader className="px-4 py-3">
-            <CardTitle>Saved configuration</CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
-            <dl className="grid gap-3 sm:grid-cols-2">
-              <DetailItem label="Sync direction" value={job.syncDirection} />
-              <DetailItem label="Sync trigger" value={job.syncTrigger} />
-              <DetailItem
-                label="Source match field"
-                value={job.idMappingSourceField}
-              />
-              <DetailItem
-                label="Destination match field"
-                value={job.idMappingDestField}
-              />
-              <DetailItem label="Source of truth" value={job.sourceOfTruth} />
-              <DetailItem label="Delete handling" value={job.deleteHandling} />
-              <DetailItem
-                label="HubSpot webhook"
-                value={job.hubspotWebhookEnabled ? 'Enabled' : 'Disabled'}
-              />
-              <DetailItem
-                label="Destination pipeline"
-                value={job.destPipelineId}
-              />
-              <DetailItem
-                label="Pipeline status mappings"
-                value={
-                  job.statusMapping ? Object.keys(job.statusMapping).length : 0
-                }
-              />
-              <DetailItem
-                label="Skip updates on match"
-                value={job.skipUpdateOnMatch ? 'Yes' : 'No'}
-              />
-              <DetailItem label="Timezone" value={job.timezone} />
-              <DetailItem label="Schedule mode" value={job.scheduleMode} />
-              <DetailItem
-                label="Schedule times"
-                value={job.scheduleTimes?.join(', ')}
-              />
-              <DetailItem
-                label="Schedule days"
-                value={job.scheduleDays?.join(', ')}
-              />
-              <DetailItem
-                label="Interval"
-                value={
-                  job.intervalMinutes == null
-                    ? null
-                    : `${job.intervalMinutes} minutes`
-                }
-              />
-              <DetailItem label="Cron expression" value={job.cronExpression} />
-              <DetailItem
-                label="Depends on job"
-                value={
-                  job.dependsOnJobId ? (
-                    <Link
-                      className="text-primary hover:underline"
-                      to={`${projectPath}/jobs/${job.dependsOnJobId}`}
+    <Accordion
+      type="single"
+      collapsible
+      value={section === 'closed' ? '' : section}
+      onValueChange={(value) => onSectionChange(value || 'closed')}
+      aria-label="Job settings"
+    >
+      <AccordionItem value="general">
+        <AccordionTrigger>
+          <span className="flex items-start gap-3">
+            <span className="bg-muted flex size-8 shrink-0 items-center justify-center rounded-lg">
+              <Settings2 className="size-4" aria-hidden />
+            </span>
+            <span>
+              <span className="block font-semibold">General</span>
+              <span className="text-muted-foreground block text-xs font-normal">
+                Name, sync direction, and saved configuration.
+              </span>
+            </span>
+          </span>
+        </AccordionTrigger>
+        <AccordionContent className="space-y-4">
+          {section === 'general' && (
+            <div className="space-y-4">
+              <Card className="gap-0 py-0">
+                <CardContent className="px-4 py-4">
+                  <JobGeneralCard
+                    projectId={projectId}
+                    job={job}
+                    onUpdated={() => undefined}
+                    saveJob={saveName}
+                  />
+                </CardContent>
+              </Card>
+              <Card className="gap-0 py-0">
+                <CardContent className="space-y-4 px-4 py-4">
+                  <HeadingPair
+                    visualLevel="card"
+                    level="h3"
+                    title="Sync Direction & Behavior"
+                    subtitle="How this job moves records between platforms. Structural fields are locked after creation."
+                  />
+                  <SyncDirectionFields
+                    syncDirection={job.syncDirection}
+                    sourceOfTruth={
+                      job.sourceOfTruth ?? project.sourcePlatformId
+                    }
+                    deleteHandling={job.deleteHandling}
+                    hubspotWebhookEnabled={webhookEnabled}
+                    syncTrigger={job.syncTrigger}
+                    sourcePlatform={project.sourcePlatformId}
+                    destPlatform={project.destPlatformId}
+                    availablePlatforms={[
+                      {
+                        platformId: project.sourcePlatformId,
+                        label: project.sourcePlatformId,
+                      },
+                      {
+                        platformId: project.destPlatformId,
+                        label: project.destPlatformId,
+                      },
+                    ]}
+                    sourceConnection={undefined}
+                    destConnection={undefined}
+                    projectId={project.id}
+                    twoWayNotice={null}
+                    onSyncDirectionChange={() => undefined}
+                    onSourceOfTruthChange={() => undefined}
+                    onDeleteHandlingChange={() => undefined}
+                    onHubspotWebhookEnabledChange={setWebhookEnabled}
+                    onSyncTriggerChange={() => undefined}
+                    fieldMappingLocationLabel="the Field Mapping tab"
+                    readOnly
+                  />
+                  {job.syncDirection === 'two_way' && (
+                    <Button
+                      onClick={() => void saveWebhookSetting()}
+                      disabled={
+                        webhookSaving ||
+                        webhookEnabled === job.hubspotWebhookEnabled
+                      }
                     >
-                      {job.dependsOnJobId}
-                    </Link>
-                  ) : (
-                    'None'
-                  )
-                }
-              />
-            </dl>
-          </CardContent>
-        </Card>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <Card className="gap-0 py-0"><CardContent className="px-4 py-4"><JobRetryCard projectId={projectId} job={job} onUpdated={() => undefined} saveJob={saveRetry} /></CardContent></Card>
-          <Card className="gap-0 py-0"><CardContent className="px-4 py-4"><JobSkipUpdateCard projectId={projectId} job={job} onUpdated={() => undefined} saveJob={saveSkipUpdate} /></CardContent></Card>
-          <Card className="gap-0 py-0">
-            <CardHeader className="px-4 py-3">
-              <CardTitle>Resume checkpoint</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 px-4 pb-4">
-              <dl className="grid gap-3 sm:grid-cols-2">
-                <DetailItem label="Page" value={job.checkpointPage} />
-                <DetailItem
-                  label="Since"
-                  value={dateLabel(job.checkpointSince)}
-                />
-                <DetailItem label="Run ID" value={job.checkpointRunId} />
-                <DetailItem label="Full sync page" value={job.syncAllPage} />
-              </dl>
-              <p className="text-muted-foreground text-xs">
-                The next matching run may resume from these saved values.
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="gap-0 py-0">
-            <CardHeader className="px-4 py-3">
-              <CardTitle>Saved advanced rules</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 px-4 pb-4 text-sm">
-              <DetailItem
-                label="Filter logic"
-                value={job.excludeConditionLogic}
-              />
-              {[
-                ['Source filters', job.excludeConditions],
-                ['Destination skip conditions', job.destinationSkipConditions],
-                ['Default values', job.defaultValues],
-                ['Pipeline status mapping', job.statusMapping],
-              ].map(([label, value]) => (
-                <details
-                  key={label as string}
-                  className="rounded-2xl border p-3"
-                >
-                  <summary className="cursor-pointer font-medium">
-                    {label as string}
-                  </summary>
-                  <pre className="mt-2 overflow-x-auto text-xs break-words whitespace-pre-wrap">
-                    {value == null ||
-                    (Array.isArray(value) && value.length === 0)
-                      ? 'Not configured'
-                      : JSON.stringify(value, null, 2)}
-                  </pre>
-                </details>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
-      )}
-    </div>
+                      {webhookSaving ? 'Saving…' : 'Save Changes'}
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+              <Card className="gap-0 py-0">
+                <CardHeader className="px-4 py-3">
+                  <CardTitle>Saved configuration</CardTitle>
+                </CardHeader>
+                <CardContent className="px-4 pb-4">
+                  <dl className="grid gap-3 sm:grid-cols-2">
+                    <DetailItem
+                      label="Sync direction"
+                      value={job.syncDirection}
+                    />
+                    <DetailItem label="Sync trigger" value={job.syncTrigger} />
+                    <DetailItem
+                      label="Source match field"
+                      value={job.idMappingSourceField}
+                    />
+                    <DetailItem
+                      label="Destination match field"
+                      value={job.idMappingDestField}
+                    />
+                    <DetailItem
+                      label="Source of truth"
+                      value={job.sourceOfTruth}
+                    />
+                    <DetailItem
+                      label="Delete handling"
+                      value={job.deleteHandling}
+                    />
+                    <DetailItem
+                      label="HubSpot webhook"
+                      value={job.hubspotWebhookEnabled ? 'Enabled' : 'Disabled'}
+                    />
+                    <DetailItem
+                      label="Destination pipeline"
+                      value={job.destPipelineId}
+                    />
+                    <DetailItem
+                      label="Pipeline status mappings"
+                      value={
+                        job.statusMapping
+                          ? Object.keys(job.statusMapping).length
+                          : 0
+                      }
+                    />
+                    <DetailItem
+                      label="Skip updates on match"
+                      value={job.skipUpdateOnMatch ? 'Yes' : 'No'}
+                    />
+                    <DetailItem label="Timezone" value={job.timezone} />
+                    <DetailItem
+                      label="Schedule mode"
+                      value={job.scheduleMode}
+                    />
+                    <DetailItem
+                      label="Schedule times"
+                      value={job.scheduleTimes?.join(', ')}
+                    />
+                    <DetailItem
+                      label="Schedule days"
+                      value={job.scheduleDays?.join(', ')}
+                    />
+                    <DetailItem
+                      label="Interval"
+                      value={
+                        job.intervalMinutes == null
+                          ? null
+                          : `${job.intervalMinutes} minutes`
+                      }
+                    />
+                    <DetailItem
+                      label="Cron expression"
+                      value={job.cronExpression}
+                    />
+                    <DetailItem
+                      label="Depends on job"
+                      value={
+                        job.dependsOnJobId ? (
+                          <Link
+                            className="text-primary hover:underline"
+                            to={`${projectPath}/jobs/${job.dependsOnJobId}`}
+                          >
+                            {job.dependsOnJobId}
+                          </Link>
+                        ) : (
+                          'None'
+                        )
+                      }
+                    />
+                  </dl>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </AccordionContent>
+      </AccordionItem>
+      <AccordionItem value="advanced">
+        <AccordionTrigger>
+          <span className="flex items-start gap-3">
+            <span className="bg-muted flex size-8 shrink-0 items-center justify-center rounded-lg">
+              <RotateCcw className="size-4" aria-hidden />
+            </span>
+            <span>
+              <span className="block font-semibold">Advanced</span>
+              <span className="text-muted-foreground block text-xs font-normal">
+                Retries, matched records, checkpoints, and saved rules.
+              </span>
+            </span>
+          </span>
+        </AccordionTrigger>
+        <AccordionContent className="space-y-4">
+          {section === 'advanced' && (
+            <div className="space-y-4">
+              <Card className="gap-0 py-0">
+                <CardContent className="px-4 py-4">
+                  <JobRetryCard
+                    projectId={projectId}
+                    job={job}
+                    onUpdated={() => undefined}
+                    saveJob={saveRetry}
+                  />
+                </CardContent>
+              </Card>
+              <Card className="gap-0 py-0">
+                <CardContent className="px-4 py-4">
+                  <JobSkipUpdateCard
+                    projectId={projectId}
+                    job={job}
+                    onUpdated={() => undefined}
+                    saveJob={saveSkipUpdate}
+                  />
+                </CardContent>
+              </Card>
+              <Card className="gap-0 py-0">
+                <CardHeader className="px-4 py-3">
+                  <CardTitle>Resume checkpoint</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 px-4 pb-4">
+                  <dl className="grid gap-3 sm:grid-cols-2">
+                    <DetailItem label="Page" value={job.checkpointPage} />
+                    <DetailItem
+                      label="Since"
+                      value={dateLabel(job.checkpointSince)}
+                    />
+                    <DetailItem label="Run ID" value={job.checkpointRunId} />
+                    <DetailItem
+                      label="Full sync page"
+                      value={job.syncAllPage}
+                    />
+                  </dl>
+                  <p className="text-muted-foreground text-xs">
+                    The next matching run may resume from these saved values.
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="gap-0 py-0">
+                <CardHeader className="px-4 py-3">
+                  <CardTitle>Saved advanced rules</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 px-4 pb-4 text-sm">
+                  <DetailItem
+                    label="Filter logic"
+                    value={job.excludeConditionLogic}
+                  />
+                  {[
+                    ['Source filters', job.excludeConditions],
+                    [
+                      'Destination skip conditions',
+                      job.destinationSkipConditions,
+                    ],
+                    ['Default values', job.defaultValues],
+                    ['Pipeline status mapping', job.statusMapping],
+                  ].map(([label, value]) => (
+                    <details
+                      key={label as string}
+                      className="rounded-2xl border p-3"
+                    >
+                      <summary className="cursor-pointer font-medium">
+                        {label as string}
+                      </summary>
+                      <pre className="mt-2 overflow-x-auto text-xs break-words whitespace-pre-wrap">
+                        {value == null ||
+                        (Array.isArray(value) && value.length === 0)
+                          ? 'Not configured'
+                          : JSON.stringify(value, null, 2)}
+                      </pre>
+                    </details>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   );
 }
 
@@ -492,13 +682,17 @@ export default function OrganisationJobDetailPage() {
       ? 'field-mapping'
       : searchParams.get('tab') === 'pipeline'
         ? 'pipeline'
-      : searchParams.get('tab') === 'run-history'
-        ? 'run-history'
-        : searchParams.get('tab') === 'settings'
-          ? 'settings'
-          : 'overview';
+        : searchParams.get('tab') === 'run-history'
+          ? 'run-history'
+          : searchParams.get('tab') === 'settings'
+            ? 'settings'
+            : 'overview';
   const section: SettingsSection =
-    searchParams.get('section') === 'advanced' ? 'advanced' : 'general';
+    searchParams.get('section') === 'advanced'
+      ? 'advanced'
+      : searchParams.get('section') === 'closed'
+        ? 'closed'
+        : 'general';
   const projectPath = `/super-admin/organisations/${organisationId}/projects/${projectId}`;
   const jobQuery = useSuperAdminJobQuery(organisationId, projectId, jobId);
   const projectQuery = useSuperAdminProjectQuery(organisationId, projectId);
@@ -513,7 +707,11 @@ export default function OrganisationJobDetailPage() {
     projectId,
     jobId,
   );
-  const updateJob = useUpdateSuperAdminJobMutation(organisationId, projectId, jobId);
+  const updateJob = useUpdateSuperAdminJobMutation(
+    organisationId,
+    projectId,
+    jobId,
+  );
   const runStatusQuery = useSuperAdminRunStatusQuery(
     organisationId,
     projectId,
@@ -584,7 +782,9 @@ export default function OrganisationJobDetailPage() {
 
   const job = jobQuery.data;
   const project = projectQuery.data;
-  const pipelineRequired = project.destPlatformId === 'hubspot' && KNOWN_PIPELINE_OBJECTS.has(job.destObject.toLowerCase());
+  const pipelineRequired =
+    project.destPlatformId === 'hubspot' &&
+    KNOWN_PIPELINE_OBJECTS.has(job.destObject.toLowerCase());
   const submitRun = async (values: RunJobDialogValues) => {
     try {
       const result = await runJob.mutateAsync(values);
@@ -623,18 +823,13 @@ export default function OrganisationJobDetailPage() {
       );
     }
   };
-  const sectionHref = (value: string) => {
-    const next = new URLSearchParams(searchParams);
-    next.set('tab', 'settings');
-    next.set('section', value);
-    return `?${next.toString()}`;
-  };
-  const goToTab = (value: JobTab) => setSearchParams((previous) => {
-    const next = new URLSearchParams(previous);
-    next.set('tab', value);
-    if (value !== 'settings') next.delete('section');
-    return next;
-  });
+  const goToTab = (value: JobTab) =>
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous);
+      next.set('tab', value);
+      if (value !== 'settings') next.delete('section');
+      return next;
+    });
 
   return (
     <Tabs
@@ -649,7 +844,10 @@ export default function OrganisationJobDetailPage() {
           pipelineRequired={pipelineRequired}
           activeTab={tab}
           onTabChange={goToTab}
-          onRun={() => { runJob.reset(); setRunOpen(true); }}
+          onRun={() => {
+            runJob.reset();
+            setRunOpen(true);
+          }}
         />
         <TabsContent value="overview">
           <JobOverview
@@ -657,7 +855,9 @@ export default function OrganisationJobDetailPage() {
             runs={historyQuery.data?.data ?? []}
             runAction={
               <div className="flex flex-wrap gap-2">
-                <Button variant="outline" onClick={() => setScheduleOpen(true)}><CalendarClock /> Configure schedule</Button>
+                <Button variant="outline" onClick={() => setScheduleOpen(true)}>
+                  <CalendarClock /> Configure schedule
+                </Button>
                 <Button
                   variant="outline"
                   onClick={changeEnabled}
@@ -709,9 +909,23 @@ export default function OrganisationJobDetailPage() {
           />
         </TabsContent>
         <TabsContent value="field-mapping">
-          <OrganisationJobMappingPanel key={job.id} organisationId={organisationId} project={project} job={job} />
+          <OrganisationJobMappingPanel
+            key={job.id}
+            organisationId={organisationId}
+            project={project}
+            job={job}
+          />
         </TabsContent>
-        {pipelineRequired && <TabsContent value="pipeline"><OrganisationJobPipelinePanel key={job.id} organisationId={organisationId} project={project} job={job} /></TabsContent>}
+        {pipelineRequired && (
+          <TabsContent value="pipeline">
+            <OrganisationJobPipelinePanel
+              key={job.id}
+              organisationId={organisationId}
+              project={project}
+              job={job}
+            />
+          </TabsContent>
+        )}
         <TabsContent value="run-history">
           <Card className="gap-0 py-0">
             <CardHeader className="px-4 py-3">
@@ -810,11 +1024,14 @@ export default function OrganisationJobDetailPage() {
                 return next;
               })
             }
-            sectionHref={sectionHref}
             saveName={(name) => updateJob.mutateAsync({ name })}
-            saveWebhook={(enabled) => updateJob.mutateAsync({ hubspotWebhookEnabled: enabled })}
+            saveWebhook={(enabled) =>
+              updateJob.mutateAsync({ hubspotWebhookEnabled: enabled })
+            }
             saveRetry={(patch) => updateJob.mutateAsync(patch)}
-            saveSkipUpdate={(skipUpdateOnMatch) => updateJob.mutateAsync({ skipUpdateOnMatch })}
+            saveSkipUpdate={(skipUpdateOnMatch) =>
+              updateJob.mutateAsync({ skipUpdateOnMatch })
+            }
           />
         </TabsContent>
       </div>
@@ -838,10 +1055,13 @@ export default function OrganisationJobDetailPage() {
         onOpenChange={setScheduleOpen}
         skipPriorityQueue
         minIntervalMinutesOverride={1}
-        saveSchedule={(payload) => updateJob.mutateAsync({
-          ...payload,
-          scheduleMode: payload.scheduleMode as 'daily_time' | 'interval' | 'day_specific',
-        })}
+        saveSchedule={(payload) =>
+          updateJob.mutateAsync({
+            ...payload,
+            scheduleMode: payload.scheduleMode as
+              'daily_time' | 'interval' | 'day_specific',
+          })
+        }
       />
     </Tabs>
   );

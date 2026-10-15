@@ -6,6 +6,7 @@ import {
   Routes,
   Navigate,
   useLocation,
+  useParams,
 } from 'react-router-dom';
 
 import { Toaster } from '@/components/ui/sonner';
@@ -62,13 +63,6 @@ const OrganisationProjectsPage = lazy(
 const OrganisationProjectDetailPage = lazy(
   () => import('@/pages/superadmin/OrganisationProjectDetailPage'),
 );
-const OrganisationProjectAssociationsPage = lazy(
-  () =>
-    import('@/pages/superadmin/associations/OrganisationProjectAssociationsPage'),
-);
-const OrganisationProjectMigrationPage = lazy(
-  () => import('@/pages/superadmin/migration/OrganisationProjectMigrationPage'),
-);
 const OrganisationBillingPage = lazy(
   () => import('@/pages/superadmin/OrganisationBillingPage'),
 );
@@ -92,6 +86,20 @@ const PlatformAuditPage = lazy(
 const PlatformProfilePage = lazy(
   () => import('@/pages/superadmin/PlatformProfilePage'),
 );
+
+function ProjectSettingsLegacyRedirect({
+  section,
+}: {
+  section: 'associations' | 'environments';
+}) {
+  const { organisationId, projectId } = useParams();
+  return (
+    <Navigate
+      to={`/super-admin/organisations/${organisationId}/projects/${projectId}?tab=settings&section=${section}`}
+      replace
+    />
+  );
+}
 const AppLayout = lazy(() => import('@/components/layout/app-layout'));
 const SuperAdminLayout = lazy(
   () => import('@/pages/superadmin/SuperAdminLayout'),
@@ -354,11 +362,15 @@ function App() {
                     />
                     <Route
                       path="projects/:projectId/associations"
-                      element={<OrganisationProjectAssociationsPage />}
+                      element={
+                        <ProjectSettingsLegacyRedirect section="associations" />
+                      }
                     />
                     <Route
                       path="projects/:projectId/migration"
-                      element={<OrganisationProjectMigrationPage />}
+                      element={
+                        <ProjectSettingsLegacyRedirect section="environments" />
+                      }
                     />
                     <Route
                       path="billing"

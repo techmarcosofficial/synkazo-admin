@@ -132,6 +132,20 @@ export default function ManagementToolbar({
             />
           </div>
         )}
+        {action && (
+          <div
+            className={cn(
+              'justify-self-end xl:col-auto xl:row-auto xl:shrink-0',
+              filterCount === 2
+                ? 'col-span-full justify-self-end'
+                : viewMode
+                  ? 'col-start-2 row-start-2'
+                  : 'col-start-2 row-span-2',
+            )}
+          >
+            {action}
+          </div>
+        )}
       </div>
     );
   }

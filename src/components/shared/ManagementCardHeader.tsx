@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
+import type { HeadingVisualLevel } from '@/components/shared/headingStyles';
 import HeadingPair from '@/components/shared/HeadingPair';
 import { Badge } from '@/components/ui/badge';
 
@@ -13,6 +14,8 @@ interface ManagementCardHeaderProps {
   countLabel: string;
   isLoading?: boolean;
   children: ReactNode;
+  level?: 'h1' | 'h2' | 'h3' | 'h4';
+  visualLevel?: HeadingVisualLevel;
 }
 
 /** Page identity and primary action for a management directory. */
@@ -25,6 +28,8 @@ export default function ManagementCardHeader({
   countLabel,
   isLoading = false,
   children,
+  level = 'h1',
+  visualLevel = 'page',
 }: ManagementCardHeaderProps) {
   return (
     <header className="min-w-0">
@@ -34,7 +39,8 @@ export default function ManagementCardHeader({
         </div>
       )}
       <div
-        className={`bg-card border-border/70 relative z-10 rounded-3xl border px-3 py-3 shadow-sm sm:px-4 ${action ? '-mt-5' : ''}`}
+        data-layout-surface="outer"
+        className={`bg-card border-border/70 relative z-10 rounded-3xl border px-3 py-3 sm:px-4 ${action ? '-mt-5' : ''}`}
       >
         <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
           <div className="flex min-w-0 items-start gap-3">
@@ -42,8 +48,8 @@ export default function ManagementCardHeader({
               <Icon className="size-4" aria-hidden />
             </span>
             <HeadingPair
-              level="h1"
-              visualLevel="page"
+              level={level}
+              visualLevel={visualLevel}
               title={title}
               subtitle={subtitle}
               trailing={

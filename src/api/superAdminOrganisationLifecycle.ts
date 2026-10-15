@@ -1,6 +1,7 @@
 import type { AxiosResponse } from 'axios';
 
 import apiClient from './apiClient';
+import { createIdempotencyKey } from '@/lib/idempotency';
 
 import type {
   ClearPaymentHoldDto,
@@ -22,51 +23,66 @@ export const superAdminOrganisationLifecycleApi = {
   transitionStatus: (
     organisationId: string,
     dto: TransitionOrganisationStatusDto,
+    idempotencyKey = createIdempotencyKey(),
   ): Promise<LifecycleTransitionResponse> =>
     apiClient
       .patch<{ data: LifecycleTransitionResponse }>(
         `/super-admin/organisations/${organisationId}/status`,
         dto,
+        { headers: { 'Idempotency-Key': idempotencyKey } },
       )
       .then(d),
 
   hold: (
     organisationId: string,
     dto: HoldWorkDto,
+    idempotencyKey = createIdempotencyKey(),
   ): Promise<HoldWorkResponse> =>
     apiClient
       .post<{ data: HoldWorkResponse }>(
         `/super-admin/organisations/${organisationId}/hold`,
         dto,
+        { headers: { 'Idempotency-Key': idempotencyKey } },
       )
       .then(d),
 
-  resume: (organisationId: string): Promise<ResumeWorkResponse> =>
+  resume: (
+    organisationId: string,
+    idempotencyKey = createIdempotencyKey(),
+  ): Promise<ResumeWorkResponse> =>
     apiClient
       .post<{ data: ResumeWorkResponse }>(
         `/super-admin/organisations/${organisationId}/resume`,
+        {},
+        { headers: { 'Idempotency-Key': idempotencyKey } },
       )
       .then(d),
 
   imposePaymentHold: (
     organisationId: string,
     dto: PaymentHoldDto,
+    idempotencyKey = createIdempotencyKey(),
   ): Promise<{ paymentHoldActive: true }> =>
     apiClient
       .post<{ data: { paymentHoldActive: true } }>(
         `/super-admin/organisations/${organisationId}/payment-hold`,
         dto,
+        { headers: { 'Idempotency-Key': idempotencyKey } },
       )
       .then(d),
 
   clearPaymentHold: (
     organisationId: string,
     dto: ClearPaymentHoldDto,
+    idempotencyKey = createIdempotencyKey(),
   ): Promise<{ paymentHoldActive: false }> =>
     apiClient
       .delete<{ data: { paymentHoldActive: false } }>(
         `/super-admin/organisations/${organisationId}/payment-hold`,
-        { data: dto },
+        {
+          data: dto,
+          headers: { 'Idempotency-Key': idempotencyKey },
+        },
       )
       .then(d),
 };

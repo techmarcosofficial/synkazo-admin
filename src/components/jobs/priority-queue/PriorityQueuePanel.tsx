@@ -1,15 +1,20 @@
-import { Plus, Save } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Plus } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 
-import AssociationQueueCard from './AssociationQueueCard';
-import QueueJobDrawer, { type QueueJobFormValues } from './QueueJobDrawer';
-import QueueJobList from './QueueJobList';
-import QueueScheduleCard from './QueueScheduleCard';
-import QueueStatusPanel from './QueueStatusPanel';
-
+import type {
+  UpdateAssociationQueuePayload,
+  UpdateQueueJobPayload,
+  UpdateQueueSchedulePayload,
+} from '@/api/priorityQueue';
+import { jobsApi } from '@/api/jobs';
+import IndividualSchedulerList, {
+  type IndividualScheduleDraft,
+} from '@/components/jobs/IndividualSchedulerList';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
+import { showToast } from '@/lib/toast';
+import { useProjectJobsQuery } from '@/queries/useJobs';
+import { useProjectQuery } from '@/queries/useProjects';
 import {
   useAddQueueJobMutation,
   useClearAndRestartQueueMutation,
@@ -19,10 +24,30 @@ import {
   useReorderQueueJobsMutation,
   useResumeQueueMutation,
   useRetryQueueJobMutation,
+  useSetSchedulerModeMutation,
+  useUpdateAssociationConfigMutation,
   useUpdateQueueJobMutation,
   useUpdateQueueScheduleMutation,
 } from '@/queries/usePriorityQueue';
+import { useEntitlements } from '@/queries/useEntitlements';
 import type { QueueJob } from '@/types';
+
+import AssociationQueueCard from './AssociationQueueCard';
+import PrioritySchedulerOverviewCard from './PrioritySchedulerOverviewCard';
+import QueueJobInlineEditor, {
+  queueJobValuesToPayload,
+  type QueueJobDraft,
+  type QueueJobInlineValues,
+} from './QueueJobInlineEditor';
+import QueueJobList from './QueueJobList';
+import QueueScheduleCard, {
+  queueScheduleDraft,
+  queueScheduleValid,
+} from './QueueScheduleCard';
+import QueueStatusPanel from './QueueStatusPanel';
+import SchedulerDraftFooter from './SchedulerDraftFooter';
+
+const EMPTY_QUEUE_JOBS: QueueJob[] = [];
 
 export default function PriorityQueuePanel({
   projectId,
@@ -30,198 +55,403 @@ export default function PriorityQueuePanel({
   projectId: string;
 }) {
   const queueQuery = usePriorityQueueQuery(projectId);
+  const jobsQuery = useProjectJobsQuery(projectId);
+  const projectQuery = useProjectQuery(projectId);
+  const { priorityScheduling: canUsePriorityScheduling } = useEntitlements();
+  const modeMutation = useSetSchedulerModeMutation(projectId);
   const scheduleMutation = useUpdateQueueScheduleMutation(projectId);
   const addJobMutation = useAddQueueJobMutation(projectId);
   const updateJobMutation = useUpdateQueueJobMutation(projectId);
   const removeJobMutation = useRemoveQueueJobMutation(projectId);
   const reorderMutation = useReorderQueueJobsMutation(projectId);
+  const associationMutation = useUpdateAssociationConfigMutation(projectId);
   const retryMutation = useRetryQueueJobMutation(projectId);
   const pauseMutation = usePauseQueueMutation(projectId);
   const resumeMutation = useResumeQueueMutation(projectId);
-  const clearAndRestartMutation = useClearAndRestartQueueMutation(projectId);
+  const clearMutation = useClearAndRestartQueueMutation(projectId);
 
+  const [modeDraft, setModeDraft] = useState<boolean | null>(null);
+  const [scheduleDraft, setScheduleDraft] =
+    useState<UpdateQueueSchedulePayload | null>(null);
   const [localJobs, setLocalJobs] = useState<QueueJob[]>([]);
-  const [dirty, setDirty] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [orderDirty, setOrderDirty] = useState(false);
+  const [jobUpdates, setJobUpdates] = useState<
+    Record<string, UpdateQueueJobPayload>
+  >({});
+  const [startingCustomerEdits, setStartingCustomerEdits] = useState<
+    Record<string, QueueJobInlineValues>
+  >({});
+  const [removedIds, setRemovedIds] = useState<string[]>([]);
+  const [stagedJobs, setStagedJobs] = useState<QueueJobDraft[]>([]);
+  const [associationDraft, setAssociationDraft] =
+    useState<UpdateAssociationQueuePayload | null>(null);
+  const [associationSavedRevision, setAssociationSavedRevision] = useState(0);
+  const [individualScheduleDrafts, setIndividualScheduleDrafts] = useState<
+    Record<string, IndividualScheduleDraft>
+  >({});
+  const [individualRefreshKey, setIndividualRefreshKey] = useState(0);
   const [editing, setEditing] = useState<QueueJob | null>(null);
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const serverJobs = queueQuery.data?.queueJobs ?? [];
-
+  const queue = queueQuery.data;
+  const serverJobs = queue?.queueJobs ?? EMPTY_QUEUE_JOBS;
   useEffect(() => {
-    if (!dirty) setLocalJobs(serverJobs);
-  }, [dirty, serverJobs]);
+    if (
+      !orderDirty &&
+      removedIds.length === 0 &&
+      Object.keys(jobUpdates).length === 0
+    ) {
+      setLocalJobs(serverJobs);
+    }
+  }, [serverJobs, orderDirty, removedIds.length, jobUpdates]);
 
-  if (queueQuery.isLoading) {
+  const onAssociationChange = useCallback(
+    (draft: UpdateAssociationQueuePayload) => setAssociationDraft(draft),
+    [],
+  );
+  if (queueQuery.isLoading)
     return (
       <div className="flex h-40 items-center justify-center">
-        <Spinner className="text-muted-foreground size-6" />
+        <Spinner />
       </div>
     );
-  }
+  if (!queue)
+    return (
+      <p className="text-destructive text-sm">Scheduler could not be loaded.</p>
+    );
 
-  const config = queueQuery.data;
-  if (!config) return null;
+  const priority = modeDraft ?? queue.schedulerMode === 'priority';
+  const schedule = scheduleDraft ?? queueScheduleDraft(queue.queue);
+  const availableJobsCount = (jobsQuery.data ?? []).filter(
+    (job) =>
+      !serverJobs.some((row) => row.jobId === job.id) &&
+      !stagedJobs.some((row) => row.jobId === job.id),
+  ).length;
+  const inlineJobs = (jobsQuery.data ?? []).map((job) => {
+    const staged = Object.values(startingCustomerEdits).find(
+      (value) => value.jobId === job.id,
+    );
+    return staged?.startingCustomerId == null
+      ? job
+      : { ...job, dataformaStartingCustomerId: staged.startingCustomerId };
+  });
+  const hasChanges =
+    modeDraft !== null ||
+    scheduleDraft !== null ||
+    orderDirty ||
+    Object.keys(jobUpdates).length > 0 ||
+    Object.keys(startingCustomerEdits).length > 0 ||
+    removedIds.length > 0 ||
+    stagedJobs.length > 0 ||
+    associationDraft !== null ||
+    Object.keys(individualScheduleDrafts).length > 0;
 
-  const handleReorderLocal = (reordered: QueueJob[]) => {
-    setLocalJobs(reordered);
-    setDirty(true);
-  };
-
-  const saveOrder = () => {
-    reorderMutation.mutate(
-      localJobs.map((qj, i) => ({ id: qj.id, position: i })),
-      { onSuccess: () => setDirty(false) },
+  const stageJobUpdate = (row: QueueJob, payload: UpdateQueueJobPayload) => {
+    setJobUpdates((current) => ({
+      ...current,
+      [row.id]: { ...current[row.id], ...payload },
+    }));
+    setLocalJobs((current) =>
+      current.map((item) =>
+        item.id === row.id
+          ? {
+              ...item,
+              enabled: payload.enabled ?? item.enabled,
+              executionWindowSec: payload.executionWindowMinutes
+                ? payload.executionWindowMinutes * 60
+                : item.executionWindowSec,
+              overrideSyncConfig:
+                payload.overrideSyncConfig === undefined
+                  ? item.overrideSyncConfig
+                  : payload.overrideSyncConfig,
+              baselineMode:
+                payload.baselineMode === undefined
+                  ? item.baselineMode
+                  : payload.baselineMode,
+              customBaselineAt:
+                payload.baselineCustomAt === undefined
+                  ? item.customBaselineAt
+                  : payload.baselineCustomAt,
+              baselineTimezone:
+                payload.baselineTimezone === undefined
+                  ? item.baselineTimezone
+                  : payload.baselineTimezone,
+            }
+          : item,
+      ),
     );
   };
 
-  const openAddDrawer = () => {
-    setEditing(null);
-    setDrawerOpen(true);
-  };
-
-  const openEditDrawer = (queueJob: QueueJob) => {
-    setEditing(queueJob);
-    setDrawerOpen(true);
-  };
-
-  const handleToggleEnabled = (queueJob: QueueJob) => {
-    updateJobMutation.mutate({
-      queueJobId: queueJob.id,
-      payload: { enabled: !queueJob.enabled },
-    });
-  };
-
-  const handleDrawerSubmit = (values: QueueJobFormValues) => {
-    const overrideSyncConfig = values.overrideEnabled
-      ? { batchSize: values.batchSize }
-      : null;
-
-    if (editing) {
-      updateJobMutation.mutate(
-        {
-          queueJobId: editing.id,
-          payload: {
-            executionWindowMinutes: values.executionWindowMinutes,
-            enabled: values.enabled,
-            overrideSyncConfig,
-            baselineMode: values.baselineMode,
-            baselineCustomAt: values.baselineCustomAt,
-            baselineTimezone: values.baselineTimezone,
-          },
-        },
-        { onSuccess: () => setDrawerOpen(false) },
-      );
-    } else {
-      addJobMutation.mutate(
-        {
-          jobId: values.jobId,
-          executionWindowMinutes: values.executionWindowMinutes,
-          enabled: values.enabled,
-          overrideSyncConfig: overrideSyncConfig ?? undefined,
-          baselineMode: values.baselineMode,
-          baselineCustomAt: values.baselineCustomAt,
-          baselineTimezone: values.baselineTimezone,
-        },
-        { onSuccess: () => setDrawerOpen(false) },
-      );
+  const saveStartingCustomerId = async (values: QueueJobInlineValues) => {
+    const job = jobsQuery.data?.find((item) => item.id === values.jobId);
+    if (
+      projectQuery.data?.sourcePlatformId === 'dataforma' &&
+      job?.sourceObject === 'customers' &&
+      values.startingCustomerId != null &&
+      values.startingCustomerId !== (job.dataformaStartingCustomerId ?? 0)
+    ) {
+      await jobsApi.updateJob(projectId, values.jobId, {
+        dataformaStartingCustomerId: values.startingCustomerId,
+      });
+      await jobsQuery.refetch();
     }
   };
 
-  const savingDrawer = addJobMutation.isPending || updateJobMutation.isPending;
+  const save = async () => {
+    if (
+      !hasChanges ||
+      saving ||
+      (scheduleDraft && !queueScheduleValid(schedule))
+    )
+      return;
+    setSaving(true);
+    setError(null);
+    let individualScheduleSaved = false;
+    try {
+      if (modeDraft === true && queue.schedulerMode !== 'priority') {
+        await modeMutation.mutateAsync(true);
+        setModeDraft(null);
+      }
+      if (scheduleDraft) {
+        await scheduleMutation.mutateAsync(scheduleDraft);
+        setScheduleDraft(null);
+      }
+      for (const id of removedIds) {
+        await removeJobMutation.mutateAsync(id);
+        setRemovedIds((current) => current.filter((item) => item !== id));
+      }
+      for (const [id, payload] of Object.entries(jobUpdates)) {
+        if (startingCustomerEdits[id])
+          await saveStartingCustomerId(startingCustomerEdits[id]);
+        await updateJobMutation.mutateAsync({ queueJobId: id, payload });
+        setJobUpdates((current) => {
+          const next = { ...current };
+          delete next[id];
+          return next;
+        });
+        setStartingCustomerEdits((current) => {
+          const next = { ...current };
+          delete next[id];
+          return next;
+        });
+      }
+      if (orderDirty) {
+        await reorderMutation.mutateAsync(
+          localJobs.map((row, position) => ({ id: row.id, position })),
+        );
+        setOrderDirty(false);
+      }
+      for (const draft of stagedJobs) {
+        await saveStartingCustomerId(draft);
+        const payload = queueJobValuesToPayload(draft);
+        await addJobMutation.mutateAsync({
+          jobId: draft.jobId,
+          ...payload,
+          executionWindowMinutes: draft.executionWindowMinutes,
+          overrideSyncConfig: payload.overrideSyncConfig ?? undefined,
+        });
+        setStagedJobs((current) =>
+          current.filter((item) => item.draftId !== draft.draftId),
+        );
+      }
+      if (associationDraft) {
+        await associationMutation.mutateAsync(associationDraft);
+        setAssociationDraft(null);
+        setAssociationSavedRevision((current) => current + 1);
+      }
+      if (modeDraft === false && queue.schedulerMode === 'priority') {
+        await modeMutation.mutateAsync(false);
+        setModeDraft(null);
+      }
+      for (const [jobId, draft] of Object.entries(individualScheduleDrafts)) {
+        await jobsApi.updateJob(projectId, jobId, draft);
+        setIndividualScheduleDrafts((current) => {
+          const next = { ...current };
+          delete next[jobId];
+          return next;
+        });
+        individualScheduleSaved = true;
+      }
+      showToast.success('Scheduler changes saved.');
+    } catch {
+      setError(
+        'Some changes could not be saved. Your remaining edits are still here; retry Save.',
+      );
+    } finally {
+      if (individualScheduleSaved)
+        setIndividualRefreshKey((value) => value + 1);
+      setSaving(false);
+    }
+  };
 
   return (
-    <div className="space-y-3">
-      <QueueScheduleCard
-        queue={config.queue}
-        saving={scheduleMutation.isPending}
-        onSave={(payload) => scheduleMutation.mutate(payload)}
-      />
-
-      <QueueStatusPanel
-        config={config}
-        onPause={() => pauseMutation.mutate()}
-        onResume={() => resumeMutation.mutate()}
-        pausing={pauseMutation.isPending || resumeMutation.isPending}
-        onClearAndRestart={async () => {
-          await clearAndRestartMutation.mutateAsync();
-        }}
-        clearingAndRestarting={clearAndRestartMutation.isPending}
-      />
-
-      <Card size="sm" className="gap-3">
-        <CardContent className="space-y-2.5">
-          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-            <div className="flex items-center gap-3">
-              <div className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
-                1
-              </div>
-              <div>
-                <p className="text-sm font-semibold">Priority Queue</p>
-                <p className="text-muted-foreground mt-0.5 text-xs">
-                  Runs first — drag jobs to reorder execution.
-                </p>
-              </div>
+    <div className={`space-y-4 ${hasChanges ? 'pb-24' : ''}`}>
+      <h2 className="text-base font-semibold">
+        Manage schedules of all sync flows
+      </h2>
+      <PrioritySchedulerOverviewCard
+        enabled={priority}
+        disabled={saving || (!priority && !canUsePriorityScheduling)}
+        onEnabledChange={(next) =>
+          setModeDraft(
+            next === (queue.schedulerMode === 'priority') ? null : next,
+          )
+        }
+        schedule={
+          <QueueScheduleCard
+            queue={queue.queue}
+            value={schedule}
+            onChange={setScheduleDraft}
+          />
+        }
+        status={
+          <QueueStatusPanel
+            embedded
+            config={queue}
+            onPause={() => pauseMutation.mutate()}
+            onResume={() => resumeMutation.mutate()}
+            pausing={pauseMutation.isPending || resumeMutation.isPending}
+            onClearAndRestart={async () => {
+              await clearMutation.mutateAsync();
+            }}
+            clearingAndRestarting={clearMutation.isPending}
+          />
+        }
+      >
+        <section
+          className="min-w-0 space-y-3 border-t px-4 py-4"
+          aria-label="Priority queue jobs"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-sm font-semibold">Step 1 · Priority Queue</h3>
+              <span className="text-muted-foreground text-xs">
+                {localJobs.length + stagedJobs.length} configured{' '}
+                {localJobs.length + stagedJobs.length === 1 ? 'job' : 'jobs'}
+              </span>
             </div>
-            <div className="flex items-center gap-2 self-end sm:self-auto">
-              {dirty && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={saveOrder}
-                  disabled={reorderMutation.isPending}
-                >
-                  {reorderMutation.isPending ? <Spinner /> : <Save />}
-                  Save Changes
-                </Button>
-              )}
-              <Button size="sm" onClick={openAddDrawer}>
-                <Plus />
-                Add Job
-              </Button>
-            </div>
+            <Button
+              size="sm"
+              disabled={
+                composerOpen ||
+                saving ||
+                availableJobsCount === 0 ||
+                jobsQuery.isLoading
+              }
+              onClick={() => {
+                setEditing(null);
+                setComposerOpen(true);
+              }}
+            >
+              <Plus /> Add job
+            </Button>
           </div>
-
-          {localJobs.length === 0 ? (
-            <div className="py-8 text-center">
-              <p className="mb-1 text-sm font-medium">
-                No jobs have been added to the priority queue
-              </p>
-              <p className="text-muted-foreground text-xs">
-                Add jobs to create an execution sequence.
-              </p>
-            </div>
-          ) : (
-            <QueueJobList
-              queueJobs={localJobs}
-              onReorderLocal={handleReorderLocal}
-              onEdit={openEditDrawer}
-              onToggleEnabled={handleToggleEnabled}
-              onRetry={(id) => retryMutation.mutate(id)}
-              onRemove={(id) => removeJobMutation.mutate(id)}
-            />
-          )}
-        </CardContent>
-      </Card>
-
-      <AssociationQueueCard
-        projectId={projectId}
-        queue={config.queue}
-        items={config.associationQueueItems}
-      />
-
-      <QueueJobDrawer
-        // Remounts the form fresh whenever the target switches (a different queue job,
-        // or between Add/Edit) — the drawer's fields are seeded via useState initializers
-        // that only run once, so without this key they'd keep showing stale values from
-        // whichever job the drawer was first opened for in this session.
-        key={editing?.id ?? 'add'}
-        projectId={projectId}
-        open={drawerOpen}
-        onOpenChange={setDrawerOpen}
-        editing={editing}
-        existingJobIds={serverJobs.map((qj) => qj.jobId)}
-        onSubmit={handleDrawerSubmit}
-        saving={savingDrawer}
+          <QueueJobList
+            queueJobs={localJobs}
+            editingQueueJobId={composerOpen ? editing?.id : null}
+            onReorderLocal={(rows) => {
+              setLocalJobs(rows);
+              setOrderDirty(true);
+            }}
+            onEdit={(row) => {
+              setEditing(row);
+              setComposerOpen(true);
+            }}
+            onToggleEnabled={(row) =>
+              stageJobUpdate(row, { enabled: !row.enabled })
+            }
+            onRetry={(id) => retryMutation.mutate(id)}
+            onRemove={(id) => {
+              setRemovedIds((current) => [...current, id]);
+              setJobUpdates((current) => {
+                const next = { ...current };
+                delete next[id];
+                return next;
+              });
+              setStartingCustomerEdits((current) => {
+                const next = { ...current };
+                delete next[id];
+                return next;
+              });
+              setLocalJobs((current) => current.filter((row) => row.id !== id));
+            }}
+            drafts={stagedJobs}
+            draftsBusy={saving}
+            jobs={jobsQuery.data ?? []}
+            onRemoveDraft={(id) =>
+              setStagedJobs((current) =>
+                current.filter((row) => row.draftId !== id),
+              )
+            }
+            composer={
+              <QueueJobInlineEditor
+                open={composerOpen}
+                onClose={() => {
+                  setComposerOpen(false);
+                  setEditing(null);
+                }}
+                jobs={inlineJobs}
+                existingJobIds={[
+                  ...serverJobs.map((row) => row.jobId),
+                  ...stagedJobs.map((row) => row.jobId),
+                ]}
+                editing={editing}
+                onApply={(drafts) =>
+                  setStagedJobs((current) => [...current, ...drafts])
+                }
+                onUpdate={(id, values, done) => {
+                  const row = localJobs.find((item) => item.id === id);
+                  if (row) {
+                    stageJobUpdate(row, queueJobValuesToPayload(values));
+                    if (values.startingCustomerId != null)
+                      setStartingCustomerEdits((current) => ({
+                        ...current,
+                        [id]: values,
+                      }));
+                  }
+                  done();
+                }}
+                busy={saving}
+                sourcePlatformId={
+                  projectQuery.data?.sourcePlatformId ?? undefined
+                }
+              />
+            }
+          />
+        </section>
+        <AssociationQueueCard
+          projectId={projectId}
+          queue={queue.queue}
+          items={queue.associationQueueItems}
+          onChange={onAssociationChange}
+          savedRevision={associationSavedRevision}
+        />
+      </PrioritySchedulerOverviewCard>
+      {!priority && (
+        <IndividualSchedulerList
+          projectId={projectId}
+          refreshKey={individualRefreshKey}
+          scheduleDrafts={individualScheduleDrafts}
+          onStageSchedule={(jobId, draft) =>
+            setIndividualScheduleDrafts((current) => ({
+              ...current,
+              [jobId]: draft,
+            }))
+          }
+        />
+      )}
+      {error && (
+        <p className="text-destructive text-sm" role="alert">
+          {error}
+        </p>
+      )}
+      <SchedulerDraftFooter
+        dirty={hasChanges}
+        saving={saving}
+        valid={scheduleDraft === null || queueScheduleValid(schedule)}
+        onSave={() => void save()}
       />
     </div>
   );

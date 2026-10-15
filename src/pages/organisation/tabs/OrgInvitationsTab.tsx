@@ -7,6 +7,7 @@ import MemberDetailDrawer from '@/components/organisation/MemberDetailDrawer';
 import InviteMemberDialog from '@/components/organisation/InviteMemberDialog';
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
+import ManagementCardHeader from '@/components/shared/ManagementCardHeader';
 import ManagementToolbar from '@/components/shared/ManagementToolbar';
 import PaginationBar from '@/components/shared/PaginationBar';
 import SkeletonList from '@/components/shared/skeletons/SkeletonList';
@@ -15,14 +16,7 @@ import StatusBadge from '@/components/shared/StatusBadge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -188,39 +182,33 @@ export default function OrgInvitationsTab() {
   };
 
   return (
-    <Card>
-      <div className="flex flex-col gap-4 border-b border-border/60 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Mail className="text-muted-foreground size-4" />
-            <h3 className="text-sm font-semibold text-foreground tracking-tight">
-              Invitations
-            </h3>
-            {invitations.length > 0 && (
-              <Badge
-                variant="secondary"
-                className="text-[11px] py-0 px-1.5 font-normal"
-              >
-                {invitations.length}
-              </Badge>
-            )}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Manage pending and previous invitations to your organization.
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+    <div className="w-full space-y-6">
+      <section className="space-y-3" aria-label="Organization invitations">
+        <ManagementCardHeader
+          title="Invitations"
+          subtitle="Manage pending and previous invitations to your organization."
+          icon={Mail}
+          count={invitations.length}
+          countLabel={invitations.length === 1 ? 'invitation' : 'invitations'}
+          isLoading={invitationsQuery.isLoading}
+        >
           <ManagementToolbar
+            directoryLayout
+            filterCount={1}
             searchValue={search}
             onSearchChange={setSearch}
             searchPlaceholder="Search invitations…"
+            searchLabel="Search invitations"
             filters={
               <Select
                 value={filter}
                 onValueChange={(v: StatusFilter) => setFilter(v)}
               >
-                <SelectTrigger className="bg-muted sm:w-36 text-xs">
+                <SelectTrigger
+                  size="sm"
+                  className="border-border/80 bg-card hover:border-foreground/25 dark:bg-card w-full min-w-0"
+                  aria-label="Filter invitations by status"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -237,7 +225,7 @@ export default function OrgInvitationsTab() {
                 <Button
                   variant="outline"
                   size="icon"
-                  className="size-9 shrink-0"
+                  className="size-8 shrink-0"
                   onClick={() => invitationsQuery.refetch()}
                   aria-label="Refresh invitations"
                   title="Refresh invitations"
@@ -251,19 +239,17 @@ export default function OrgInvitationsTab() {
                 </Button>
                 <Button
                   size="sm"
-                  className="h-9 gap-1.5 shrink-0"
+                  className="h-8 gap-1.5 shrink-0"
                   onClick={() => setShowForm(true)}
                 >
-                  <Plus className="size-4" />
+                  <Plus className="size-3.5" />
                   Send Invitation
                 </Button>
               </div>
             }
           />
-        </div>
-      </div>
+        </ManagementCardHeader>
 
-      <CardContent className="space-y-4 pt-4">
         {invitationsQuery.isLoading ? (
           <SkeletonList count={5} />
         ) : invitationsQuery.isError ? (
@@ -289,8 +275,9 @@ export default function OrgInvitationsTab() {
             action={{ onClick: clearFilters, label: 'Clear filters' }}
           />
         ) : (
-          <div className="border-border overflow-x-auto rounded-3xl border">
-            <Table>
+          <Card size="sm" className="overflow-hidden py-0">
+            <div className="overflow-x-auto">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <SortableTableHead
@@ -490,12 +477,11 @@ export default function OrgInvitationsTab() {
                 })}
               </TableBody>
             </Table>
-          </div>
+            </div>
+          </Card>
         )}
-      </CardContent>
 
-      {displayList.length > 0 && (
-        <CardFooter>
+        {displayList.length > 0 && (
           <PaginationBar
             page={page}
             totalPages={totalPages}
@@ -504,8 +490,8 @@ export default function OrgInvitationsTab() {
             onPageChange={setPage}
             onPageSizeChange={setPageSize}
           />
-        </CardFooter>
-      )}
+        )}
+      </section>
 
       <InviteMemberDialog open={showForm} onOpenChange={setShowForm} />
       <MemberDetailDrawer
@@ -530,6 +516,6 @@ export default function OrgInvitationsTab() {
         }
         isSuperAdmin={false}
       />
-    </Card>
+    </div>
   );
 }

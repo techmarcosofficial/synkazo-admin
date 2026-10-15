@@ -1,8 +1,12 @@
 import type { AxiosResponse } from 'axios';
 
 import apiClient from './apiClient';
+import type { ProjectArchiveImpact } from './projects';
 import type { PipelineItem } from '@/features/jobs/types';
-import type { CrossObjectProperty, CrossObjectPropertyOption } from '@/api/jobs';
+import type {
+  CrossObjectProperty,
+  CrossObjectPropertyOption,
+} from '@/api/jobs';
 
 import type {
   SuperAdminPage,
@@ -77,6 +81,55 @@ export const superAdminOperationsApi = {
     apiClient
       .get<{ data: SuperAdminProjectDetail }>(
         `/super-admin/organisations/${organisationId}/projects/${projectId}`,
+      )
+      .then(d),
+
+  updateProject: (
+    organisationId: string,
+    projectId: string,
+    dto: { name?: string; description?: string },
+  ): Promise<SuperAdminProjectDetail> =>
+    apiClient
+      .patch<{ data: SuperAdminProjectDetail }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}`,
+        dto,
+      )
+      .then(d),
+
+  getProjectArchiveImpact: (
+    organisationId: string,
+    projectId: string,
+  ): Promise<ProjectArchiveImpact> =>
+    apiClient
+      .get<{ data: ProjectArchiveImpact }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}/archive-impact`,
+      )
+      .then(d),
+
+  archiveProject: (
+    organisationId: string,
+    projectId: string,
+    confirmation: string,
+    reason: string,
+  ): Promise<ProjectArchiveImpact> =>
+    apiClient
+      .delete<{ data: ProjectArchiveImpact }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}`,
+        { data: { confirmation, reason } },
+      )
+      .then(d),
+
+  activateProjectEnvironment: (
+    organisationId: string,
+    projectId: string,
+    dto: { environment: 'sandbox' | 'production'; reason: string },
+  ): Promise<{ environment: 'sandbox' | 'production'; message: string }> =>
+    apiClient
+      .post<{
+        data: { environment: 'sandbox' | 'production'; message: string };
+      }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}/activate-environment`,
+        dto,
       )
       .then(d),
 
@@ -232,30 +285,57 @@ export const superAdminOperationsApi = {
       )
       .then(d),
 
-  getJobCrossObjectOptions: (organisationId: string, projectId: string, jobId: string): Promise<{ objects: CrossObjectPropertyOption[] }> =>
-    apiClient.get<{ data: { objects: CrossObjectPropertyOption[] } }>(
-      `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs/${jobId}/cross-object-properties/options`,
-    ).then(d),
+  getJobCrossObjectOptions: (
+    organisationId: string,
+    projectId: string,
+    jobId: string,
+  ): Promise<{ objects: CrossObjectPropertyOption[] }> =>
+    apiClient
+      .get<{ data: { objects: CrossObjectPropertyOption[] } }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs/${jobId}/cross-object-properties/options`,
+      )
+      .then(d),
 
-  listJobCrossObjectProperties: (organisationId: string, projectId: string, jobId: string): Promise<CrossObjectProperty[]> =>
-    apiClient.get<{ data: CrossObjectProperty[] }>(
-      `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs/${jobId}/cross-object-properties`,
-    ).then(d),
+  listJobCrossObjectProperties: (
+    organisationId: string,
+    projectId: string,
+    jobId: string,
+  ): Promise<CrossObjectProperty[]> =>
+    apiClient
+      .get<{ data: CrossObjectProperty[] }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs/${jobId}/cross-object-properties`,
+      )
+      .then(d),
 
   createJobCrossObjectProperty: (
     organisationId: string,
     projectId: string,
     jobId: string,
-    data: { relatedObject: string; lookupMode: 'id' | 'name'; lookupField: string; importedProperty: string },
-  ): Promise<CrossObjectProperty> => apiClient.post<{ data: CrossObjectProperty }>(
-    `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs/${jobId}/cross-object-properties`,
-    data,
-  ).then(d),
+    data: {
+      relatedObject: string;
+      lookupMode: 'id' | 'name';
+      lookupField: string;
+      importedProperty: string;
+    },
+  ): Promise<CrossObjectProperty> =>
+    apiClient
+      .post<{ data: CrossObjectProperty }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs/${jobId}/cross-object-properties`,
+        data,
+      )
+      .then(d),
 
-  removeJobCrossObjectProperty: (organisationId: string, projectId: string, jobId: string, propertyId: string): Promise<void> =>
-    apiClient.delete(
-      `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs/${jobId}/cross-object-properties/${propertyId}`,
-    ).then(() => undefined),
+  removeJobCrossObjectProperty: (
+    organisationId: string,
+    projectId: string,
+    jobId: string,
+    propertyId: string,
+  ): Promise<void> =>
+    apiClient
+      .delete(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs/${jobId}/cross-object-properties/${propertyId}`,
+      )
+      .then(() => undefined),
 
   listJobRuns: (
     organisationId: string,

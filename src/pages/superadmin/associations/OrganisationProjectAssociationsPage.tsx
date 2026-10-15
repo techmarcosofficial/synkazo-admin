@@ -1,17 +1,20 @@
 import { formatDistanceToNow } from 'date-fns';
-import { ArrowLeft, Link2, PlusCircle } from 'lucide-react';
+import { Link2, PlusCircle } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 
-import AssociationRuleFormDialog from './AssociationRuleFormDialog';
 import LifecycleConfirmDialog from '../lifecycle/LifecycleConfirmDialog';
 
+import AssociationRuleFormDialog, {
+  type AssociationRuleFormOperations,
+} from '@/components/associations/AssociationRuleFormDialog';
+import { superAdminAssociationsApi } from '@/api/superAdminAssociations';
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
-import PageHeader from '@/components/shared/PageHeader';
 import SkeletonList from '@/components/shared/skeletons/SkeletonList';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -24,17 +27,17 @@ import { showToast } from '@/lib/toast';
 import {
   useCreateSuperAdminAssociationRuleMutation,
   useDeleteSuperAdminAssociationRuleMutation,
+  useRetrySuperAdminAssociationRuleMutation,
+  useRunSuperAdminAssociationRuleMutation,
   useSuperAdminAssociationRulesQuery,
+  useSuperAdminAssociationRuleRecordsQuery,
+  useSuperAdminAssociationRuleStatsQuery,
+  useSuperAdminAssociationRunsQuery,
   useSuperAdminOrganisationQuery,
   useSuperAdminPendingAssociationsQuery,
-  useSuperAdminProjectQuery,
   useUpdateSuperAdminAssociationRuleMutation,
 } from '@/queries/useSuperAdmin';
-import type {
-  SuperAdminAssociationRule,
-  SuperAdminCreateAssociationRuleDto,
-  SuperAdminUpdateAssociationRuleDto,
-} from '@/types';
+import type { SuperAdminAssociationRule } from '@/types';
 
 function extractErrorMessage(err: unknown): string {
   const e = err as { response?: { data?: { message?: string } } };
@@ -43,52 +46,213 @@ function extractErrorMessage(err: unknown): string {
 
 const PAGE_LIMIT = 25;
 
+function AssociationRuleDetails({
+  organisationId,
+  projectId,
+  rule,
+}: {
+  organisationId: string;
+  projectId: string;
+  rule: SuperAdminAssociationRule;
+}) {
+  const stats = useSuperAdminAssociationRuleStatsQuery(
+    organisationId,
+    projectId,
+    rule.id,
+  );
+  const [runPage, setRunPage] = useState(1);
+  const [recordPage, setRecordPage] = useState(1);
+  const runs = useSuperAdminAssociationRunsQuery(
+    organisationId,
+    projectId,
+    rule.id,
+    runPage,
+  );
+  const records = useSuperAdminAssociationRuleRecordsQuery(
+    organisationId,
+    projectId,
+    rule.id,
+    recordPage,
+  );
+  return (
+    <Card className="gap-0 py-0">
+      <CardHeader className="px-4 py-3">
+        <CardTitle>Rule activity: {rule.name ?? rule.id}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4 px-4 pb-4">
+        {stats.isError ? (
+          <ErrorState
+            title="Could not load rule statistics"
+            description={extractErrorMessage(stats.error)}
+            onRetry={() => stats.refetch()}
+          />
+        ) : stats.isLoading ? (
+          <SkeletonList count={1} />
+        ) : stats.data ? (
+          <dl className="grid gap-2 sm:grid-cols-4">
+            {(
+              [
+                ['Source records', stats.data.total],
+                ['Resolved', stats.data.resolved],
+                ['Pending', stats.data.pending],
+                ['Failed', stats.data.failed],
+              ] as const
+            ).map(([label, value]) => (
+              <div key={label} className="bg-muted/25 rounded-xl border p-3">
+                <dt className="text-muted-foreground text-xs">{label}</dt>
+                <dd className="mt-1 text-lg font-semibold tabular-nums">
+                  {value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        ) : null}
+        <section className="space-y-2" aria-label="Association runs">
+          <h3 className="text-sm font-semibold">Recent runs</h3>
+          {runs.isError ? (
+            <ErrorState
+              title="Could not load association runs"
+              description={extractErrorMessage(runs.error)}
+              onRetry={() => runs.refetch()}
+            />
+          ) : runs.isLoading ? (
+            <SkeletonList count={2} />
+          ) : !runs.data?.data.length ? (
+            <p className="text-muted-foreground text-sm">
+              This rule has not run yet.
+            </p>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Started</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Resolved</TableHead>
+                    <TableHead>Pending</TableHead>
+                    <TableHead>Failed</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {runs.data.data.map((run) => (
+                    <TableRow key={run.id}>
+                      <TableCell>
+                        {run.startedAt
+                          ? formatDistanceToNow(new Date(run.startedAt), {
+                              addSuffix: true,
+                            })
+                          : '—'}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{run.status}</Badge>
+                      </TableCell>
+                      <TableCell>{run.succeeded}</TableCell>
+                      <TableCell>{run.pendingCreated}</TableCell>
+                      <TableCell>{run.failed}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+          {(runs.data?.total ?? 0) > 10 && (
+            <div className="flex items-center justify-end gap-2 text-xs">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={runPage === 1}
+                onClick={() => setRunPage((page) => page - 1)}
+              >
+                Previous
+              </Button>
+              <span>Page {runPage}</span>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={runPage * 10 >= runs.data!.total}
+                onClick={() => setRunPage((page) => page + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          )}
+        </section>
+        <section className="space-y-2" aria-label="Association records">
+          <h3 className="text-sm font-semibold">Records</h3>
+          {records.isError ? (
+            <ErrorState
+              title="Could not load association records"
+              description={extractErrorMessage(records.error)}
+              onRetry={() => records.refetch()}
+            />
+          ) : records.isLoading ? (
+            <SkeletonList count={2} />
+          ) : !records.data?.data.length ? (
+            <p className="text-muted-foreground text-sm">
+              No records have been processed for this rule.
+            </p>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Source record</TableHead>
+                    <TableHead>Target lookup</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Retries</TableHead>
+                    <TableHead>Error</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {records.data.data.map((record) => (
+                    <TableRow key={record.id}>
+                      <TableCell>{record.sourceId}</TableCell>
+                      <TableCell>{record.targetMatchValue}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{record.status}</Badge>
+                      </TableCell>
+                      <TableCell>{record.retryCount}</TableCell>
+                      <TableCell className="max-w-xs truncate text-xs">
+                        {record.errorMessage ?? '—'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+          {(records.data?.total ?? 0) > 10 && (
+            <div className="flex items-center justify-end gap-2 text-xs">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={recordPage === 1}
+                onClick={() => setRecordPage((page) => page - 1)}
+              >
+                Previous
+              </Button>
+              <span>Page {recordPage}</span>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={recordPage * 10 >= records.data!.total}
+                onClick={() => setRecordPage((page) => page + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          )}
+        </section>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function OrganisationProjectAssociationsPage() {
   const { organisationId, projectId } = useParams<{
     organisationId: string;
     projectId: string;
   }>();
-
-  const orgQuery = useSuperAdminOrganisationQuery(organisationId);
-  const projectQuery = useSuperAdminProjectQuery(
-    organisationId ?? '',
-    projectId,
-  );
-  const rulesQuery = useSuperAdminAssociationRulesQuery(
-    organisationId ?? '',
-    projectId ?? '',
-  );
-
-  const [pendingPage, setPendingPage] = useState(1);
-  const pendingQuery = useSuperAdminPendingAssociationsQuery(
-    organisationId ?? '',
-    projectId ?? '',
-    pendingPage,
-    PAGE_LIMIT,
-  );
-
-  const createMutation = useCreateSuperAdminAssociationRuleMutation(
-    organisationId ?? '',
-    projectId ?? '',
-  );
-  const updateMutation = useUpdateSuperAdminAssociationRuleMutation(
-    organisationId ?? '',
-    projectId ?? '',
-  );
-  const deleteMutation = useDeleteSuperAdminAssociationRuleMutation(
-    organisationId ?? '',
-    projectId ?? '',
-  );
-
-  const [dialogState, setDialogState] = useState<{
-    mode: 'create' | 'edit';
-    rule: SuperAdminAssociationRule | null;
-  } | null>(null);
-  const [deleteTarget, setDeleteTarget] =
-    useState<SuperAdminAssociationRule | null>(null);
-
-  const rules = useMemo(() => rulesQuery.data ?? [], [rulesQuery.data]);
-
   if (!organisationId || !projectId) {
     return (
       <EmptyState
@@ -98,32 +262,141 @@ export default function OrganisationProjectAssociationsPage() {
       />
     );
   }
+  return (
+    <OrganisationProjectAssociationsPanel
+      organisationId={organisationId}
+      projectId={projectId}
+    />
+  );
+}
 
-  const project = projectQuery.data;
+export function OrganisationProjectAssociationsPanel({
+  organisationId,
+  projectId,
+}: {
+  organisationId: string;
+  projectId: string;
+}) {
+  const orgQuery = useSuperAdminOrganisationQuery(organisationId);
+  const rulesQuery = useSuperAdminAssociationRulesQuery(
+    organisationId,
+    projectId,
+  );
 
-  const handleCreate = (dto: SuperAdminCreateAssociationRuleDto) => {
-    createMutation.mutate(dto, {
-      onSuccess: () => {
-        showToast.success('Association rule created.');
-        setDialogState(null);
+  const [pendingPage, setPendingPage] = useState(1);
+  const pendingQuery = useSuperAdminPendingAssociationsQuery(
+    organisationId,
+    projectId,
+    pendingPage,
+    PAGE_LIMIT,
+  );
+
+  const createMutation = useCreateSuperAdminAssociationRuleMutation(
+    organisationId,
+    projectId,
+  );
+  const updateMutation = useUpdateSuperAdminAssociationRuleMutation(
+    organisationId,
+    projectId,
+  );
+  const deleteMutation = useDeleteSuperAdminAssociationRuleMutation(
+    organisationId,
+    projectId,
+  );
+
+  const [dialogState, setDialogState] = useState<{
+    mode: 'create' | 'edit';
+    rule: SuperAdminAssociationRule | null;
+  } | null>(null);
+  const [deleteTarget, setDeleteTarget] =
+    useState<SuperAdminAssociationRule | null>(null);
+  const [selectedRuleId, setSelectedRuleId] = useState<string | null>(null);
+  const [actionTarget, setActionTarget] = useState<{
+    rule: SuperAdminAssociationRule;
+    kind: 'run' | 'retry';
+  } | null>(null);
+  const runRule = useRunSuperAdminAssociationRuleMutation(
+    organisationId,
+    projectId,
+  );
+  const retryFailed = useRetrySuperAdminAssociationRuleMutation(
+    organisationId,
+    projectId,
+  );
+
+  const rules = useMemo(() => rulesQuery.data ?? [], [rulesQuery.data]);
+  const selectedRule = rules.find((rule) => rule.id === selectedRuleId);
+  const formOperations = useMemo<AssociationRuleFormOperations>(
+    () => ({
+      getProjectObjects: async () =>
+        (
+          await superAdminAssociationsApi.getObjects(organisationId, projectId)
+        ).map((object) => ({
+          sourceObject: object.sourceObject,
+          hsObjectType: object.destObjectType,
+        })),
+      getAssociationFields: (_projectId, sourceObject) =>
+        superAdminAssociationsApi.getObjectFields(
+          organisationId,
+          projectId,
+          sourceObject,
+        ),
+      getOwnerFields: () =>
+        superAdminAssociationsApi.getOwnerFields(organisationId, projectId),
+      getAssociationTypes: (_projectId, from, to) =>
+        superAdminAssociationsApi.getAssociationTypes(
+          organisationId,
+          projectId,
+          from,
+          to,
+        ),
+      createRule: async (_projectId, input, reason) => {
+        if (
+          !input.name ||
+          !input.sourceObject ||
+          !input.sourceMatchField ||
+          !input.destSourceObjectType ||
+          !input.targetObject ||
+          !input.targetMatchField ||
+          !input.destTargetObjectType ||
+          input.assocTypeId == null
+        )
+          throw new Error('Complete the required association fields.');
+        return createMutation.mutateAsync({
+          name: input.name,
+          sourceObject: input.sourceObject,
+          sourceMatchField: input.sourceMatchField,
+          destSourceObjectType: input.destSourceObjectType,
+          targetObject: input.targetObject,
+          targetMatchField: input.targetMatchField,
+          destTargetObjectType: input.destTargetObjectType,
+          assocTypeId: input.assocTypeId,
+          assocCategory: input.assocCategory,
+          assocLabel: input.assocLabel ?? undefined,
+          cardinality: input.cardinality,
+          conditions: input.conditions ?? undefined,
+          conditionLogic: input.conditionLogic,
+          reason,
+        });
       },
-    });
-  };
-
-  const handleUpdate = (
-    ruleId: string,
-    dto: SuperAdminUpdateAssociationRuleDto,
-  ) => {
-    updateMutation.mutate(
-      { ruleId, dto },
-      {
-        onSuccess: () => {
-          showToast.success('Association rule updated.');
-          setDialogState(null);
-        },
-      },
-    );
-  };
+      updateRule: async (_projectId, ruleId, input, reason) =>
+        updateMutation.mutateAsync({
+          ruleId,
+          dto: {
+            name: input.name,
+            conditions: input.conditions ?? undefined,
+            conditionLogic: input.conditionLogic,
+            reason,
+          },
+        }),
+    }),
+    [
+      organisationId,
+      projectId,
+      createMutation.mutateAsync,
+      updateMutation.mutateAsync,
+    ],
+  );
 
   const handleDelete = ({ reason }: { reason: string }) => {
     if (!deleteTarget) return;
@@ -142,25 +415,7 @@ export default function OrganisationProjectAssociationsPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <Link
-          to={`/super-admin/organisations/${organisationId}/projects`}
-          className="text-muted-foreground hover:text-foreground mb-2 inline-flex items-center gap-1 text-sm"
-        >
-          <ArrowLeft className="size-3.5" aria-hidden />
-          All projects
-        </Link>
-        <PageHeader
-          title="Association rules"
-          description={
-            project
-              ? `${project.name} · ${orgQuery.data?.name ?? organisationId}`
-              : organisationId
-          }
-        />
-      </div>
-
+    <div className="flex flex-col gap-5">
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold">Rules</h2>
@@ -245,6 +500,20 @@ export default function OrganisationProjectAssociationsPage() {
                     <TableCell className="text-right">
                       <Button
                         size="sm"
+                        variant="ghost"
+                        aria-expanded={selectedRuleId === rule.id}
+                        onClick={() =>
+                          setSelectedRuleId(
+                            selectedRuleId === rule.id ? null : rule.id,
+                          )
+                        }
+                      >
+                        {selectedRuleId === rule.id
+                          ? 'Hide details'
+                          : 'Inspect'}
+                      </Button>
+                      <Button
+                        size="sm"
                         variant="outline"
                         onClick={() => setDialogState({ mode: 'edit', rule })}
                       >
@@ -266,6 +535,44 @@ export default function OrganisationProjectAssociationsPage() {
           </div>
         )}
       </section>
+
+      {selectedRule ? (
+        <AssociationRuleDetails
+          key={selectedRule.id}
+          organisationId={organisationId}
+          projectId={projectId}
+          rule={selectedRule}
+        />
+      ) : null}
+
+      {selectedRule ? (
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              setActionTarget({
+                rule: selectedRule,
+                kind: 'run',
+              })
+            }
+          >
+            Run selected rule
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              setActionTarget({
+                rule: selectedRule,
+                kind: 'retry',
+              })
+            }
+          >
+            Retry failed records
+          </Button>
+        </div>
+      ) : null}
 
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-semibold">Pending associations</h2>
@@ -363,21 +670,85 @@ export default function OrganisationProjectAssociationsPage() {
         )}
       </section>
 
-      <AssociationRuleFormDialog
-        open={dialogState !== null}
-        onOpenChange={(o) => (o ? undefined : setDialogState(null))}
-        mode={dialogState?.mode ?? 'create'}
-        rule={dialogState?.rule ?? null}
-        isSubmitting={createMutation.isPending || updateMutation.isPending}
+      {dialogState?.mode === 'create' && (
+        <AssociationRuleFormDialog
+          mode="create"
+          projectId={projectId}
+          operations={formOperations}
+          onSuccess={() => {
+            setDialogState(null);
+          }}
+          onClose={() => setDialogState(null)}
+        />
+      )}
+      {dialogState?.mode === 'edit' && dialogState.rule && (
+        <AssociationRuleFormDialog
+          mode="edit"
+          projectId={projectId}
+          rule={dialogState.rule}
+          operations={formOperations}
+          onSuccess={() => {
+            setDialogState(null);
+          }}
+          onClose={() => setDialogState(null)}
+        />
+      )}
+
+      <LifecycleConfirmDialog
+        open={actionTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setActionTarget(null);
+        }}
+        title={
+          actionTarget?.kind === 'run'
+            ? 'Run association rule'
+            : 'Retry failed associations'
+        }
+        description={
+          actionTarget
+            ? `${actionTarget.rule.name ?? actionTarget.rule.id} · ${orgQuery.data?.name ?? 'Selected organisation'}`
+            : ''
+        }
+        bodyWarning={
+          actionTarget?.kind === 'run'
+            ? 'This may create new associations for matching synced records.'
+            : 'Failed records will be processed again.'
+        }
+        actionLabel={actionTarget?.kind === 'run' ? 'Run rule' : 'Retry failed'}
+        tone="warning"
+        organisationName={orgQuery.data?.name ?? ''}
+        requiresNameConfirm={false}
+        minReasonLength={10}
+        reasonPlaceholder="Why is this operation needed?"
+        isSubmitting={runRule.isPending || retryFailed.isPending}
         errorMessage={
-          createMutation.isError
-            ? extractErrorMessage(createMutation.error)
-            : updateMutation.isError
-              ? extractErrorMessage(updateMutation.error)
+          runRule.isError
+            ? extractErrorMessage(runRule.error)
+            : retryFailed.isError
+              ? extractErrorMessage(retryFailed.error)
               : null
         }
-        onCreate={handleCreate}
-        onUpdate={handleUpdate}
+        onSubmit={async ({ reason }) => {
+          if (!actionTarget) return;
+          try {
+            if (actionTarget.kind === 'run') {
+              await runRule.mutateAsync({
+                ruleId: actionTarget.rule.id,
+                reason,
+              });
+              showToast.success('Association rule run completed.');
+            } else {
+              await retryFailed.mutateAsync({
+                ruleId: actionTarget.rule.id,
+                reason,
+              });
+              showToast.success('Failed associations queued for retry.');
+            }
+            setActionTarget(null);
+          } catch {
+            // Keep the dialog open with the server error.
+          }
+        }}
       />
 
       <LifecycleConfirmDialog

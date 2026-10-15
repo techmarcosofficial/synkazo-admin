@@ -460,6 +460,63 @@ export function useSuperAdminProjectQuery(
   });
 }
 
+export function useUpdateSuperAdminProjectMutation(
+  organisationId: string,
+  projectId: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: { name?: string; description?: string }) =>
+      superAdminOperationsApi.updateProject(organisationId, projectId, dto),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.superAdmin.operations.project(
+          organisationId,
+          projectId,
+        ),
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['superAdmin', organisationId, 'projects'],
+      });
+    },
+  });
+}
+
+export function useActivateSuperAdminProjectEnvironmentMutation(
+  organisationId: string,
+  projectId: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: {
+      environment: 'sandbox' | 'production';
+      reason: string;
+    }) =>
+      superAdminOperationsApi.activateProjectEnvironment(
+        organisationId,
+        projectId,
+        dto,
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.superAdmin.operations.project(
+          organisationId,
+          projectId,
+        ),
+      });
+      queryClient.invalidateQueries({
+        queryKey: [
+          'superAdmin',
+          organisationId,
+          'projects',
+          projectId,
+          'connections',
+        ],
+      });
+    },
+  });
+}
+
 export function useSuperAdminJobsQuery(
   organisationId: string,
   projectId: string,
@@ -926,6 +983,61 @@ export function useSuperAdminBillingOverviewQuery(organisationId: string) {
   });
 }
 
+export function useSuperAdminSubscriptionQuery(organisationId: string) {
+  return useQuery({
+    queryKey: queryKeys.superAdmin.billing.subscription(organisationId),
+    queryFn: () => superAdminBillingApi.subscription(organisationId),
+    enabled: !!organisationId,
+  });
+}
+
+export function useSuperAdminUsageQuery(organisationId: string) {
+  return useQuery({
+    queryKey: queryKeys.superAdmin.billing.usage(organisationId),
+    queryFn: () => superAdminBillingApi.usage(organisationId),
+    enabled: !!organisationId,
+  });
+}
+
+export function useSuperAdminInvoiceDetailQuery(
+  organisationId: string,
+  invoiceId: string | null,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: queryKeys.superAdmin.billing.invoiceDetail(
+      organisationId,
+      invoiceId ?? '',
+    ),
+    queryFn: () =>
+      superAdminBillingApi.invoiceDetail(organisationId, invoiceId ?? ''),
+    enabled: !!organisationId && !!invoiceId && enabled,
+  });
+}
+
+export function useSuperAdminBillingHistoryQuery(
+  organisationId: string,
+  page = 1,
+  limit = 20,
+  onlyPayments = false,
+) {
+  return useQuery({
+    queryKey: queryKeys.superAdmin.billing.history(
+      organisationId,
+      page,
+      limit,
+      onlyPayments,
+    ),
+    queryFn: () =>
+      superAdminBillingApi.history(organisationId, {
+        page,
+        limit,
+        onlyPayments,
+      }),
+    enabled: !!organisationId,
+  });
+}
+
 export function useSuperAdminInvoicesQuery(
   organisationId: string,
   page = 1,
@@ -1042,6 +1154,140 @@ export function useSuperAdminAssociationRulesQuery(
     queryFn: () =>
       superAdminAssociationsApi.listRules(organisationId, projectId),
     enabled: !!organisationId && !!projectId,
+  });
+}
+
+export function useSuperAdminAssociationRunsQuery(
+  organisationId: string,
+  projectId: string,
+  ruleId: string | null,
+  page = 1,
+) {
+  return useQuery({
+    queryKey: [
+      'superAdmin',
+      organisationId,
+      'projects',
+      projectId,
+      'associations',
+      'runs',
+      ruleId,
+      page,
+    ],
+    queryFn: () =>
+      superAdminAssociationsApi.listRuns(organisationId, projectId, {
+        ruleId: ruleId ?? undefined,
+        page,
+        limit: 10,
+      }),
+    enabled: !!organisationId && !!projectId && !!ruleId,
+  });
+}
+
+export function useSuperAdminAssociationRuleStatsQuery(
+  organisationId: string,
+  projectId: string,
+  ruleId: string | null,
+) {
+  return useQuery({
+    queryKey: [
+      'superAdmin',
+      organisationId,
+      'projects',
+      projectId,
+      'associations',
+      'rules',
+      ruleId,
+      'stats',
+    ],
+    queryFn: () =>
+      superAdminAssociationsApi.getRuleStats(
+        organisationId,
+        projectId,
+        ruleId!,
+      ),
+    enabled: !!organisationId && !!projectId && !!ruleId,
+  });
+}
+
+export function useSuperAdminAssociationRuleRecordsQuery(
+  organisationId: string,
+  projectId: string,
+  ruleId: string | null,
+  page = 1,
+) {
+  return useQuery({
+    queryKey: [
+      'superAdmin',
+      organisationId,
+      'projects',
+      projectId,
+      'associations',
+      'rules',
+      ruleId,
+      'records',
+      page,
+    ],
+    queryFn: () =>
+      superAdminAssociationsApi.getRuleRecords(
+        organisationId,
+        projectId,
+        ruleId!,
+        { page, limit: 10 },
+      ),
+    enabled: !!organisationId && !!projectId && !!ruleId,
+  });
+}
+
+export function useRunSuperAdminAssociationRuleMutation(
+  organisationId: string,
+  projectId: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ruleId, reason }: { ruleId: string; reason: string }) =>
+      superAdminAssociationsApi.runRule(
+        organisationId,
+        projectId,
+        ruleId,
+        reason,
+      ),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: [
+          'superAdmin',
+          organisationId,
+          'projects',
+          projectId,
+          'associations',
+        ],
+      }),
+  });
+}
+
+export function useRetrySuperAdminAssociationRuleMutation(
+  organisationId: string,
+  projectId: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ruleId, reason }: { ruleId: string; reason: string }) =>
+      superAdminAssociationsApi.retryFailed(
+        organisationId,
+        projectId,
+        ruleId,
+        reason,
+      ),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: [
+          'superAdmin',
+          organisationId,
+          'projects',
+          projectId,
+          'associations',
+        ],
+      }),
   });
 }
 

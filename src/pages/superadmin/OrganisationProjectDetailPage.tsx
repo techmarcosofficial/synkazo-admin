@@ -5,12 +5,7 @@ import {
   CalendarClock,
   Clock,
   FolderOpen,
-  Layers3,
-  Link2,
-  Pause,
-  Play,
   Power,
-  Settings2,
 } from 'lucide-react';
 import { useState } from 'react';
 import {
@@ -23,6 +18,7 @@ import { toast } from 'sonner';
 
 import LifecycleConfirmDialog from './lifecycle/LifecycleConfirmDialog';
 import OrganisationCreateJobDialog from './OrganisationCreateJobDialog';
+import OrganisationProjectSettings from './OrganisationProjectSettings';
 
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
@@ -31,7 +27,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs } from '@/components/ui/tabs';
-import ProjectSettingsNavigation from '@/features/projects/components/detail/ProjectSettingsNavigation';
 import SyncFlowCard from '@/features/projects/components/detail/SyncFlowCard';
 import SyncFlowMetrics from '@/features/projects/components/detail/SyncFlowMetrics';
 import SyncFlowPanel from '@/features/projects/components/detail/SyncFlowPanel';
@@ -270,7 +265,11 @@ export default function OrganisationProjectDetailPage() {
           <div className="space-y-4">
             <SyncFlowPanel
               hasFlows={(jobsQuery.data?.length ?? 0) > 0}
-              action={<Button onClick={() => setCreateOpen(true)}>Create Sync Flow</Button>}
+              action={
+                <Button onClick={() => setCreateOpen(true)}>
+                  Create Sync Flow
+                </Button>
+              }
             >
               {jobsQuery.isLoading ? (
                 <SkeletonList count={3} />
@@ -310,105 +309,14 @@ export default function OrganisationProjectDetailPage() {
             )}
           </div>
         ) : (
-          <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[250px_minmax(0,1fr)]">
-            <ProjectSettingsNavigation
-              activeId="general"
-              items={[
-                { id: 'general', label: 'General', icon: Settings2 },
-                { id: 'associations', label: 'Associations', icon: Link2 },
-                { id: 'environments', label: 'Environments', icon: Layers3 },
-              ]}
-              onSelect={(section) => {
-                if (section === 'associations')
-                  navigate(`${projectPath}/associations`);
-                if (section === 'environments')
-                  navigate(`${projectPath}/migration`);
-              }}
-              renderLink={(item, children) => (
-                <Link
-                  to={
-                    item.id === 'associations'
-                      ? `${projectPath}/associations`
-                      : item.id === 'environments'
-                        ? `${projectPath}/migration`
-                        : `${projectPath}?tab=settings`
-                  }
-                  aria-current={item.id === 'general' ? 'page' : undefined}
-                >
-                  {children}
-                </Link>
-              )}
-            />
-            <div className="space-y-4">
-              <Card className="gap-0 py-0">
-                <CardHeader className="px-4 py-3">
-                  <CardTitle>Project information</CardTitle>
-                </CardHeader>
-                <CardContent className="px-4 pb-4">
-                  <dl className="grid gap-3 sm:grid-cols-2">
-                    {[
-                      { label: 'Project status', value: project.status },
-                      {
-                        label: 'Sync mode',
-                        value:
-                          project.syncMode === 'two_way'
-                            ? 'Two-way'
-                            : 'One-way',
-                      },
-                      {
-                        label: 'Scheduler mode',
-                        value: project.schedulerMode || 'Not configured',
-                      },
-                      {
-                        label: 'Active environment',
-                        value: project.activeEnvironment || 'Not activated',
-                      },
-                    ].map((item) => (
-                      <div
-                        key={item.label}
-                        className="bg-muted/40 rounded-2xl border p-3"
-                      >
-                        <dt className="text-muted-foreground text-xs font-medium">
-                          {item.label}
-                        </dt>
-                        <dd className="mt-1 text-sm font-semibold capitalize">
-                          {item.value}
-                        </dd>
-                      </div>
-                    ))}
-                  </dl>
-                </CardContent>
-              </Card>
-              <Card className="gap-0 py-0">
-                <CardHeader className="px-4 py-3">
-                  <CardTitle>Support operations</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 px-4 pb-4">
-                  <p className="text-muted-foreground text-sm">
-                    Hold active jobs on this project or resume jobs held by a
-                    platform operator. Jobs paused by the customer are not
-                    resumed.
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => openHoldDialog('hold')}
-                      disabled={hold.isPending || resume.isPending}
-                    >
-                      <Pause /> Hold active jobs
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => openHoldDialog('resume')}
-                      disabled={hold.isPending || resume.isPending}
-                    >
-                      <Play /> Resume held jobs
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+          <OrganisationProjectSettings
+            organisationId={orgId}
+            organisationName={organisationName}
+            project={project}
+            onHold={() => openHoldDialog('hold')}
+            onResume={() => openHoldDialog('resume')}
+            operationPending={hold.isPending || resume.isPending}
+          />
         )}
       </div>
       {createOpen && (

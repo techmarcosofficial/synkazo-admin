@@ -268,7 +268,11 @@ function connectCdp(url) {
                               currentPeriodEnd: '2026-11-01T00:00:00.000Z',
                               cancelAtPeriodEnd: false,
                               overLimit: {
-                                projects: { count: 1, limit: 5, over: false },
+                                projects: {
+                                  count: 1,
+                                  limit: 5,
+                                  over: false,
+                                },
                                 jobs: { count: 1, limit: 20, over: false },
                                 teamMembers: {
                                   count: 3,
@@ -642,7 +646,10 @@ try {
       state?.search !== '?tab=super-admins'
     )
       throw new Error(`Super Admins tab URL missing at ${route}`);
-    if (!state?.text?.includes('Synkazo platform admin'))
+    if (
+      !state?.text?.includes('Organisations') ||
+      !state?.text?.includes('Audit log')
+    )
       throw new Error(`Platform shell missing at ${route}`);
     if (expectedContent && !state?.mainText?.includes(expectedContent))
       throw new Error(
@@ -767,6 +774,31 @@ try {
           )
       )
         throw new Error('Create popup did not use scoped object discovery');
+    }
+    if (
+      route ===
+      '/super-admin/organisations/org-1/projects/project-1?tab=settings'
+    ) {
+      const settingsCards = (
+        await cdp.send('Runtime.evaluate', {
+          expression: `(() => {
+            const region = document.querySelector('main [aria-label="Project settings"]');
+            const cards = Array.from(region?.children ?? []).map((section) => section.querySelector('[data-slot="card"]'));
+            const buttons = cards.map((card) => card?.querySelector('[data-slot="collapsible-trigger"]'));
+            return cards.length === 4 && cards.every((card) => card?.dataset.layoutSurface === 'outer') && buttons.every((button) => button?.getBoundingClientRect().width > 900);
+          })()`,
+          returnByValue: true,
+        })
+      ).result.value;
+      if (!settingsCards)
+        throw new Error(
+          'Project Settings does not have four separate full-width cards',
+        );
+      await cdp.send('Runtime.evaluate', {
+        expression:
+          'document.querySelector("main [aria-label=\\"Project settings\\"] [data-slot=\\"collapsible-trigger\\"]")?.click()',
+      });
+      await wait(100);
     }
     if (
       process.env.SCREENSHOT_DIR &&
@@ -977,7 +1009,7 @@ try {
       historicalShellVisible =
         state?.path === '/super-admin/overview' &&
         state.text.includes('Platform overview') &&
-        state.text.includes('Synkazo platform admin');
+        state.text.includes('Audit log');
     } catch {
       /* navigation replaces the execution context */
     }

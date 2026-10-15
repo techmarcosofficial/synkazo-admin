@@ -1,15 +1,5 @@
-import { useState } from 'react';
-import { Clock3 } from 'lucide-react';
-
 import type { UpdateQueueSchedulePayload } from '@/api/priorityQueue';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -18,233 +8,171 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Spinner } from '@/components/ui/spinner';
 import { WEEKDAYS } from '@/features/jobs/utils';
 import { BROWSER_TIMEZONE } from '@/lib/timezones';
 import type { ProjectQueue, QueueScheduleMode } from '@/types';
 
-interface IntervalConfig {
-  amount: number;
-  unit: 'minutes' | 'hours';
+export function queueScheduleDraft(
+  queue: ProjectQueue | null,
+): UpdateQueueSchedulePayload {
+  return {
+    scheduleMode: queue?.scheduleMode ?? 'daily_time',
+    timezone: queue?.timezone ?? BROWSER_TIMEZONE,
+    scheduleTimes: queue?.scheduleTimes ?? ['02:00'],
+    intervalMinutes: queue?.intervalMinutes ?? 60,
+    scheduleDays: queue?.scheduleDays ?? [1, 2, 3, 4, 5],
+    oneTimeAt: queue?.oneTimeAt?.slice(0, 16) ?? '',
+  };
 }
 
-function scheduleTimeToMinutesUnit(
-  intervalMinutes: number | null | undefined,
-): IntervalConfig {
-  const m = intervalMinutes ?? 60;
-  return m >= 60 && m % 60 === 0
-    ? { amount: m / 60, unit: 'hours' }
-    : { amount: m, unit: 'minutes' };
+export function queueScheduleValid(value: UpdateQueueSchedulePayload): boolean {
+  if (value.scheduleMode === 'day_specific')
+    return !!value.scheduleDays?.length && !!value.scheduleTimes?.[0];
+  if (value.scheduleMode === 'one_time') return !!value.oneTimeAt;
+  if (value.scheduleMode === 'interval')
+    return (value.intervalMinutes ?? 0) > 0;
+  return !!value.scheduleTimes?.[0];
 }
 
 export default function QueueScheduleCard({
   queue,
-  onSave,
-  saving,
+  value,
+  onChange,
 }: {
   queue: ProjectQueue | null;
-  onSave: (payload: UpdateQueueSchedulePayload) => void;
-  saving: boolean;
+  value: UpdateQueueSchedulePayload;
+  onChange: (value: UpdateQueueSchedulePayload) => void;
 }) {
-  const [scheduleMode, setScheduleMode] = useState<QueueScheduleMode>(
-    queue?.scheduleMode ?? 'daily_time',
-  );
-  const [time, setTime] = useState(queue?.scheduleTimes?.[0] ?? '02:00');
-  const [interval, setInterval] = useState<IntervalConfig>(
-    scheduleTimeToMinutesUnit(queue?.intervalMinutes),
-  );
-  const [days, setDays] = useState<number[]>(
-    queue?.scheduleDays ?? [1, 2, 3, 4, 5],
-  );
-  const [oneTimeAt, setOneTimeAt] = useState(
-    queue?.oneTimeAt ? queue.oneTimeAt.slice(0, 16) : '',
-  );
-  const toggleDay = (d: number) =>
-    setDays((prev) =>
-      prev.includes(d)
-        ? prev.filter((x) => x !== d)
-        : [...prev, d].sort((a, b) => a - b),
-    );
-
-  const getIntervalMinutes = () =>
-    interval.unit === 'hours' ? interval.amount * 60 : interval.amount;
-
-  const handleSave = () => {
-    // Timezone remains part of the API contract, but is intentionally not an
-    // editable field in this compact form. Preserve the queue's current value.
-    const payload: UpdateQueueSchedulePayload = {
-      scheduleMode,
-      timezone: queue?.timezone ?? BROWSER_TIMEZONE,
-    };
-    if (scheduleMode === 'interval') {
-      payload.intervalMinutes = getIntervalMinutes();
-    } else if (scheduleMode === 'daily_time') {
-      payload.scheduleTimes = [time];
-    } else if (scheduleMode === 'day_specific') {
-      payload.scheduleTimes = [time];
-      payload.scheduleDays = days;
-    } else if (scheduleMode === 'one_time') {
-      payload.oneTimeAt = oneTimeAt;
-    }
-    onSave(payload);
-  };
-
-  const canSave =
-    (scheduleMode !== 'day_specific' || days.length > 0) &&
-    (scheduleMode !== 'one_time' || !!oneTimeAt);
+  const mode = value.scheduleMode;
+  const minutes = value.intervalMinutes ?? 60;
+  const intervalUnit =
+    minutes >= 60 && minutes % 60 === 0 ? 'hours' : 'minutes';
+  const intervalAmount = intervalUnit === 'hours' ? minutes / 60 : minutes;
+  const update = (change: Partial<UpdateQueueSchedulePayload>) =>
+    onChange({ ...value, ...change });
 
   return (
-    <Card size="sm">
-      <CardHeader className="flex items-start gap-3 pb-3">
-        <div className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-lg">
-          <Clock3 className="size-4" aria-hidden="true" />
+    <div className="space-y-3">
+      <div>
+        <h3 className="text-sm font-semibold">Cycle start</h3>
+        <p className="text-muted-foreground text-xs">
+          When a new queue cycle begins
+        </p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-[minmax(10rem,14rem)_minmax(0,1fr)] sm:items-end">
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium">Schedule type</label>
+          <Select
+            value={mode}
+            onValueChange={(next) =>
+              update({ scheduleMode: next as QueueScheduleMode })
+            }
+          >
+            <SelectTrigger size="sm" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="interval">Repeat interval</SelectItem>
+              <SelectItem value="daily_time">Once per day</SelectItem>
+              <SelectItem value="day_specific">Selected weekdays</SelectItem>
+              <SelectItem value="one_time">One-time date</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <div className="flex flex-col gap-1">
-          <CardTitle>Queue Schedule</CardTitle>
-          <CardDescription>
-            Choose when a new queue cycle starts. It continues until every
-            job&apos;s pending work is done.
-          </CardDescription>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-2.5">
-        <div className="grid gap-3 md:grid-cols-[minmax(14rem,18rem)_minmax(0,1fr)_auto] md:items-end">
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium">Schedule Type</label>
+        {mode === 'interval' && (
+          <div className="flex items-end gap-2">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium">Every</label>
+              <Input
+                type="number"
+                min={1}
+                uiSize="sm"
+                className="w-20"
+                value={intervalAmount}
+                onChange={(event) =>
+                  update({
+                    intervalMinutes:
+                      Math.max(1, Number(event.target.value) || 1) *
+                      (intervalUnit === 'hours' ? 60 : 1),
+                  })
+                }
+              />
+            </div>
             <Select
-              value={scheduleMode}
-              onValueChange={(v) => setScheduleMode(v as QueueScheduleMode)}
+              value={intervalUnit}
+              onValueChange={(unit) =>
+                update({
+                  intervalMinutes: intervalAmount * (unit === 'hours' ? 60 : 1),
+                })
+              }
             >
-              <SelectTrigger size="sm" className="w-full">
+              <SelectTrigger size="sm" className="w-28">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="interval">Every N Hours</SelectItem>
-                <SelectItem value="daily_time">Once Per Day</SelectItem>
-                <SelectItem value="day_specific">Selected Weekdays</SelectItem>
-                <SelectItem value="one_time">One-Time Date and Time</SelectItem>
+                <SelectItem value="minutes">minutes</SelectItem>
+                <SelectItem value="hours">hours</SelectItem>
               </SelectContent>
             </Select>
           </div>
-
-          <div className="min-w-0">
-            {scheduleMode === 'interval' && (
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium">Repeat Every</label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    min={1}
-                    value={interval.amount}
-                    onChange={(e) =>
-                      setInterval((prev) => ({
-                        ...prev,
-                        amount: Math.max(1, parseInt(e.target.value) || 1),
-                      }))
-                    }
-                    uiSize="sm"
-                    className="w-20 font-mono"
-                  />
-                  <Select
-                    value={interval.unit}
-                    onValueChange={(v) =>
-                      setInterval((prev) => ({
-                        ...prev,
-                        unit: v as 'minutes' | 'hours',
-                      }))
-                    }
-                  >
-                    <SelectTrigger size="sm" className="w-28">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="minutes">minutes</SelectItem>
-                      <SelectItem value="hours">hours</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            )}
-
-            {scheduleMode === 'daily_time' && (
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium">Time of Day</label>
-                <Input
-                  type="time"
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
-                  uiSize="sm"
-                  className="w-36 font-mono"
-                />
-              </div>
-            )}
-
-            {scheduleMode === 'day_specific' && (
-              <div className="flex flex-wrap items-end gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium">Days of Week</label>
-                  <div className="flex flex-wrap gap-1">
-                    {WEEKDAYS.map((wd) => (
-                      <Button
-                        key={wd.value}
-                        type="button"
-                        variant={
-                          days.includes(wd.value) ? 'default' : 'outline'
-                        }
-                        size="sm"
-                        onClick={() => toggleDay(wd.value)}
-                      >
-                        {wd.label}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium">Time of Day</label>
-                  <Input
-                    type="time"
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
-                    uiSize="sm"
-                    className="w-36 font-mono"
-                  />
-                </div>
-              </div>
-            )}
-
-            {scheduleMode === 'one_time' && (
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium">Date and Time</label>
-                <Input
-                  type="datetime-local"
-                  value={oneTimeAt}
-                  onChange={(e) => setOneTimeAt(e.target.value)}
-                  uiSize="sm"
-                  className="w-56 max-w-full"
-                />
-              </div>
-            )}
-          </div>
-
-          <Button
-            size="sm"
-            className="justify-self-start md:justify-self-end"
-            onClick={handleSave}
-            disabled={saving || !canSave}
-          >
-            {saving ? <Spinner /> : null}
-            Save Schedule
-          </Button>
-        </div>
-        {(queue?.nextStartAt ||
-          (scheduleMode === 'one_time' && queue?.oneTimeCompletedAt)) && (
-          <p className="text-muted-foreground text-xs">
-            {queue?.nextStartAt
-              ? `Next cycle starts ${new Date(queue.nextStartAt).toLocaleString()}`
-              : `Last fired ${new Date(queue.oneTimeCompletedAt!).toLocaleString()} — saving a new date re-arms it.`}
-          </p>
         )}
-      </CardContent>
-    </Card>
+        {(mode === 'daily_time' || mode === 'day_specific') && (
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium">Time of day</label>
+            <Input
+              type="time"
+              uiSize="sm"
+              className="w-36"
+              value={value.scheduleTimes?.[0] ?? '02:00'}
+              onChange={(event) =>
+                update({ scheduleTimes: [event.target.value] })
+              }
+            />
+          </div>
+        )}
+        {mode === 'one_time' && (
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium">Date and time</label>
+            <Input
+              type="datetime-local"
+              uiSize="sm"
+              className="w-56 max-w-full"
+              value={value.oneTimeAt ?? ''}
+              onChange={(event) => update({ oneTimeAt: event.target.value })}
+            />
+          </div>
+        )}
+      </div>
+      {mode === 'day_specific' && (
+        <div className="flex flex-wrap gap-1">
+          {WEEKDAYS.map((day) => (
+            <Button
+              key={day.value}
+              type="button"
+              size="sm"
+              variant={
+                value.scheduleDays?.includes(day.value) ? 'default' : 'outline'
+              }
+              onClick={() =>
+                update({
+                  scheduleDays: value.scheduleDays?.includes(day.value)
+                    ? value.scheduleDays.filter((item) => item !== day.value)
+                    : [...(value.scheduleDays ?? []), day.value].sort(
+                        (a, b) => a - b,
+                      ),
+                })
+              }
+            >
+              {day.label}
+            </Button>
+          ))}
+        </div>
+      )}
+      {queue?.nextStartAt && (
+        <p className="text-muted-foreground text-xs">
+          Next cycle: {new Date(queue.nextStartAt).toLocaleString()}
+        </p>
+      )}
+    </div>
   );
 }
