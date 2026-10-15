@@ -206,7 +206,7 @@ export default function AssignPlanDialog({
           </div>
 
           {selectedPlan && diff.length > 0 ? (
-            <div className="rounded-md border">
+            <div className="rounded-xl border overflow-hidden">
               <div className="border-b px-3 py-2 text-sm font-medium">
                 Limits comparison
               </div>

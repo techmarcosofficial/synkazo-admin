@@ -4,11 +4,15 @@ import apiClient from './apiClient';
 import { createIdempotencyKey } from '@/lib/idempotency';
 
 import type {
+  HistoryItem,
   RetryInvoiceDto,
   RetryInvoiceResponse,
-  SuperAdminPage,
   SuperAdminBillingOverview,
+  SuperAdminInvoiceDetail,
   SuperAdminInvoiceListItem,
+  SuperAdminPage,
+  SuperAdminSubscriptionDetail,
+  SuperAdminUsageDetail,
 } from '@/types';
 
 interface PaginatedEnvelope<T> {
@@ -34,6 +38,12 @@ export interface ListInvoicesParams {
   limit?: number;
 }
 
+export interface ListHistoryParams {
+  page?: number;
+  limit?: number;
+  onlyPayments?: boolean;
+}
+
 // Read-only billing surface for a selected organisation. Zero-write —
 // opening a screen must never create or update provider objects (SA-701).
 export const superAdminBillingApi = {
@@ -41,6 +51,22 @@ export const superAdminBillingApi = {
     apiClient
       .get<{ data: SuperAdminBillingOverview }>(
         `/super-admin/organisations/${organisationId}/billing/overview`,
+      )
+      .then(d),
+
+  subscription: (
+    organisationId: string,
+  ): Promise<SuperAdminSubscriptionDetail | null> =>
+    apiClient
+      .get<{ data: SuperAdminSubscriptionDetail | null }>(
+        `/super-admin/organisations/${organisationId}/billing/subscription`,
+      )
+      .then(d),
+
+  usage: (organisationId: string): Promise<SuperAdminUsageDetail> =>
+    apiClient
+      .get<{ data: SuperAdminUsageDetail }>(
+        `/super-admin/organisations/${organisationId}/billing/usage`,
       )
       .then(d),
 
@@ -54,6 +80,27 @@ export const superAdminBillingApi = {
         { params },
       )
       .then(paginated<SuperAdminInvoiceListItem>),
+
+  invoiceDetail: (
+    organisationId: string,
+    invoiceId: string,
+  ): Promise<SuperAdminInvoiceDetail> =>
+    apiClient
+      .get<{ data: SuperAdminInvoiceDetail }>(
+        `/super-admin/organisations/${organisationId}/billing/invoices/${invoiceId}`,
+      )
+      .then(d),
+
+  history: (
+    organisationId: string,
+    params: ListHistoryParams = {},
+  ): Promise<SuperAdminPage<HistoryItem>> =>
+    apiClient
+      .get<PaginatedEnvelope<HistoryItem>>(
+        `/super-admin/organisations/${organisationId}/billing/history`,
+        { params },
+      )
+      .then(paginated<HistoryItem>),
 
   // SA-706 — retry a specific invoice through Stripe. The dry-run
   // command; safe to fire again if the first attempt returned open state.

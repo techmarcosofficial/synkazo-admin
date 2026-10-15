@@ -1,4 +1,5 @@
 import apiClient from './apiClient';
+import { createIdempotencyKey } from '@/lib/idempotency';
 
 import type {
   PlanStatus,
@@ -167,12 +168,17 @@ export const billingAdminApi = {
     organisationId: string,
     planId: string,
     reason: string,
+    idempotencyKey = createIdempotencyKey(),
   ): Promise<Organisation> =>
     apiClient
-      .patch(`/super-admin/billing/organisations/${organisationId}/plan`, {
-        planId,
-        reason,
-      })
+      .patch(
+        `/super-admin/billing/organisations/${organisationId}/plan`,
+        {
+          planId,
+          reason,
+        },
+        { headers: { 'Idempotency-Key': idempotencyKey } },
+      )
       .then(d),
 
   // ── Coupons + discount settings ─────────────────────────────────────────────

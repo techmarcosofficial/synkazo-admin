@@ -1,6 +1,7 @@
 import type { AxiosResponse } from 'axios';
 
 import apiClient from './apiClient';
+import { createIdempotencyKey } from '@/lib/idempotency';
 
 import type {
   CancelAtPeriodEndDto,
@@ -22,33 +23,41 @@ export const superAdminSubscriptionApi = {
   cancelAtPeriodEnd: (
     organisationId: string,
     dto: CancelAtPeriodEndDto,
+    idempotencyKey = createIdempotencyKey(),
   ): Promise<CancelAtPeriodEndResponse> =>
     apiClient
       .post<{ data: CancelAtPeriodEndResponse }>(
         `/super-admin/organisations/${organisationId}/billing/subscription/cancel-at-period-end`,
         dto,
+        { headers: { 'Idempotency-Key': idempotencyKey } },
       )
       .then(d),
 
   resume: (
     organisationId: string,
     dto: ResumeSubscriptionDto,
+    idempotencyKey = createIdempotencyKey(),
   ): Promise<ResumeSubscriptionResponse> =>
     apiClient
       .post<{ data: ResumeSubscriptionResponse }>(
         `/super-admin/organisations/${organisationId}/billing/subscription/resume`,
         dto,
+        { headers: { 'Idempotency-Key': idempotencyKey } },
       )
       .then(d),
 
   cancelImmediate: (
     organisationId: string,
     dto: CancelSubscriptionImmediateDto,
+    idempotencyKey = createIdempotencyKey(),
   ): Promise<CancelSubscriptionImmediateResponse> =>
     apiClient
       .delete<{ data: CancelSubscriptionImmediateResponse }>(
         `/super-admin/organisations/${organisationId}/billing/subscription`,
-        { data: dto },
+        {
+          data: dto,
+          headers: { 'Idempotency-Key': idempotencyKey },
+        },
       )
       .then(d),
 };
