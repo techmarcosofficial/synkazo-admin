@@ -333,6 +333,15 @@ describe('Platform analytics dashboard', () => {
         summary: 'Payment failed',
         severity: 'critical',
       },
+      {
+        ...base,
+        id: 'missing-context',
+        organisationId: 'deleted-org',
+        organisationName: null,
+        action: 'billing.subscription_issue',
+        summary: 'Subscription issue',
+        severity: 'warning',
+      },
     ];
     renderPage('/super-admin/overview');
     expect(await screen.findByText('Payment failed')).toBeVisible();
@@ -349,6 +358,9 @@ describe('Platform analytics dashboard', () => {
       screen.getByRole('link', { name: /Payment failed/ }),
     ).toHaveAttribute('href', '/super-admin/organisations/org-1/activity');
     expect(screen.queryByText('operator@example.test')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /Subscription issue/ }),
+    ).toHaveAttribute('href', '/super-admin/audit-log');
   });
 
   it('shows operational analytics and gated cash without inventing revenue or missing duration', async () => {

@@ -30,7 +30,7 @@ function EventRow({ event }: { event: Alert }) {
       <Link
         className="hover:bg-muted/40 focus-visible:ring-ring flex items-center gap-2.5 rounded-2xl py-2.5 outline-none focus-visible:ring-2"
         to={
-          event.organisationId
+          event.organisationId && event.organisationName
             ? `/super-admin/organisations/${event.organisationId}/activity`
             : '/super-admin/audit-log'
         }

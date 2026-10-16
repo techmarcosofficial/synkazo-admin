@@ -98,7 +98,7 @@ export default function TopOrganisations({
                       <ArrowUpRight className="text-muted-foreground size-3" />
                     </Link>
                   )}
-                  {row.archived && (
+                  {row.archived && row.status !== 'deleted' && (
                     <span className="text-muted-foreground ml-1 text-xs">
                       Archived
                     </span>
