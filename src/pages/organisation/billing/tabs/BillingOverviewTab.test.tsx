@@ -192,10 +192,13 @@ describe('BillingOverviewTab', () => {
       screen.getByText('Monthly record limit reached'),
     ).toBeInTheDocument();
 
-    // Unified Billing & Payment History
+    // Unified Billing & Payment History (Table Card)
     expect(screen.getByText('Billing & Payment History')).toBeInTheDocument();
-    expect(screen.getByText('All Activity (1)')).toBeInTheDocument();
+    expect(screen.getByText('Payment History (1)')).toBeInTheDocument();
     expect(screen.getByText('Invoices (1)')).toBeInTheDocument();
-    expect(screen.getByText('Payments only')).toBeInTheDocument();
+
+    // Dedicated Billing Activity Tree Card in Right Column
+    expect(screen.getByText('Billing Activity')).toBeInTheDocument();
+    expect(screen.getAllByText('Monthly subscription renewal').length).toBeGreaterThanOrEqual(1);
   });
 });

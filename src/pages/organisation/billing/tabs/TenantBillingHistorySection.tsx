@@ -1,7 +1,7 @@
+import { format } from 'date-fns';
 import { CreditCard, ExternalLink, Receipt, X } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
 
-import { BillingTimeline } from './BillingTimeline';
 import { STATUS_DOT } from './InvoicesTab';
 
 import DateRangePicker, { type DateRangeValue } from '@/components/shared/DateRangePicker';
@@ -27,12 +27,14 @@ import {
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import {
-  useHistoryQuery,
   useInvoicesQuery,
   usePaymentHistoryQuery,
 } from '@/queries/useBilling';
 
 const EVENT_LABEL: Record<string, string> = {
+  payment_succeeded: 'Payment succeeded',
+  payment_failed: 'Payment failed',
+  payment_pending: 'Payment pending',
   'subscription.created': 'Subscription created',
   'subscription.updated': 'Subscription updated',
   'subscription.canceled': 'Subscription cancelled',
@@ -41,9 +43,6 @@ const EVENT_LABEL: Record<string, string> = {
   trial_ending: 'Trial ending soon',
   plan_changed: 'Plan changed',
   'invoice.paid': 'Invoice paid',
-  payment_succeeded: 'Payment succeeded',
-  payment_failed: 'Payment failed',
-  payment_pending: 'Payment pending',
   'refund.updated': 'Refund processed',
 };
 
@@ -60,44 +59,56 @@ const money = (cents: number | null | undefined, currency?: string | null) => {
   }
 };
 
+function formatDateSafe(
+  iso: string | null | undefined,
+  formatStr = 'MMM d, yyyy',
+): string {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '—';
+    return format(d, formatStr);
+  } catch {
+    return '—';
+  }
+}
+
+export type HistorySubTab = 'payments' | 'invoices';
+
 export default function TenantBillingHistorySection({
   className,
 }: {
   className?: string;
 }) {
-  const [subSection, setSubSection] = useState<'activity' | 'invoices'>('activity');
-  const [paymentsOnly, setPaymentsOnly] = useState(false);
+  const [activeTab, setActiveTab] = useState<HistorySubTab>('payments');
   const [dateRange, setDateRange] = useState<DateRangeValue>({});
 
-  const [historyPage, setHistoryPage] = useState(1);
+  const [paymentPage, setPaymentPage] = useState(1);
   const [invoicePage, setInvoicePage] = useState(1);
+  const pageSize = 20;
 
-  // When paymentsOnly is active, use the filtered payment history query; otherwise use the full history query
-  const allHistoryQuery = useHistoryQuery(historyPage, 50);
-  const paymentHistoryQuery = usePaymentHistoryQuery(historyPage, 50);
-  const activeHistoryQuery = paymentsOnly ? paymentHistoryQuery : allHistoryQuery;
+  const paymentHistoryQuery = usePaymentHistoryQuery(paymentPage, pageSize);
+  const invoicesQuery = useInvoicesQuery(invoicePage, pageSize);
 
-  const invoicesQuery = useInvoicesQuery(invoicePage, 50);
-
-  const rawHistoryItems = activeHistoryQuery.data?.items ?? [];
-  const totalHistory = activeHistoryQuery.data?.total ?? 0;
-
-  // Filter history items by selected date range for auditing
-  const filteredHistoryItems = useMemo(() => {
-    if (!dateRange.from && !dateRange.to) {
-      return rawHistoryItems;
-    }
-    return rawHistoryItems.filter((ev) => {
-      if (!ev.createdAt) return false;
-      const evDate = ev.createdAt.slice(0, 10);
-      if (dateRange.from && evDate < dateRange.from) return false;
-      if (dateRange.to && evDate > dateRange.to) return false;
-      return true;
-    });
-  }, [rawHistoryItems, dateRange]);
+  const rawPayments = paymentHistoryQuery.data?.items ?? [];
+  const totalPayments = paymentHistoryQuery.data?.total ?? 0;
 
   const rawInvoices = invoicesQuery.data?.items ?? [];
   const totalInvoices = invoicesQuery.data?.total ?? 0;
+
+  // Filter payments by selected date range
+  const filteredPayments = useMemo(() => {
+    if (!dateRange.from && !dateRange.to) {
+      return rawPayments;
+    }
+    return rawPayments.filter((item) => {
+      if (!item.createdAt) return false;
+      const d = item.createdAt.slice(0, 10);
+      if (dateRange.from && d < dateRange.from) return false;
+      if (dateRange.to && d > dateRange.to) return false;
+      return true;
+    });
+  }, [rawPayments, dateRange]);
 
   // Filter invoices by selected date range
   const filteredInvoices = useMemo(() => {
@@ -107,9 +118,9 @@ export default function TenantBillingHistorySection({
     return rawInvoices.filter((inv) => {
       const invDateStr = inv.paidAt || inv.periodStart;
       if (!invDateStr) return false;
-      const invDate = invDateStr.slice(0, 10);
-      if (dateRange.from && invDate < dateRange.from) return false;
-      if (dateRange.to && invDate > dateRange.to) return false;
+      const d = invDateStr.slice(0, 10);
+      if (dateRange.from && d < dateRange.from) return false;
+      if (dateRange.to && d > dateRange.to) return false;
       return true;
     });
   }, [rawInvoices, dateRange]);
@@ -124,50 +135,38 @@ export default function TenantBillingHistorySection({
               Billing &amp; Payment History
             </CardTitle>
             <CardDescription className="text-xs">
-              Chronological log of payments, lifecycle events, and Stripe invoices.
+              History of payments, lifecycle events, and Stripe invoices.
             </CardDescription>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* Sub-toggle between Activity and Invoices */}
+            {/* Header Tabs: Payment History & Invoices */}
             <div className="bg-muted inline-flex rounded-xl p-1 text-xs">
               <button
                 type="button"
-                onClick={() => setSubSection('activity')}
-                className={`px-3 py-1 font-medium rounded-lg transition-all ${
-                  subSection === 'activity'
+                onClick={() => setActiveTab('payments')}
+                className={cn(
+                  'px-3 py-1 font-medium rounded-lg transition-all cursor-pointer',
+                  activeTab === 'payments'
                     ? 'bg-background text-foreground shadow-xs'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
               >
-                All Activity ({totalHistory})
+                Payment History ({totalPayments})
               </button>
               <button
                 type="button"
-                onClick={() => setSubSection('invoices')}
-                className={`px-3 py-1 font-medium rounded-lg transition-all ${
-                  subSection === 'invoices'
+                onClick={() => setActiveTab('invoices')}
+                className={cn(
+                  'px-3 py-1 font-medium rounded-lg transition-all cursor-pointer',
+                  activeTab === 'invoices'
                     ? 'bg-background text-foreground shadow-xs'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
               >
                 Invoices ({totalInvoices})
               </button>
             </div>
-
-            {subSection === 'activity' && (
-              <Button
-                variant={paymentsOnly ? 'default' : 'outline'}
-                size="sm"
-                className="h-8 px-2.5 text-xs rounded-xl"
-                onClick={() => {
-                  setPaymentsOnly(!paymentsOnly);
-                  setHistoryPage(1);
-                }}
-              >
-                Payments only
-              </Button>
-            )}
 
             <DateRangePicker
               value={dateRange}
@@ -193,19 +192,19 @@ export default function TenantBillingHistorySection({
       </CardHeader>
 
       <CardContent className="p-4 sm:p-5 pt-3.5">
-        {subSection === 'activity' ? (
-          activeHistoryQuery.isLoading ? (
+        {activeTab === 'payments' ? (
+          paymentHistoryQuery.isLoading ? (
             <SkeletonTable rows={4} columns={4} />
-          ) : activeHistoryQuery.isError ? (
+          ) : paymentHistoryQuery.isError ? (
             <ErrorState
-              title="Could not load billing activity"
-              onRetry={() => activeHistoryQuery.refetch()}
+              title="Could not load payment history"
+              onRetry={() => paymentHistoryQuery.refetch()}
             />
-          ) : filteredHistoryItems.length === 0 ? (
+          ) : filteredPayments.length === 0 ? (
             <div className="py-8 text-center text-xs text-muted-foreground">
               {dateRange.from || dateRange.to ? (
                 <div className="space-y-2">
-                  <p>No activity events found for the selected date range.</p>
+                  <p>No payment events found for the selected date range.</p>
                   <Button
                     variant="outline"
                     size="sm"
@@ -218,53 +217,81 @@ export default function TenantBillingHistorySection({
               ) : (
                 <EmptyState
                   icon={CreditCard}
-                  title={paymentsOnly ? 'No payment events yet' : 'No activity events yet'}
+                  title="No payment events yet"
                   viewMode="table"
                 />
               )}
             </div>
           ) : (
             <div className="space-y-4">
-              <BillingTimeline
-                items={filteredHistoryItems.map((ev, i) => ({
-                  key: ev.id ?? `${ev.paymentId}-${i}`,
-                  date: ev.createdAt,
-                  title: EVENT_LABEL[ev.eventType] ?? ev.eventType,
-                  description: ev.description,
-                  amount:
-                    ev.amount != null && ev.currency
-                      ? money(ev.amount, ev.currency)
-                      : null,
-                  dotClassName: ev.orderStatus
-                    ? (STATUS_DOT[ev.orderStatus] ?? 'bg-muted-foreground')
-                    : 'bg-muted-foreground',
-                  status: ev.orderStatus ?? undefined,
-                  paymentId: ev.paymentId ?? undefined,
-                  oldStatus: ev.oldStatus ?? undefined,
-                  newStatus: ev.newStatus ?? undefined,
-                }))}
-              />
+              <div className="overflow-hidden rounded-2xl border">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="w-[160px] text-xs font-semibold">Date</TableHead>
+                      <TableHead className="text-xs font-semibold">Event / Description</TableHead>
+                      <TableHead className="text-xs font-semibold">Status</TableHead>
+                      <TableHead className="text-right text-xs font-semibold">Amount</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredPayments.map((item, idx) => {
+                      const statusKey = item.orderStatus ?? (item.eventType.includes('fail') ? 'failed' : 'paid');
+                      const dotClass = STATUS_DOT[statusKey as keyof typeof STATUS_DOT] ?? 'bg-muted-foreground';
+                      const label = item.description || EVENT_LABEL[item.eventType] || item.eventType;
 
-              {totalHistory > 50 && (
-                <div className="mt-4 flex items-center justify-between gap-3 pt-2">
+                      return (
+                        <TableRow key={item.id ?? idx} className="hover:bg-muted/40">
+                          <TableCell className="text-xs text-muted-foreground whitespace-nowrap py-3">
+                            {formatDateSafe(item.createdAt)}
+                          </TableCell>
+                          <TableCell className="text-xs font-medium py-3">
+                            <span className="text-foreground">{label}</span>
+                            {item.paymentId && (
+                              <span className="block text-[10px] text-muted-foreground font-mono mt-0.5">
+                                {item.paymentId}
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="py-3">
+                            <Badge
+                              variant="secondary"
+                              className="gap-1.5 text-[11px] font-medium capitalize py-0.5 px-2 rounded-full border-0"
+                            >
+                              <span className={cn('size-1.5 rounded-full', dotClass)} />
+                              {item.orderStatus ?? 'succeeded'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-semibold py-3">
+                            {money(item.amount, item.currency)}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {totalPayments > pageSize && (
+                <div className="flex items-center justify-between gap-3 pt-1">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="rounded-xl"
-                    disabled={historyPage === 1 || activeHistoryQuery.isLoading}
-                    onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
+                    className="rounded-xl h-7 text-xs"
+                    disabled={paymentPage === 1 || paymentHistoryQuery.isLoading}
+                    onClick={() => setPaymentPage((p) => Math.max(1, p - 1))}
                   >
                     Previous
                   </Button>
                   <span className="text-muted-foreground text-xs">
-                    Page {historyPage} of {Math.max(1, Math.ceil(totalHistory / 50))}
+                    Page {paymentPage} of {Math.max(1, Math.ceil(totalPayments / pageSize))}
                   </span>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="rounded-xl"
-                    disabled={historyPage * 50 >= totalHistory || activeHistoryQuery.isLoading}
-                    onClick={() => setHistoryPage((p) => p + 1)}
+                    className="rounded-xl h-7 text-xs"
+                    disabled={paymentPage * pageSize >= totalPayments || paymentHistoryQuery.isLoading}
+                    onClick={() => setPaymentPage((p) => p + 1)}
                   >
                     Next
                   </Button>
@@ -274,7 +301,7 @@ export default function TenantBillingHistorySection({
           )
         ) : (
           invoicesQuery.isLoading ? (
-            <SkeletonTable rows={4} columns={4} />
+            <SkeletonTable rows={4} columns={5} />
           ) : invoicesQuery.isError ? (
             <ErrorState
               title="Could not load invoices"
@@ -299,81 +326,85 @@ export default function TenantBillingHistorySection({
               )}
             </div>
           ) : (
-            <div className="overflow-hidden rounded-xl border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Receipt</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredInvoices.map((inv) => (
-                    <TableRow key={inv.id}>
-                      <TableCell className="text-xs">
-                        {inv.paidAt ? new Date(inv.paidAt).toLocaleDateString(undefined, {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                        }) : '—'}
-                      </TableCell>
-                      <TableCell className="text-xs font-medium">
-                        {money(inv.totalAmount, inv.currency)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="secondary"
-                          className="bg-muted text-muted-foreground gap-1.5 rounded-full border-0 font-medium text-xs capitalize"
-                        >
-                          <span
-                            className={cn(
-                              'size-1.5 rounded-full',
-                              STATUS_DOT[inv.status] ?? 'bg-muted-foreground',
-                            )}
-                          />
-                          {inv.status.replace('_', ' ')}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {inv.receiptUrl ? (
-                          <a
-                            href={inv.receiptUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-primary inline-flex items-center gap-1 hover:underline text-xs font-medium"
-                          >
-                            Receipt <ExternalLink className="h-3 w-3" />
-                          </a>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">—</span>
-                        )}
-                      </TableCell>
+            <div className="space-y-4">
+              <div className="overflow-hidden rounded-2xl border">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="w-[160px] text-xs font-semibold">Date</TableHead>
+                      <TableHead className="text-xs font-semibold">Invoice #</TableHead>
+                      <TableHead className="text-xs font-semibold">Status</TableHead>
+                      <TableHead className="text-xs font-semibold">Amount</TableHead>
+                      <TableHead className="text-right text-xs font-semibold">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredInvoices.map((inv) => {
+                      const dotClass = STATUS_DOT[inv.status as keyof typeof STATUS_DOT] ?? 'bg-muted-foreground';
+                      const num = inv.id.slice(0, 8);
 
-              {totalInvoices > 50 && (
-                <div className="p-3 border-t flex items-center justify-between gap-3">
+                      return (
+                        <TableRow key={inv.id} className="hover:bg-muted/40">
+                          <TableCell className="text-xs text-muted-foreground whitespace-nowrap py-3">
+                            {formatDateSafe(inv.paidAt || inv.periodStart)}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs font-medium py-3">
+                            {num}
+                          </TableCell>
+                          <TableCell className="py-3">
+                            <Badge
+                              variant="secondary"
+                              className="gap-1.5 text-[11px] font-medium capitalize py-0.5 px-2 rounded-full border-0"
+                            >
+                              <span className={cn('size-1.5 rounded-full', dotClass)} />
+                              {inv.status.replace('_', ' ')}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-mono text-xs font-semibold py-3">
+                            {money(inv.totalAmount, inv.currency)}
+                          </TableCell>
+                          <TableCell className="text-right py-3">
+                            <div className="flex items-center justify-end gap-2.5">
+                              {inv.receiptUrl ? (
+                                <a
+                                  href={inv.receiptUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-primary inline-flex items-center gap-1 hover:underline text-xs font-medium"
+                                >
+                                  Receipt <ExternalLink className="size-3" />
+                                </a>
+                              ) : (
+                                <span className="text-muted-foreground text-xs">—</span>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {totalInvoices > pageSize && (
+                <div className="flex items-center justify-between gap-3 pt-1">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="rounded-xl"
+                    className="rounded-xl h-7 text-xs"
                     disabled={invoicePage === 1 || invoicesQuery.isLoading}
                     onClick={() => setInvoicePage((p) => Math.max(1, p - 1))}
                   >
                     Previous
                   </Button>
                   <span className="text-muted-foreground text-xs">
-                    Page {invoicePage} of {Math.max(1, Math.ceil(totalInvoices / 50))}
+                    Page {invoicePage} of {Math.max(1, Math.ceil(totalInvoices / pageSize))}
                   </span>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="rounded-xl"
-                    disabled={invoicePage * 50 >= totalInvoices || invoicesQuery.isLoading}
+                    className="rounded-xl h-7 text-xs"
+                    disabled={invoicePage * pageSize >= totalInvoices || invoicesQuery.isLoading}
                     onClick={() => setInvoicePage((p) => p + 1)}
                   >
                     Next

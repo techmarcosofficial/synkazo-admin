@@ -19,6 +19,7 @@ import {
 import React, { useState } from 'react';
 
 import { CardPicker } from './CardPicker';
+import TenantBillingActivityCard from './TenantBillingActivityCard';
 import TenantBillingHistorySection from './TenantBillingHistorySection';
 import TenantPlanSlider from './TenantPlanSlider';
 import {
@@ -635,6 +636,9 @@ export default function BillingOverviewTab() {
                   : 'Your subscription renews automatically on the date shown above.'}
             </p>
           </Card>
+
+          {/* Dedicated Billing Activity Timeline Card */}
+          <TenantBillingActivityCard />
         </div>
       </div>
 
