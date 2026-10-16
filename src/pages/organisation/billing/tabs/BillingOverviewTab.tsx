@@ -2,13 +2,19 @@ import {
   AlertCircle,
   AlertTriangle,
   CalendarDays,
+  Check,
   CreditCard,
+  Database,
   FileText,
+  FolderOpen,
   Gauge,
   Loader2,
+  Package,
   Plus,
   Sparkles,
   Star,
+  Users,
+  X,
 } from 'lucide-react';
 import React, { useState } from 'react';
 
@@ -18,7 +24,6 @@ import TenantPlanSlider from './TenantPlanSlider';
 import {
   daysLeft,
   featureList,
-  FeatureRow,
   formatDate,
   usageTone,
 } from '../lib/billingDisplay';
@@ -76,63 +81,6 @@ function formatPrice(amount: number, currency: string) {
   }).format(amount / 100);
 }
 
-function ThinMeter({
-  value,
-  indicatorClassName,
-}: {
-  value: number;
-  indicatorClassName?: string;
-}) {
-  return (
-    <div className="bg-muted h-1.5 overflow-hidden rounded-full">
-      <div
-        className={cn(
-          'bg-primary h-full rounded-full transition-[width]',
-          indicatorClassName,
-        )}
-        style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
-      />
-    </div>
-  );
-}
-
-function CompactLimitRow({
-  label,
-  count,
-  limit,
-}: {
-  label: string;
-  count: number;
-  limit: number | null;
-}) {
-  const rawPct = limit ? (count / limit) * 100 : 100;
-  const over = limit != null && count >= limit;
-
-  return (
-    <div className="bg-muted/45 space-y-2 rounded-xl px-4 py-3">
-      <div className="flex items-center justify-between gap-4 text-sm">
-        <span className="font-medium text-xs">{label}</span>
-        <span className="text-muted-foreground text-xs">
-          <strong className="text-foreground font-semibold">
-            {count.toLocaleString()}
-          </strong>{' '}
-          of {limit == null ? 'unlimited' : limit.toLocaleString()}
-        </span>
-      </div>
-      <ThinMeter
-        value={rawPct}
-        indicatorClassName={
-          over
-            ? 'bg-destructive'
-            : limit == null
-              ? 'bg-muted-foreground/25'
-              : undefined
-        }
-      />
-    </div>
-  );
-}
-
 export default function BillingOverviewTab() {
   const planQuery = usePlanQuery();
   const usageQuery = useUsageQuery();
@@ -158,13 +106,13 @@ export default function BillingOverviewTab() {
     return (
       <div className="grid gap-6 lg:grid-cols-12">
         <div className="space-y-6 lg:col-span-7 xl:col-span-8">
-          <Skeleton className="h-80 w-full rounded-xl" />
-          <Skeleton className="h-96 w-full rounded-xl" />
+          <Skeleton className="h-80 w-full rounded-2xl" />
+          <Skeleton className="h-96 w-full rounded-2xl" />
         </div>
         <div className="space-y-6 lg:col-span-5 xl:col-span-4">
           <Skeleton className="h-60 w-full rounded-3xl" />
-          <Skeleton className="h-32 w-full rounded-xl" />
-          <Skeleton className="h-44 w-full rounded-xl" />
+          <Skeleton className="h-32 w-full rounded-2xl" />
+          <Skeleton className="h-44 w-full rounded-2xl" />
         </div>
       </div>
     );
@@ -186,8 +134,6 @@ export default function BillingOverviewTab() {
   const defaultCard = paymentMethods.find((c) => c.isDefault) ?? paymentMethods[0];
 
   const features = featureList(plan.limits);
-  const includedFeatures = features.filter((feature) => feature.enabled);
-  const excludedFeatures = features.filter((feature) => !feature.enabled);
   const hasSubscription = plan.subscriptionStatus !== 'none';
   const trialDays =
     plan.subscriptionStatus === 'trialing' ? daysLeft(plan.trialEndsAt) : null;
@@ -199,7 +145,6 @@ export default function BillingOverviewTab() {
     !!usage &&
     usage.maxRecordsPerMonth != null &&
     usage.recordsSynced >= usage.maxRecordsPerMonth;
-  const usageToneInfo = usageTone(usageRawPct, usageOver);
 
   const cataloguePlan = plansQuery.data?.find(
     (candidate) => candidate.id === plan.planId,
@@ -258,7 +203,7 @@ export default function BillingOverviewTab() {
         {/* ── LEFT COLUMN: USAGE & BILLING HISTORY (~65-70%) ─────────────────── */}
         <div className="space-y-6 lg:col-span-7 xl:col-span-8">
           {/* Plan Limits, Resource Quotas & Entitlements */}
-          <Card className="rounded-xl overflow-hidden gap-0">
+          <Card className="gap-0">
             <CardHeader visualLevel="section" className="p-4 sm:p-5 border-b">
               <CardTitle className="text-base font-bold flex items-center gap-2">
                 <FileText className="text-muted-foreground size-4" />
@@ -268,123 +213,195 @@ export default function BillingOverviewTab() {
                 Included in your {plan.planName} plan and current monthly consumption.
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-4 sm:p-5 space-y-6">
-              {/* Monthly records synced meter */}
-              <div className="space-y-2.5">
-                <div className="flex flex-wrap items-end justify-between gap-2">
-                  <div>
-                    <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      <Gauge className="size-3.5 text-muted-foreground" />
-                      Usage this month
-                    </p>
-                    <p className="text-muted-foreground mt-0.5 text-xs">
-                      Current billing period
-                      {usage ? ` · since ${formatDate(usage.periodStart)}` : ''}
-                    </p>
-                  </div>
-                  {usage && (
-                    <div className="text-right">
-                      <p className="text-xs font-semibold">
-                        {usage.recordsSynced.toLocaleString()}
-                        {usage.maxRecordsPerMonth != null
-                          ? ` of ${usage.maxRecordsPerMonth.toLocaleString()} records used`
-                          : ' records used'}
-                      </p>
-                      <p className={cn('text-xs font-semibold', usageToneInfo.text)}>
-                        {usage.maxRecordsPerMonth == null
-                          ? 'Unlimited'
-                          : `${Math.round(usageRawPct)}%`}
-                      </p>
-                    </div>
-                  )}
-                </div>
 
-                {usageQuery.isLoading || !usage ? (
-                  <Skeleton className="h-1.5 w-full rounded-full" />
-                ) : (
-                  <ThinMeter
-                    value={usage.maxRecordsPerMonth == null ? 0 : usageRawPct}
-                    indicatorClassName={usageToneInfo.bar}
-                  />
-                )}
+            <CardContent className="p-4 sm:p-5 space-y-6">
+              {/* Resource Usage & Quotas (Super Admin inspired presentation) */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Resource Usage &amp; Quotas
+                  </h4>
+                  <span className="text-xs text-muted-foreground">
+                    Billing cycle: <strong className="text-foreground font-medium">{formatDate(usage?.periodStart ?? null)}</strong> – <strong className="text-foreground font-medium">{formatDate(renewalDate)}</strong>
+                  </span>
+                </div>
 
                 {usageOver && (
                   <Alert
                     variant="destructive"
-                    className="border-destructive/20 bg-destructive/5 rounded-xl"
+                    className="border-destructive/20 bg-destructive/5 rounded-xl py-2.5 px-3.5 mb-2"
                   >
-                    <AlertCircle />
-                    <AlertTitle>Monthly record limit reached</AlertTitle>
+                    <AlertCircle className="size-4" />
+                    <AlertTitle className="text-xs font-semibold">Monthly record limit reached</AlertTitle>
                     <AlertDescription className="text-xs">
-                      New syncs are blocked until the next billing cycle or until
-                      your plan is upgraded.
+                      New syncs are blocked until the next billing cycle or until your plan is upgraded.
                     </AlertDescription>
                   </Alert>
                 )}
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {/* Records synced */}
+                  <div className="space-y-1.5 rounded-xl bg-muted/30 p-3 border border-border/50">
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2 font-medium">
+                        <Database className="size-3.5 text-amber-500" aria-hidden="true" />
+                        <span>Records synced</span>
+                      </div>
+                      <span
+                        className={cn(
+                          'font-mono text-xs',
+                          usageOver
+                            ? 'font-semibold text-destructive'
+                            : usage?.maxRecordsPerMonth == null
+                              ? 'text-muted-foreground'
+                              : 'font-medium text-foreground',
+                        )}
+                      >
+                        {usage
+                          ? `${usage.recordsSynced.toLocaleString()} of ${usage.maxRecordsPerMonth != null ? usage.maxRecordsPerMonth.toLocaleString() : 'unlimited'} records used`
+                          : '0 records used'}
+                      </span>
+                    </div>
+                    <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className={cn(
+                          'h-full rounded-full transition-all duration-500 bg-gradient-to-r',
+                          usageOver
+                            ? 'from-red-500 to-rose-600'
+                            : 'from-amber-500 to-orange-500',
+                        )}
+                        style={{
+                          width: `${usage?.maxRecordsPerMonth == null ? (usage?.recordsSynced ? 25 : 0) : Math.min(100, Math.max(3, Math.round(usageRawPct)))}%`,
+                        }}
+                        aria-label={`Records used: ${Math.round(usageRawPct)}%`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Projects */}
+                  <div className="space-y-1.5 rounded-xl bg-muted/30 p-3 border border-border/50">
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2 font-medium">
+                        <FolderOpen className="size-3.5 text-blue-500" aria-hidden="true" />
+                        <span>Projects</span>
+                      </div>
+                      <span className="font-mono text-xs font-medium text-foreground">
+                        {plan.overLimit?.projects.limit != null
+                          ? `${plan.overLimit.projects.count.toLocaleString()} / ${plan.overLimit.projects.limit.toLocaleString()}`
+                          : `${plan.overLimit?.projects.count ?? 0} / Unlimited`}
+                      </span>
+                    </div>
+                    <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-blue-500 to-indigo-500"
+                        style={{
+                          width: `${
+                            plan.overLimit?.projects.limit
+                              ? Math.min(100, Math.max(3, Math.round((plan.overLimit.projects.count / plan.overLimit.projects.limit) * 100)))
+                              : plan.overLimit?.projects.count ? 25 : 0
+                          }%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Sync Jobs */}
+                  <div className="space-y-1.5 rounded-xl bg-muted/30 p-3 border border-border/50">
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2 font-medium">
+                        <Package className="size-3.5 text-purple-500" aria-hidden="true" />
+                        <span>Sync jobs</span>
+                      </div>
+                      <span className="font-mono text-xs font-medium text-foreground">
+                        {plan.overLimit?.jobs.limit != null
+                          ? `${plan.overLimit.jobs.count.toLocaleString()} / ${plan.overLimit.jobs.limit.toLocaleString()}`
+                          : `${plan.overLimit?.jobs.count ?? 0} / Unlimited`}
+                      </span>
+                    </div>
+                    <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-purple-500 to-violet-500"
+                        style={{
+                          width: `${
+                            plan.overLimit?.jobs.limit
+                              ? Math.min(100, Math.max(3, Math.round((plan.overLimit.jobs.count / plan.overLimit.jobs.limit) * 100)))
+                              : plan.overLimit?.jobs.count ? 25 : 0
+                          }%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Team Members */}
+                  <div className="space-y-1.5 rounded-xl bg-muted/30 p-3 border border-border/50">
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2 font-medium">
+                        <Users className="size-3.5 text-emerald-500" aria-hidden="true" />
+                        <span>Team members</span>
+                      </div>
+                      <span className="font-mono text-xs font-medium text-foreground">
+                        {plan.overLimit?.teamMembers.limit != null
+                          ? `${plan.overLimit.teamMembers.count.toLocaleString()} / ${plan.overLimit.teamMembers.limit.toLocaleString()}`
+                          : `${plan.overLimit?.teamMembers.count ?? 0} / Unlimited`}
+                      </span>
+                    </div>
+                    <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-emerald-500 to-teal-600"
+                        style={{
+                          width: `${
+                            plan.overLimit?.teamMembers.limit
+                              ? Math.min(100, Math.max(3, Math.round((plan.overLimit.teamMembers.count / plan.overLimit.teamMembers.limit) * 100)))
+                              : plan.overLimit?.teamMembers.count ? 25 : 0
+                          }%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* Quotas & Features Grid */}
-              <div className="grid gap-6 lg:grid-cols-2 pt-2 border-t">
-                {/* Resource Quotas */}
-                <div className="space-y-3">
-                  <p className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">
-                    Resource quotas
-                  </p>
-                  {plan.overLimit ? (
-                    <div className="space-y-2.5">
-                      <CompactLimitRow
-                        label="Projects"
-                        count={plan.overLimit.projects.count}
-                        limit={plan.overLimit.projects.limit}
-                      />
-                      <CompactLimitRow
-                        label="Sync jobs"
-                        count={plan.overLimit.jobs.count}
-                        limit={plan.overLimit.jobs.limit}
-                      />
-                      <CompactLimitRow
-                        label="Team members"
-                        count={plan.overLimit.teamMembers.count}
-                        limit={plan.overLimit.teamMembers.limit}
-                      />
-                    </div>
-                  ) : (
-                    <Skeleton className="h-36 w-full rounded-xl" />
-                  )}
+              {/* Plan Features & Inclusions (Clean presentation without extra dividers or separators) */}
+              <div className="space-y-3 pt-1">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Plan Capabilities &amp; Inclusions
+                  </h4>
+                  <Badge variant="secondary" className="text-[10px] rounded-full px-2 py-0 border-0 font-medium">
+                    {plan.planName} tier
+                  </Badge>
                 </div>
 
-                {/* Features Included & Excluded */}
-                <div className="space-y-4 lg:border-l lg:pl-6">
-                  <div>
-                    <p className="mb-2 text-xs font-semibold tracking-wide uppercase text-muted-foreground">
-                      Included in {plan.planName}
-                    </p>
-                    <ul className="space-y-2 text-xs">
-                      {includedFeatures.map((feature) => (
-                        <FeatureRow
-                          key={feature.label}
-                          enabled
-                          label={feature.label}
-                        />
-                      ))}
-                    </ul>
-                  </div>
-                  {excludedFeatures.length > 0 && (
-                    <div className="pt-2 border-t">
-                      <p className="mb-2 text-xs font-semibold tracking-wide uppercase text-muted-foreground">
-                        Not included
-                      </p>
-                      <ul className="space-y-2 text-xs">
-                        {excludedFeatures.map((feature) => (
-                          <FeatureRow
-                            key={feature.label}
-                            enabled={false}
-                            label={feature.label}
-                          />
-                        ))}
-                      </ul>
+                <div className="grid gap-2.5 sm:grid-cols-2">
+                  {features.map((feature) => (
+                    <div
+                      key={feature.label}
+                      className="flex items-center gap-2.5 rounded-xl bg-muted/30 px-3 py-2 text-xs border border-transparent hover:border-border/60 transition-colors"
+                    >
+                      <span
+                        className={cn(
+                          'size-4 rounded-full inline-flex items-center justify-center shrink-0',
+                          feature.enabled
+                            ? 'bg-success/20 text-success'
+                            : 'bg-muted text-muted-foreground/60',
+                        )}
+                      >
+                        {feature.enabled ? (
+                          <Check className="size-2.5 stroke-[3]" />
+                        ) : (
+                          <X className="size-2.5 stroke-[2]" />
+                        )}
+                      </span>
+                      <span
+                        className={cn(
+                          'font-medium truncate',
+                          feature.enabled ? 'text-foreground' : 'text-muted-foreground/70',
+                        )}
+                      >
+                        {feature.label}
+                      </span>
                     </div>
-                  )}
+                  ))}
                 </div>
               </div>
             </CardContent>
@@ -431,7 +448,7 @@ export default function BillingOverviewTab() {
 
           {/* Contextual Lifecycle Banners */}
           {pendingCancel && (
-            <div className="border-warning/30 bg-warning/10 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3.5">
+            <div className="border-warning/30 bg-warning/10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-3.5">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="text-warning size-4 shrink-0" />
                 <p className="text-warning text-xs font-medium">
@@ -453,7 +470,7 @@ export default function BillingOverviewTab() {
           )}
 
           {sub?.pendingPriceId && (
-            <div className="border-info/30 bg-info/10 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3.5">
+            <div className="border-info/30 bg-info/10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-3.5">
               <div className="flex items-center gap-2">
                 <Sparkles className="text-info size-4 shrink-0" />
                 <p className="text-info text-xs font-medium">
@@ -476,7 +493,7 @@ export default function BillingOverviewTab() {
           )}
 
           {sub?.creditBalance != null && sub.creditBalance > 0 && (
-            <div className="border-success/30 bg-success/10 flex items-center justify-between rounded-xl border p-3 text-xs">
+            <div className="border-success/30 bg-success/10 flex items-center justify-between rounded-2xl border p-3 text-xs">
               <span className="text-success font-medium">
                 Credit balance: {formatPrice(sub.creditBalance, 'USD')} available.
               </span>
@@ -484,7 +501,7 @@ export default function BillingOverviewTab() {
           )}
 
           {plan.subscriptionStatus === 'past_due' && (
-            <div className="border-destructive/30 bg-destructive/10 flex items-center justify-between rounded-xl border p-3.5">
+            <div className="border-destructive/30 bg-destructive/10 flex items-center justify-between rounded-2xl border p-3.5">
               <div className="flex items-center gap-2">
                 <AlertCircle className="text-destructive size-4" />
                 <p className="text-destructive text-xs font-medium">
@@ -503,7 +520,7 @@ export default function BillingOverviewTab() {
           )}
 
           {/* Payment Method on File Card */}
-          <Card className="gap-0 py-0 p-3 sm:px-3.5 sm:py-2.5 rounded-xl border bg-card space-y-1.5">
+          <Card size="sm" className="space-y-1.5 p-3 sm:px-3.5 sm:py-2.5">
             <div className="flex items-center justify-between">
               <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                 <CreditCard className="size-3.5 text-muted-foreground" aria-hidden="true" />
@@ -561,7 +578,7 @@ export default function BillingOverviewTab() {
           </Card>
 
           {/* Upcoming Billing Card */}
-          <Card className="gap-0 py-0 p-3 sm:px-3.5 sm:py-3 rounded-xl border bg-card space-y-2">
+          <Card size="sm" className="space-y-2 p-3 sm:px-3.5 sm:py-3">
             <div className="flex items-center justify-between">
               <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                 <CalendarDays className="size-3.5 text-muted-foreground" aria-hidden="true" />

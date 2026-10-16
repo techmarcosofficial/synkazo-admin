@@ -83,7 +83,7 @@ export default function TenantPlanSlider({
     <>
       <Card
         className={cn(
-          'relative overflow-hidden rounded-xl border border-primary/20 bg-muted/20 p-4 transition-all shadow-md',
+          'p-4 transition-all shadow-md',
           className,
         )}
       >

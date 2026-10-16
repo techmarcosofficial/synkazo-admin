@@ -115,7 +115,7 @@ export default function TenantBillingHistorySection({
   }, [rawInvoices, dateRange]);
 
   return (
-    <Card className={cn('gap-0 py-0 rounded-xl overflow-hidden', className)}>
+    <Card className={cn('gap-0', className)}>
       <CardHeader className="p-4 sm:p-5 pb-4 border-b">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
