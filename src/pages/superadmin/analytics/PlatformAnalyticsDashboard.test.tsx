@@ -344,7 +344,7 @@ describe('Platform analytics dashboard', () => {
     renderPage('/super-admin/overview');
     expect(await screen.findByText('Payment failed')).toBeVisible();
     expect(screen.getByText('Plan assigned')).not.toBeVisible();
-    fireEvent.click(screen.getByText('Administrative activity · 1'));
+    fireEvent.click(screen.getByText('Administrative activity'));
     expect(screen.getByText('Plan assigned')).toBeVisible();
     expect(
       screen.getByRole('link', { name: /Payment failed/ }),

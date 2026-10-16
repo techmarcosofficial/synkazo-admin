@@ -18,6 +18,14 @@ let browser;
 let server;
 let socket;
 
+// Presentation fixtures only; application alerts always come from the API.
+const alertContext = {
+  resource: 'organisation',
+  resourceId: 'org-1',
+  organisationId: 'org-1',
+  organisationName: 'Test Organisation',
+  userEmail: 'operator@example.test',
+};
 const overview = {
   generatedAt: new Date().toISOString(),
   organisations: {
@@ -37,7 +45,35 @@ const overview = {
       workerOnline: true,
     },
   },
-  recentAlerts: [],
+  recentAlerts:
+    process.env.SUPER_ADMIN_TEST_ALERTS === 'empty'
+      ? []
+      : [
+          {
+            ...alertContext,
+            id: 'alert-1',
+            action: 'billing.payment_failed',
+            summary: 'Payment failed',
+            severity: 'critical',
+            createdAt: new Date(Date.now() - 15 * 60000).toISOString(),
+          },
+          {
+            ...alertContext,
+            id: 'alert-2',
+            action: 'sync.run.failed',
+            summary: 'Sync run failed',
+            severity: 'warning',
+            createdAt: new Date(Date.now() - 45 * 60000).toISOString(),
+          },
+          {
+            ...alertContext,
+            id: 'alert-3',
+            action: 'organisation.plan_assigned',
+            summary: 'Plan assigned',
+            severity: 'warning',
+            createdAt: new Date(Date.now() - 90 * 60000).toISOString(),
+          },
+        ],
   systemHealth: {
     processUptimeSeconds: 1,
     memoryHeapUsedMb: 1,
@@ -800,6 +836,28 @@ try {
             ),
             Buffer.from(screenshot.data, 'base64'),
           );
+          if (route === '/super-admin/overview') {
+            const bounds = await cdp.send('Runtime.evaluate', {
+              expression:
+                '(() => { const rect = document.querySelector(\'[aria-labelledby="overview-attention-title"]\').getBoundingClientRect(); return {x: rect.x + scrollX, y: rect.y + scrollY, width: rect.width, height: rect.height, scale: 1}; })()',
+              returnByValue: true,
+            });
+            const attentionScreenshot = await cdp.send(
+              'Page.captureScreenshot',
+              {
+                format: 'png',
+                captureBeyondViewport: true,
+                clip: bounds.result.value,
+              },
+            );
+            await writeFile(
+              join(
+                process.env.SUPER_ADMIN_SCREENSHOT_DIR,
+                `needs-attention-${width}.png`,
+              ),
+              Buffer.from(attentionScreenshot.data, 'base64'),
+            );
+          }
         }
       }
       await cdp.send('Emulation.clearDeviceMetricsOverride');
