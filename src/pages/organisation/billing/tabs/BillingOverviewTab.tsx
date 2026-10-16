@@ -562,7 +562,10 @@ export default function BillingOverviewTab() {
                     size="sm"
                     variant="outline"
                     className="h-7 text-xs rounded-lg"
-                    onClick={() => setAddCardOpen(true)}
+                    onClick={() => {
+                      setAddCardOpen(true);
+                      setManageCardsOpen(true);
+                    }}
                   >
                     <Plus className="size-3 mr-1" /> Add card
                   </Button>
@@ -608,9 +611,9 @@ export default function BillingOverviewTab() {
 
               {hasSubscription && !pendingCancel && (
                 <Button
-                  variant="ghost"
+                  variant="destructive"
                   size="sm"
-                  className="h-6 text-[11px] text-muted-foreground hover:text-destructive px-1.5"
+                  className="h-7 text-xs rounded-xl px-2.5 font-medium shrink-0"
                   onClick={() =>
                     confirm({
                       variant: 'danger',
@@ -676,7 +679,13 @@ export default function BillingOverviewTab() {
       </Dialog>
 
       {/* Manage Payment Methods Modal Dialog */}
-      <Dialog open={manageCardsOpen} onOpenChange={setManageCardsOpen}>
+      <Dialog
+        open={manageCardsOpen}
+        onOpenChange={(open) => {
+          setManageCardsOpen(open);
+          if (!open) setAddCardOpen(false);
+        }}
+      >
         <DialogContent className="max-w-lg rounded-2xl">
           <DialogHeader>
             <DialogTitle>Manage Payment Methods</DialogTitle>
