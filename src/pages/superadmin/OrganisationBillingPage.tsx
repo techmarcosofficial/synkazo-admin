@@ -593,9 +593,9 @@ export default function OrganisationBillingPage() {
 
             {/* Payment Method on File (CAP-021: Non-sensitive card details) */}
             {subscription?.paymentMethod && (
-              <Card className="p-4 space-y-2.5">
+              <Card className="gap-0 py-0 p-3 sm:px-3.5 sm:py-2.5 rounded-xl border bg-card space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                  <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                     <Receipt className="size-3.5 text-muted-foreground" aria-hidden="true" />
                     Payment Method on File
                   </h4>
@@ -605,7 +605,7 @@ export default function OrganisationBillingPage() {
                     </span>
                   )}
                 </div>
-                <div className="flex items-center justify-between pt-1">
+                <div className="flex items-center justify-between pt-0.5">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-xs tracking-wider uppercase text-foreground">
                       {subscription.paymentMethod.cardBrand?.toUpperCase() ?? 'CARD'}

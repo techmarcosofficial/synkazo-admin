@@ -5,6 +5,7 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  Eye,
   Sparkles,
   X,
 } from 'lucide-react';
@@ -14,6 +15,14 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
@@ -70,6 +79,7 @@ export default function PlanChangeSlider({
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedPlanId, setSelectedPlanId] = useState<string>('');
   const [reason, setReason] = useState<string>('');
+  const [previewPlan, setPreviewPlan] = useState<AdminApiPlan | null>(null);
 
   const activePlans = useMemo(
     () => plans.filter((p) => p.isActive),
@@ -134,7 +144,8 @@ export default function PlanChangeSlider({
     !isSubmitting;
 
   return (
-    <Card className={cn('p-4 space-y-4 border-primary/30 bg-card/95', className)}>
+    <>
+      <Card className={cn('p-4 space-y-4 border-primary/30 bg-card/95', className)}>
       {/* Header with Title, slide controls, and close button */}
       <CardHeader className="p-0">
         <div className="flex items-center justify-between">
@@ -195,7 +206,7 @@ export default function PlanChangeSlider({
       </CardHeader>
 
       <CardContent className="p-0 space-y-4">
-        {/* 2-Card Slider View */}
+        {/* 2-Card Slider View (Compact landscape rectangles) */}
         <div className="grid grid-cols-2 gap-2.5">
           {visiblePlans.map((plan) => {
             const isCurrent =
@@ -210,81 +221,84 @@ export default function PlanChangeSlider({
                 key={plan.id}
                 onClick={() => !isCurrent && handleSelectPlan(plan)}
                 className={cn(
-                  'flex flex-col justify-between rounded-2xl border p-3.5 transition-all select-none text-left min-h-[145px]',
+                  'flex flex-col justify-between rounded-xl border p-2.5 sm:px-3 sm:py-2.5 transition-all select-none text-left min-h-[96px] h-auto overflow-hidden',
                   isCurrent
                     ? 'border-border/60 bg-muted/30 cursor-default opacity-80'
                     : isSelected
-                      ? 'border-primary ring-2 ring-primary/20 bg-primary/5 cursor-pointer'
+                      ? 'border-primary ring-2 ring-primary/20 bg-primary/5 cursor-pointer shadow-xs'
                       : 'border-border hover:border-primary/60 hover:bg-muted/40 cursor-pointer',
                 )}
               >
-                {/* Top: Plan name & Badge/Price */}
-                <div>
-                  <div className="flex items-center justify-between gap-1">
-                    <h4 className="font-bold text-xs capitalize text-foreground truncate">
-                      {plan.name}
-                    </h4>
-                    {isCurrent ? (
-                      <Badge
-                        variant="secondary"
-                        className="text-[10px] px-1.5 py-0 font-medium"
-                      >
-                        Current
-                      </Badge>
-                    ) : isSelected ? (
-                      <Badge
-                        variant="default"
-                        className="text-[10px] px-1.5 py-0 font-medium gap-0.5"
-                      >
-                        <Check className="size-2.5" />
-                        Selected
-                      </Badge>
-                    ) : null}
+                {/* Top: Plan name, Price & Eye button */}
+                <div className="min-w-0">
+                  <div className="flex items-start justify-between gap-1">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <h4 className="font-bold text-xs capitalize text-foreground truncate">
+                          {plan.name}
+                        </h4>
+                        {isCurrent ? (
+                          <Badge
+                            variant="secondary"
+                            className="border-0 bg-muted text-[10px] px-1.5 py-0 font-medium h-4 shrink-0"
+                          >
+                            Current
+                          </Badge>
+                        ) : isSelected ? (
+                          <Badge
+                            variant="default"
+                            className="text-[10px] px-1.5 py-0 font-medium gap-0.5 h-4 shrink-0"
+                          >
+                            <Check className="size-2.5" />
+                            Selected
+                          </Badge>
+                        ) : null}
+                      </div>
+
+                      {/* Price */}
+                      <div className="font-mono text-xs font-bold text-primary mt-0.5">
+                        {priceStr}
+                      </div>
+                    </div>
+
+                    {/* Eye Button for more info / preview */}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      className="size-6 shrink-0 text-muted-foreground hover:text-foreground hover:bg-muted/80 rounded-md transition-colors"
+                      title={`View full ${plan.name} limits & details`}
+                      aria-label={`View full ${plan.name} details`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewPlan(plan);
+                      }}
+                    >
+                      <Eye className="size-3.5" />
+                    </Button>
                   </div>
 
-                  {/* Price */}
-                  <div className="mt-1 font-mono text-xs font-semibold text-primary">
-                    {priceStr}
-                  </div>
-
-                  {/* Feature Limits summary */}
-                  <div className="mt-2 space-y-1 text-[11px] text-muted-foreground">
-                    <div className="flex items-center justify-between">
-                      <span>Projects:</span>
-                      <span className="font-medium text-foreground">
-                        {formatLimit(plan.features?.maxProjects)}
+                  {/* Feature Limits summary with Check icons */}
+                  <ul className="mt-1.5 space-y-0.5 text-[10.5px] text-muted-foreground">
+                    <li className="flex items-center gap-1 truncate">
+                      <Check className="size-2.5 text-success shrink-0" aria-hidden="true" />
+                      <span className="truncate">
+                        <strong className="font-semibold text-foreground">{formatLimit(plan.features?.maxProjects)}</strong> projects
                       </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Jobs:</span>
-                      <span className="font-medium text-foreground">
-                        {formatLimit(plan.features?.maxJobs)}
+                    </li>
+                    <li className="flex items-center gap-1 truncate">
+                      <Check className="size-2.5 text-success shrink-0" aria-hidden="true" />
+                      <span className="truncate">
+                        <strong className="font-semibold text-foreground">{formatLimit(plan.features?.maxJobs)}</strong> jobs
                       </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Records:</span>
-                      <span className="font-medium text-foreground truncate max-w-[70px]">
-                        {formatLimit(plan.features?.maxRecordsPerMonth)}
+                    </li>
+                    <li className="flex items-center gap-1 truncate">
+                      <Check className="size-2.5 text-success shrink-0" aria-hidden="true" />
+                      <span className="truncate">
+                        <strong className="font-semibold text-foreground">{formatLimit(plan.features?.maxRecordsPerMonth)}</strong> records/mo
                       </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bottom button/indicator */}
-                <div className="pt-2 mt-2 border-t text-[11px]">
-                  {isCurrent ? (
-                    <span className="text-muted-foreground font-medium">
-                      Active Plan
-                    </span>
-                  ) : isSelected ? (
-                    <span className="text-primary font-semibold flex items-center gap-1">
-                      <Check className="size-3" /> Ready to change
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground hover:text-foreground font-medium flex items-center gap-1">
-                      Select plan &rarr;
-                    </span>
-                  )}
+                    </li>
+                  </ul>
                 </div>
               </div>
             );
@@ -388,5 +402,147 @@ export default function PlanChangeSlider({
         )}
       </CardContent>
     </Card>
+
+    {/* Plan Details Preview Dialog (Opened via Eye button) */}
+    <Dialog
+      open={Boolean(previewPlan)}
+      onOpenChange={(open) => !open && setPreviewPlan(null)}
+    >
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader className="space-y-1">
+          <div className="flex items-center justify-between pr-6">
+            <DialogTitle className="text-base font-bold flex items-center gap-2">
+              <span>{previewPlan?.name} Plan Details</span>
+              {previewPlan && (
+                <Badge variant="outline" className="text-xs font-mono">
+                  {formatPrice(previewPlan)}
+                </Badge>
+              )}
+            </DialogTitle>
+          </div>
+          <DialogDescription className="text-xs">
+            {previewPlan?.description ||
+              'Review resource limits, quotas, and included capabilities before assigning.'}
+          </DialogDescription>
+        </DialogHeader>
+
+        {previewPlan && (
+          <div className="space-y-3.5 py-2 text-xs">
+            {/* Limits Grid */}
+            <div className="rounded-xl border bg-card p-3 space-y-2">
+              <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                Resource Limits &amp; Quotas
+              </h4>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                <div className="flex justify-between border-b pb-1">
+                  <span className="text-muted-foreground">Max Projects:</span>
+                  <span className="font-semibold text-foreground font-mono">
+                    {formatLimit(previewPlan.features?.maxProjects)}
+                  </span>
+                </div>
+                <div className="flex justify-between border-b pb-1">
+                  <span className="text-muted-foreground">Max Jobs:</span>
+                  <span className="font-semibold text-foreground font-mono">
+                    {formatLimit(previewPlan.features?.maxJobs)}
+                  </span>
+                </div>
+                <div className="flex justify-between border-b pb-1">
+                  <span className="text-muted-foreground">Monthly Records:</span>
+                  <span className="font-semibold text-foreground font-mono">
+                    {formatLimit(previewPlan.features?.maxRecordsPerMonth)}
+                  </span>
+                </div>
+                <div className="flex justify-between border-b pb-1">
+                  <span className="text-muted-foreground">Team Members:</span>
+                  <span className="font-semibold text-foreground font-mono">
+                    {formatLimit(previewPlan.features?.maxTeamMembers)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Min Sync Interval:</span>
+                  <span className="font-semibold text-foreground">
+                    {previewPlan.features?.minIntervalMinutes
+                      ? `${previewPlan.features.minIntervalMinutes} min`
+                      : 'Standard'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Log Retention:</span>
+                  <span className="font-semibold text-foreground">
+                    {previewPlan.features?.logRetentionDays
+                      ? `${previewPlan.features.logRetentionDays} days`
+                      : 'Standard'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Included Capabilities */}
+            <div className="rounded-xl border bg-muted/30 p-3 space-y-2">
+              <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                Included Capabilities
+              </h4>
+              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                <div className="flex items-center gap-1.5">
+                  <Check className="size-3 text-success shrink-0" />
+                  <span>Priority Scheduling</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Check className="size-3 text-success shrink-0" />
+                  <span>Two-Way Sync</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Check className="size-3 text-success shrink-0" />
+                  <span>Job Dependency Chains</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Check className="size-3 text-success shrink-0" />
+                  <span>Custom Objects &amp; Fields</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Before/After Context */}
+            {currentPlan && currentPlan.id !== previewPlan.id && (
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-2.5 text-[11px] flex items-center justify-between">
+                <span className="text-muted-foreground">Plan Transition:</span>
+                <div className="flex items-center gap-1 font-semibold text-foreground">
+                  <span className="capitalize">{currentPlan.name}</span>
+                  <ArrowRight className="size-3 text-muted-foreground" />
+                  <span className="capitalize text-primary font-bold">{previewPlan.name}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <DialogFooter className="flex items-center justify-between sm:justify-between gap-2 pt-2 border-t">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 text-xs rounded-xl"
+            onClick={() => setPreviewPlan(null)}
+          >
+            Close
+          </Button>
+          {previewPlan && previewPlan.id !== currentPlan?.id && (
+            <Button
+              type="button"
+              variant="default"
+              size="sm"
+              className="h-8 text-xs rounded-xl font-semibold"
+              onClick={() => {
+                handleSelectPlan(previewPlan);
+                setPreviewPlan(null);
+              }}
+            >
+              {selectedPlanId === previewPlan.id ? 'Keep Selected' : 'Select This Plan'}
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  </>
   );
 }

@@ -195,4 +195,24 @@ describe('PlanChangeSlider', () => {
     fireEvent.click(saveBtn);
     expect(onSave).toHaveBeenCalledWith('plan-starter', 'Customer requested upgrade');
   });
+
+  it('opens plan details preview dialog when clicking the eye button', () => {
+    render(
+      <PlanChangeSlider
+        plans={mockPlans}
+        currentPlanId="plan-free"
+        currentPlanName="Free"
+        isOpen={true}
+        onClose={vi.fn()}
+        onSavePlanChange={vi.fn()}
+      />,
+    );
+
+    const eyeBtn = screen.getByRole('button', { name: /view full starter details/i });
+    fireEvent.click(eyeBtn);
+
+    expect(screen.getByText('Starter Plan Details')).toBeInTheDocument();
+    expect(screen.getByText(/Resource Limits & Quotas/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /select this plan/i })).toBeInTheDocument();
+  });
 });
