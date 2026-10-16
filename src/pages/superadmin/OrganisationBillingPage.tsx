@@ -14,6 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import PlanSlider from '@/components/billing/PlanSlider';
 import AssignPlanDialog from '@/pages/superadmin/billing/AssignPlanDialog';
 import BillingActions from '@/pages/superadmin/billing/BillingActions';
 import BillingActivityTable from '@/pages/superadmin/billing/BillingActivityTable';
@@ -23,10 +24,10 @@ import BillingNotesCard from '@/pages/superadmin/billing/BillingNotesCard';
 import BillingOverviewHeader from '@/pages/superadmin/billing/BillingOverviewHeader';
 import EntitlementsUsage from '@/pages/superadmin/billing/EntitlementsUsage';
 import InvoiceDetailDrawer from '@/pages/superadmin/billing/InvoiceDetailDrawer';
-import PlanChangeSlider from '@/pages/superadmin/billing/PlanChangeSlider';
 import SubscriptionPlanCard from '@/pages/superadmin/billing/SubscriptionPlanCard';
 import LifecycleConfirmDialog from '@/pages/superadmin/lifecycle/LifecycleConfirmDialog';
 import { showToast } from '@/lib/toast';
+import { cn } from '@/lib/utils';
 import { useAdminPlansQuery } from '@/queries/useBilling';
 import {
   useAssignPlanMutation,
@@ -541,59 +542,61 @@ export default function OrganisationBillingPage() {
         </div>
 
         {/* ── RIGHT COLUMN: SUBSCRIPTION & ENTITLEMENTS (~35%) ─────────── */}
-        <div className="space-y-6 lg:col-span-5 xl:col-span-4">
+        <div className="space-y-4 lg:col-span-5 xl:col-span-4">
+          <span className="sr-only">Subscription</span>
+
           {/* Subscription Plan Card */}
-          <div className="space-y-3">
-            <div>
-              <h3 className="text-sm font-semibold tracking-tight text-foreground">
-                Subscription Plan
-                <span className="sr-only">Subscription</span>
-              </h3>
-            </div>
-
-            {overview ? (
-              <SubscriptionPlanCard
-                planName={overview.plan.planName}
-                status={overview.plan.subscriptionStatus}
-                billingInterval={overview.plan.billingInterval}
-                currentPeriodEnd={overview.plan.currentPeriodEnd}
-                planAccessSource={overview.plan.planAccessSource}
-                onChangePlan={() => {
-                  setAssignPlanError(null);
-                  setPlanSliderOpen((prev) => !prev);
-                }}
-              />
-            ) : (
-              <Card className="h-44 animate-pulse" />
-            )}
-
-            {/* Inline Plan Change Slider (2 cards per slide + reason) */}
-            <PlanChangeSlider
-              plans={plansQuery.data ?? []}
-              currentPlanId={overview?.plan?.planId ?? null}
-              currentPlanName={overview?.plan?.planName ?? null}
-              isOpen={planSliderOpen}
-              onClose={() => setPlanSliderOpen(false)}
-              onSavePlanChange={async (planId, reason) => {
-                try {
-                  setAssignPlanError(null);
-                  await assignPlanMutation.mutateAsync({ planId, reason });
-                  showToast.success('Plan changed successfully.');
-                  setPlanSliderOpen(false);
-                } catch (err) {
-                  const msg = extractErrorMessage(err);
-                  setAssignPlanError(msg);
-                  showToast.error(msg);
-                  throw err;
-                }
+          {overview ? (
+            <SubscriptionPlanCard
+              planName={overview.plan.planName}
+              status={overview.plan.subscriptionStatus}
+              billingInterval={overview.plan.billingInterval}
+              currentPeriodEnd={overview.plan.currentPeriodEnd}
+              planAccessSource={overview.plan.planAccessSource}
+              onChangePlan={() => {
+                setAssignPlanError(null);
+                setPlanSliderOpen((prev) => !prev);
               }}
-              isSubmitting={assignPlanMutation.isPending}
-              errorMessage={assignPlanError}
+              changePlanLabel={overview ? 'Change Plan' : 'Choose Plan'}
+              className="w-full"
             />
+          ) : (
+            <Card className="h-44 animate-pulse" />
+          )}
 
-            {/* Payment Method on File (CAP-021: Non-sensitive card details) */}
-            {subscription?.paymentMethod && (
-              <Card className="gap-0 py-0 p-3 sm:px-3.5 sm:py-2.5 rounded-xl border bg-card space-y-1.5">
+          {/* Inline Plan Change Slider (Shared Component with inline audit reason) */}
+          <PlanSlider
+            title="Change Plan"
+            plans={plansQuery.data ?? []}
+            currentPlanId={overview?.plan?.planId ?? null}
+            currentPlanName={overview?.plan?.planName ?? null}
+            currentBillingInterval={overview?.plan?.billingInterval}
+            isOpen={planSliderOpen}
+            onClose={() => {
+              setPlanSliderOpen(false);
+              setAssignPlanError(null);
+            }}
+            onSavePlanChange={async (planId, reason) => {
+              try {
+                setAssignPlanError(null);
+                await assignPlanMutation.mutateAsync({ planId, reason });
+                showToast.success('Plan changed successfully.');
+                setPlanSliderOpen(false);
+                await overviewQuery.refetch();
+              } catch (err) {
+                const msg = extractErrorMessage(err);
+                setAssignPlanError(msg);
+                showToast.error(msg);
+                throw err;
+              }
+            }}
+            isSubmitting={assignPlanMutation.isPending}
+            errorMessage={assignPlanError}
+          />
+
+          {/* Payment Method on File (CAP-021: Non-sensitive card details) */}
+          {subscription?.paymentMethod && (
+            <Card size="sm" className="gap-0 py-0 p-3 sm:px-3.5 sm:py-2.5 space-y-1.5">
                 <div className="flex items-center justify-between">
                   <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                     <Receipt className="size-3.5 text-muted-foreground" aria-hidden="true" />
@@ -623,9 +626,8 @@ export default function OrganisationBillingPage() {
                 </div>
               </Card>
             )}
-          </div>
 
-          {/* Entitlements & Usage */}
+            {/* Entitlements & Usage */}
           {overview && (
             <EntitlementsUsage
               organisationId={organisationId}

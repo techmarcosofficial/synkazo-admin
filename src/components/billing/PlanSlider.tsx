@@ -36,7 +36,7 @@ export interface PlanSliderProps {
   plans: (ApiPlan | AdminApiPlan)[];
   currentPlanId: string | null;
   currentPlanName: string | null;
-  currentBillingInterval?: BillingInterval | null;
+  currentBillingInterval?: BillingInterval | string | null;
   isOpen: boolean;
   onClose: () => void;
   onSelectPlan?: (plan: ApiPlan | AdminApiPlan, price: ApiPrice) => void;
@@ -82,12 +82,14 @@ export default function PlanSlider({
   onSavePlanChange,
   isSubmitting = false,
   errorMessage,
-  title = 'Change or Upgrade Plan',
+  title,
   className,
 }: PlanSliderProps) {
+  const resolvedTitle =
+    title ?? (onSavePlanChange ? 'Change Plan' : 'Upgrade Plan');
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedInterval, setSelectedInterval] = useState<BillingInterval>(
-    currentBillingInterval || 'month',
+    currentBillingInterval === 'year' ? 'year' : 'month',
   );
   const [selectedPlanId, setSelectedPlanId] = useState<string>('');
   const [reason, setReason] = useState<string>('');
@@ -179,14 +181,14 @@ export default function PlanSlider({
     <>
       <Card
         className={cn(
-          'p-4 transition-all shadow-md',
+          'p-3.5 sm:p-4 gap-2.5 transition-all shadow-md',
           className,
         )}
       >
-        <CardHeader className="p-0 pb-3 flex flex-row items-center justify-between">
+        <CardHeader className="p-0 flex flex-row items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles className="size-4 text-primary" />
-            <CardTitle className="text-sm font-semibold">{title}</CardTitle>
+            <CardTitle className="text-sm font-semibold">{resolvedTitle}</CardTitle>
           </div>
 
           <div className="flex items-center gap-2">
@@ -230,7 +232,7 @@ export default function PlanSlider({
           </div>
         </CardHeader>
 
-        <CardContent className="p-0 space-y-3">
+        <CardContent className="p-0 space-y-2.5">
           {/* 2-Card Slider View */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             {visiblePlans.map((plan) => {
@@ -251,7 +253,7 @@ export default function PlanSlider({
                   key={plan.id}
                   onClick={() => handleCardClick(plan, price)}
                   className={cn(
-                    'relative flex flex-col justify-between rounded-xl border p-3 transition-all h-[112px] bg-card select-none text-left',
+                    'relative flex flex-col justify-between rounded-2xl border p-3 transition-all min-h-[106px] bg-card select-none text-left overflow-hidden',
                     isCurrent
                       ? 'border-primary/50 bg-primary/5 ring-1 ring-primary/20 cursor-default'
                       : isSelected
@@ -269,14 +271,14 @@ export default function PlanSlider({
                         {isCurrent ? (
                           <Badge
                             variant="secondary"
-                            className="text-[9px] px-1.5 py-0 rounded-full font-semibold bg-primary/15 text-primary border-0"
+                            className="text-[9px] px-1.5 py-0 rounded-full font-semibold bg-primary/15 text-primary border-0 shrink-0"
                           >
                             Current
                           </Badge>
                         ) : isSelected ? (
                           <Badge
                             variant="default"
-                            className="text-[9px] px-1.5 py-0 rounded-full font-semibold gap-0.5 border-0"
+                            className="text-[9px] px-1.5 py-0 rounded-full font-semibold gap-0.5 border-0 shrink-0"
                           >
                             <Check className="size-2.5" />
                             Selected
@@ -309,21 +311,17 @@ export default function PlanSlider({
                     </div>
                   </div>
 
-                  {/* Bottom Row: Action button */}
-                  <div className="pt-1 border-t border-border/50 flex items-center justify-between">
-                    <span className="text-[10px] text-muted-foreground capitalize">
+                  {/* Bottom Row: Billing Interval & Action */}
+                  <div className="pt-1.5 border-t border-border/50 flex items-center justify-between text-[10px]">
+                    <span className="text-muted-foreground capitalize">
                       {price?.billingInterval ? `${price.billingInterval}ly billing` : 'Standard'}
                     </span>
 
                     {isCurrent ? (
-                      <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
+                      <span className="text-muted-foreground font-medium flex items-center gap-1">
                         <Check className="size-3 text-primary" /> Active Plan
                       </span>
-                    ) : isSelected ? (
-                      <span className="text-[10px] text-primary font-semibold flex items-center gap-1">
-                        <Check className="size-3" /> Selected
-                      </span>
-                    ) : (
+                    ) : !onSavePlanChange ? (
                       <Button
                         size="sm"
                         className="h-6 text-[11px] px-2.5 rounded-lg"
@@ -335,7 +333,7 @@ export default function PlanSlider({
                       >
                         Select Plan <ArrowRight className="size-2.5 ml-1" />
                       </Button>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               );
@@ -344,7 +342,7 @@ export default function PlanSlider({
 
           {/* Reason & Confirmation Section (For direct save mode) */}
           {onSavePlanChange && selectedPlan && selectedPlan.id !== currentPlan?.id && (
-            <div className="rounded-xl border bg-muted/40 p-3 space-y-2.5 animate-in fade-in-50 duration-200">
+            <div className="rounded-2xl border bg-muted/40 p-3 space-y-2.5 animate-in fade-in-50 duration-200">
               <div className="flex items-center justify-between text-xs pb-1.5 border-b">
                 <span className="text-muted-foreground font-medium">Changing plan:</span>
                 <div className="flex items-center gap-1.5 font-semibold">
@@ -505,7 +503,7 @@ export default function PlanSlider({
           {previewPlan && (
             <div className="space-y-4 pt-2">
               {/* Pricing breakdown */}
-              <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/40 p-3 text-xs border">
+              <div className="grid grid-cols-2 gap-2 rounded-2xl bg-muted/40 p-3 text-xs border">
                 <div>
                   <span className="text-muted-foreground block text-[10px] uppercase font-semibold">
                     Monthly Price

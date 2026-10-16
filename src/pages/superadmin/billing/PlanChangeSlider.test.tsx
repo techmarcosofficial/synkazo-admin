@@ -144,7 +144,7 @@ describe('PlanChangeSlider', () => {
     );
 
     // Header title
-    expect(screen.getByText('Change or Upgrade Plan')).toBeInTheDocument();
+    expect(screen.getByText('Change Plan')).toBeInTheDocument();
     expect(screen.getByText('1/3')).toBeInTheDocument();
 
     // Slide 1 has Free and Starter
