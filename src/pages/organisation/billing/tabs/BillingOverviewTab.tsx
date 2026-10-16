@@ -46,6 +46,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -686,7 +687,11 @@ export default function BillingOverviewTab() {
           if (!open) setAddCardOpen(false);
         }}
       >
-        <DialogContent className="max-w-lg rounded-2xl">
+        <DialogContent
+          className="max-w-lg rounded-2xl"
+          onInteractOutside={(e) => e.preventDefault()}
+          onPointerDownOutside={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>Manage Payment Methods</DialogTitle>
           </DialogHeader>
@@ -697,6 +702,19 @@ export default function BillingOverviewTab() {
               onAddDialogOpenChange={setAddCardOpen}
             />
           </div>
+          <DialogFooter className="pt-2 border-t mt-1">
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-xl h-8 px-4 text-xs"
+              onClick={() => {
+                setManageCardsOpen(false);
+                setAddCardOpen(false);
+              }}
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
