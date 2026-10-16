@@ -118,44 +118,46 @@ export default function TenantBillingHistorySection({
 
   return (
     <div className={cn('space-y-5', className)}>
-      {/* ── Icon-based Header ────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <span className="bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-xl">
-            <Receipt className="size-4" aria-hidden="true" />
-          </span>
-          <div>
-            <h2 className="text-base font-bold text-foreground">
-              Billing &amp; Payment History
-            </h2>
-            <p className="text-xs text-muted-foreground">
-              History of payments, lifecycle events, and Stripe invoices.
-            </p>
+      {/* ── Icon-based Header wrapped in standard Card ──────────────────────── */}
+      <Card size="sm" className="p-3 sm:px-4 sm:py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-xl">
+              <Receipt className="size-4" aria-hidden="true" />
+            </span>
+            <div>
+              <h2 className="text-base font-bold text-foreground">
+                Billing &amp; Payment History
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                History of payments, lifecycle events, and Stripe invoices.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <DateRangePicker
+              value={dateRange}
+              onChange={setDateRange}
+              placeholder="Filter by date"
+              className="h-8 text-xs px-2.5 rounded-xl"
+            />
+
+            {(dateRange.from || dateRange.to) && (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="size-8 rounded-xl text-muted-foreground hover:text-foreground"
+                title="Clear date filter"
+                aria-label="Clear date filter"
+                onClick={() => setDateRange({})}
+              >
+                <X className="size-3.5" />
+              </Button>
+            )}
           </div>
         </div>
-
-        <div className="flex items-center gap-2">
-          <DateRangePicker
-            value={dateRange}
-            onChange={setDateRange}
-            placeholder="Filter by date"
-            className="h-8 text-xs px-2.5 rounded-xl"
-          />
-
-          {(dateRange.from || dateRange.to) && (
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className="size-8 rounded-xl text-muted-foreground hover:text-foreground"
-              title="Clear date filter"
-              aria-label="Clear date filter"
-              onClick={() => setDateRange({})}
-            >
-              <X className="size-3.5" />
-            </Button>
-          )}
-        </div>
-      </div>
+      </Card>
 
       {/* ── Section 1: All payment history (Flat card table like Super Admin) ── */}
       <div className="space-y-3">
