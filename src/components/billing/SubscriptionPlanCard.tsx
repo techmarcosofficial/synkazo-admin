@@ -299,7 +299,7 @@ export default function SubscriptionPlanCard({
 
       {/* Top row: Current Plan label + Status Badge + Change Plan button */}
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-medium tracking-wide uppercase text-white/60">
+        <span className="text-xs font-medium text-white/70">
           Current Plan
           <span className="sr-only">Live Subscription</span>
         </span>
@@ -373,7 +373,7 @@ export default function SubscriptionPlanCard({
       <div className="mt-5 grid grid-cols-3 divide-x divide-white/10 rounded-2xl border border-white/10 bg-white/5 py-2.5 px-1 backdrop-blur-sm">
         {/* Interval */}
         <div className="px-3 text-center sm:text-left">
-          <span className="block text-[10px] font-medium uppercase tracking-wider text-white/50">
+          <span className="block text-[10px] font-medium text-white/60">
             Billing interval
           </span>
           <span className="mt-0.5 block text-xs font-semibold text-white">
@@ -383,7 +383,7 @@ export default function SubscriptionPlanCard({
 
         {/* Current period ends */}
         <div className="px-3 text-center sm:text-left">
-          <span className="block text-[10px] font-medium uppercase tracking-wider text-white/50">
+          <span className="block text-[10px] font-medium text-white/60">
             Current period ends
           </span>
           <span className="mt-0.5 block text-xs font-semibold text-white">
@@ -398,7 +398,7 @@ export default function SubscriptionPlanCard({
 
         {/* Provider */}
         <div className="px-3 text-center sm:text-left">
-          <span className="block text-[10px] font-medium uppercase tracking-wider text-white/50">
+          <span className="block text-[10px] font-medium text-white/60">
             Provider
           </span>
           <div className="mt-0.5 flex items-center justify-center sm:justify-start gap-1.5">

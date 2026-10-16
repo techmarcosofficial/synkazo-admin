@@ -115,8 +115,8 @@ export default function TenantBillingHistorySection({
   }, [rawInvoices, dateRange]);
 
   return (
-    <Card className={cn('gap-0', className)}>
-      <CardHeader className="p-4 sm:p-5 pb-4 border-b">
+    <Card className={cn('gap-0 py-0', className)}>
+      <CardHeader className="px-4 py-3 sm:px-5 sm:py-3.5 border-b">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <CardTitle className="text-base font-bold flex items-center gap-2">
@@ -192,7 +192,7 @@ export default function TenantBillingHistorySection({
         </div>
       </CardHeader>
 
-      <CardContent className="p-4 sm:p-5 pt-4">
+      <CardContent className="p-4 sm:p-5 pt-3.5">
         {subSection === 'activity' ? (
           activeHistoryQuery.isLoading ? (
             <SkeletonTable rows={4} columns={4} />

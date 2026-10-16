@@ -197,14 +197,14 @@ export default function BillingOverviewTab() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-5">
       {/* 2-Column Responsive Layout Matching Super Admin Style */}
-      <div className="grid gap-6 lg:grid-cols-12">
+      <div className="grid gap-4 sm:gap-5 lg:grid-cols-12">
         {/* ── LEFT COLUMN: USAGE & BILLING HISTORY (~65-70%) ─────────────────── */}
-        <div className="space-y-6 lg:col-span-7 xl:col-span-8">
+        <div className="space-y-4 sm:space-y-5 lg:col-span-7 xl:col-span-8">
           {/* Plan Limits, Resource Quotas & Entitlements */}
-          <Card className="gap-0">
-            <CardHeader visualLevel="section" className="p-4 sm:p-5 border-b">
+          <Card className="gap-0 py-0">
+            <CardHeader visualLevel="section" className="px-4 py-3 sm:px-5 sm:py-3.5 border-b">
               <CardTitle className="text-base font-bold flex items-center gap-2">
                 <FileText className="text-muted-foreground size-4" />
                 Plan limits &amp; features
@@ -214,9 +214,9 @@ export default function BillingOverviewTab() {
               </CardDescription>
             </CardHeader>
 
-            <CardContent className="p-4 sm:p-5 space-y-6">
+            <CardContent className="p-4 sm:p-5 space-y-4">
               {/* Resource Usage & Quotas (Super Admin inspired presentation) */}
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Resource Usage &amp; Quotas
@@ -229,7 +229,7 @@ export default function BillingOverviewTab() {
                 {usageOver && (
                   <Alert
                     variant="destructive"
-                    className="border-destructive/20 bg-destructive/5 rounded-xl py-2.5 px-3.5 mb-2"
+                    className="border-destructive/20 bg-destructive/5 rounded-xl py-2 px-3 mb-1.5"
                   >
                     <AlertCircle className="size-4" />
                     <AlertTitle className="text-xs font-semibold">Monthly record limit reached</AlertTitle>
@@ -239,11 +239,11 @@ export default function BillingOverviewTab() {
                   </Alert>
                 )}
 
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-2.5 sm:grid-cols-2">
                   {/* Records synced */}
-                  <div className="space-y-1.5 rounded-xl bg-muted/30 p-3 border border-border/50">
+                  <div className="space-y-1 rounded-xl bg-muted/20 p-2.5 border border-border/40">
                     <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2 font-medium">
+                      <div className="flex items-center gap-1.5 font-medium">
                         <Database className="size-3.5 text-amber-500" aria-hidden="true" />
                         <span>Records synced</span>
                       </div>
@@ -262,7 +262,7 @@ export default function BillingOverviewTab() {
                           : '0 records used'}
                       </span>
                     </div>
-                    <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
+                    <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
                       <div
                         className={cn(
                           'h-full rounded-full transition-all duration-500 bg-gradient-to-r',
@@ -279,9 +279,9 @@ export default function BillingOverviewTab() {
                   </div>
 
                   {/* Projects */}
-                  <div className="space-y-1.5 rounded-xl bg-muted/30 p-3 border border-border/50">
+                  <div className="space-y-1 rounded-xl bg-muted/20 p-2.5 border border-border/40">
                     <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2 font-medium">
+                      <div className="flex items-center gap-1.5 font-medium">
                         <FolderOpen className="size-3.5 text-blue-500" aria-hidden="true" />
                         <span>Projects</span>
                       </div>
@@ -291,7 +291,7 @@ export default function BillingOverviewTab() {
                           : `${plan.overLimit?.projects.count ?? 0} / Unlimited`}
                       </span>
                     </div>
-                    <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
+                    <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
                       <div
                         className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-blue-500 to-indigo-500"
                         style={{
@@ -306,9 +306,9 @@ export default function BillingOverviewTab() {
                   </div>
 
                   {/* Sync Jobs */}
-                  <div className="space-y-1.5 rounded-xl bg-muted/30 p-3 border border-border/50">
+                  <div className="space-y-1 rounded-xl bg-muted/20 p-2.5 border border-border/40">
                     <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2 font-medium">
+                      <div className="flex items-center gap-1.5 font-medium">
                         <Package className="size-3.5 text-purple-500" aria-hidden="true" />
                         <span>Sync jobs</span>
                       </div>
@@ -318,7 +318,7 @@ export default function BillingOverviewTab() {
                           : `${plan.overLimit?.jobs.count ?? 0} / Unlimited`}
                       </span>
                     </div>
-                    <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
+                    <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
                       <div
                         className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-purple-500 to-violet-500"
                         style={{
@@ -333,9 +333,9 @@ export default function BillingOverviewTab() {
                   </div>
 
                   {/* Team Members */}
-                  <div className="space-y-1.5 rounded-xl bg-muted/30 p-3 border border-border/50">
+                  <div className="space-y-1 rounded-xl bg-muted/20 p-2.5 border border-border/40">
                     <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2 font-medium">
+                      <div className="flex items-center gap-1.5 font-medium">
                         <Users className="size-3.5 text-emerald-500" aria-hidden="true" />
                         <span>Team members</span>
                       </div>
@@ -345,7 +345,7 @@ export default function BillingOverviewTab() {
                           : `${plan.overLimit?.teamMembers.count ?? 0} / Unlimited`}
                       </span>
                     </div>
-                    <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
+                    <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
                       <div
                         className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-emerald-500 to-teal-600"
                         style={{
@@ -362,7 +362,7 @@ export default function BillingOverviewTab() {
               </div>
 
               {/* Plan Features & Inclusions (Clean presentation without extra dividers or separators) */}
-              <div className="space-y-3 pt-1">
+              <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Plan Capabilities &amp; Inclusions
@@ -372,15 +372,15 @@ export default function BillingOverviewTab() {
                   </Badge>
                 </div>
 
-                <div className="grid gap-2.5 sm:grid-cols-2">
+                <div className="grid gap-2 sm:grid-cols-2">
                   {features.map((feature) => (
                     <div
                       key={feature.label}
-                      className="flex items-center gap-2.5 rounded-xl bg-muted/30 px-3 py-2 text-xs border border-transparent hover:border-border/60 transition-colors"
+                      className="flex items-center gap-2 rounded-lg bg-muted/20 px-2.5 py-1.5 text-xs border border-transparent hover:border-border/50 transition-colors"
                     >
                       <span
                         className={cn(
-                          'size-4 rounded-full inline-flex items-center justify-center shrink-0',
+                          'size-3.5 rounded-full inline-flex items-center justify-center shrink-0',
                           feature.enabled
                             ? 'bg-success/20 text-success'
                             : 'bg-muted text-muted-foreground/60',
@@ -389,7 +389,7 @@ export default function BillingOverviewTab() {
                         {feature.enabled ? (
                           <Check className="size-2.5 stroke-[3]" />
                         ) : (
-                          <X className="size-2.5 stroke-[2]" />
+                          <X className="size-2 stroke-[2]" />
                         )}
                       </span>
                       <span
@@ -412,26 +412,18 @@ export default function BillingOverviewTab() {
         </div>
 
         {/* ── RIGHT COLUMN: SUBSCRIPTION & PAYMENT (~30-35%) ─────────────────── */}
-        <div className="space-y-5 lg:col-span-5 xl:col-span-4">
+        <div className="space-y-3.5 lg:col-span-5 xl:col-span-4">
           {/* Subscription Plan "ATM" Card (Well-proportioned dimensions) */}
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Subscription Plan
-              </h3>
-            </div>
-
-            <SubscriptionPlanCard
-              planName={plan.planName}
-              status={plan.subscriptionStatus}
-              billingInterval={plan.billingInterval}
-              currentPeriodEnd={renewalDate}
-              planAccessSource={hasSubscription ? 'stripe_subscription' : 'free'}
-              onChangePlan={() => setPlanSliderOpen((prev) => !prev)}
-              changePlanLabel={hasSubscription ? 'Change Plan' : 'Choose Plan'}
-              className="w-full"
-            />
-          </div>
+          <SubscriptionPlanCard
+            planName={plan.planName}
+            status={plan.subscriptionStatus}
+            billingInterval={plan.billingInterval}
+            currentPeriodEnd={renewalDate}
+            planAccessSource={hasSubscription ? 'stripe_subscription' : 'free'}
+            onChangePlan={() => setPlanSliderOpen((prev) => !prev)}
+            changePlanLabel={hasSubscription ? 'Change Plan' : 'Choose Plan'}
+            className="w-full"
+          />
 
           {/* In-App Plan Upgrade / Change Slider */}
           <TenantPlanSlider
@@ -520,7 +512,7 @@ export default function BillingOverviewTab() {
           )}
 
           {/* Payment Method on File Card */}
-          <Card size="sm" className="space-y-1.5 p-3 sm:px-3.5 sm:py-2.5">
+          <Card size="sm" className="gap-0 py-0 p-3 sm:px-3.5 sm:py-2.5 space-y-1.5">
             <div className="flex items-center justify-between">
               <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                 <CreditCard className="size-3.5 text-muted-foreground" aria-hidden="true" />
@@ -578,7 +570,7 @@ export default function BillingOverviewTab() {
           </Card>
 
           {/* Upcoming Billing Card */}
-          <Card size="sm" className="space-y-2 p-3 sm:px-3.5 sm:py-3">
+          <Card size="sm" className="gap-0 py-0 p-3 sm:px-3.5 sm:py-2.5 space-y-1.5">
             <div className="flex items-center justify-between">
               <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                 <CalendarDays className="size-3.5 text-muted-foreground" aria-hidden="true" />
