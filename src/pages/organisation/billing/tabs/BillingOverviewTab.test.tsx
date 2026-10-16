@@ -192,10 +192,10 @@ describe('BillingOverviewTab', () => {
       screen.getByText('Monthly record limit reached'),
     ).toBeInTheDocument();
 
-    // Unified Billing & Payment History (Table Card)
+    // Unified Billing & Payment History (Table Card with both individual sections)
     expect(screen.getByText('Billing & Payment History')).toBeInTheDocument();
-    expect(screen.getByText('Payment History (1)')).toBeInTheDocument();
-    expect(screen.getByText('Invoices (1)')).toBeInTheDocument();
+    expect(screen.getByText('Payment History')).toBeInTheDocument();
+    expect(screen.getByText('Invoices')).toBeInTheDocument();
 
     // Dedicated Billing Activity Tree Card in Right Column
     expect(screen.getByText('Billing Activity')).toBeInTheDocument();

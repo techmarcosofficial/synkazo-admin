@@ -73,19 +73,16 @@ function formatDateSafe(
   }
 }
 
-export type HistorySubTab = 'payments' | 'invoices';
-
 export default function TenantBillingHistorySection({
   className,
 }: {
   className?: string;
 }) {
-  const [activeTab, setActiveTab] = useState<HistorySubTab>('payments');
   const [dateRange, setDateRange] = useState<DateRangeValue>({});
 
   const [paymentPage, setPaymentPage] = useState(1);
   const [invoicePage, setInvoicePage] = useState(1);
-  const pageSize = 20;
+  const pageSize = 5;
 
   const paymentHistoryQuery = usePaymentHistoryQuery(paymentPage, pageSize);
   const invoicesQuery = useInvoicesQuery(invoicePage, pageSize);
@@ -127,6 +124,7 @@ export default function TenantBillingHistorySection({
 
   return (
     <Card className={cn('gap-0 py-0', className)}>
+      {/* ── Main Unified Header with Date Filter ────────────────────────── */}
       <CardHeader className="px-4 py-3 sm:px-5 sm:py-3.5 border-b">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -139,35 +137,7 @@ export default function TenantBillingHistorySection({
             </CardDescription>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Header Tabs: Payment History & Invoices */}
-            <div className="bg-muted inline-flex rounded-xl p-1 text-xs">
-              <button
-                type="button"
-                onClick={() => setActiveTab('payments')}
-                className={cn(
-                  'px-3 py-1 font-medium rounded-lg transition-all cursor-pointer',
-                  activeTab === 'payments'
-                    ? 'bg-background text-foreground shadow-xs'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                Payment History ({totalPayments})
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('invoices')}
-                className={cn(
-                  'px-3 py-1 font-medium rounded-lg transition-all cursor-pointer',
-                  activeTab === 'invoices'
-                    ? 'bg-background text-foreground shadow-xs'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                Invoices ({totalInvoices})
-              </button>
-            </div>
-
+          <div className="flex items-center gap-2">
             <DateRangePicker
               value={dateRange}
               onChange={setDateRange}
@@ -191,24 +161,42 @@ export default function TenantBillingHistorySection({
         </div>
       </CardHeader>
 
-      <CardContent className="p-4 sm:p-5 pt-3.5">
-        {activeTab === 'payments' ? (
-          paymentHistoryQuery.isLoading ? (
-            <SkeletonTable rows={4} columns={4} />
+      <CardContent className="p-4 sm:p-5 space-y-6">
+        {/* ── Section 1: Payment History Table ─────────────────────────── */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold tracking-tight text-foreground flex items-center gap-1.5">
+                <CreditCard className="size-3.5 text-muted-foreground" />
+                Payment History
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Recent payments and transaction outcomes.
+              </p>
+            </div>
+            {totalPayments > 0 && (
+              <span className="text-[10px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                {totalPayments} {totalPayments === 1 ? 'payment' : 'payments'}
+              </span>
+            )}
+          </div>
+
+          {paymentHistoryQuery.isLoading ? (
+            <SkeletonTable rows={3} columns={4} />
           ) : paymentHistoryQuery.isError ? (
             <ErrorState
               title="Could not load payment history"
               onRetry={() => paymentHistoryQuery.refetch()}
             />
           ) : filteredPayments.length === 0 ? (
-            <div className="py-8 text-center text-xs text-muted-foreground">
+            <div className="py-6 text-center text-xs text-muted-foreground rounded-2xl border border-dashed p-4">
               {dateRange.from || dateRange.to ? (
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <p>No payment events found for the selected date range.</p>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-7 text-xs rounded-xl"
+                    className="h-6 text-[11px] rounded-lg"
                     onClick={() => setDateRange({})}
                   >
                     Clear date filter
@@ -223,7 +211,7 @@ export default function TenantBillingHistorySection({
               )}
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-2.5">
               <div className="overflow-hidden rounded-2xl border">
                 <Table>
                   <TableHeader>
@@ -242,10 +230,10 @@ export default function TenantBillingHistorySection({
 
                       return (
                         <TableRow key={item.id ?? idx} className="hover:bg-muted/40">
-                          <TableCell className="text-xs text-muted-foreground whitespace-nowrap py-3">
+                          <TableCell className="text-xs text-muted-foreground whitespace-nowrap py-2.5">
                             {formatDateSafe(item.createdAt)}
                           </TableCell>
-                          <TableCell className="text-xs font-medium py-3">
+                          <TableCell className="text-xs font-medium py-2.5">
                             <span className="text-foreground">{label}</span>
                             {item.paymentId && (
                               <span className="block text-[10px] text-muted-foreground font-mono mt-0.5">
@@ -253,7 +241,7 @@ export default function TenantBillingHistorySection({
                               </span>
                             )}
                           </TableCell>
-                          <TableCell className="py-3">
+                          <TableCell className="py-2.5">
                             <Badge
                               variant="secondary"
                               className="gap-1.5 text-[11px] font-medium capitalize py-0.5 px-2 rounded-full border-0"
@@ -262,7 +250,7 @@ export default function TenantBillingHistorySection({
                               {item.orderStatus ?? 'succeeded'}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right font-mono text-xs font-semibold py-3">
+                          <TableCell className="text-right font-mono text-xs font-semibold py-2.5">
                             {money(item.amount, item.currency)}
                           </TableCell>
                         </TableRow>
@@ -277,19 +265,19 @@ export default function TenantBillingHistorySection({
                   <Button
                     variant="outline"
                     size="sm"
-                    className="rounded-xl h-7 text-xs"
+                    className="rounded-xl h-6 text-[11px] px-2"
                     disabled={paymentPage === 1 || paymentHistoryQuery.isLoading}
                     onClick={() => setPaymentPage((p) => Math.max(1, p - 1))}
                   >
                     Previous
                   </Button>
-                  <span className="text-muted-foreground text-xs">
+                  <span className="text-muted-foreground text-[11px]">
                     Page {paymentPage} of {Math.max(1, Math.ceil(totalPayments / pageSize))}
                   </span>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="rounded-xl h-7 text-xs"
+                    className="rounded-xl h-6 text-[11px] px-2"
                     disabled={paymentPage * pageSize >= totalPayments || paymentHistoryQuery.isLoading}
                     onClick={() => setPaymentPage((p) => p + 1)}
                   >
@@ -298,24 +286,44 @@ export default function TenantBillingHistorySection({
                 </div>
               )}
             </div>
-          )
-        ) : (
-          invoicesQuery.isLoading ? (
-            <SkeletonTable rows={4} columns={5} />
+          )}
+        </div>
+
+        {/* ── Section 2: Invoices Table (Like Super Admin UI) ───────────── */}
+        <div className="space-y-3 pt-4 border-t border-border/60">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold tracking-tight text-foreground flex items-center gap-1.5">
+                <Receipt className="size-3.5 text-muted-foreground" />
+                Invoices
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Stripe tax invoices and receipts.
+              </p>
+            </div>
+            {totalInvoices > 0 && (
+              <span className="text-[10px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                {totalInvoices} {totalInvoices === 1 ? 'invoice' : 'invoices'}
+              </span>
+            )}
+          </div>
+
+          {invoicesQuery.isLoading ? (
+            <SkeletonTable rows={3} columns={5} />
           ) : invoicesQuery.isError ? (
             <ErrorState
               title="Could not load invoices"
               onRetry={() => invoicesQuery.refetch()}
             />
           ) : filteredInvoices.length === 0 ? (
-            <div className="py-8 text-center text-xs text-muted-foreground">
+            <div className="py-6 text-center text-xs text-muted-foreground rounded-2xl border border-dashed p-4">
               {dateRange.from || dateRange.to ? (
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <p>No invoices found for the selected date range.</p>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-7 text-xs rounded-xl"
+                    className="h-6 text-[11px] rounded-lg"
                     onClick={() => setDateRange({})}
                   >
                     Clear date filter
@@ -326,7 +334,7 @@ export default function TenantBillingHistorySection({
               )}
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-2.5">
               <div className="overflow-hidden rounded-2xl border">
                 <Table>
                   <TableHeader>
@@ -345,13 +353,13 @@ export default function TenantBillingHistorySection({
 
                       return (
                         <TableRow key={inv.id} className="hover:bg-muted/40">
-                          <TableCell className="text-xs text-muted-foreground whitespace-nowrap py-3">
+                          <TableCell className="text-xs text-muted-foreground whitespace-nowrap py-2.5">
                             {formatDateSafe(inv.paidAt || inv.periodStart)}
                           </TableCell>
-                          <TableCell className="font-mono text-xs font-medium py-3">
+                          <TableCell className="font-mono text-xs font-medium py-2.5">
                             {num}
                           </TableCell>
-                          <TableCell className="py-3">
+                          <TableCell className="py-2.5">
                             <Badge
                               variant="secondary"
                               className="gap-1.5 text-[11px] font-medium capitalize py-0.5 px-2 rounded-full border-0"
@@ -360,10 +368,10 @@ export default function TenantBillingHistorySection({
                               {inv.status.replace('_', ' ')}
                             </Badge>
                           </TableCell>
-                          <TableCell className="font-mono text-xs font-semibold py-3">
+                          <TableCell className="font-mono text-xs font-semibold py-2.5">
                             {money(inv.totalAmount, inv.currency)}
                           </TableCell>
-                          <TableCell className="text-right py-3">
+                          <TableCell className="text-right py-2.5">
                             <div className="flex items-center justify-end gap-2.5">
                               {inv.receiptUrl ? (
                                 <a
@@ -391,19 +399,19 @@ export default function TenantBillingHistorySection({
                   <Button
                     variant="outline"
                     size="sm"
-                    className="rounded-xl h-7 text-xs"
+                    className="rounded-xl h-6 text-[11px] px-2"
                     disabled={invoicePage === 1 || invoicesQuery.isLoading}
                     onClick={() => setInvoicePage((p) => Math.max(1, p - 1))}
                   >
                     Previous
                   </Button>
-                  <span className="text-muted-foreground text-xs">
+                  <span className="text-muted-foreground text-[11px]">
                     Page {invoicePage} of {Math.max(1, Math.ceil(totalInvoices / pageSize))}
                   </span>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="rounded-xl h-7 text-xs"
+                    className="rounded-xl h-6 text-[11px] px-2"
                     disabled={invoicePage * pageSize >= totalInvoices || invoicesQuery.isLoading}
                     onClick={() => setInvoicePage((p) => p + 1)}
                   >
@@ -412,8 +420,8 @@ export default function TenantBillingHistorySection({
                 </div>
               )}
             </div>
-          )
-        )}
+          )}
+        </div>
       </CardContent>
     </Card>
   );
