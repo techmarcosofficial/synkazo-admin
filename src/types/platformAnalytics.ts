@@ -60,6 +60,7 @@ export interface PlatformAnalyticsResponse {
     customers: {
       asOf: string;
       total: number;
+      paidOrganisations: { confirmed: number; unverified: number } | null;
       byStatus: Array<{ status: string; count: number }>;
       bySubscriptionStatus: Array<{ status: string; count: number }>;
       byPlan: Array<{ planId: string | null; name: string; count: number }>;
@@ -75,6 +76,7 @@ export interface OrganisationAnalyticsRow {
   status: string;
   archived: boolean;
   planName: string;
+  subscriptionStatus: string | null;
   collectedMinor: string | null;
   runs: number;
   recordsWritten: number;

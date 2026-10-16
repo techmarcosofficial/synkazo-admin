@@ -20,6 +20,10 @@ const mocks = vi.hoisted(() => ({
   analytics: null as PlatformAnalyticsResponse | null,
   organisations: null as OrganisationAnalyticsResponse | null,
   error: false,
+  liveError: false,
+  queueError: false,
+  alerts:
+    [] as import('@/types/superAdmin').PlatformOverviewResponse['recentAlerts'],
 }));
 vi.mock('@/api/platformAnalytics', () => ({
   platformAnalyticsApi: {
@@ -34,7 +38,7 @@ vi.mock('@/api/platformAnalytics', () => ({
 vi.mock('@/queries/useSuperAdmin', () => ({
   useSuperAdminPlatformOverviewQuery: () => ({
     isLoading: false,
-    isError: false,
+    isError: mocks.liveError,
     isFetching: false,
     refetch: vi.fn(),
     data: {
@@ -49,8 +53,8 @@ vi.mock('@/queries/useSuperAdmin', () => ({
           workerOnline: true,
         },
       },
-      recentAlerts: [],
-      errors: {},
+      recentAlerts: mocks.alerts,
+      errors: mocks.queueError ? { queue: 'Queue unavailable' } : {},
     },
   }),
 }));
@@ -102,6 +106,7 @@ function fixture(): PlatformAnalyticsResponse {
       customers: {
         asOf: '2026-10-16T12:00:00Z',
         total: 11,
+        paidOrganisations: { confirmed: 4, unverified: 0 },
         byPlan: [{ planId: null, name: 'Unassigned', count: 11 }],
         byStatus: [{ status: 'active', count: 11 }],
         bySubscriptionStatus: [{ status: 'past_due', count: 3 }],
@@ -117,7 +122,7 @@ function fixture(): PlatformAnalyticsResponse {
   };
 }
 
-function renderPage(path = '/super-admin/overview') {
+function renderPage(path = '/super-admin/overview?view=analytics') {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
@@ -133,6 +138,9 @@ function renderPage(path = '/super-admin/overview') {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.error = false;
+  mocks.liveError = false;
+  mocks.queueError = false;
+  mocks.alerts = [];
   mocks.analytics = fixture();
   mocks.organisations = {
     generatedAt: '2026-10-16T12:00:00Z',
@@ -148,6 +156,7 @@ beforeEach(() => {
         status: 'active',
         archived: false,
         planName: 'Pro',
+        subscriptionStatus: 'active',
         collectedMinor: null,
         runs: 10,
         recordsWritten: 100,
@@ -163,6 +172,185 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('Platform analytics dashboard', () => {
+  it('defaults to a compact summary with honest paid and worker values and relevant links', async () => {
+    renderPage('/super-admin/overview');
+    await screen.findByText('Example organisation');
+    expect(screen.getByRole('button', { name: 'Summary' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(
+      screen.queryByRole('heading', { name: 'Collections' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /Total organisations/ }),
+    ).toHaveTextContent('11');
+    expect(
+      screen.getByRole('link', { name: /Active paid organisations/ }),
+    ).toHaveTextContent('4');
+    expect(
+      screen.getByRole('link', { name: /Workers online/ }),
+    ).toHaveTextContent('Online');
+    expect(
+      screen.getByText(/Heartbeat status · count unavailable/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /Past-due billing/ }),
+    ).toHaveAttribute(
+      'href',
+      '/super-admin/organisations?subscriptionStatus=past_due',
+    );
+    expect(
+      screen.getByText('Example organisation').closest('a'),
+    ).toHaveAttribute('href', '/super-admin/organisations/org-1/overview');
+    expect(
+      screen.getByRole('link', { name: 'Active subscription' }),
+    ).toHaveAttribute('href', '/super-admin/organisations/org-1/billing');
+    expect(
+      screen
+        .getByRole('link', { name: 'Unassigned: 11 organisations' })
+        .getAttribute('href'),
+    ).toContain('planId=unassigned');
+  });
+
+  it('keeps live operational data available when historical analytics sources fail', async () => {
+    mocks.analytics!.sections.customers = null;
+    mocks.analytics!.sections.processing = null;
+    mocks.analytics!.errors = {
+      customers: 'Customer data unavailable.',
+      processing: 'Processing data unavailable.',
+    };
+    renderPage('/super-admin/overview');
+    await screen.findByText('Customer data unavailable.');
+    expect(
+      screen.getByRole('link', { name: /Total organisations/ }),
+    ).toHaveTextContent('—');
+    expect(
+      screen.getByRole('link', { name: /Past-due billing/ }),
+    ).toHaveTextContent('—');
+    expect(
+      screen.getByRole('link', { name: /Sync success rate/ }),
+    ).toHaveTextContent('—');
+    expect(
+      screen.getByRole('link', { name: /Workers online/ }),
+    ).toHaveTextContent('Online');
+  });
+
+  it('converts an inclusive through date to the API exclusive UTC boundary', async () => {
+    renderPage('/super-admin/overview');
+    await screen.findByText('Example organisation');
+    fireEvent.click(screen.getByRole('button', { name: 'Choose date range' }));
+    const from = defaultRange().from;
+    fireEvent.change(screen.getByLabelText('Through date UTC'), {
+      target: { value: from },
+    });
+    const expectedTo = new Date(
+      new Date(`${from}T00:00:00Z`).getTime() + 86400000,
+    )
+      .toISOString()
+      .slice(0, 10);
+    await waitFor(() =>
+      expect(platformAnalyticsApi.overview).toHaveBeenLastCalledWith(
+        expect.objectContaining({ from, to: expectedTo }),
+      ),
+    );
+  });
+
+  it('withholds the paid total when payment evidence is incomplete, without inferring paid from active plans', async () => {
+    mocks.analytics!.sections.customers!.paidOrganisations = {
+      confirmed: 2,
+      unverified: 3,
+    };
+    mocks.queueError = true;
+    renderPage('/super-admin/overview');
+    await screen.findByText('Example organisation');
+    expect(
+      screen.getByRole('link', { name: /Active paid organisations/ }),
+    ).toHaveTextContent('—');
+    expect(screen.getByText('2 confirmed · 3 unverified')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /Workers online/ }),
+    ).toHaveTextContent('—');
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Live queue status could not be loaded',
+    );
+  });
+
+  it('preserves dates and cohort when switching views and navigating portfolio bars', async () => {
+    mocks.analytics!.sections.customers!.byPlan = [
+      { planId: 'plan-1', name: 'Pro', count: 11 },
+    ];
+    const range = defaultRange(7);
+    renderPage(
+      `/super-admin/overview?from=${range.from}&to=${range.to}&currency=EUR`,
+    );
+    const planLink = await screen.findByRole('link', {
+      name: 'Pro: 11 organisations',
+    });
+    expect(planLink.getAttribute('href')).toContain('currency=EUR');
+    expect(planLink.getAttribute('href')).toContain('planId=plan-1');
+    fireEvent.click(planLink);
+    await screen.findByRole('heading', { name: 'Collections' });
+    expect(platformAnalyticsApi.overview).toHaveBeenLastCalledWith(
+      expect.objectContaining({ ...range, currency: 'EUR', planId: 'plan-1' }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Summary' }));
+    await screen.findByRole('heading', { name: 'Top organisations' });
+    expect(screen.getByText('Current plan cohort: Pro')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear plan filter' }));
+    await waitFor(() =>
+      expect(platformAnalyticsApi.overview).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          ...range,
+          currency: 'EUR',
+          planId: undefined,
+        }),
+      ),
+    );
+  });
+
+  it('separates routine activity from issues while preserving source severity and organisation context', async () => {
+    const base = {
+      resource: 'organisation',
+      resourceId: 'org-1',
+      userEmail: 'operator@example.test',
+      organisationId: 'org-1',
+      organisationName: 'Example organisation',
+      createdAt: '2026-10-16T12:00:00Z',
+    };
+    mocks.alerts = [
+      {
+        ...base,
+        id: 'routine',
+        action: 'organisation.plan_assigned',
+        summary: 'Plan assigned',
+        severity: 'warning',
+      },
+      {
+        ...base,
+        id: 'issue',
+        action: 'billing.payment_failed',
+        summary: 'Payment failed',
+        severity: 'critical',
+      },
+    ];
+    renderPage('/super-admin/overview');
+    expect(await screen.findByText('Payment failed')).toBeVisible();
+    expect(screen.getByText('Plan assigned')).not.toBeVisible();
+    fireEvent.click(screen.getByText('Administrative activity · 1'));
+    expect(screen.getByText('Plan assigned')).toBeVisible();
+    expect(
+      screen.getByRole('link', { name: /Payment failed/ }),
+    ).toHaveTextContent('critical');
+    expect(
+      screen.getByRole('link', { name: /Plan assigned/ }),
+    ).toHaveTextContent('warning');
+    expect(
+      screen.getByRole('link', { name: /Payment failed/ }),
+    ).toHaveAttribute('href', '/super-admin/organisations/org-1/activity');
+    expect(screen.queryByText('operator@example.test')).not.toBeInTheDocument();
+  });
+
   it('shows operational analytics and gated cash without inventing revenue or missing duration', async () => {
     renderPage();
     expect(
@@ -177,7 +365,9 @@ describe('Platform analytics dashboard', () => {
       screen.getByText(/2 runs have no duration measurement/),
     ).toBeInTheDocument();
     expect(screen.getAllByText('80%').length).toBeGreaterThan(0);
-    expect(screen.getByText('Worker online')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Queue health' }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText('1000')).not.toBeInTheDocument();
     expect(
       screen.getByText('Example organisation').closest('a'),
@@ -210,12 +400,13 @@ describe('Platform analytics dashboard', () => {
     expect(
       screen.getByRole('heading', { name: 'Sync reliability' }),
     ).toBeInTheDocument();
-    expect(screen.getByText('Worker online')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Summary' })).toBeInTheDocument();
   });
 
   it('changes query filters for quick ranges and preserves UTC boundaries', async () => {
     renderPage();
     await screen.findByText('Example organisation');
+    fireEvent.click(screen.getByRole('button', { name: 'Choose date range' }));
     fireEvent.click(screen.getByRole('button', { name: '7 days' }));
     await waitFor(() =>
       expect(platformAnalyticsApi.overview).toHaveBeenLastCalledWith(

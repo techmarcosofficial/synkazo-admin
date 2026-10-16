@@ -45,6 +45,7 @@ const overviewFixture: PlatformOverviewResponse = {
       severity: 'warning',
       userEmail: 'admin@example.test',
       organisationId: 'org-1',
+      organisationName: 'Test organisation',
       summary: 'organisation suspended',
       createdAt: new Date().toISOString(),
     },

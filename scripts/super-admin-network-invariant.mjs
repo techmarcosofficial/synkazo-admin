@@ -86,6 +86,7 @@ function analyticsFixture(url) {
           status: 'active',
           archived: false,
           planName: 'Pro',
+          subscriptionStatus: 'active',
           collectedMinor: null,
           runs: 10,
           recordsWritten: 100,
@@ -125,6 +126,7 @@ function analyticsFixture(url) {
       customers: {
         asOf: new Date().toISOString(),
         total: 1,
+        paidOrganisations: { confirmed: 0, unverified: 0 },
         byStatus: [{ status: 'active', count: 1 }],
         bySubscriptionStatus: [{ status: 'past_due', count: 1 }],
         byPlan: [{ planId: null, name: 'Unassigned', count: 1 }],
@@ -627,7 +629,11 @@ try {
   });
   await cdp.send('Page.addScriptToEvaluateOnNewDocument', {
     source:
-      "try { if (!localStorage.getItem('accessToken')) localStorage.setItem('accessToken', 'browser-test-token'); } catch {}",
+      "try { if (!localStorage.getItem('accessToken')) localStorage.setItem('accessToken', 'browser-test-token'); " +
+      (process.env.SUPER_ADMIN_TEST_THEME === 'dark'
+        ? "localStorage.setItem('sb-theme-v2', 'dark');"
+        : '') +
+      ' } catch {}',
   });
 
   const tenantRoutes = [
@@ -639,6 +645,7 @@ try {
   ];
   for (const route of [
     '/super-admin/overview',
+    '/super-admin/overview?view=analytics',
     '/super-admin/profile',
     '/super-admin/organisations',
     '/super-admin/projects',
@@ -663,7 +670,11 @@ try {
     });
     let state;
     const expectedContent = new Map([
-      ['/super-admin/overview', 'This graph shows payment counts, not money.'],
+      ['/super-admin/overview', 'Top organisations'],
+      [
+        '/super-admin/overview?view=analytics',
+        'This graph shows payment counts, not money.',
+      ],
       ['/super-admin/organisations/org-1/projects', 'Scoped project'],
       ['/super-admin/organisations', 'Test Organisation'],
       ['/super-admin/projects', 'Test Organisation'],
@@ -752,10 +763,14 @@ try {
       throw new Error(
         `Scoped page content missing at ${route}: ${expectedContent}`,
       );
-    if (route === '/super-admin/overview') {
+    if (route.startsWith('/super-admin/overview')) {
       if (
         !state.mainText.includes('Processing demand') ||
-        !state.mainText.includes('Organisation economics')
+        !state.mainText.includes(
+          route.includes('view=analytics')
+            ? 'Organisation economics'
+            : 'Top organisations',
+        )
       )
         throw new Error('Platform analytics sections are missing');
       for (const width of [375, 768, 1440]) {
@@ -773,6 +788,19 @@ try {
         });
         if (overflow.result.value)
           throw new Error(`Platform analytics overflows at ${width}px`);
+        if (process.env.SUPER_ADMIN_SCREENSHOT_DIR) {
+          const screenshot = await cdp.send('Page.captureScreenshot', {
+            format: 'png',
+            captureBeyondViewport: false,
+          });
+          await writeFile(
+            join(
+              process.env.SUPER_ADMIN_SCREENSHOT_DIR,
+              `platform-${route.includes('analytics') ? 'analytics' : 'summary'}-${width}.png`,
+            ),
+            Buffer.from(screenshot.data, 'base64'),
+          );
+        }
       }
       await cdp.send('Emulation.clearDeviceMetricsOverride');
     }

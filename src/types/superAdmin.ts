@@ -590,6 +590,7 @@ export interface PlatformOverviewResponse {
     severity: 'info' | 'warning' | 'critical';
     userEmail: string | null;
     organisationId: string | null;
+    organisationName: string | null;
     summary: string;
     createdAt: string;
   }>;
