@@ -97,15 +97,6 @@ export default function PlanSlider({
     ApiPlan | AdminApiPlan | null
   >(null);
 
-  const activePlans = useMemo(
-    () =>
-      plans.filter((p) => {
-        if ('isActive' in p && p.isActive === false) return false;
-        return !p.name.toLowerCase().includes('archived');
-      }),
-    [plans],
-  );
-
   const currentPlan = useMemo(
     () =>
       plans.find(
@@ -117,6 +108,20 @@ export default function PlanSlider({
     [plans, currentPlanId, currentPlanName],
   );
 
+  const activePlans = useMemo(
+    () =>
+      plans.filter((p) => {
+        if ('isActive' in p && p.isActive === false) return false;
+        if (p.name.toLowerCase().includes('archived')) return false;
+        const isCurrent =
+          p.id === currentPlanId ||
+          (currentPlanName &&
+            p.name.toLowerCase() === currentPlanName.toLowerCase());
+        return !isCurrent;
+      }),
+    [plans, currentPlanId, currentPlanName],
+  );
+
   const selectedPlan = useMemo(
     () => plans.find((p) => p.id === selectedPlanId) ?? null,
     [plans, selectedPlanId],
@@ -124,12 +129,13 @@ export default function PlanSlider({
 
   const pageSize = 2;
   const totalPages = Math.max(1, Math.ceil(activePlans.length / pageSize));
+  const safePage = Math.min(currentPage, Math.max(0, totalPages - 1));
 
   // Current slice of 2 cards
   const visiblePlans = useMemo(() => {
-    const start = currentPage * pageSize;
+    const start = safePage * pageSize;
     return activePlans.slice(start, start + pageSize);
-  }, [activePlans, currentPage]);
+  }, [activePlans, safePage]);
 
   if (!isOpen) return null;
 

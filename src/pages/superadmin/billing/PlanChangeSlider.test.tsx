@@ -145,21 +145,22 @@ describe('PlanChangeSlider', () => {
 
     // Header title
     expect(screen.getByText('Change Plan')).toBeInTheDocument();
-    expect(screen.getByText('1/3')).toBeInTheDocument();
+    // 5 total plans - 1 current (Starter) = 4 available plans across 2 pages
+    expect(screen.getByText('1/2')).toBeInTheDocument();
 
-    // Slide 1 has Free and Starter
+    // Slide 1 has Free and Pro (Starter is excluded as current plan)
     expect(screen.getByRole('heading', { name: 'Free' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Starter' })).toBeInTheDocument();
-    expect(screen.getByText('Current')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Pro' })).toBeInTheDocument();
+    expect(screen.queryByText('Current')).not.toBeInTheDocument();
 
     // Next button
     const nextBtn = screen.getByRole('button', { name: /next plans/i });
     fireEvent.click(nextBtn);
 
-    // Slide 2 has Pro and Enterprise
-    expect(screen.getByText('2/3')).toBeInTheDocument();
-    expect(screen.getByText('Pro')).toBeInTheDocument();
+    // Slide 2 has Enterprise and Unlimited
+    expect(screen.getByText('2/2')).toBeInTheDocument();
     expect(screen.getByText('Enterprise')).toBeInTheDocument();
+    expect(screen.getByText('Unlimited')).toBeInTheDocument();
   });
 
   it('allows selecting a plan and requires at least 10 chars reason to save', async () => {
