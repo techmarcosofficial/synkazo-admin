@@ -14,6 +14,7 @@ import React, { useState } from 'react';
 
 import { CardPicker } from './CardPicker';
 import TenantBillingHistorySection from './TenantBillingHistorySection';
+import TenantPlanSlider from './TenantPlanSlider';
 import {
   daysLeft,
   featureList,
@@ -30,7 +31,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -39,6 +39,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -48,6 +49,7 @@ import { getUserFriendlyError } from '@/lib/errorMessages';
 import { isStripeConfigured } from '@/lib/stripe';
 import { showToast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
+import { ChangePlanUpgradeForm } from '@/pages/checkout/ChangePlanUpgradeForm';
 import {
   useCancelScheduledChangeMutation,
   useCancelSubscriptionMutation,
@@ -58,6 +60,7 @@ import {
   useSubscriptionQuery,
   useUsageQuery,
 } from '@/queries/useBilling';
+import type { ApiPlan, ApiPrice } from '@/types/billing';
 
 function billingIntervalLabel(interval?: string | null) {
   if (interval === 'year') return 'Yearly';
@@ -133,9 +136,7 @@ function CompactLimitRow({
 export default function BillingOverviewTab() {
   const planQuery = usePlanQuery();
   const usageQuery = useUsageQuery();
-  const plansQuery = usePlansQuery(
-    planQuery.data?.billingInterval ?? undefined,
-  );
+  const plansQuery = usePlansQuery();
   const subscriptionQuery = useSubscriptionQuery();
   const paymentMethodsQuery = usePaymentMethodsQuery();
 
@@ -144,18 +145,27 @@ export default function BillingOverviewTab() {
   const reactivateSubscription = useReactivateMutation();
   const { confirm } = useConfirmDialog();
 
+  const [planSliderOpen, setPlanSliderOpen] = useState(false);
+  const [upgradeTarget, setUpgradeTarget] = useState<{
+    plan: ApiPlan;
+    price: ApiPrice;
+  } | null>(null);
+
   const [manageCardsOpen, setManageCardsOpen] = useState(false);
   const [addCardOpen, setAddCardOpen] = useState(false);
 
   if (planQuery.isLoading) {
     return (
-      <div className="flex flex-col gap-5">
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-          <Skeleton className="h-64 w-full rounded-4xl" />
-          <Skeleton className="h-64 w-full rounded-xl" />
+      <div className="grid gap-6 lg:grid-cols-12">
+        <div className="space-y-6 lg:col-span-7 xl:col-span-8">
+          <Skeleton className="h-80 w-full rounded-xl" />
+          <Skeleton className="h-96 w-full rounded-xl" />
         </div>
-        <Skeleton className="h-80 w-full rounded-xl" />
-        <Skeleton className="h-96 w-full rounded-xl" />
+        <div className="space-y-6 lg:col-span-5 xl:col-span-4">
+          <Skeleton className="h-60 w-full rounded-3xl" />
+          <Skeleton className="h-32 w-full rounded-xl" />
+          <Skeleton className="h-44 w-full rounded-xl" />
+        </div>
       </div>
     );
   }
@@ -242,36 +252,267 @@ export default function BillingOverviewTab() {
   };
 
   return (
-    <div className="flex flex-col gap-5">
-      {/* Top Section: Active Plan ATM Card + Payment Method & Upcoming Billing */}
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
-        {/* Dynamic Plan ATM Card (Unlimited, Pro, Starter, Enterprise, Free) */}
-        <div>
-          <span className="sr-only">Subscription overview</span>
-          <SubscriptionPlanCard
-            planName={plan.planName}
-            status={plan.subscriptionStatus}
-            billingInterval={plan.billingInterval}
-            currentPeriodEnd={renewalDate}
-            planAccessSource={hasSubscription ? 'stripe_subscription' : 'free'}
-            changePlanHref={`${import.meta.env.VITE_FRONTEND_URL}/pricing`}
-            changePlanLabel={hasSubscription ? 'Upgrade Plan' : 'View Plans'}
-          />
+    <div className="space-y-6">
+      {/* 2-Column Responsive Layout Matching Super Admin Style */}
+      <div className="grid gap-6 lg:grid-cols-12">
+        {/* ── LEFT COLUMN: USAGE & BILLING HISTORY (~65-70%) ─────────────────── */}
+        <div className="space-y-6 lg:col-span-7 xl:col-span-8">
+          {/* Plan Limits, Resource Quotas & Entitlements */}
+          <Card className="rounded-xl overflow-hidden gap-0">
+            <CardHeader visualLevel="section" className="p-4 sm:p-5 border-b">
+              <CardTitle className="text-base font-bold flex items-center gap-2">
+                <FileText className="text-muted-foreground size-4" />
+                Plan limits &amp; features
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Included in your {plan.planName} plan and current monthly consumption.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-4 sm:p-5 space-y-6">
+              {/* Monthly records synced meter */}
+              <div className="space-y-2.5">
+                <div className="flex flex-wrap items-end justify-between gap-2">
+                  <div>
+                    <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      <Gauge className="size-3.5 text-muted-foreground" />
+                      Usage this month
+                    </p>
+                    <p className="text-muted-foreground mt-0.5 text-xs">
+                      Current billing period
+                      {usage ? ` · since ${formatDate(usage.periodStart)}` : ''}
+                    </p>
+                  </div>
+                  {usage && (
+                    <div className="text-right">
+                      <p className="text-xs font-semibold">
+                        {usage.recordsSynced.toLocaleString()}
+                        {usage.maxRecordsPerMonth != null
+                          ? ` of ${usage.maxRecordsPerMonth.toLocaleString()} records used`
+                          : ' records used'}
+                      </p>
+                      <p className={cn('text-xs font-semibold', usageToneInfo.text)}>
+                        {usage.maxRecordsPerMonth == null
+                          ? 'Unlimited'
+                          : `${Math.round(usageRawPct)}%`}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {usageQuery.isLoading || !usage ? (
+                  <Skeleton className="h-1.5 w-full rounded-full" />
+                ) : (
+                  <ThinMeter
+                    value={usage.maxRecordsPerMonth == null ? 0 : usageRawPct}
+                    indicatorClassName={usageToneInfo.bar}
+                  />
+                )}
+
+                {usageOver && (
+                  <Alert
+                    variant="destructive"
+                    className="border-destructive/20 bg-destructive/5 rounded-xl"
+                  >
+                    <AlertCircle />
+                    <AlertTitle>Monthly record limit reached</AlertTitle>
+                    <AlertDescription className="text-xs">
+                      New syncs are blocked until the next billing cycle or until
+                      your plan is upgraded.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+
+              {/* Quotas & Features Grid */}
+              <div className="grid gap-6 lg:grid-cols-2 pt-2 border-t">
+                {/* Resource Quotas */}
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">
+                    Resource quotas
+                  </p>
+                  {plan.overLimit ? (
+                    <div className="space-y-2.5">
+                      <CompactLimitRow
+                        label="Projects"
+                        count={plan.overLimit.projects.count}
+                        limit={plan.overLimit.projects.limit}
+                      />
+                      <CompactLimitRow
+                        label="Sync jobs"
+                        count={plan.overLimit.jobs.count}
+                        limit={plan.overLimit.jobs.limit}
+                      />
+                      <CompactLimitRow
+                        label="Team members"
+                        count={plan.overLimit.teamMembers.count}
+                        limit={plan.overLimit.teamMembers.limit}
+                      />
+                    </div>
+                  ) : (
+                    <Skeleton className="h-36 w-full rounded-xl" />
+                  )}
+                </div>
+
+                {/* Features Included & Excluded */}
+                <div className="space-y-4 lg:border-l lg:pl-6">
+                  <div>
+                    <p className="mb-2 text-xs font-semibold tracking-wide uppercase text-muted-foreground">
+                      Included in {plan.planName}
+                    </p>
+                    <ul className="space-y-2 text-xs">
+                      {includedFeatures.map((feature) => (
+                        <FeatureRow
+                          key={feature.label}
+                          enabled
+                          label={feature.label}
+                        />
+                      ))}
+                    </ul>
+                  </div>
+                  {excludedFeatures.length > 0 && (
+                    <div className="pt-2 border-t">
+                      <p className="mb-2 text-xs font-semibold tracking-wide uppercase text-muted-foreground">
+                        Not included
+                      </p>
+                      <ul className="space-y-2 text-xs">
+                        {excludedFeatures.map((feature) => (
+                          <FeatureRow
+                            key={feature.label}
+                            enabled={false}
+                            label={feature.label}
+                          />
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Unified Billing & Payment History (Timeline + Invoices with Date Filter) */}
+          <TenantBillingHistorySection />
         </div>
 
-        {/* Right side: Payment Method on File & Upcoming Billing */}
-        <div className="flex flex-col gap-3">
-          {/* Payment Method on File Card */}
-          <Card className="gap-0 py-0 p-3.5 sm:px-4 sm:py-3 rounded-xl border bg-card space-y-2">
+        {/* ── RIGHT COLUMN: SUBSCRIPTION & PAYMENT (~30-35%) ─────────────────── */}
+        <div className="space-y-5 lg:col-span-5 xl:col-span-4">
+          {/* Subscription Plan "ATM" Card (Well-proportioned dimensions) */}
+          <div className="space-y-2.5">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Subscription Plan
+              </h3>
+            </div>
+
+            <SubscriptionPlanCard
+              planName={plan.planName}
+              status={plan.subscriptionStatus}
+              billingInterval={plan.billingInterval}
+              currentPeriodEnd={renewalDate}
+              planAccessSource={hasSubscription ? 'stripe_subscription' : 'free'}
+              onChangePlan={() => setPlanSliderOpen((prev) => !prev)}
+              changePlanLabel={hasSubscription ? 'Change Plan' : 'Choose Plan'}
+              className="w-full"
+            />
+          </div>
+
+          {/* In-App Plan Upgrade / Change Slider */}
+          <TenantPlanSlider
+            plans={plansQuery.data ?? []}
+            currentPlanId={plan.planId}
+            currentPlanName={plan.planName}
+            currentBillingInterval={plan.billingInterval}
+            isOpen={planSliderOpen}
+            onClose={() => setPlanSliderOpen(false)}
+            onSelectPlan={(targetPlan, targetPrice) => {
+              setUpgradeTarget({ plan: targetPlan, price: targetPrice });
+            }}
+          />
+
+          {/* Contextual Lifecycle Banners */}
+          {pendingCancel && (
+            <div className="border-warning/30 bg-warning/10 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3.5">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="text-warning size-4 shrink-0" />
+                <p className="text-warning text-xs font-medium">
+                  Scheduled to cancel on {formatDate(renewalDate)}.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                className="rounded-lg h-7 text-xs"
+                onClick={doReactivate}
+                disabled={reactivateSubscription.isPending}
+              >
+                {reactivateSubscription.isPending && (
+                  <Loader2 className="mr-1.5 size-3 animate-spin" />
+                )}
+                Reactivate
+              </Button>
+            </div>
+          )}
+
+          {sub?.pendingPriceId && (
+            <div className="border-info/30 bg-info/10 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3.5">
+              <div className="flex items-center gap-2">
+                <Sparkles className="text-info size-4 shrink-0" />
+                <p className="text-info text-xs font-medium">
+                  Switching to {pendingPlanName ?? 'new plan'} on {formatDate(sub.pendingPlanChangeAt)}.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-lg h-7 text-xs"
+                onClick={doCancelScheduledChange}
+                disabled={cancelScheduledChange.isPending}
+              >
+                {cancelScheduledChange.isPending && (
+                  <Loader2 className="mr-1.5 size-3 animate-spin" />
+                )}
+                Cancel change
+              </Button>
+            </div>
+          )}
+
+          {sub?.creditBalance != null && sub.creditBalance > 0 && (
+            <div className="border-success/30 bg-success/10 flex items-center justify-between rounded-xl border p-3 text-xs">
+              <span className="text-success font-medium">
+                Credit balance: {formatPrice(sub.creditBalance, 'USD')} available.
+              </span>
+            </div>
+          )}
+
+          {plan.subscriptionStatus === 'past_due' && (
+            <div className="border-destructive/30 bg-destructive/10 flex items-center justify-between rounded-xl border p-3.5">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="text-destructive size-4" />
+                <p className="text-destructive text-xs font-medium">
+                  Payment failed. Update payment method.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="destructive"
+                className="rounded-lg h-7 text-xs"
+                onClick={() => setManageCardsOpen(true)}
+              >
+                Update card
+              </Button>
+            </div>
+          )}
+
+          {/* Payment Method on File Card */}
+          <Card className="gap-0 py-0 p-3 sm:px-3.5 sm:py-2.5 rounded-xl border bg-card space-y-1.5">
+            <div className="flex items-center justify-between">
+              <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                 <CreditCard className="size-3.5 text-muted-foreground" aria-hidden="true" />
                 Payment Method on File
               </h4>
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 text-xs px-2 text-primary hover:text-primary"
+                className="h-6 text-[11px] px-2 text-primary hover:text-primary"
                 onClick={() => setManageCardsOpen(true)}
               >
                 {paymentMethods.length > 0 ? 'Manage cards' : '+ Add card'}
@@ -279,22 +520,20 @@ export default function BillingOverviewTab() {
             </div>
 
             {defaultCard ? (
-              <div className="flex items-center justify-between pt-1">
-                <div className="flex items-center gap-2.5">
-                  <CardBrandLogo brand={defaultCard.cardBrand} className="h-6 w-9 shrink-0" />
-                  <div>
-                    <div className="flex items-center gap-1.5 text-xs font-semibold uppercase text-foreground">
-                      <span>{defaultCard.cardBrand ?? 'Card'}</span>
-                      <span className="font-mono text-muted-foreground tracking-wider">
-                        •••• {defaultCard.cardLast4}
-                      </span>
-                    </div>
-                    {defaultCard.isDefault && (
-                      <span className="text-[10px] text-primary flex items-center gap-0.5 font-medium">
-                        <Star className="size-2.5 fill-current" /> Default payment card
-                      </span>
-                    )}
-                  </div>
+              <div className="flex items-center justify-between pt-0.5">
+                <div className="flex items-center gap-2">
+                  <CardBrandLogo brand={defaultCard.cardBrand} className="h-5 w-8 shrink-0" />
+                  <span className="font-semibold text-xs tracking-wider uppercase text-foreground">
+                    {defaultCard.cardBrand?.toUpperCase() ?? 'CARD'}
+                  </span>
+                  <span className="font-mono text-sm tracking-widest text-muted-foreground">
+                    &bull;&bull;&bull;&bull; {defaultCard.cardLast4}
+                  </span>
+                  {defaultCard.isDefault && (
+                    <span className="rounded-full bg-secondary text-secondary-foreground text-[10px] px-1.5 py-0.5 font-medium ml-1">
+                      Default
+                    </span>
+                  )}
                 </div>
 
                 {defaultCard.cardExpMonth && defaultCard.cardExpYear && (
@@ -306,7 +545,7 @@ export default function BillingOverviewTab() {
               </div>
             ) : (
               <div className="flex items-center justify-between py-1 text-xs text-muted-foreground">
-                <span>No payment card saved on file.</span>
+                <span>No card saved on file.</span>
                 {isStripeConfigured && (
                   <Button
                     size="sm"
@@ -322,65 +561,63 @@ export default function BillingOverviewTab() {
           </Card>
 
           {/* Upcoming Billing Card */}
-          <Card className="gap-0 py-0 p-3.5 sm:px-4 sm:py-3 rounded-xl border bg-card space-y-2 flex-1 justify-between flex flex-col">
-            <div>
-              <div className="flex items-center justify-between">
-                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                  <CalendarDays className="size-3.5 text-muted-foreground" aria-hidden="true" />
-                  Upcoming billing
-                </h4>
-                <Badge variant="secondary" className="rounded-full text-[10px] px-2 py-0 border-0">
-                  {billingIntervalLabel(plan.billingInterval)}
-                </Badge>
-              </div>
-
-              <div className="mt-2 flex items-baseline justify-between">
-                <div>
-                  <p className="text-base font-bold">
-                    {currentPrice
-                      ? `${formatPrice(currentPrice.amount, currentPrice.currency)}`
-                      : 'Free'}
-                    {currentPrice && (
-                      <span className="text-muted-foreground font-normal text-xs ml-1">
-                        / {plan.billingInterval ?? 'month'}
-                      </span>
-                    )}
-                  </p>
-                  <p className="text-muted-foreground text-xs mt-0.5">
-                    {renewalLabel}:{' '}
-                    <strong className="text-foreground font-medium">
-                      {formatDate(renewalDate)}
-                    </strong>
-                    {trialDays != null && (
-                      <span className="ml-1 text-primary">({trialDays} days left)</span>
-                    )}
-                  </p>
-                </div>
-
-                {hasSubscription && !pendingCancel && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-xs text-muted-foreground hover:text-destructive"
-                    onClick={() =>
-                      confirm({
-                        variant: 'danger',
-                        title: 'Cancel subscription?',
-                        description:
-                          'You’ll keep full access until the end of your current billing period, then your account moves to the free tier. You can reactivate any time before then.',
-                        confirmLabel: 'Cancel subscription',
-                        cancelLabel: 'Keep subscription',
-                        onConfirm: doCancel,
-                      })
-                    }
-                  >
-                    Cancel subscription
-                  </Button>
-                )}
-              </div>
+          <Card className="gap-0 py-0 p-3 sm:px-3.5 sm:py-3 rounded-xl border bg-card space-y-2">
+            <div className="flex items-center justify-between">
+              <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <CalendarDays className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                Upcoming billing
+              </h4>
+              <Badge variant="secondary" className="rounded-full text-[10px] px-2 py-0 border-0">
+                {billingIntervalLabel(plan.billingInterval)}
+              </Badge>
             </div>
 
-            <p className="text-muted-foreground text-[11px] leading-relaxed pt-1 border-t border-border/50">
+            <div className="flex items-baseline justify-between pt-0.5">
+              <div>
+                <p className="text-base font-bold">
+                  {currentPrice
+                    ? `${formatPrice(currentPrice.amount, currentPrice.currency)}`
+                    : 'Free'}
+                  {currentPrice && (
+                    <span className="text-muted-foreground font-normal text-xs ml-1">
+                      / {plan.billingInterval ?? 'month'}
+                    </span>
+                  )}
+                </p>
+                <p className="text-muted-foreground text-xs mt-0.5">
+                  {renewalLabel}:{' '}
+                  <strong className="text-foreground font-medium">
+                    {formatDate(renewalDate)}
+                  </strong>
+                  {trialDays != null && (
+                    <span className="ml-1 text-primary">({trialDays} days left)</span>
+                  )}
+                </p>
+              </div>
+
+              {hasSubscription && !pendingCancel && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-[11px] text-muted-foreground hover:text-destructive px-1.5"
+                  onClick={() =>
+                    confirm({
+                      variant: 'danger',
+                      title: 'Cancel subscription?',
+                      description:
+                        'You’ll keep full access until the end of your current billing period, then your account moves to the free tier. You can reactivate any time before then.',
+                      confirmLabel: 'Cancel subscription',
+                      cancelLabel: 'Keep subscription',
+                      onConfirm: doCancel,
+                    })
+                  }
+                >
+                  Cancel subscription
+                </Button>
+              )}
+            </div>
+
+            <p className="text-muted-foreground text-[10px] leading-relaxed pt-1 border-t border-border/50">
               {pendingCancel
                 ? 'Cancellation is scheduled for the end of this billing period.'
                 : plan.subscriptionStatus === 'trialing'
@@ -391,215 +628,38 @@ export default function BillingOverviewTab() {
         </div>
       </div>
 
-      {/* Contextual Lifecycle Banners */}
-      {pendingCancel && (
-        <div className="border-warning/30 bg-warning/10 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="text-warning size-4 shrink-0" />
-            <p className="text-warning text-xs font-medium">
-              Your subscription is scheduled to cancel at the end of this billing period ({formatDate(renewalDate)}).
-            </p>
-          </div>
-          <Button
-            size="sm"
-            className="rounded-lg h-8 text-xs"
-            onClick={doReactivate}
-            disabled={reactivateSubscription.isPending}
-          >
-            {reactivateSubscription.isPending && (
-              <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-            )}
-            Reactivate subscription
-          </Button>
-        </div>
-      )}
+      {/* In-App Plan Change Confirmation / Upgrade Dialog */}
+      <Dialog
+        open={!!upgradeTarget}
+        onOpenChange={(open) => !open && setUpgradeTarget(null)}
+      >
+        <DialogContent className="max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="capitalize">
+              Confirm Plan Change to {upgradeTarget?.plan.name}
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Review your prorated balance and confirm your plan change.
+            </DialogDescription>
+          </DialogHeader>
 
-      {sub?.pendingPriceId && (
-        <div className="border-info/30 bg-info/10 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4">
-          <div className="flex items-center gap-2">
-            <Sparkles className="text-info size-4 shrink-0" />
-            <p className="text-info text-xs font-medium">
-              Scheduled plan change: Switching to {pendingPlanName ?? 'your new plan'} on{' '}
-              {formatDate(sub.pendingPlanChangeAt)}. Your card on file will be used.
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-lg h-8 text-xs"
-            onClick={doCancelScheduledChange}
-            disabled={cancelScheduledChange.isPending}
-          >
-            {cancelScheduledChange.isPending && (
-              <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-            )}
-            Cancel scheduled change
-          </Button>
-        </div>
-      )}
-
-      {sub?.creditBalance != null && sub.creditBalance > 0 && (
-        <div className="border-success/30 bg-success/10 flex items-center justify-between rounded-xl border p-3.5 text-xs">
-          <span className="text-success font-medium">
-            Account Credit: You have {formatPrice(sub.creditBalance, 'USD')} of unused credit. It will be applied automatically to your next invoices.
-          </span>
-        </div>
-      )}
-
-      {plan.subscriptionStatus === 'past_due' && (
-        <div className="border-destructive/30 bg-destructive/10 flex items-center justify-between rounded-xl border p-4">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="text-destructive size-4" />
-            <p className="text-destructive text-xs font-medium">
-              Your last payment failed. Update your payment method to keep the plan active.
-            </p>
-          </div>
-          <Button
-            size="sm"
-            variant="destructive"
-            className="rounded-lg h-8 text-xs"
-            onClick={() => setManageCardsOpen(true)}
-          >
-            Update payment method
-          </Button>
-        </div>
-      )}
-
-      {/* Plan Limits, Resource Quotas & Entitlements */}
-      <Card className="rounded-xl overflow-hidden gap-0">
-        <CardHeader visualLevel="section" className="p-4 sm:p-5 border-b">
-          <CardTitle className="text-base font-bold flex items-center gap-2">
-            <FileText className="text-muted-foreground size-4" />
-            Plan limits &amp; features
-          </CardTitle>
-          <CardDescription className="text-xs">
-            Included in your {plan.planName} plan and current usage.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-4 sm:p-5 space-y-6">
-          {/* Monthly records synced meter */}
-          <div className="space-y-2.5">
-            <div className="flex flex-wrap items-end justify-between gap-2">
-              <div>
-                <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  <Gauge className="size-3.5 text-muted-foreground" />
-                  Usage this month
-                </p>
-                <p className="text-muted-foreground mt-0.5 text-xs">
-                  Current billing period
-                  {usage ? ` · since ${formatDate(usage.periodStart)}` : ''}
-                </p>
-              </div>
-              {usage && (
-                <div className="text-right">
-                  <p className="text-xs font-semibold">
-                    {usage.recordsSynced.toLocaleString()}
-                    {usage.maxRecordsPerMonth != null
-                      ? ` of ${usage.maxRecordsPerMonth.toLocaleString()} records used`
-                      : ' records used'}
-                  </p>
-                  <p className={cn('text-xs font-semibold', usageToneInfo.text)}>
-                    {usage.maxRecordsPerMonth == null
-                      ? 'Unlimited'
-                      : `${Math.round(usageRawPct)}%`}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {usageQuery.isLoading || !usage ? (
-              <Skeleton className="h-1.5 w-full rounded-full" />
-            ) : (
-              <ThinMeter
-                value={usage.maxRecordsPerMonth == null ? 0 : usageRawPct}
-                indicatorClassName={usageToneInfo.bar}
+          {upgradeTarget && (
+            <div className="pt-1">
+              <ChangePlanUpgradeForm
+                plan={upgradeTarget.plan}
+                price={upgradeTarget.price}
+                onSuccess={async () => {
+                  setUpgradeTarget(null);
+                  setPlanSliderOpen(false);
+                  await planQuery.refetch();
+                  await subscriptionQuery.refetch();
+                  showToast.success('Plan changed successfully!');
+                }}
               />
-            )}
-
-            {usageOver && (
-              <Alert
-                variant="destructive"
-                className="border-destructive/20 bg-destructive/5 rounded-xl"
-              >
-                <AlertCircle />
-                <AlertTitle>Monthly record limit reached</AlertTitle>
-                <AlertDescription className="text-xs">
-                  New syncs are blocked until the next billing cycle or until
-                  your plan is upgraded.
-                </AlertDescription>
-              </Alert>
-            )}
-          </div>
-
-          {/* Quotas & Features Grid */}
-          <div className="grid gap-6 lg:grid-cols-2 pt-2 border-t">
-            {/* Resource Quotas */}
-            <div className="space-y-3">
-              <p className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">
-                Resource quotas
-              </p>
-              {plan.overLimit ? (
-                <div className="space-y-2.5">
-                  <CompactLimitRow
-                    label="Projects"
-                    count={plan.overLimit.projects.count}
-                    limit={plan.overLimit.projects.limit}
-                  />
-                  <CompactLimitRow
-                    label="Sync jobs"
-                    count={plan.overLimit.jobs.count}
-                    limit={plan.overLimit.jobs.limit}
-                  />
-                  <CompactLimitRow
-                    label="Team members"
-                    count={plan.overLimit.teamMembers.count}
-                    limit={plan.overLimit.teamMembers.limit}
-                  />
-                </div>
-              ) : (
-                <Skeleton className="h-36 w-full rounded-xl" />
-              )}
             </div>
-
-            {/* Features Included & Excluded */}
-            <div className="space-y-4 lg:border-l lg:pl-6">
-              <div>
-                <p className="mb-2 text-xs font-semibold tracking-wide uppercase text-muted-foreground">
-                  Included in {plan.planName}
-                </p>
-                <ul className="space-y-2 text-xs">
-                  {includedFeatures.map((feature) => (
-                    <FeatureRow
-                      key={feature.label}
-                      enabled
-                      label={feature.label}
-                    />
-                  ))}
-                </ul>
-              </div>
-              {excludedFeatures.length > 0 && (
-                <div className="pt-2 border-t">
-                  <p className="mb-2 text-xs font-semibold tracking-wide uppercase text-muted-foreground">
-                    Not included
-                  </p>
-                  <ul className="space-y-2 text-xs">
-                    {excludedFeatures.map((feature) => (
-                      <FeatureRow
-                        key={feature.label}
-                        enabled={false}
-                        label={feature.label}
-                      />
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Unified Billing & Payment History (Timeline + Invoices with Date Filter) */}
-      <TenantBillingHistorySection />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Manage Payment Methods Modal Dialog */}
       <Dialog open={manageCardsOpen} onOpenChange={setManageCardsOpen}>

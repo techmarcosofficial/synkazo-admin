@@ -175,7 +175,7 @@ describe('BillingOverviewTab', () => {
     // Plan ATM Card
     expect(screen.getByText('Pro')).toBeInTheDocument();
     expect(screen.getByText('active')).toBeInTheDocument();
-    expect(screen.getByText('Upgrade Plan')).toBeInTheDocument();
+    expect(screen.getByText('Change Plan')).toBeInTheDocument();
 
     // Payment Method on File
     expect(screen.getByText('Payment Method on File')).toBeInTheDocument();
