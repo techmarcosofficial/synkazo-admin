@@ -566,6 +566,7 @@ export default function OrganisationBillingPage() {
 
           {/* Inline Plan Change Slider (Shared Component with inline audit reason) */}
           <PlanSlider
+            title="Change Plan"
             plans={plansQuery.data ?? []}
             currentPlanId={overview?.plan?.planId ?? null}
             currentPlanName={overview?.plan?.planName ?? null}

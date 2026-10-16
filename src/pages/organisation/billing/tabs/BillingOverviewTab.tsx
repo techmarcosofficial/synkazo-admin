@@ -427,6 +427,7 @@ export default function BillingOverviewTab() {
 
           {/* In-App Plan Upgrade / Change Slider */}
           <TenantPlanSlider
+            title="Upgrade Plan"
             plans={plansQuery.data ?? []}
             currentPlanId={plan.planId}
             currentPlanName={plan.planName}
