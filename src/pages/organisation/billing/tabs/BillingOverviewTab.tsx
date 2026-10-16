@@ -46,7 +46,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -702,19 +701,6 @@ export default function BillingOverviewTab() {
               onAddDialogOpenChange={setAddCardOpen}
             />
           </div>
-          <DialogFooter className="pt-2 border-t mt-1">
-            <Button
-              variant="outline"
-              size="sm"
-              className="rounded-xl h-8 px-4 text-xs"
-              onClick={() => {
-                setManageCardsOpen(false);
-                setAddCardOpen(false);
-              }}
-            >
-              Cancel
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
