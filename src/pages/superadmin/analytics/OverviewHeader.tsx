@@ -1,14 +1,17 @@
+import { useState } from 'react';
+import type { DateRange } from 'react-day-picker';
 import { CalendarDays, ChevronDown, RefreshCw } from 'lucide-react';
 import HeadingPair from '@/components/shared/HeadingPair';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Calendar } from '@/components/ui/calendar';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
 import type { AnalyticsFilters } from '@/types/platformAnalytics';
-import { defaultRange, utcDay } from './analyticsDisplay';
+import { defaultRange, utcDay, validRange } from './analyticsDisplay';
 
 export function inclusiveEnd(to: string) {
   const date = new Date(`${to}T00:00:00Z`);
@@ -34,7 +37,28 @@ export default function OverviewHeader({
   refreshing: boolean;
   valid: boolean;
 }) {
+  const [open, setOpen] = useState(false);
+  const [selection, setSelection] = useState<DateRange>();
+  const isMobile = useIsMobile();
   const through = inclusiveEnd(filters.to);
+  const today = new Date(`${inclusiveEnd(defaultRange().to)}T00:00:00Z`);
+  const selectedFilters =
+    selection?.from && selection.to
+      ? {
+          from: utcDay(selection.from),
+          to: utcDay(
+            new Date(
+              Date.UTC(
+                selection.to.getUTCFullYear(),
+                selection.to.getUTCMonth(),
+                selection.to.getUTCDate() + 1,
+              ),
+            ),
+          ),
+        }
+      : undefined;
+  const canApply =
+    !!selectedFilters && validRange({ ...filters, ...selectedFilters });
   const format = (day: string) => {
     const date = new Date(`${day}T00:00:00Z`);
     return Number.isFinite(date.getTime())
@@ -75,55 +99,102 @@ export default function OverviewHeader({
             </Button>
           ))}
         </div>
-        <Popover>
+        <Popover
+          open={open}
+          onOpenChange={(nextOpen) => {
+            if (nextOpen)
+              setSelection(
+                valid
+                  ? {
+                      from: new Date(`${filters.from}T00:00:00Z`),
+                      to: new Date(`${through}T00:00:00Z`),
+                    }
+                  : undefined,
+              );
+            setOpen(nextOpen);
+          }}
+        >
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" aria-label="Choose date range">
               <CalendarDays />
-              {format(filters.from)} – {format(through)}
+              {valid
+                ? `${format(filters.from)} – ${format(through)}`
+                : 'Choose dates'}
               <ChevronDown />
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-72 rounded-3xl">
-            <p className="text-sm font-medium">Processing and payment period</p>
-            <div className="flex gap-1" aria-label="Quick date ranges">
-              {[7, 30, 90].map((days) => (
-                <Button
-                  key={days}
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => update(defaultRange(days))}
-                >
-                  {days} days
-                </Button>
-              ))}
+          <PopoverContent
+            align="end"
+            aria-label="Choose reporting dates"
+            className="max-h-(--radix-popover-content-available-height) w-auto max-w-[calc(100vw-2rem)] gap-0 overflow-y-auto rounded-3xl p-0"
+          >
+            <div className="border-b p-3">
+              <p className="text-sm font-medium">Date range</p>
+              <p className="text-muted-foreground mt-1 text-xs">
+                Processing and payment period · UTC
+              </p>
+              <div className="mt-3 flex gap-1" aria-label="Quick date ranges">
+                {[7, 30, 90].map((days) => (
+                  <Button
+                    key={days}
+                    size="sm"
+                    variant={
+                      filters.from === defaultRange(days).from &&
+                      filters.to === defaultRange(days).to
+                        ? 'secondary'
+                        : 'ghost'
+                    }
+                    onClick={() => {
+                      update(defaultRange(days));
+                      setOpen(false);
+                    }}
+                  >
+                    {days} days
+                  </Button>
+                ))}
+              </div>
             </div>
-            <label className="grid gap-1 text-xs">
-              From (UTC)
-              <Input
-                type="date"
-                aria-label="From date UTC"
-                value={filters.from}
-                onChange={(event) => update({ from: event.target.value })}
-              />
-            </label>
-            <label className="grid gap-1 text-xs">
-              Through (UTC)
-              <Input
-                type="date"
-                aria-label="Through date UTC"
-                value={through}
-                max={inclusiveEnd(defaultRange().to)}
-                onChange={(event) => {
-                  const date = new Date(`${event.target.value}T00:00:00Z`);
-                  if (Number.isFinite(date.getTime()))
-                    update({ to: utcDay(new Date(date.getTime() + 86400000)) });
-                }}
-              />
-            </label>
-            <p className="text-muted-foreground text-xs">
-              Dates include the full UTC day. Customer and queue status always
-              show the latest snapshot.
-            </p>
+            <Calendar
+              mode="range"
+              required
+              timeZone="UTC"
+              selected={selection}
+              onSelect={setSelection}
+              defaultMonth={selection?.from ?? today}
+              numberOfMonths={isMobile ? 1 : 2}
+              captionLayout="dropdown"
+              showOutsideDays={false}
+              disabled={{ after: today }}
+              endMonth={today}
+              max={365}
+            />
+            <div className="grid gap-3 border-t p-3">
+              <p className="text-muted-foreground max-w-56 text-xs md:max-w-md">
+                Up to 366 days, including both dates. Customer and queue status
+                always show the latest snapshot.
+              </p>
+              <div className="flex items-center justify-end gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={!canApply}
+                  onClick={() => {
+                    if (canApply && selectedFilters) {
+                      update(selectedFilters);
+                      setOpen(false);
+                    }
+                  }}
+                >
+                  Apply range
+                </Button>
+              </div>
+            </div>
           </PopoverContent>
         </Popover>
         <Button

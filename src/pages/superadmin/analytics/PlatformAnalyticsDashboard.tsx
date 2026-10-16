@@ -57,7 +57,6 @@ const chartConfig = {
   completed: { label: 'Completed', color: 'var(--chart-2)' },
   partial: { label: 'Partial', color: 'var(--chart-4)' },
   failed: { label: 'Failed', color: 'var(--chart-5)' },
-  count: { label: 'Organisations', color: 'var(--chart-3)' },
   waiting: { label: 'Waiting', color: 'var(--chart-1)' },
 };
 
@@ -292,9 +291,8 @@ export default function PlatformAnalyticsDashboard() {
             <span>Customer and billing status are current snapshots.</span>
           </div>
 
-          <div className="grid min-w-0 gap-4 xl:grid-cols-3">
+          <div className="min-w-0">
             <AnalyticsSection
-              className="xl:col-span-2"
               title="Collections"
               description={
                 verified
@@ -425,73 +423,6 @@ export default function PlatformAnalyticsDashboard() {
                     </table>
                   </div>
                 </details>
-              )}
-            </AnalyticsSection>
-            <AnalyticsSection
-              title="Customer portfolio"
-              description="Current organisations by plan. This is not historical plan mix."
-              loading={loading}
-              error={mainError ?? data?.errors.customers}
-            >
-              <div className="mb-3 flex items-baseline gap-2">
-                <span className="text-3xl font-semibold tracking-tight tabular-nums">
-                  {customers ? fullNumber(customers.total) : '—'}
-                </span>
-                <Link
-                  className="text-muted-foreground hover:text-primary inline-flex items-center gap-1 text-xs"
-                  to="/super-admin/organisations"
-                >
-                  organisations
-                  <ArrowUpRight className="size-3" />
-                </Link>
-              </div>
-              {!customers?.byPlan.length ? (
-                <EmptyChart>No organisations match this cohort.</EmptyChart>
-              ) : (
-                <>
-                  <ChartContainer
-                    config={chartConfig}
-                    className="aspect-auto h-52 w-full"
-                    aria-label="Current organisations by plan"
-                  >
-                    <BarChart
-                      data={customers.byPlan}
-                      layout="vertical"
-                      accessibilityLayer
-                      margin={{ left: 0, right: 20 }}
-                    >
-                      <XAxis type="number" hide />
-                      <YAxis
-                        type="category"
-                        dataKey="name"
-                        width={92}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                      <Bar
-                        dataKey="count"
-                        fill="var(--chart-3)"
-                        radius={4}
-                        isAnimationActive={false}
-                      />
-                    </BarChart>
-                  </ChartContainer>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {customers.byStatus.map((row) => (
-                      <Link
-                        key={row.status}
-                        to={`/super-admin/organisations?status=${encodeURIComponent(row.status)}`}
-                        className="bg-muted/60 text-muted-foreground rounded-full px-2.5 py-1 text-xs"
-                      >
-                        {row.status.replace(/_/g, ' ')}{' '}
-                        <span className="text-foreground font-medium">
-                          {row.count}
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                </>
               )}
             </AnalyticsSection>
           </div>
