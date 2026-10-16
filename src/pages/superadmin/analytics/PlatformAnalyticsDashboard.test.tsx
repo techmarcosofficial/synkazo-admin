@@ -174,7 +174,7 @@ afterEach(cleanup);
 describe('Platform analytics dashboard', () => {
   it('defaults to a compact summary with honest paid and worker values and relevant links', async () => {
     renderPage('/super-admin/overview');
-    await screen.findByText('Example organisation');
+    await screen.findByRole('link', { name: 'Unassigned: 11 organisations' });
     expect(screen.getByRole('button', { name: 'Summary' })).toHaveAttribute(
       'aria-pressed',
       'true',
@@ -201,11 +201,9 @@ describe('Platform analytics dashboard', () => {
       '/super-admin/organisations?subscriptionStatus=past_due',
     );
     expect(
-      screen.getByText('Example organisation').closest('a'),
-    ).toHaveAttribute('href', '/super-admin/organisations/org-1/overview');
-    expect(
-      screen.getByRole('link', { name: 'Active subscription' }),
-    ).toHaveAttribute('href', '/super-admin/organisations/org-1/billing');
+      screen.queryByRole('heading', { name: 'Top organisations' }),
+    ).not.toBeInTheDocument();
+    expect(platformAnalyticsApi.organisations).not.toHaveBeenCalled();
     expect(
       screen
         .getByRole('link', { name: 'Unassigned: 11 organisations' })
@@ -238,7 +236,7 @@ describe('Platform analytics dashboard', () => {
 
   it('converts an inclusive through date to the API exclusive UTC boundary', async () => {
     renderPage('/super-admin/overview');
-    await screen.findByText('Example organisation');
+    await screen.findByRole('link', { name: 'Unassigned: 11 organisations' });
     fireEvent.click(screen.getByRole('button', { name: 'Choose date range' }));
     const from = defaultRange().from;
     fireEvent.change(screen.getByLabelText('Through date UTC'), {
@@ -263,7 +261,7 @@ describe('Platform analytics dashboard', () => {
     };
     mocks.queueError = true;
     renderPage('/super-admin/overview');
-    await screen.findByText('Example organisation');
+    await screen.findByRole('link', { name: 'Unassigned: 11 organisations' });
     expect(
       screen.getByRole('link', { name: /Active paid organisations/ }),
     ).toHaveTextContent('—');
@@ -295,7 +293,7 @@ describe('Platform analytics dashboard', () => {
       expect.objectContaining({ ...range, currency: 'EUR', planId: 'plan-1' }),
     );
     fireEvent.click(screen.getByRole('button', { name: 'Summary' }));
-    await screen.findByRole('heading', { name: 'Top organisations' });
+    await screen.findByRole('heading', { name: 'Customer portfolio' });
     expect(screen.getByText('Current plan cohort: Pro')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Clear plan filter' }));
     await waitFor(() =>
