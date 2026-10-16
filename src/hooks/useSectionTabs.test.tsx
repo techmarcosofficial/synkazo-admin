@@ -66,10 +66,6 @@ describe('direct-URL protection', () => {
     expect(
       at('/organization/billing/payment-history', 'org_admin').active?.id,
     ).toBe('billing');
-    expect(
-      at('/organization/billing/payment-history', 'org_admin', BILLING_SECTION)
-        .active?.id,
-    ).toBe('payment-history');
   });
 
   it('does not resolve an unknown segment', () => {

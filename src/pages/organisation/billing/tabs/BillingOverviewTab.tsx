@@ -1,13 +1,19 @@
 import {
   AlertCircle,
+  AlertTriangle,
   CalendarDays,
   CreditCard,
   FileText,
   Gauge,
+  Loader2,
+  Plus,
   Sparkles,
+  Star,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
 
+import { CardPicker } from './CardPicker';
+import TenantBillingHistorySection from './TenantBillingHistorySection';
 import {
   daysLeft,
   featureList,
@@ -16,23 +22,40 @@ import {
   usageTone,
 } from '../lib/billingDisplay';
 
+import CardBrandLogo from '@/components/billing/CardBrandLogo';
+import SubscriptionPlanCard from '@/components/billing/SubscriptionPlanCard';
 import ErrorState from '@/components/shared/ErrorState';
-import StatusBadge from '@/components/shared/StatusBadge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { getUserFriendlyError } from '@/lib/errorMessages';
+import { isStripeConfigured } from '@/lib/stripe';
+import { showToast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
 import {
+  useCancelScheduledChangeMutation,
+  useCancelSubscriptionMutation,
+  usePaymentMethodsQuery,
   usePlanQuery,
   usePlansQuery,
+  useReactivateMutation,
+  useSubscriptionQuery,
   useUsageQuery,
 } from '@/queries/useBilling';
 
@@ -83,9 +106,9 @@ function CompactLimitRow({
   const over = limit != null && count >= limit;
 
   return (
-    <div className="bg-muted/45 space-y-2 rounded-3xl px-4 py-3">
+    <div className="bg-muted/45 space-y-2 rounded-xl px-4 py-3">
       <div className="flex items-center justify-between gap-4 text-sm">
-        <span className="font-medium">{label}</span>
+        <span className="font-medium text-xs">{label}</span>
         <span className="text-muted-foreground text-xs">
           <strong className="text-foreground font-semibold">
             {count.toLocaleString()}
@@ -113,15 +136,26 @@ export default function BillingOverviewTab() {
   const plansQuery = usePlansQuery(
     planQuery.data?.billingInterval ?? undefined,
   );
+  const subscriptionQuery = useSubscriptionQuery();
+  const paymentMethodsQuery = usePaymentMethodsQuery();
+
+  const cancelScheduledChange = useCancelScheduledChangeMutation();
+  const cancelSubscription = useCancelSubscriptionMutation();
+  const reactivateSubscription = useReactivateMutation();
+  const { confirm } = useConfirmDialog();
+
+  const [manageCardsOpen, setManageCardsOpen] = useState(false);
+  const [addCardOpen, setAddCardOpen] = useState(false);
 
   if (planQuery.isLoading) {
     return (
-      <div className="flex flex-col gap-4">
-        <Skeleton className="h-72 w-full" />
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.7fr)]">
-          <Skeleton className="h-80 w-full" />
-          <Skeleton className="h-64 w-full" />
+      <div className="flex flex-col gap-5">
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+          <Skeleton className="h-64 w-full rounded-4xl" />
+          <Skeleton className="h-64 w-full rounded-xl" />
         </div>
+        <Skeleton className="h-80 w-full rounded-xl" />
+        <Skeleton className="h-96 w-full rounded-xl" />
       </div>
     );
   }
@@ -137,6 +171,10 @@ export default function BillingOverviewTab() {
 
   const plan = planQuery.data;
   const usage = usageQuery.data;
+  const sub = subscriptionQuery.data;
+  const paymentMethods = paymentMethodsQuery.data ?? [];
+  const defaultCard = paymentMethods.find((c) => c.isDefault) ?? paymentMethods[0];
+
   const features = featureList(plan.limits);
   const includedFeatures = features.filter((feature) => feature.enabled);
   const excludedFeatures = features.filter((feature) => !feature.enabled);
@@ -169,74 +207,283 @@ export default function BillingOverviewTab() {
       ? plan.trialEndsAt
       : plan.currentPeriodEnd;
 
+  const pendingPlanName = plansQuery.data?.find(
+    (p) => p.id === sub?.pendingPlanId,
+  )?.name;
+
+  const pendingCancel =
+    sub?.cancelAtPeriodEnd || sub?.status === 'pending_cancel' || plan.cancelAtPeriodEnd;
+
+  const doCancelScheduledChange = async () => {
+    try {
+      await cancelScheduledChange.mutateAsync();
+      showToast.success('Scheduled plan change cancelled.');
+    } catch (err) {
+      showToast.error(getUserFriendlyError(err as never));
+    }
+  };
+
+  const doCancel = async () => {
+    try {
+      await cancelSubscription.mutateAsync(undefined);
+      showToast.success('Your subscription will end at the period end.');
+    } catch (err) {
+      showToast.error(getUserFriendlyError(err as never));
+    }
+  };
+
+  const doReactivate = async () => {
+    try {
+      await reactivateSubscription.mutateAsync();
+      showToast.success('Subscription reactivated.');
+    } catch (err) {
+      showToast.error(getUserFriendlyError(err as never));
+    }
+  };
+
   return (
-    <div className="flex flex-col gap-4">
-      <Card data-tour="current-plan">
-        <CardHeader visualLevel="section">
-          <CardTitle className="flex items-center gap-2">
-            <CreditCard className="text-muted-foreground size-4" />
-            Subscription overview
+    <div className="flex flex-col gap-5">
+      {/* Top Section: Active Plan ATM Card + Payment Method & Upcoming Billing */}
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+        {/* Dynamic Plan ATM Card (Unlimited, Pro, Starter, Enterprise, Free) */}
+        <div>
+          <span className="sr-only">Subscription overview</span>
+          <SubscriptionPlanCard
+            planName={plan.planName}
+            status={plan.subscriptionStatus}
+            billingInterval={plan.billingInterval}
+            currentPeriodEnd={renewalDate}
+            planAccessSource={hasSubscription ? 'stripe_subscription' : 'free'}
+            changePlanHref={`${import.meta.env.VITE_FRONTEND_URL}/pricing`}
+            changePlanLabel={hasSubscription ? 'Upgrade Plan' : 'View Plans'}
+          />
+        </div>
+
+        {/* Right side: Payment Method on File & Upcoming Billing */}
+        <div className="flex flex-col gap-3">
+          {/* Payment Method on File Card */}
+          <Card className="gap-0 py-0 p-3.5 sm:px-4 sm:py-3 rounded-xl border bg-card space-y-2">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <CreditCard className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                Payment Method on File
+              </h4>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs px-2 text-primary hover:text-primary"
+                onClick={() => setManageCardsOpen(true)}
+              >
+                {paymentMethods.length > 0 ? 'Manage cards' : '+ Add card'}
+              </Button>
+            </div>
+
+            {defaultCard ? (
+              <div className="flex items-center justify-between pt-1">
+                <div className="flex items-center gap-2.5">
+                  <CardBrandLogo brand={defaultCard.cardBrand} className="h-6 w-9 shrink-0" />
+                  <div>
+                    <div className="flex items-center gap-1.5 text-xs font-semibold uppercase text-foreground">
+                      <span>{defaultCard.cardBrand ?? 'Card'}</span>
+                      <span className="font-mono text-muted-foreground tracking-wider">
+                        •••• {defaultCard.cardLast4}
+                      </span>
+                    </div>
+                    {defaultCard.isDefault && (
+                      <span className="text-[10px] text-primary flex items-center gap-0.5 font-medium">
+                        <Star className="size-2.5 fill-current" /> Default payment card
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {defaultCard.cardExpMonth && defaultCard.cardExpYear && (
+                  <span className="text-xs text-muted-foreground font-mono">
+                    Expires {defaultCard.cardExpMonth.toString().padStart(2, '0')}/
+                    {defaultCard.cardExpYear}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center justify-between py-1 text-xs text-muted-foreground">
+                <span>No payment card saved on file.</span>
+                {isStripeConfigured && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs rounded-lg"
+                    onClick={() => setAddCardOpen(true)}
+                  >
+                    <Plus className="size-3 mr-1" /> Add card
+                  </Button>
+                )}
+              </div>
+            )}
+          </Card>
+
+          {/* Upcoming Billing Card */}
+          <Card className="gap-0 py-0 p-3.5 sm:px-4 sm:py-3 rounded-xl border bg-card space-y-2 flex-1 justify-between flex flex-col">
+            <div>
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                  <CalendarDays className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                  Upcoming billing
+                </h4>
+                <Badge variant="secondary" className="rounded-full text-[10px] px-2 py-0 border-0">
+                  {billingIntervalLabel(plan.billingInterval)}
+                </Badge>
+              </div>
+
+              <div className="mt-2 flex items-baseline justify-between">
+                <div>
+                  <p className="text-base font-bold">
+                    {currentPrice
+                      ? `${formatPrice(currentPrice.amount, currentPrice.currency)}`
+                      : 'Free'}
+                    {currentPrice && (
+                      <span className="text-muted-foreground font-normal text-xs ml-1">
+                        / {plan.billingInterval ?? 'month'}
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-muted-foreground text-xs mt-0.5">
+                    {renewalLabel}:{' '}
+                    <strong className="text-foreground font-medium">
+                      {formatDate(renewalDate)}
+                    </strong>
+                    {trialDays != null && (
+                      <span className="ml-1 text-primary">({trialDays} days left)</span>
+                    )}
+                  </p>
+                </div>
+
+                {hasSubscription && !pendingCancel && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs text-muted-foreground hover:text-destructive"
+                    onClick={() =>
+                      confirm({
+                        variant: 'danger',
+                        title: 'Cancel subscription?',
+                        description:
+                          'You’ll keep full access until the end of your current billing period, then your account moves to the free tier. You can reactivate any time before then.',
+                        confirmLabel: 'Cancel subscription',
+                        cancelLabel: 'Keep subscription',
+                        onConfirm: doCancel,
+                      })
+                    }
+                  >
+                    Cancel subscription
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <p className="text-muted-foreground text-[11px] leading-relaxed pt-1 border-t border-border/50">
+              {pendingCancel
+                ? 'Cancellation is scheduled for the end of this billing period.'
+                : plan.subscriptionStatus === 'trialing'
+                  ? `Billing begins automatically after the trial on ${formatDate(plan.trialEndsAt)}.`
+                  : 'Your subscription renews automatically on the date shown above.'}
+            </p>
+          </Card>
+        </div>
+      </div>
+
+      {/* Contextual Lifecycle Banners */}
+      {pendingCancel && (
+        <div className="border-warning/30 bg-warning/10 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="text-warning size-4 shrink-0" />
+            <p className="text-warning text-xs font-medium">
+              Your subscription is scheduled to cancel at the end of this billing period ({formatDate(renewalDate)}).
+            </p>
+          </div>
+          <Button
+            size="sm"
+            className="rounded-lg h-8 text-xs"
+            onClick={doReactivate}
+            disabled={reactivateSubscription.isPending}
+          >
+            {reactivateSubscription.isPending && (
+              <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+            )}
+            Reactivate subscription
+          </Button>
+        </div>
+      )}
+
+      {sub?.pendingPriceId && (
+        <div className="border-info/30 bg-info/10 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4">
+          <div className="flex items-center gap-2">
+            <Sparkles className="text-info size-4 shrink-0" />
+            <p className="text-info text-xs font-medium">
+              Scheduled plan change: Switching to {pendingPlanName ?? 'your new plan'} on{' '}
+              {formatDate(sub.pendingPlanChangeAt)}. Your card on file will be used.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-lg h-8 text-xs"
+            onClick={doCancelScheduledChange}
+            disabled={cancelScheduledChange.isPending}
+          >
+            {cancelScheduledChange.isPending && (
+              <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+            )}
+            Cancel scheduled change
+          </Button>
+        </div>
+      )}
+
+      {sub?.creditBalance != null && sub.creditBalance > 0 && (
+        <div className="border-success/30 bg-success/10 flex items-center justify-between rounded-xl border p-3.5 text-xs">
+          <span className="text-success font-medium">
+            Account Credit: You have {formatPrice(sub.creditBalance, 'USD')} of unused credit. It will be applied automatically to your next invoices.
+          </span>
+        </div>
+      )}
+
+      {plan.subscriptionStatus === 'past_due' && (
+        <div className="border-destructive/30 bg-destructive/10 flex items-center justify-between rounded-xl border p-4">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="text-destructive size-4" />
+            <p className="text-destructive text-xs font-medium">
+              Your last payment failed. Update your payment method to keep the plan active.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="destructive"
+            className="rounded-lg h-8 text-xs"
+            onClick={() => setManageCardsOpen(true)}
+          >
+            Update payment method
+          </Button>
+        </div>
+      )}
+
+      {/* Plan Limits, Resource Quotas & Entitlements */}
+      <Card className="rounded-xl overflow-hidden gap-0">
+        <CardHeader visualLevel="section" className="p-4 sm:p-5 border-b">
+          <CardTitle className="text-base font-bold flex items-center gap-2">
+            <FileText className="text-muted-foreground size-4" />
+            Plan limits &amp; features
           </CardTitle>
-          <CardDescription>
-            Plan, renewal, and usage details in one place.
+          <CardDescription className="text-xs">
+            Included in your {plan.planName} plan and current usage.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-5">
-          <dl className="grid overflow-hidden rounded-3xl border sm:grid-cols-2 xl:grid-cols-4">
-            <div className="border-b px-4 py-3.5 sm:border-r xl:border-b-0">
-              <dt className="text-muted-foreground text-xs">Current plan</dt>
-              <dd className="mt-1 text-base font-semibold">{plan.planName}</dd>
-              <p className="text-muted-foreground text-xs">
-                {billingIntervalLabel(plan.billingInterval)} billing
-              </p>
-            </div>
-            <div className="border-b px-4 py-3.5 xl:border-r xl:border-b-0">
-              <dt className="text-muted-foreground text-xs">
-                Subscription status
-              </dt>
-              <dd className="mt-1.5">
-                <StatusBadge status={plan.subscriptionStatus} size="sm" />
-              </dd>
-            </div>
-            <div className="border-b px-4 py-3.5 sm:border-r sm:border-b-0 xl:border-r">
-              <dt className="text-muted-foreground text-xs">{renewalLabel}</dt>
-              <dd className="mt-1 text-sm font-semibold">
-                {formatDate(renewalDate)}
-              </dd>
-              {trialDays != null && (
-                <p className="text-muted-foreground text-xs">
-                  {trialDays} day{trialDays === 1 ? '' : 's'} remaining
-                </p>
-              )}
-            </div>
-            <div className="px-4 py-3.5">
-              <dt className="text-muted-foreground text-xs">Monthly usage</dt>
-              {usageQuery.isLoading || !usage ? (
-                <Skeleton className="mt-2 h-5 w-28" />
-              ) : (
-                <>
-                  <dd className="mt-1 text-sm font-semibold">
-                    {usage.recordsSynced.toLocaleString()}
-                    {usage.maxRecordsPerMonth != null
-                      ? ` of ${usage.maxRecordsPerMonth.toLocaleString()}`
-                      : ' records'}
-                  </dd>
-                  <p className={cn('text-xs', usageToneInfo.text)}>
-                    {usage.maxRecordsPerMonth == null
-                      ? 'Unlimited'
-                      : `${Math.round(usageRawPct)}% used`}
-                  </p>
-                </>
-              )}
-            </div>
-          </dl>
-
-          <div data-tour="usage-section" className="space-y-3 border-t pt-5">
+        <CardContent className="p-4 sm:p-5 space-y-6">
+          {/* Monthly records synced meter */}
+          <div className="space-y-2.5">
             <div className="flex flex-wrap items-end justify-between gap-2">
               <div>
-                <p className="flex items-center gap-2 text-sm font-semibold">
-                  <Gauge className="text-muted-foreground size-4" /> Usage this
-                  month
+                <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <Gauge className="size-3.5 text-muted-foreground" />
+                  Usage this month
                 </p>
                 <p className="text-muted-foreground mt-0.5 text-xs">
                   Current billing period
@@ -245,15 +492,13 @@ export default function BillingOverviewTab() {
               </div>
               {usage && (
                 <div className="text-right">
-                  <p className="text-sm font-semibold">
+                  <p className="text-xs font-semibold">
                     {usage.recordsSynced.toLocaleString()}
                     {usage.maxRecordsPerMonth != null
                       ? ` of ${usage.maxRecordsPerMonth.toLocaleString()} records used`
                       : ' records used'}
                   </p>
-                  <p
-                    className={cn('text-xs font-semibold', usageToneInfo.text)}
-                  >
+                  <p className={cn('text-xs font-semibold', usageToneInfo.text)}>
                     {usage.maxRecordsPerMonth == null
                       ? 'Unlimited'
                       : `${Math.round(usageRawPct)}%`}
@@ -263,7 +508,7 @@ export default function BillingOverviewTab() {
             </div>
 
             {usageQuery.isLoading || !usage ? (
-              <Skeleton className="h-1.5 w-full" />
+              <Skeleton className="h-1.5 w-full rounded-full" />
             ) : (
               <ThinMeter
                 value={usage.maxRecordsPerMonth == null ? 0 : usageRawPct}
@@ -274,76 +519,27 @@ export default function BillingOverviewTab() {
             {usageOver && (
               <Alert
                 variant="destructive"
-                className="border-destructive/20 bg-destructive/5 rounded-3xl"
+                className="border-destructive/20 bg-destructive/5 rounded-xl"
               >
                 <AlertCircle />
                 <AlertTitle>Monthly record limit reached</AlertTitle>
-                <AlertDescription>
+                <AlertDescription className="text-xs">
                   New syncs are blocked until the next billing cycle or until
                   your plan is upgraded.
                 </AlertDescription>
               </Alert>
             )}
-
-            <div className="flex flex-wrap items-center gap-2 pt-1">
-              <Button asChild>
-                <a href={`${import.meta.env.VITE_FRONTEND_URL}/pricing`}>
-                  <Sparkles /> Upgrade plan
-                </a>
-              </Button>
-              {hasSubscription && (
-                <Button
-                  asChild
-                  variant="outline"
-                  data-tour="manage-subscription"
-                >
-                  <Link to="/organization/billing/subscription">
-                    Manage subscription
-                  </Link>
-                </Button>
-              )}
-            </div>
-
-            {plan.subscriptionStatus === 'trialing' &&
-              !plan.cancelAtPeriodEnd && (
-                <p className="text-muted-foreground text-xs">
-                  Billing begins automatically after the trial. Cancel before{' '}
-                  {formatDate(plan.trialEndsAt)} to avoid charges.
-                </p>
-              )}
-            {plan.cancelAtPeriodEnd && (
-              <p className="text-warning text-xs">
-                Cancellation is scheduled for the end of this billing period.
-              </p>
-            )}
-            {plan.subscriptionStatus === 'past_due' && (
-              <p className="text-destructive text-xs">
-                Your last payment failed. Update your payment method to keep the
-                plan active.
-              </p>
-            )}
           </div>
-        </CardContent>
-      </Card>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.7fr)]">
-        <Card>
-          <CardHeader visualLevel="section">
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="text-muted-foreground size-4" /> Plan limits
-              &amp; features
-            </CardTitle>
-            <CardDescription>
-              Included in your {plan.planName} plan and current usage.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-5 lg:grid-cols-2 lg:gap-6">
+          {/* Quotas & Features Grid */}
+          <div className="grid gap-6 lg:grid-cols-2 pt-2 border-t">
+            {/* Resource Quotas */}
             <div className="space-y-3">
-              <p className="text-xs font-semibold tracking-wide uppercase">
-                Resource usage
+              <p className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">
+                Resource quotas
               </p>
               {plan.overLimit ? (
-                <>
+                <div className="space-y-2.5">
                   <CompactLimitRow
                     label="Projects"
                     count={plan.overLimit.projects.count}
@@ -359,18 +555,19 @@ export default function BillingOverviewTab() {
                     count={plan.overLimit.teamMembers.count}
                     limit={plan.overLimit.teamMembers.limit}
                   />
-                </>
+                </div>
               ) : (
-                <Skeleton className="h-36 w-full" />
+                <Skeleton className="h-36 w-full rounded-xl" />
               )}
             </div>
 
-            <div className="space-y-5 border-t pt-5 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-6">
+            {/* Features Included & Excluded */}
+            <div className="space-y-4 lg:border-l lg:pl-6">
               <div>
-                <p className="mb-2 text-xs font-semibold tracking-wide uppercase">
-                  Included
+                <p className="mb-2 text-xs font-semibold tracking-wide uppercase text-muted-foreground">
+                  Included in {plan.planName}
                 </p>
-                <ul className="space-y-2">
+                <ul className="space-y-2 text-xs">
                   {includedFeatures.map((feature) => (
                     <FeatureRow
                       key={feature.label}
@@ -381,11 +578,11 @@ export default function BillingOverviewTab() {
                 </ul>
               </div>
               {excludedFeatures.length > 0 && (
-                <div>
-                  <p className="mb-2 text-xs font-semibold tracking-wide uppercase">
+                <div className="pt-2 border-t">
+                  <p className="mb-2 text-xs font-semibold tracking-wide uppercase text-muted-foreground">
                     Not included
                   </p>
-                  <ul className="space-y-2">
+                  <ul className="space-y-2 text-xs">
                     {excludedFeatures.map((feature) => (
                       <FeatureRow
                         key={feature.label}
@@ -397,52 +594,28 @@ export default function BillingOverviewTab() {
                 </div>
               )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </CardContent>
+      </Card>
 
-        <Card className="h-fit">
-          <CardHeader visualLevel="section">
-            <CardTitle className="flex items-center gap-2">
-              <CalendarDays className="text-muted-foreground size-4" />
-              Upcoming billing
-            </CardTitle>
-            <CardDescription>Your next billing event.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 overflow-hidden rounded-3xl border">
-              <div className="border-r p-3.5">
-                <p className="text-muted-foreground text-xs">{renewalLabel}</p>
-                <p className="mt-1 text-sm font-semibold">
-                  {formatDate(renewalDate)}
-                </p>
-              </div>
-              <div className="p-3.5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-sm font-semibold">{plan.planName}</p>
-                  <Badge variant="secondary">
-                    {billingIntervalLabel(plan.billingInterval)}
-                  </Badge>
-                </div>
-                <p className="text-muted-foreground mt-1 text-xs">
-                  {currentPrice
-                    ? `${formatPrice(currentPrice.amount, currentPrice.currency)} / ${plan.billingInterval ?? 'month'}`
-                    : 'Current subscription'}
-                </p>
-              </div>
-            </div>
+      {/* Unified Billing & Payment History (Timeline + Invoices with Date Filter) */}
+      <TenantBillingHistorySection />
 
-            <p className="text-muted-foreground text-xs leading-5">
-              {plan.cancelAtPeriodEnd
-                ? 'Your subscription will not renew after this period.'
-                : 'Your subscription renews automatically on the date shown above.'}
-            </p>
-
-            <Button asChild variant="outline" className="w-full">
-              <Link to="/organization/billing/invoices">View invoices</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Manage Payment Methods Modal Dialog */}
+      <Dialog open={manageCardsOpen} onOpenChange={setManageCardsOpen}>
+        <DialogContent className="max-w-lg rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Manage Payment Methods</DialogTitle>
+          </DialogHeader>
+          <div className="pt-2">
+            <CardPicker
+              mode="manage"
+              addDialogOpen={addCardOpen}
+              onAddDialogOpenChange={setAddCardOpen}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
