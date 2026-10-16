@@ -36,7 +36,7 @@ export interface PlanSliderProps {
   plans: (ApiPlan | AdminApiPlan)[];
   currentPlanId: string | null;
   currentPlanName: string | null;
-  currentBillingInterval?: BillingInterval | null;
+  currentBillingInterval?: BillingInterval | string | null;
   isOpen: boolean;
   onClose: () => void;
   onSelectPlan?: (plan: ApiPlan | AdminApiPlan, price: ApiPrice) => void;
@@ -87,7 +87,7 @@ export default function PlanSlider({
 }: PlanSliderProps) {
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedInterval, setSelectedInterval] = useState<BillingInterval>(
-    currentBillingInterval || 'month',
+    currentBillingInterval === 'year' ? 'year' : 'month',
   );
   const [selectedPlanId, setSelectedPlanId] = useState<string>('');
   const [reason, setReason] = useState<string>('');

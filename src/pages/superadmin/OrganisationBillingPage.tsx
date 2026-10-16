@@ -1,6 +1,7 @@
 import { format, formatDistanceToNow } from 'date-fns';
 import {
   AlertTriangle,
+  ArrowRight,
   Receipt,
   ShieldAlert,
 } from 'lucide-react';
@@ -13,7 +14,18 @@ import SkeletonList from '@/components/shared/skeletons/SkeletonList';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import PlanSlider from '@/components/billing/PlanSlider';
 import AssignPlanDialog from '@/pages/superadmin/billing/AssignPlanDialog';
 import BillingActions from '@/pages/superadmin/billing/BillingActions';
 import BillingActivityTable from '@/pages/superadmin/billing/BillingActivityTable';
@@ -23,11 +35,12 @@ import BillingNotesCard from '@/pages/superadmin/billing/BillingNotesCard';
 import BillingOverviewHeader from '@/pages/superadmin/billing/BillingOverviewHeader';
 import EntitlementsUsage from '@/pages/superadmin/billing/EntitlementsUsage';
 import InvoiceDetailDrawer from '@/pages/superadmin/billing/InvoiceDetailDrawer';
-import PlanChangeSlider from '@/pages/superadmin/billing/PlanChangeSlider';
 import SubscriptionPlanCard from '@/pages/superadmin/billing/SubscriptionPlanCard';
 import LifecycleConfirmDialog from '@/pages/superadmin/lifecycle/LifecycleConfirmDialog';
 import { showToast } from '@/lib/toast';
+import { cn } from '@/lib/utils';
 import { useAdminPlansQuery } from '@/queries/useBilling';
+import type { AdminApiPlan, ApiPrice } from '@/types/billing';
 import {
   useAssignPlanMutation,
   useCancelSubscriptionAtPeriodEndMutation,
@@ -47,6 +60,13 @@ function extractErrorMessage(err: unknown): string {
   const e = err as { response?: { data?: { message?: string } } };
   return e?.response?.data?.message ?? 'The request failed. Try again.';
 }
+
+const QUICK_REASONS = [
+  'Customer requested upgrade',
+  'Contract & terms renewal',
+  'Quota adjustment',
+  'Billing dispute resolution',
+];
 
 export type MainBillingTab = 'overview' | 'history';
 
@@ -78,6 +98,11 @@ export default function OrganisationBillingPage() {
   const [assignPlanOpen, setAssignPlanOpen] = useState(false);
   const [planSliderOpen, setPlanSliderOpen] = useState(false);
   const [assignPlanError, setAssignPlanError] = useState<string | null>(null);
+  const [planChangeTarget, setPlanChangeTarget] = useState<{
+    plan: AdminApiPlan;
+    price: ApiPrice;
+  } | null>(null);
+  const [changeReason, setChangeReason] = useState('');
 
   // State for Lifecycle & Hold Actions
   const [holdAction, setHoldAction] = useState<'impose' | 'clear' | null>(null);
@@ -541,59 +566,188 @@ export default function OrganisationBillingPage() {
         </div>
 
         {/* ── RIGHT COLUMN: SUBSCRIPTION & ENTITLEMENTS (~35%) ─────────── */}
-        <div className="space-y-6 lg:col-span-5 xl:col-span-4">
+        <div className="space-y-4 lg:col-span-5 xl:col-span-4">
+          <span className="sr-only">Subscription</span>
+
           {/* Subscription Plan Card */}
-          <div className="space-y-3">
-            <div>
-              <h3 className="text-sm font-semibold tracking-tight text-foreground">
-                Subscription Plan
-                <span className="sr-only">Subscription</span>
-              </h3>
-            </div>
-
-            {overview ? (
-              <SubscriptionPlanCard
-                planName={overview.plan.planName}
-                status={overview.plan.subscriptionStatus}
-                billingInterval={overview.plan.billingInterval}
-                currentPeriodEnd={overview.plan.currentPeriodEnd}
-                planAccessSource={overview.plan.planAccessSource}
-                onChangePlan={() => {
-                  setAssignPlanError(null);
-                  setPlanSliderOpen((prev) => !prev);
-                }}
-              />
-            ) : (
-              <Card className="h-44 animate-pulse" />
-            )}
-
-            {/* Inline Plan Change Slider (2 cards per slide + reason) */}
-            <PlanChangeSlider
-              plans={plansQuery.data ?? []}
-              currentPlanId={overview?.plan?.planId ?? null}
-              currentPlanName={overview?.plan?.planName ?? null}
-              isOpen={planSliderOpen}
-              onClose={() => setPlanSliderOpen(false)}
-              onSavePlanChange={async (planId, reason) => {
-                try {
-                  setAssignPlanError(null);
-                  await assignPlanMutation.mutateAsync({ planId, reason });
-                  showToast.success('Plan changed successfully.');
-                  setPlanSliderOpen(false);
-                } catch (err) {
-                  const msg = extractErrorMessage(err);
-                  setAssignPlanError(msg);
-                  showToast.error(msg);
-                  throw err;
-                }
+          {overview ? (
+            <SubscriptionPlanCard
+              planName={overview.plan.planName}
+              status={overview.plan.subscriptionStatus}
+              billingInterval={overview.plan.billingInterval}
+              currentPeriodEnd={overview.plan.currentPeriodEnd}
+              planAccessSource={overview.plan.planAccessSource}
+              onChangePlan={() => {
+                setAssignPlanError(null);
+                setPlanSliderOpen((prev) => !prev);
               }}
-              isSubmitting={assignPlanMutation.isPending}
-              errorMessage={assignPlanError}
+              changePlanLabel={overview ? 'Change Plan' : 'Choose Plan'}
+              className="w-full"
             />
+          ) : (
+            <Card className="h-44 animate-pulse" />
+          )}
 
-            {/* Payment Method on File (CAP-021: Non-sensitive card details) */}
-            {subscription?.paymentMethod && (
-              <Card className="gap-0 py-0 p-3 sm:px-3.5 sm:py-2.5 rounded-xl border bg-card space-y-1.5">
+          {/* Inline Plan Change Slider (Shared Component matching Tenant Board) */}
+          <PlanSlider
+            plans={plansQuery.data ?? []}
+            currentPlanId={overview?.plan?.planId ?? null}
+            currentPlanName={overview?.plan?.planName ?? null}
+            currentBillingInterval={overview?.plan?.billingInterval}
+            isOpen={planSliderOpen}
+            onClose={() => setPlanSliderOpen(false)}
+            onSelectPlan={(targetPlan, targetPrice) => {
+              setAssignPlanError(null);
+              setChangeReason('');
+              setPlanChangeTarget({
+                plan: targetPlan as AdminApiPlan,
+                price: targetPrice,
+              });
+            }}
+          />
+
+          {/* Super Admin Plan Change Confirmation Dialog */}
+          <Dialog
+            open={Boolean(planChangeTarget)}
+            onOpenChange={(open) => {
+              if (!open) {
+                setPlanChangeTarget(null);
+                setAssignPlanError(null);
+                setChangeReason('');
+              }
+            }}
+          >
+            <DialogContent className="max-w-md rounded-2xl">
+              <DialogHeader>
+                <DialogTitle className="capitalize">
+                  Confirm Plan Change to {planChangeTarget?.plan.name}
+                </DialogTitle>
+                <DialogDescription className="text-xs">
+                  Review details and provide an audit justification to assign this plan to {organisation?.name ?? 'this organisation'}.
+                </DialogDescription>
+              </DialogHeader>
+
+              {planChangeTarget && (
+                <div className="space-y-3.5 pt-1 text-xs">
+                  {/* Plan Comparison Summary */}
+                  <div className="rounded-xl border bg-muted/40 p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground font-medium">Plan Transition:</span>
+                      <div className="flex items-center gap-1.5 font-bold">
+                        <span className="text-muted-foreground capitalize">
+                          {overview?.plan?.planName ?? 'Current'}
+                        </span>
+                        <ArrowRight className="size-3 text-muted-foreground" />
+                        <span className="text-primary capitalize">
+                          {planChangeTarget.plan.name}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-border/50 pt-2 text-[11px]">
+                      <span className="text-muted-foreground">Price &amp; Billing Interval:</span>
+                      <span className="font-semibold text-foreground font-mono">
+                        {planChangeTarget.price.amount === 0
+                          ? 'Free'
+                          : `$${(planChangeTarget.price.amount / 100).toFixed(0)}/${planChangeTarget.price.billingInterval === 'year' ? 'yr' : 'mo'}`}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Audit Reason */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="admin-plan-reason" className="text-xs font-medium">
+                        Audit Reason <span className="text-destructive">*</span>
+                      </Label>
+                      <span
+                        className={cn(
+                          'text-[10px] font-mono',
+                          changeReason.trim().length >= 10
+                            ? 'text-success font-semibold'
+                            : 'text-muted-foreground',
+                        )}
+                      >
+                        {changeReason.trim().length}/10 min chars
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1">
+                      {QUICK_REASONS.map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => setChangeReason(tag)}
+                          className="text-[10px] bg-muted hover:bg-secondary px-1.5 py-0.5 rounded text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                        >
+                          +{tag}
+                        </button>
+                      ))}
+                    </div>
+
+                    <Textarea
+                      id="admin-plan-reason"
+                      placeholder="Enter justification for this plan reassignment (required for audit)..."
+                      value={changeReason}
+                      onChange={(e) => setChangeReason(e.target.value)}
+                      rows={2}
+                      className="text-xs resize-none"
+                    />
+                  </div>
+
+                  {assignPlanError && (
+                    <Alert variant="destructive" className="py-2 text-xs">
+                      <AlertDescription>{assignPlanError}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  <DialogFooter className="gap-2 sm:gap-0 pt-2 border-t">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setPlanChangeTarget(null);
+                        setAssignPlanError(null);
+                        setChangeReason('');
+                      }}
+                      disabled={assignPlanMutation.isPending}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={
+                        changeReason.trim().length < 10 ||
+                        assignPlanMutation.isPending
+                      }
+                      onClick={async () => {
+                        try {
+                          setAssignPlanError(null);
+                          await assignPlanMutation.mutateAsync({
+                            planId: planChangeTarget.plan.id,
+                            reason: changeReason.trim(),
+                          });
+                          showToast.success('Plan changed successfully.');
+                          setPlanChangeTarget(null);
+                          setPlanSliderOpen(false);
+                          setChangeReason('');
+                          await overviewQuery.refetch();
+                        } catch (err) {
+                          setAssignPlanError(extractErrorMessage(err));
+                        }
+                      }}
+                    >
+                      {assignPlanMutation.isPending ? 'Saving…' : 'Save & Change Plan'}
+                    </Button>
+                  </DialogFooter>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+
+          {/* Payment Method on File (CAP-021: Non-sensitive card details) */}
+          {subscription?.paymentMethod && (
+            <Card size="sm" className="gap-0 py-0 p-3 sm:px-3.5 sm:py-2.5 space-y-1.5">
                 <div className="flex items-center justify-between">
                   <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                     <Receipt className="size-3.5 text-muted-foreground" aria-hidden="true" />
@@ -623,9 +777,8 @@ export default function OrganisationBillingPage() {
                 </div>
               </Card>
             )}
-          </div>
 
-          {/* Entitlements & Usage */}
+            {/* Entitlements & Usage */}
           {overview && (
             <EntitlementsUsage
               organisationId={organisationId}
