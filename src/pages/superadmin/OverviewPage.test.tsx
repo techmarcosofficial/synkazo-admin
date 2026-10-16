@@ -3,7 +3,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import OverviewPage from './OverviewPage';
+import OverviewPage from './LegacyOverviewPage';
 
 import type { PlatformOverviewResponse } from '@/types';
 
@@ -138,9 +138,7 @@ describe('OverviewPage', () => {
     renderPage();
     await screen.findByText('47');
 
-    const alertLink = screen
-      .getByText('organisation suspended')
-      .closest('a');
+    const alertLink = screen.getByText('organisation suspended').closest('a');
     expect(alertLink).toHaveAttribute(
       'href',
       '/super-admin/organisations/org-1/activity',
