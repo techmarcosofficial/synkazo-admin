@@ -1,10 +1,12 @@
 import type { ReactNode } from 'react';
+import type { LucideIcon } from 'lucide-react';
 import HeadingPair from '@/components/shared/HeadingPair';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export function AnalyticsSection({
   title,
+  icon: Icon,
   description,
   action,
   loading,
@@ -13,6 +15,7 @@ export function AnalyticsSection({
   className = '',
 }: {
   title: string;
+  icon?: LucideIcon;
   description: ReactNode;
   action?: ReactNode;
   loading?: boolean;
@@ -21,14 +24,21 @@ export function AnalyticsSection({
   className?: string;
 }) {
   return (
-    <Card surface="outer" size="sm" className={`min-w-0 ${className}`}>
+    <Card surface="outer" size="sm" className={`h-full min-w-0 ${className}`}>
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <HeadingPair
-            title={title}
-            subtitle={description}
-            visualLevel="card"
-          />
+          <div className="flex min-w-0 flex-1 items-start gap-2">
+            {Icon && (
+              <span className="bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-2xl">
+                <Icon className="size-4" />
+              </span>
+            )}
+            <HeadingPair
+              title={title}
+              subtitle={description}
+              visualLevel="card"
+            />
+          </div>
           {action}
         </div>
       </CardHeader>
@@ -40,7 +50,7 @@ export function AnalyticsSection({
             className="space-y-3"
           >
             <Skeleton className="h-8 w-32" />
-            <Skeleton className="h-56 w-full" />
+            <Skeleton className="h-32 w-full" />
           </div>
         ) : error ? (
           <p
