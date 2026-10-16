@@ -670,7 +670,7 @@ try {
     });
     let state;
     const expectedContent = new Map([
-      ['/super-admin/overview', 'Top organisations'],
+      ['/super-admin/overview', 'Customer portfolio'],
       [
         '/super-admin/overview?view=analytics',
         'This graph shows payment counts, not money.',
@@ -769,7 +769,7 @@ try {
         !state.mainText.includes(
           route.includes('view=analytics')
             ? 'Organisation economics'
-            : 'Top organisations',
+            : 'Queue health',
         )
       )
         throw new Error('Platform analytics sections are missing');

@@ -204,10 +204,8 @@ export default function PlatformAnalyticsDashboard() {
         <PlatformSummary
           analytics={analytics}
           live={live}
-          filters={filters}
           valid={valid}
           mainError={mainError}
-          refreshVersion={refreshVersion}
           analyticsLink={viewLink()}
           planLink={viewLink}
         />

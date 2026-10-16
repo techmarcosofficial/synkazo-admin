@@ -7,30 +7,24 @@ import {
 } from 'lucide-react';
 import type { usePlatformAnalytics } from '@/queries/usePlatformAnalytics';
 import type { useSuperAdminPlatformOverviewQuery } from '@/queries/useSuperAdmin';
-import type { AnalyticsFilters } from '@/types/platformAnalytics';
 import OverviewKpiCard from './OverviewKpiCard';
 import OverviewAttention from './OverviewAttention';
 import CustomerPortfolio from './CustomerPortfolio';
 import { OverviewProcessing, OverviewQueue } from './OverviewProcessing';
-import TopOrganisations from './TopOrganisations';
 import { fullNumber, percentage } from './analyticsDisplay';
 
 export default function PlatformSummary({
   analytics,
   live,
-  filters,
   valid,
   mainError,
-  refreshVersion,
   analyticsLink,
   planLink,
 }: {
   analytics: ReturnType<typeof usePlatformAnalytics>;
   live: ReturnType<typeof useSuperAdminPlatformOverviewQuery>;
-  filters: AnalyticsFilters;
   valid: boolean;
   mainError?: string;
-  refreshVersion: number;
   analyticsLink: string;
   planLink: (planId: string) => string;
 }) {
@@ -167,11 +161,6 @@ export default function PlatformSummary({
           generatedAt={live.data?.generatedAt}
         />
       </div>
-      <TopOrganisations
-        filters={filters}
-        valid={valid}
-        refreshVersion={refreshVersion}
-      />
       <div className="text-muted-foreground flex flex-wrap justify-between gap-2 px-1 text-xs">
         <span>
           {data
