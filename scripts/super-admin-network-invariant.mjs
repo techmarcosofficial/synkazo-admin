@@ -46,6 +46,100 @@ const overview = {
   },
 };
 
+function analyticsFixture(url) {
+  const from = url.searchParams.get('from');
+  const to = url.searchParams.get('to');
+  const currency = url.searchParams.get('currency') || 'USD';
+  const quality = {
+    status: 'provisional',
+    source: 'payment_results',
+    message: 'Payment totals and dates are awaiting provider reconciliation.',
+    verifiedFrom: null,
+    verifiedThrough: null,
+    reconciliationReference: null,
+  };
+  const totals = {
+    completed: 8,
+    failed: 1,
+    partial: 1,
+    terminalRuns: 10,
+    running: 0,
+    recordsWritten: 100,
+    recordsFetched: 120,
+    durationMs: 3600000,
+    missingDurationRuns: 2,
+    unattributedRuns: 0,
+    successRate: 0.8,
+  };
+  if (url.pathname.endsWith('/organisations'))
+    return {
+      generatedAt: new Date().toISOString(),
+      currency,
+      quality,
+      total: 1,
+      page: 1,
+      limit: 10,
+      data: [
+        {
+          organisationId: 'org-1',
+          name: 'Test Organisation',
+          status: 'active',
+          archived: false,
+          planName: 'Pro',
+          collectedMinor: null,
+          runs: 10,
+          recordsWritten: 100,
+          durationMs: 3600000,
+          missingDurationRuns: 2,
+          failedRuns: 1,
+          partialRuns: 1,
+          successRate: 0.8,
+        },
+      ],
+    };
+  return {
+    generatedAt: new Date().toISOString(),
+    definitionVersion: 'platform-analytics-v1',
+    cohortBasis: 'current-plan',
+    currency,
+    range: {
+      from,
+      to,
+      granularity: url.searchParams.get('granularity') || 'day',
+      timezone: 'UTC',
+    },
+    sections: {
+      revenue: {
+        collectedMinor: null,
+        recordedPayments: 2,
+        unattributedPayments: 0,
+        currencies: ['USD'],
+        series: [{ bucket: from, collectedMinor: null, payments: 2 }],
+        quality,
+      },
+      processing: {
+        totals,
+        series: [{ ...totals, bucket: from }],
+        quality: { ...quality, source: 'sync_run_logs', status: 'partial' },
+      },
+      customers: {
+        asOf: new Date().toISOString(),
+        total: 1,
+        byStatus: [{ status: 'active', count: 1 }],
+        bySubscriptionStatus: [{ status: 'past_due', count: 1 }],
+        byPlan: [{ planId: null, name: 'Unassigned', count: 1 }],
+      },
+    },
+    errors: {},
+    unavailableMetrics: [
+      {
+        metric: 'MRR, ARR and churn',
+        reason: 'Effective recurring terms are not yet verified.',
+      },
+    ],
+  };
+}
+
 const wait = (ms) => new Promise((done) => setTimeout(done, ms));
 const mime = (file) =>
   ({
@@ -139,7 +233,7 @@ function connectCdp(url) {
         },
         { name: 'Content-Type', value: 'application/json' },
       ];
-      const data =
+      let data =
         url.pathname === '/api/auth/me'
           ? {
               data: {
@@ -475,6 +569,8 @@ function connectCdp(url) {
                                                 '/api/super-admin/organisations/org-1/notes'
                                               ? { data: [] }
                                               : { data: {} };
+      if (url.pathname.startsWith('/api/super-admin/platform/analytics'))
+        data = { data: analyticsFixture(url) };
       const body = Buffer.from(JSON.stringify(data)).toString('base64');
       send('Fetch.fulfillRequest', {
         requestId,
@@ -567,6 +663,7 @@ try {
     });
     let state;
     const expectedContent = new Map([
+      ['/super-admin/overview', 'This graph shows payment counts, not money.'],
       ['/super-admin/organisations/org-1/projects', 'Scoped project'],
       ['/super-admin/organisations', 'Test Organisation'],
       ['/super-admin/projects', 'Test Organisation'],
@@ -655,6 +752,30 @@ try {
       throw new Error(
         `Scoped page content missing at ${route}: ${expectedContent}`,
       );
+    if (route === '/super-admin/overview') {
+      if (
+        !state.mainText.includes('Processing demand') ||
+        !state.mainText.includes('Organisation economics')
+      )
+        throw new Error('Platform analytics sections are missing');
+      for (const width of [375, 768, 1440]) {
+        await cdp.send('Emulation.setDeviceMetricsOverride', {
+          width,
+          height: 900,
+          deviceScaleFactor: 1,
+          mobile: width < 768,
+        });
+        await wait(100);
+        const overflow = await cdp.send('Runtime.evaluate', {
+          expression:
+            'document.documentElement.scrollWidth > window.innerWidth',
+          returnByValue: true,
+        });
+        if (overflow.result.value)
+          throw new Error(`Platform analytics overflows at ${width}px`);
+      }
+      await cdp.send('Emulation.clearDeviceMetricsOverride');
+    }
     if (
       process.env.SUPER_ADMIN_SCREENSHOT_DIR &&
       (route === '/super-admin/organisations/org-1/overview' ||
