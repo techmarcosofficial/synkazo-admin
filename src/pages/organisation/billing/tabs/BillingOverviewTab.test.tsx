@@ -194,8 +194,8 @@ describe('BillingOverviewTab', () => {
 
     // Unified Billing & Payment History (Table Card with both individual sections)
     expect(screen.getByText('Billing & Payment History')).toBeInTheDocument();
-    expect(screen.getByText('Payment History')).toBeInTheDocument();
-    expect(screen.getByText('Invoices')).toBeInTheDocument();
+    expect(screen.getByText('All payment history')).toBeInTheDocument();
+    expect(screen.getByText('All invoices')).toBeInTheDocument();
 
     // Dedicated Billing Activity Tree Card in Right Column
     expect(screen.getByText('Billing Activity')).toBeInTheDocument();

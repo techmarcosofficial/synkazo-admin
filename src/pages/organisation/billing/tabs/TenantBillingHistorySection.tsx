@@ -10,13 +10,7 @@ import ErrorState from '@/components/shared/ErrorState';
 import SkeletonTable from '@/components/shared/skeletons/SkeletonTable';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -123,18 +117,22 @@ export default function TenantBillingHistorySection({
   }, [rawInvoices, dateRange]);
 
   return (
-    <Card className={cn('gap-0 py-0', className)}>
-      {/* ── Main Unified Header with Date Filter ────────────────────────── */}
-      <CardHeader className="px-4 py-3 sm:px-5 sm:py-3.5 border-b">
+    <div className={cn('space-y-5', className)}>
+      {/* ── Icon-based Header matching /projects list pattern ──────────────── */}
+      <div className="bg-card border-border/70 rounded-3xl border px-3 py-3 sm:px-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <CardTitle className="text-base font-bold flex items-center gap-2">
-              <Receipt className="text-muted-foreground size-4" />
-              Billing &amp; Payment History
-            </CardTitle>
-            <CardDescription className="text-xs">
-              History of payments, lifecycle events, and Stripe invoices.
-            </CardDescription>
+          <div className="flex items-center gap-3">
+            <span className="bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-xl">
+              <Receipt className="size-4" aria-hidden="true" />
+            </span>
+            <div>
+              <h2 className="text-base font-bold text-foreground">
+                Billing &amp; Payment History
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                History of payments, lifecycle events, and Stripe invoices.
+              </p>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
@@ -159,270 +157,266 @@ export default function TenantBillingHistorySection({
             )}
           </div>
         </div>
-      </CardHeader>
+      </div>
 
-      <CardContent className="p-4 sm:p-5 space-y-6">
-        {/* ── Section 1: Payment History Table ─────────────────────────── */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-semibold tracking-tight text-foreground flex items-center gap-1.5">
-                <CreditCard className="size-3.5 text-muted-foreground" />
-                Payment History
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                Recent payments and transaction outcomes.
-              </p>
-            </div>
-            {totalPayments > 0 && (
-              <span className="text-[10px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                {totalPayments} {totalPayments === 1 ? 'payment' : 'payments'}
-              </span>
+      {/* ── Section 1: All payment history (Flat card table like Super Admin) ── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold tracking-tight text-foreground">
+              All payment history
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              Recent payments and transaction outcomes.
+            </p>
+          </div>
+          {totalPayments > 0 && (
+            <span className="text-[10px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+              {totalPayments} {totalPayments === 1 ? 'payment' : 'payments'}
+            </span>
+          )}
+        </div>
+
+        {paymentHistoryQuery.isLoading ? (
+          <SkeletonTable rows={3} columns={4} />
+        ) : paymentHistoryQuery.isError ? (
+          <ErrorState
+            title="Could not load payment history"
+            onRetry={() => paymentHistoryQuery.refetch()}
+          />
+        ) : filteredPayments.length === 0 ? (
+          <Card size="sm" className="p-6 text-center text-xs text-muted-foreground">
+            {dateRange.from || dateRange.to ? (
+              <div className="space-y-1.5">
+                <p>No payment events found for the selected date range.</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 text-[11px] rounded-lg"
+                  onClick={() => setDateRange({})}
+                >
+                  Clear date filter
+                </Button>
+              </div>
+            ) : (
+              <EmptyState
+                icon={CreditCard}
+                title="No payment events yet"
+                viewMode="table"
+              />
+            )}
+          </Card>
+        ) : (
+          <div className="space-y-2.5">
+            <Card size="sm" className="overflow-hidden py-0">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="w-[160px] text-xs font-semibold">Date</TableHead>
+                    <TableHead className="text-xs font-semibold">Event / Description</TableHead>
+                    <TableHead className="text-xs font-semibold">Status</TableHead>
+                    <TableHead className="text-right text-xs font-semibold">Amount</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredPayments.map((item, idx) => {
+                    const statusKey = item.orderStatus ?? (item.eventType.includes('fail') ? 'failed' : 'paid');
+                    const dotClass = STATUS_DOT[statusKey as keyof typeof STATUS_DOT] ?? 'bg-muted-foreground';
+                    const label = item.description || EVENT_LABEL[item.eventType] || item.eventType;
+
+                    return (
+                      <TableRow key={item.id ?? idx} className="hover:bg-muted/40">
+                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap py-3">
+                          {formatDateSafe(item.createdAt)}
+                        </TableCell>
+                        <TableCell className="text-xs font-medium py-3">
+                          <span className="text-foreground">{label}</span>
+                          {item.paymentId && (
+                            <span className="block text-[10px] text-muted-foreground font-mono mt-0.5">
+                              {item.paymentId}
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="py-3">
+                          <Badge
+                            variant="secondary"
+                            className="gap-1.5 text-[11px] font-medium capitalize py-0.5 px-2 rounded-full border-0"
+                          >
+                            <span className={cn('size-1.5 rounded-full', dotClass)} />
+                            {item.orderStatus ?? 'succeeded'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs font-semibold py-3">
+                          {money(item.amount, item.currency)}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </Card>
+
+            {totalPayments > pageSize && (
+              <div className="flex items-center justify-between gap-3 pt-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xl h-6 text-[11px] px-2"
+                  disabled={paymentPage === 1 || paymentHistoryQuery.isLoading}
+                  onClick={() => setPaymentPage((p) => Math.max(1, p - 1))}
+                >
+                  Previous
+                </Button>
+                <span className="text-muted-foreground text-[11px]">
+                  Page {paymentPage} of {Math.max(1, Math.ceil(totalPayments / pageSize))}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xl h-6 text-[11px] px-2"
+                  disabled={paymentPage * pageSize >= totalPayments || paymentHistoryQuery.isLoading}
+                  onClick={() => setPaymentPage((p) => p + 1)}
+                >
+                  Next
+                </Button>
+              </div>
             )}
           </div>
+        )}
+      </div>
 
-          {paymentHistoryQuery.isLoading ? (
-            <SkeletonTable rows={3} columns={4} />
-          ) : paymentHistoryQuery.isError ? (
-            <ErrorState
-              title="Could not load payment history"
-              onRetry={() => paymentHistoryQuery.refetch()}
-            />
-          ) : filteredPayments.length === 0 ? (
-            <div className="py-6 text-center text-xs text-muted-foreground rounded-2xl border border-dashed p-4">
-              {dateRange.from || dateRange.to ? (
-                <div className="space-y-1.5">
-                  <p>No payment events found for the selected date range.</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-6 text-[11px] rounded-lg"
-                    onClick={() => setDateRange({})}
-                  >
-                    Clear date filter
-                  </Button>
-                </div>
-              ) : (
-                <EmptyState
-                  icon={CreditCard}
-                  title="No payment events yet"
-                  viewMode="table"
-                />
-              )}
-            </div>
-          ) : (
-            <div className="space-y-2.5">
-              <div className="overflow-hidden rounded-2xl border">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-transparent">
-                      <TableHead className="w-[160px] text-xs font-semibold">Date</TableHead>
-                      <TableHead className="text-xs font-semibold">Event / Description</TableHead>
-                      <TableHead className="text-xs font-semibold">Status</TableHead>
-                      <TableHead className="text-right text-xs font-semibold">Amount</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredPayments.map((item, idx) => {
-                      const statusKey = item.orderStatus ?? (item.eventType.includes('fail') ? 'failed' : 'paid');
-                      const dotClass = STATUS_DOT[statusKey as keyof typeof STATUS_DOT] ?? 'bg-muted-foreground';
-                      const label = item.description || EVENT_LABEL[item.eventType] || item.eventType;
+      {/* ── Section 2: All invoices (Flat card table like Super Admin) ───────── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold tracking-tight text-foreground">
+              All invoices
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              Stripe tax invoices and receipts.
+            </p>
+          </div>
+          {totalInvoices > 0 && (
+            <span className="text-[10px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+              {totalInvoices} {totalInvoices === 1 ? 'invoice' : 'invoices'}
+            </span>
+          )}
+        </div>
 
-                      return (
-                        <TableRow key={item.id ?? idx} className="hover:bg-muted/40">
-                          <TableCell className="text-xs text-muted-foreground whitespace-nowrap py-2.5">
-                            {formatDateSafe(item.createdAt)}
-                          </TableCell>
-                          <TableCell className="text-xs font-medium py-2.5">
-                            <span className="text-foreground">{label}</span>
-                            {item.paymentId && (
-                              <span className="block text-[10px] text-muted-foreground font-mono mt-0.5">
-                                {item.paymentId}
-                              </span>
+        {invoicesQuery.isLoading ? (
+          <SkeletonTable rows={3} columns={5} />
+        ) : invoicesQuery.isError ? (
+          <ErrorState
+            title="Could not load invoices"
+            onRetry={() => invoicesQuery.refetch()}
+          />
+        ) : filteredInvoices.length === 0 ? (
+          <Card size="sm" className="p-6 text-center text-xs text-muted-foreground">
+            {dateRange.from || dateRange.to ? (
+              <div className="space-y-1.5">
+                <p>No invoices found for the selected date range.</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 text-[11px] rounded-lg"
+                  onClick={() => setDateRange({})}
+                >
+                  Clear date filter
+                </Button>
+              </div>
+            ) : (
+              <EmptyState icon={Receipt} title="No invoices yet" viewMode="table" />
+            )}
+          </Card>
+        ) : (
+          <div className="space-y-2.5">
+            <Card size="sm" className="overflow-hidden py-0">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="w-[160px] text-xs font-semibold">Date</TableHead>
+                    <TableHead className="text-xs font-semibold">Invoice #</TableHead>
+                    <TableHead className="text-xs font-semibold">Status</TableHead>
+                    <TableHead className="text-xs font-semibold">Amount</TableHead>
+                    <TableHead className="text-right text-xs font-semibold">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredInvoices.map((inv) => {
+                    const dotClass = STATUS_DOT[inv.status as keyof typeof STATUS_DOT] ?? 'bg-muted-foreground';
+                    const num = inv.id.slice(0, 8);
+
+                    return (
+                      <TableRow key={inv.id} className="hover:bg-muted/40">
+                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap py-3">
+                          {formatDateSafe(inv.paidAt || inv.periodStart)}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs font-medium py-3">
+                          {num}
+                        </TableCell>
+                        <TableCell className="py-3">
+                          <Badge
+                            variant="secondary"
+                            className="gap-1.5 text-[11px] font-medium capitalize py-0.5 px-2 rounded-full border-0"
+                          >
+                            <span className={cn('size-1.5 rounded-full', dotClass)} />
+                            {inv.status.replace('_', ' ')}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-mono text-xs font-semibold py-3">
+                          {money(inv.totalAmount, inv.currency)}
+                        </TableCell>
+                        <TableCell className="text-right py-3">
+                          <div className="flex items-center justify-end gap-2.5">
+                            {inv.receiptUrl ? (
+                              <a
+                                href={inv.receiptUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-primary inline-flex items-center gap-1 hover:underline text-xs font-medium"
+                              >
+                                Receipt <ExternalLink className="size-3" />
+                              </a>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">—</span>
                             )}
-                          </TableCell>
-                          <TableCell className="py-2.5">
-                            <Badge
-                              variant="secondary"
-                              className="gap-1.5 text-[11px] font-medium capitalize py-0.5 px-2 rounded-full border-0"
-                            >
-                              <span className={cn('size-1.5 rounded-full', dotClass)} />
-                              {item.orderStatus ?? 'succeeded'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-xs font-semibold py-2.5">
-                            {money(item.amount, item.currency)}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </Card>
+
+            {totalInvoices > pageSize && (
+              <div className="flex items-center justify-between gap-3 pt-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xl h-6 text-[11px] px-2"
+                  disabled={invoicePage === 1 || invoicesQuery.isLoading}
+                  onClick={() => setInvoicePage((p) => Math.max(1, p - 1))}
+                >
+                  Previous
+                </Button>
+                <span className="text-muted-foreground text-[11px]">
+                  Page {invoicePage} of {Math.max(1, Math.ceil(totalInvoices / pageSize))}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xl h-6 text-[11px] px-2"
+                  disabled={invoicePage * pageSize >= totalInvoices || invoicesQuery.isLoading}
+                  onClick={() => setInvoicePage((p) => p + 1)}
+                >
+                  Next
+                </Button>
               </div>
-
-              {totalPayments > pageSize && (
-                <div className="flex items-center justify-between gap-3 pt-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-xl h-6 text-[11px] px-2"
-                    disabled={paymentPage === 1 || paymentHistoryQuery.isLoading}
-                    onClick={() => setPaymentPage((p) => Math.max(1, p - 1))}
-                  >
-                    Previous
-                  </Button>
-                  <span className="text-muted-foreground text-[11px]">
-                    Page {paymentPage} of {Math.max(1, Math.ceil(totalPayments / pageSize))}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-xl h-6 text-[11px] px-2"
-                    disabled={paymentPage * pageSize >= totalPayments || paymentHistoryQuery.isLoading}
-                    onClick={() => setPaymentPage((p) => p + 1)}
-                  >
-                    Next
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* ── Section 2: Invoices Table (Like Super Admin UI) ───────────── */}
-        <div className="space-y-3 pt-4 border-t border-border/60">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-semibold tracking-tight text-foreground flex items-center gap-1.5">
-                <Receipt className="size-3.5 text-muted-foreground" />
-                Invoices
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                Stripe tax invoices and receipts.
-              </p>
-            </div>
-            {totalInvoices > 0 && (
-              <span className="text-[10px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                {totalInvoices} {totalInvoices === 1 ? 'invoice' : 'invoices'}
-              </span>
             )}
           </div>
-
-          {invoicesQuery.isLoading ? (
-            <SkeletonTable rows={3} columns={5} />
-          ) : invoicesQuery.isError ? (
-            <ErrorState
-              title="Could not load invoices"
-              onRetry={() => invoicesQuery.refetch()}
-            />
-          ) : filteredInvoices.length === 0 ? (
-            <div className="py-6 text-center text-xs text-muted-foreground rounded-2xl border border-dashed p-4">
-              {dateRange.from || dateRange.to ? (
-                <div className="space-y-1.5">
-                  <p>No invoices found for the selected date range.</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-6 text-[11px] rounded-lg"
-                    onClick={() => setDateRange({})}
-                  >
-                    Clear date filter
-                  </Button>
-                </div>
-              ) : (
-                <EmptyState icon={Receipt} title="No invoices yet" viewMode="table" />
-              )}
-            </div>
-          ) : (
-            <div className="space-y-2.5">
-              <div className="overflow-hidden rounded-2xl border">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-transparent">
-                      <TableHead className="w-[160px] text-xs font-semibold">Date</TableHead>
-                      <TableHead className="text-xs font-semibold">Invoice #</TableHead>
-                      <TableHead className="text-xs font-semibold">Status</TableHead>
-                      <TableHead className="text-xs font-semibold">Amount</TableHead>
-                      <TableHead className="text-right text-xs font-semibold">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredInvoices.map((inv) => {
-                      const dotClass = STATUS_DOT[inv.status as keyof typeof STATUS_DOT] ?? 'bg-muted-foreground';
-                      const num = inv.id.slice(0, 8);
-
-                      return (
-                        <TableRow key={inv.id} className="hover:bg-muted/40">
-                          <TableCell className="text-xs text-muted-foreground whitespace-nowrap py-2.5">
-                            {formatDateSafe(inv.paidAt || inv.periodStart)}
-                          </TableCell>
-                          <TableCell className="font-mono text-xs font-medium py-2.5">
-                            {num}
-                          </TableCell>
-                          <TableCell className="py-2.5">
-                            <Badge
-                              variant="secondary"
-                              className="gap-1.5 text-[11px] font-medium capitalize py-0.5 px-2 rounded-full border-0"
-                            >
-                              <span className={cn('size-1.5 rounded-full', dotClass)} />
-                              {inv.status.replace('_', ' ')}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="font-mono text-xs font-semibold py-2.5">
-                            {money(inv.totalAmount, inv.currency)}
-                          </TableCell>
-                          <TableCell className="text-right py-2.5">
-                            <div className="flex items-center justify-end gap-2.5">
-                              {inv.receiptUrl ? (
-                                <a
-                                  href={inv.receiptUrl}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="text-primary inline-flex items-center gap-1 hover:underline text-xs font-medium"
-                                >
-                                  Receipt <ExternalLink className="size-3" />
-                                </a>
-                              ) : (
-                                <span className="text-muted-foreground text-xs">—</span>
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-
-              {totalInvoices > pageSize && (
-                <div className="flex items-center justify-between gap-3 pt-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-xl h-6 text-[11px] px-2"
-                    disabled={invoicePage === 1 || invoicesQuery.isLoading}
-                    onClick={() => setInvoicePage((p) => Math.max(1, p - 1))}
-                  >
-                    Previous
-                  </Button>
-                  <span className="text-muted-foreground text-[11px]">
-                    Page {invoicePage} of {Math.max(1, Math.ceil(totalInvoices / pageSize))}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-xl h-6 text-[11px] px-2"
-                    disabled={invoicePage * pageSize >= totalInvoices || invoicesQuery.isLoading}
-                    onClick={() => setInvoicePage((p) => p + 1)}
-                  >
-                    Next
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+        )}
+      </div>
+    </div>
   );
 }
