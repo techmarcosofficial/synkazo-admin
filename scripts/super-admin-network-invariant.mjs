@@ -801,6 +801,11 @@ try {
       );
     if (route.startsWith('/super-admin/overview')) {
       if (
+        route.includes('view=analytics') &&
+        state.mainText.includes('Customer portfolio')
+      )
+        throw new Error('Customer portfolio should appear only in Summary');
+      if (
         !state.mainText.includes('Processing demand') ||
         !state.mainText.includes(
           route.includes('view=analytics')
@@ -824,6 +829,42 @@ try {
         });
         if (overflow.result.value)
           throw new Error(`Platform analytics overflows at ${width}px`);
+        if (route === '/super-admin/overview') {
+          await cdp.send('Runtime.evaluate', {
+            expression: `document.querySelector('button[aria-label="Choose date range"]').click()`,
+          });
+          await wait(200);
+          const picker = await cdp.send('Runtime.evaluate', {
+            expression: `(() => { const el = document.querySelector('[role="dialog"][aria-label="Choose reporting dates"]'); if (!el) return null; const rect = el.getBoundingClientRect(); return {clip: {x: rect.x + scrollX, y: rect.y + scrollY, width: rect.width, height: rect.height, scale: 1}, months: el.querySelectorAll('.rdp-month').length, hasNativeInput: !!el.querySelector('input[type="date"]'), fits: rect.left >= 0 && rect.right <= innerWidth + 1 && rect.top >= 0 && rect.bottom <= innerHeight + 1}; })()`,
+            returnByValue: true,
+          });
+          if (
+            !picker.result.value?.fits ||
+            picker.result.value.hasNativeInput ||
+            picker.result.value.months !== (width < 768 ? 1 : 2)
+          )
+            throw new Error(
+              `Range calendar layout is incorrect at ${width}px: ${JSON.stringify(picker.result.value)}`,
+            );
+          if (process.env.SUPER_ADMIN_SCREENSHOT_DIR) {
+            const screenshot = await cdp.send('Page.captureScreenshot', {
+              format: 'png',
+              captureBeyondViewport: true,
+              clip: picker.result.value.clip,
+            });
+            await writeFile(
+              join(
+                process.env.SUPER_ADMIN_SCREENSHOT_DIR,
+                `date-range-${width}.png`,
+              ),
+              Buffer.from(screenshot.data, 'base64'),
+            );
+          }
+          await cdp.send('Runtime.evaluate', {
+            expression: `Array.from(document.querySelectorAll('[role="dialog"] button')).find(button => button.textContent.trim() === 'Cancel').click()`,
+          });
+          await wait(100);
+        }
         if (process.env.SUPER_ADMIN_SCREENSHOT_DIR) {
           const screenshot = await cdp.send('Page.captureScreenshot', {
             format: 'png',

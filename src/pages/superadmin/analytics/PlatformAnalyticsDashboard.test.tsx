@@ -7,6 +7,7 @@ import {
   waitFor,
 } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { format as formatDate } from 'date-fns';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   OrganisationAnalyticsResponse,
@@ -239,9 +240,15 @@ describe('Platform analytics dashboard', () => {
     await screen.findByRole('link', { name: 'Unassigned: 11 organisations' });
     fireEvent.click(screen.getByRole('button', { name: 'Choose date range' }));
     const from = defaultRange().from;
-    fireEvent.change(screen.getByLabelText('Through date UTC'), {
-      target: { value: from },
-    });
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: new RegExp(formatDate(new Date(`${from}T00:00:00`), 'PPPP')),
+      }),
+    );
+    expect(platformAnalyticsApi.overview).toHaveBeenLastCalledWith(
+      expect.objectContaining(defaultRange()),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Apply range' }));
     const expectedTo = new Date(
       new Date(`${from}T00:00:00Z`).getTime() + 86400000,
     )
@@ -367,6 +374,12 @@ describe('Platform analytics dashboard', () => {
       await screen.findByRole('heading', { name: 'Collections' }),
     ).toBeInTheDocument();
     await screen.findByText('Example organisation');
+    expect(
+      screen.queryByRole('heading', { name: 'Customer portfolio' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('combobox', { name: 'Current plan cohort' }),
+    ).toBeInTheDocument();
     expect(screen.getByText('Awaiting reconciliation')).toBeInTheDocument();
     expect(
       screen.getByText(/This graph shows payment counts, not money/),
@@ -423,8 +436,10 @@ describe('Platform analytics dashboard', () => {
         expect.objectContaining({ ...defaultRange(7), currency: 'USD' }),
       ),
     );
-    expect(screen.getByLabelText('From date UTC')).toHaveValue(
-      defaultRange(7).from,
+    expect(
+      screen.getByRole('button', { name: 'Choose date range' }),
+    ).toHaveTextContent(
+      formatDate(new Date(`${defaultRange(7).from}T00:00:00`), 'MMM d'),
     );
   });
 
