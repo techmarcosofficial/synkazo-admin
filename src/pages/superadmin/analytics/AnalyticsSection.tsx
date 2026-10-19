@@ -66,11 +66,3 @@ export function AnalyticsSection({
     </Card>
   );
 }
-
-export function EmptyChart({ children }: { children: ReactNode }) {
-  return (
-    <div className="text-muted-foreground flex min-h-52 items-center justify-center p-6 text-center text-sm">
-      {children}
-    </div>
-  );
-}

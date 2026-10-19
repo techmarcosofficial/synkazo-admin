@@ -12,8 +12,10 @@ const dist = join(root, 'dist');
 const chromeBin = process.env.CHROME_BIN || '/usr/bin/google-chrome';
 const userDataDir = await mkdtemp(join(tmpdir(), 'synkazo-platform-network-'));
 const requests = [];
+const monitorQueries = [];
 const organisationQueries = [];
 let historicalMeSeen = false;
+let monitorNoActive = false;
 let browser;
 let server;
 let socket;
@@ -107,33 +109,6 @@ function analyticsFixture(url) {
     unattributedRuns: 0,
     successRate: 0.8,
   };
-  if (url.pathname.endsWith('/organisations'))
-    return {
-      generatedAt: new Date().toISOString(),
-      currency,
-      quality,
-      total: 1,
-      page: 1,
-      limit: 10,
-      data: [
-        {
-          organisationId: 'org-1',
-          name: 'Test Organisation',
-          status: 'active',
-          archived: false,
-          planName: 'Pro',
-          subscriptionStatus: 'active',
-          collectedMinor: null,
-          runs: 10,
-          recordsWritten: 100,
-          durationMs: 3600000,
-          missingDurationRuns: 2,
-          failedRuns: 1,
-          partialRuns: 1,
-          successRate: 0.8,
-        },
-      ],
-    };
   return {
     generatedAt: new Date().toISOString(),
     definitionVersion: 'platform-analytics-v1',
@@ -173,6 +148,90 @@ function analyticsFixture(url) {
       {
         metric: 'MRR, ARR and churn',
         reason: 'Effective recurring terms are not yet verified.',
+      },
+    ],
+  };
+}
+
+function monitorFixture() {
+  const now = new Date().toISOString();
+  return {
+    generatedAt: now,
+    nextCursor: null,
+    errors: {},
+    queue: {
+      observedAt: now,
+      data: {
+        active: 1,
+        waiting: 2,
+        delayed: 0,
+        failed: 1,
+        completed: 10,
+        workerOnline: true,
+      },
+    },
+    processes: [
+      {
+        id: 'api-test',
+        role: 'api',
+        sampledAt: now,
+        uptimeSeconds: 300,
+        rssMb: 96,
+        heapUsedMb: 50,
+        cpuCorePercent: 4,
+        memoryLimitMb: 1024,
+        executions: [],
+        truncated: false,
+      },
+      {
+        id: 'worker-test',
+        role: 'queue_worker',
+        sampledAt: now,
+        uptimeSeconds: 300,
+        rssMb: 180,
+        heapUsedMb: 96,
+        cpuCorePercent: 12,
+        memoryLimitMb: 1024,
+        executions: [{ id: 'run-1', mode: 'incremental', origin: 'manual' }],
+        truncated: false,
+      },
+    ],
+    data: [
+      {
+        id: 'run-1',
+        syncRunLogId: 'log-1',
+        bullJobId: 'bull-1',
+        organisationId: 'org-1',
+        organisationName: 'Test Organisation',
+        projectId: 'project-1',
+        projectName: 'Scoped project',
+        jobId: 'job-1',
+        jobName: 'Scoped job',
+        trigger: 'manual:1a925122-38ac-471d-b783-7eb51e32ae1c',
+        mode: 'incremental',
+        status: 'running',
+        source: 'HubSpot · contacts',
+        destination: 'ServiceTitan · customers',
+        startedAt: new Date(Date.now() - 60000).toISOString(),
+        finishedAt: null,
+        processId: 'worker-test',
+        executionObserved: true,
+        progress: {
+          observedAt: now,
+          source: 'live',
+          attempted: 25,
+          created: 10,
+          updated: 10,
+          skipped: 3,
+          failed: 2,
+          total: 100,
+          currentBatch: 1,
+          completedBatches: 0,
+          batchProcessed: 25,
+          batchTotal: 100,
+          totalBatches: 1,
+          ratePerSec: 5,
+        },
       },
     ],
   };
@@ -245,6 +304,8 @@ function connectCdp(url) {
       const { requestId, request } = message.params;
       const url = new URL(request.url);
       requests.push(`${request.method} ${url.pathname}`);
+      if (url.pathname.startsWith('/api/super-admin/platform/sync-operations'))
+        monitorQueries.push(url.pathname + url.search);
       if (
         request.method === 'GET' &&
         url.pathname === '/api/super-admin/organisations'
@@ -607,13 +668,36 @@ function connectCdp(url) {
                                                 '/api/super-admin/organisations/org-1/notes'
                                               ? { data: [] }
                                               : { data: {} };
-      if (url.pathname.startsWith('/api/super-admin/platform/analytics'))
+      if (url.pathname === '/api/super-admin/platform/analytics')
         data = { data: analyticsFixture(url) };
-      const body = Buffer.from(JSON.stringify(data)).toString('base64');
+      const monitor = url.pathname.startsWith(
+        '/api/super-admin/platform/sync-operations',
+      );
+      if (monitor) {
+        const snapshot = monitorFixture();
+        if (
+          url.searchParams.get('status') === 'failed' ||
+          (monitorNoActive &&
+            !url.pathname.includes('/runs/') &&
+            !url.pathname.endsWith('/recent'))
+        )
+          snapshot.data = [];
+        data = { data: snapshot };
+      }
+      const monitorStream = monitor && url.pathname.endsWith('/stream');
+      const body = Buffer.from(
+        monitorStream
+          ? `event: sync-monitor\ndata: ${JSON.stringify(monitorFixture())}\n\n`
+          : JSON.stringify(data),
+      ).toString('base64');
       send('Fetch.fulfillRequest', {
         requestId,
         responseCode: request.method === 'OPTIONS' ? 204 : 200,
-        responseHeaders,
+        responseHeaders: responseHeaders.map((header) =>
+          monitorStream && header.name === 'Content-Type'
+            ? { ...header, value: 'text/event-stream' }
+            : header,
+        ),
         body,
       }).catch((error) => {
         throw error;
@@ -682,6 +766,7 @@ try {
   for (const route of [
     '/super-admin/overview',
     '/super-admin/overview?view=analytics',
+    '/super-admin/sync-operations',
     '/super-admin/profile',
     '/super-admin/organisations',
     '/super-admin/projects',
@@ -707,10 +792,8 @@ try {
     let state;
     const expectedContent = new Map([
       ['/super-admin/overview', 'Customer portfolio'],
-      [
-        '/super-admin/overview?view=analytics',
-        'This graph shows payment counts, not money.',
-      ],
+      ['/super-admin/overview?view=analytics', 'Customer portfolio'],
+      ['/super-admin/sync-operations', '25 / 100 attempted'],
       ['/super-admin/organisations/org-1/projects', 'Scoped project'],
       ['/super-admin/organisations', 'Test Organisation'],
       ['/super-admin/projects', 'Test Organisation'],
@@ -799,21 +882,304 @@ try {
       throw new Error(
         `Scoped page content missing at ${route}: ${expectedContent}`,
       );
-    if (route.startsWith('/super-admin/overview')) {
+    if (route.includes('tab=run-history')) {
+      const repeatedProgress = (
+        await cdp.send('Runtime.evaluate', {
+          expression: `!!document.querySelector('main [data-slot="sync-summary-header"]')`,
+          returnByValue: true,
+        })
+      ).result.value;
+      if (repeatedProgress)
+        throw new Error(
+          'Run history still renders the overview progress summary',
+        );
+    }
+    if (route === '/super-admin/sync-operations') {
+      const baselineStreams = requests.filter((request) =>
+        request.includes('/sync-operations/runs/'),
+      ).length;
+      if (baselineStreams)
+        throw new Error('Run detail subscribed before opening a drawer');
+      for (const width of [375, 768, 1440]) {
+        await cdp.send('Emulation.setDeviceMetricsOverride', {
+          width,
+          height: 900,
+          deviceScaleFactor: 1,
+          mobile: width < 768,
+        });
+        await wait(150);
+        const checks = (
+          await cdp.send('Runtime.evaluate', {
+            expression: `(() => {
+              const card = document.querySelector('[data-sync-run-card]');
+              const identity = card.querySelector('[data-slot="monitor-run-identity"]').getBoundingClientRect();
+              const progress = card.querySelector('[data-slot="monitor-run-progress"]').getBoundingClientRect();
+              const actions = card.querySelector('[data-slot="monitor-run-actions"]').getBoundingClientRect();
+              return {
+                overflow: document.documentElement.scrollWidth > innerWidth,
+                actions: Array.from(document.querySelectorAll('main button')).filter(button => /pause|resume|stop|disable|cancel/i.test(button.textContent)).length,
+                cards: document.querySelectorAll('[data-sync-run-card]').length,
+                tables: document.querySelectorAll('main table').length,
+                progressHeight: card.querySelector('[role="progressbar"]').getBoundingClientRect().height,
+                batchVisible: document.querySelector('main').innerText.includes('Current batch'),
+                horizontal: identity.right <= progress.left && progress.right <= actions.left && Math.abs(identity.y + identity.height / 2 - progress.y - progress.height / 2) < 1,
+                headerHeight: card.querySelector('[data-slot="monitor-run-header"]').getBoundingClientRect().height,
+                titleWidth: card.querySelector('h3').getBoundingClientRect().width,
+                rawTrigger: card.innerText.includes('1a925122'),
+                ownership: card.innerText.includes('Organisation:') && card.innerText.includes('Project:'),
+                headerControls: !!document.querySelector('header input[aria-label="Search by integration ID"]') && !!document.querySelector('header [aria-label="Run origin"]') && !!document.querySelector('header [aria-label="Sort sync runs"]'),
+                flatActivity: !card.closest('[data-slot="card"]') && !document.querySelector('[aria-label="Sync activity view"]').closest('[data-slot="card"]'),
+                heading: document.querySelector('main h1')?.textContent.includes('Platform sync activity'),
+                removedDecorations: !/refreshes about every|Snapshot |Queue active|Retained failures/.test(document.querySelector('main').innerText),
+                resourceCards: document.querySelectorAll('[data-resource-card]').length,
+                resourceLayout: Array.from(document.querySelectorAll('[data-resource-card]')).every(resource => !resource.parentElement.closest('[data-slot="card"]') && !!(resource.compareDocumentPosition(document.querySelector('main h1')) & Node.DOCUMENT_POSITION_FOLLOWING)),
+                defaultTabs: document.querySelector('[aria-label="Sync activity view"]').dataset.variant === 'default',
+                statusFilter: !!document.querySelector('header [aria-label="Run status"]'),
+              };
+            })()`,
+            returnByValue: true,
+          })
+        ).result.value;
+        if (
+          checks.overflow ||
+          checks.actions ||
+          checks.cards !== 1 ||
+          checks.tables ||
+          checks.progressHeight !== 4 ||
+          checks.batchVisible ||
+          checks.rawTrigger ||
+          checks.titleWidth < 40 ||
+          !checks.ownership ||
+          !checks.headerControls ||
+          !checks.flatActivity ||
+          !checks.heading ||
+          !checks.removedDecorations ||
+          checks.resourceCards !== 2 ||
+          !checks.resourceLayout ||
+          !checks.defaultTabs ||
+          !checks.statusFilter ||
+          (width === 1440 && (!checks.horizontal || checks.headerHeight > 80))
+        )
+          throw new Error(`Sync monitor layout/actions failed at ${width}px`);
+        if (process.env.SUPER_ADMIN_SCREENSHOT_DIR) {
+          const headerBounds = (
+            await cdp.send('Runtime.evaluate', {
+              expression: `(() => { const r = document.querySelector('input[aria-label="Search by integration ID"]').closest('header').getBoundingClientRect(); return { x: r.x + scrollX, y: r.y + scrollY, width: r.width, height: r.height, scale: 1 }; })()`,
+              returnByValue: true,
+            })
+          ).result.value;
+          const headerScreenshot = await cdp.send('Page.captureScreenshot', {
+            format: 'png',
+            clip: headerBounds,
+            captureBeyondViewport: true,
+          });
+          await writeFile(
+            join(
+              process.env.SUPER_ADMIN_SCREENSHOT_DIR,
+              `sync-management-header-${width}.png`,
+            ),
+            Buffer.from(headerScreenshot.data, 'base64'),
+          );
+          const bounds = (
+            await cdp.send('Runtime.evaluate', {
+              expression: `(() => { const r = document.querySelector('[data-sync-run-card]').getBoundingClientRect(); return { x: r.x + scrollX, y: r.y + scrollY, width: r.width, height: r.height, scale: 1 }; })()`,
+              returnByValue: true,
+            })
+          ).result.value;
+          const cardScreenshot = await cdp.send('Page.captureScreenshot', {
+            format: 'png',
+            clip: bounds,
+            captureBeyondViewport: true,
+          });
+          await writeFile(
+            join(
+              process.env.SUPER_ADMIN_SCREENSHOT_DIR,
+              `sync-run-header-${width}.png`,
+            ),
+            Buffer.from(cardScreenshot.data, 'base64'),
+          );
+          const screenshot = await cdp.send('Page.captureScreenshot', {
+            format: 'png',
+            captureBeyondViewport: false,
+          });
+          await writeFile(
+            join(
+              process.env.SUPER_ADMIN_SCREENSHOT_DIR,
+              `sync-operations-${width}.png`,
+            ),
+            Buffer.from(screenshot.data, 'base64'),
+          );
+        }
+      }
+      await cdp.send('Runtime.evaluate', {
+        expression: `document.querySelector('button[aria-label="View details for Scoped job"]').click()`,
+      });
+      await wait(600);
+      const drawer = (
+        await cdp.send('Runtime.evaluate', {
+          expression: `({ open: !!document.querySelector('[role="dialog"]'), text: document.querySelector('[role="dialog"]')?.innerText })`,
+          returnByValue: true,
+        })
+      ).result.value;
       if (
-        route.includes('view=analytics') &&
-        state.mainText.includes('Customer portfolio')
+        !drawer.open ||
+        !drawer.text?.includes('Sync run progress') ||
+        !drawer.text?.includes('25% complete')
       )
-        throw new Error('Customer portfolio should appear only in Summary');
+        throw new Error('Sync monitor drawer did not open');
+      for (const width of [375, 768, 1440]) {
+        await cdp.send('Emulation.setDeviceMetricsOverride', {
+          width,
+          height: 900,
+          deviceScaleFactor: 1,
+          mobile: width < 768,
+        });
+        await wait(100);
+        const bounds = (
+          await cdp.send('Runtime.evaluate', {
+            expression: `(() => { const dialog = document.querySelector('[role="dialog"]'); const rect = dialog.getBoundingClientRect(); const summary = dialog.querySelector('[data-embedded="true"]'); return { fits: rect.left >= 0 && rect.right <= innerWidth + 1, batch: dialog.querySelector('[role="progressbar"][aria-label="Current batch progress"]')?.getAttribute('aria-valuenow'), plain: !!summary && !summary.closest('[data-slot="card"]'), noClose: !!summary && !Array.from(summary.querySelectorAll('button')).some(button => button.textContent.trim() === 'Close') }; })()`,
+            returnByValue: true,
+          })
+        ).result.value;
+        if (
+          !bounds.fits ||
+          bounds.batch !== '25' ||
+          !bounds.plain ||
+          !bounds.noClose
+        )
+          throw new Error(
+            `Monitor drawer or batch progress failed at ${width}px`,
+          );
+        if (process.env.SUPER_ADMIN_SCREENSHOT_DIR) {
+          const screenshot = await cdp.send('Page.captureScreenshot', {
+            format: 'png',
+            captureBeyondViewport: false,
+          });
+          await writeFile(
+            join(
+              process.env.SUPER_ADMIN_SCREENSHOT_DIR,
+              `sync-operations-drawer-${width}.png`,
+            ),
+            Buffer.from(screenshot.data, 'base64'),
+          );
+        }
+      }
+      if (process.env.SUPER_ADMIN_SCREENSHOT_DIR) {
+        const screenshot = await cdp.send('Page.captureScreenshot', {
+          format: 'png',
+          captureBeyondViewport: false,
+        });
+        await writeFile(
+          join(
+            process.env.SUPER_ADMIN_SCREENSHOT_DIR,
+            'sync-operations-drawer.png',
+          ),
+          Buffer.from(screenshot.data, 'base64'),
+        );
+      }
+      await cdp.send('Runtime.evaluate', {
+        expression: `Array.from(document.querySelectorAll('[role="dialog"] button')).find(button => button.textContent.trim() === 'Close').click()`,
+      });
+      await wait(300);
+      await cdp.send('Runtime.evaluate', {
+        expression: `document.querySelector('[aria-label="Run status"]').dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowDown', bubbles: true}))`,
+      });
+      await wait(100);
+      await cdp.send('Runtime.evaluate', {
+        expression: `Array.from(document.querySelectorAll('[role="option"]')).find(option => option.textContent.trim() === 'Failed').click()`,
+      });
+      await wait(400);
+      const filteredEmpty = (
+        await cdp.send('Runtime.evaluate', {
+          expression: `({ filtered: document.querySelector('main').innerText.includes('No syncs match these filters'), overflow: document.documentElement.scrollWidth > innerWidth })`,
+          returnByValue: true,
+        })
+      ).result.value;
       if (
-        !state.mainText.includes('Processing demand') ||
-        !state.mainText.includes(
-          route.includes('view=analytics')
-            ? 'Organisation economics'
-            : 'Queue health',
+        !filteredEmpty.filtered ||
+        filteredEmpty.overflow ||
+        !monitorQueries.some(
+          (request) =>
+            request.includes('/sync-operations/recent?') &&
+            request.includes('status=failed'),
         )
       )
-        throw new Error('Platform analytics sections are missing');
+        throw new Error('Filtered sync empty state/status request failed');
+      await cdp.send('Runtime.evaluate', {
+        expression: `Array.from(document.querySelectorAll('main button')).find(button => button.textContent.trim() === 'Clear filters').click()`,
+      });
+      await wait(300);
+      monitorNoActive = true;
+      await cdp.send('Runtime.evaluate', {
+        expression: `Array.from(document.querySelectorAll('[role="tab"]')).find(tab => tab.textContent.trim() === 'Active runs').dispatchEvent(new MouseEvent('mousedown', {bubbles: true, button: 0}))`,
+      });
+      await wait(300);
+      await cdp.send('Runtime.evaluate', {
+        expression: `Array.from(document.querySelectorAll('main button')).find(button => button.textContent.trim() === 'Refresh').click()`,
+      });
+      await wait(400);
+      const idle = (
+        await cdp.send('Runtime.evaluate', {
+          expression: `document.querySelector('main').innerText.includes('No syncs are running right now')`,
+          returnByValue: true,
+        })
+      ).result.value;
+      if (!idle) throw new Error('Idle sync state did not appear');
+      if (process.env.SUPER_ADMIN_SCREENSHOT_DIR) {
+        for (const width of [375, 1440]) {
+          await cdp.send('Emulation.setDeviceMetricsOverride', {
+            width,
+            height: 900,
+            deviceScaleFactor: 1,
+            mobile: width < 768,
+          });
+          await wait(100);
+          const bounds = (
+            await cdp.send('Runtime.evaluate', {
+              expression: `(() => { const r = document.querySelector('[aria-label="Sync activity"]').getBoundingClientRect(); return { x: r.x + scrollX, y: r.y + scrollY, width: r.width, height: r.height, scale: 1 }; })()`,
+              returnByValue: true,
+            })
+          ).result.value;
+          const screenshot = await cdp.send('Page.captureScreenshot', {
+            format: 'png',
+            clip: bounds,
+            captureBeyondViewport: true,
+          });
+          await writeFile(
+            join(
+              process.env.SUPER_ADMIN_SCREENSHOT_DIR,
+              `sync-idle-${width}.png`,
+            ),
+            Buffer.from(screenshot.data, 'base64'),
+          );
+        }
+      }
+      monitorNoActive = false;
+    }
+    if (route.startsWith('/super-admin/overview')) {
+      if (
+        requests
+          .slice(requestStart)
+          .some((request) =>
+            request.includes('/platform/analytics/organisations'),
+          )
+      )
+        throw new Error('Overview requested removed organisation analytics');
+      if (state.search.includes('view='))
+        throw new Error('Overview view parameter should be removed');
+      if (/Collections|Organisation economics/.test(state.mainText))
+        throw new Error('Removed Analytics sections are still rendered');
+      const obsoleteControls = await cdp.send('Runtime.evaluate', {
+        expression: `Array.from(document.querySelectorAll('main button, main a')).filter(el => /^(Summary|Analytics|Classic view|Details)$/.test(el.textContent.trim()) || el.getAttribute('href')?.includes('view=')).map(el => el.textContent)`,
+        returnByValue: true,
+      });
+      if (obsoleteControls.result.value.length)
+        throw new Error('Removed overview navigation is still rendered');
+      if (
+        !state.mainText.includes('Processing demand') ||
+        !state.mainText.includes('Queue health')
+      )
+        throw new Error('Platform overview sections are missing');
       for (const width of [375, 768, 1440]) {
         await cdp.send('Emulation.setDeviceMetricsOverride', {
           width,
@@ -873,7 +1239,7 @@ try {
           await writeFile(
             join(
               process.env.SUPER_ADMIN_SCREENSHOT_DIR,
-              `platform-${route.includes('analytics') ? 'analytics' : 'summary'}-${width}.png`,
+              `platform-${route.includes('analytics') ? 'legacy-url' : 'summary'}-${width}.png`,
             ),
             Buffer.from(screenshot.data, 'base64'),
           );

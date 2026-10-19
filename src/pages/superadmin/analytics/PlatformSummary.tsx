@@ -18,15 +18,11 @@ export default function PlatformSummary({
   live,
   valid,
   mainError,
-  analyticsLink,
-  planLink,
 }: {
   analytics: ReturnType<typeof usePlatformAnalytics>;
   live: ReturnType<typeof useSuperAdminPlatformOverviewQuery>;
   valid: boolean;
   mainError?: string;
-  analyticsLink: string;
-  planLink: (planId: string) => string;
 }) {
   const data = analytics.data;
   const customers =
@@ -83,7 +79,7 @@ export default function PlatformSummary({
                   : 'No confirmed paid organisations'
               : 'Payment evidence unavailable'
           }
-          to={analyticsLink}
+          to="#overview-customers"
           loading={loading}
         />
         <OverviewKpiCard
@@ -109,7 +105,7 @@ export default function PlatformSummary({
               ? 'Heartbeat status · count unavailable'
               : 'Worker status unavailable'
           }
-          to="#overview-queue"
+          to="/super-admin/sync-operations#processes"
           loading={live.isLoading}
         />
         <OverviewKpiCard
@@ -122,7 +118,7 @@ export default function PlatformSummary({
               ? `${fullNumber(processing.totals.terminalRuns)} finished runs in period`
               : 'Processing data unavailable'
           }
-          to="#overview-reliability"
+          to="/super-admin/sync-operations"
           loading={loading}
         />
       </div>
@@ -140,7 +136,6 @@ export default function PlatformSummary({
           customers={customers}
           loading={loading}
           error={mainError ?? data?.errors.customers}
-          planLink={planLink}
         />
       </div>
       <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -148,7 +143,6 @@ export default function PlatformSummary({
           processing={processing}
           loading={loading}
           error={mainError ?? data?.errors.processing}
-          analyticsLink={analyticsLink}
         />
         <OverviewQueue
           queue={queue}

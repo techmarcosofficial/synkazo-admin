@@ -23,16 +23,12 @@ export function inclusiveEnd(to: string) {
 export default function OverviewHeader({
   filters,
   update,
-  view,
-  setView,
   refresh,
   refreshing,
   valid,
 }: {
   filters: AnalyticsFilters;
   update: (next: Partial<AnalyticsFilters>) => void;
-  view: 'summary' | 'analytics';
-  setView: (view: 'summary' | 'analytics') => void;
   refresh: () => void;
   refreshing: boolean;
   valid: boolean;
@@ -77,28 +73,6 @@ export default function OverviewHeader({
         subtitle="Your organisations, billing and platform health at a glance."
       />
       <div className="flex min-w-0 flex-wrap items-center gap-2">
-        <div
-          className="bg-muted/50 inline-flex rounded-2xl border p-0.5"
-          role="group"
-          aria-label="Overview view"
-        >
-          {(['summary', 'analytics'] as const).map((item) => (
-            <Button
-              key={item}
-              size="sm"
-              variant={view === item ? 'secondary' : 'ghost'}
-              className={
-                view === item
-                  ? 'text-primary bg-primary/10'
-                  : 'text-muted-foreground'
-              }
-              aria-pressed={view === item}
-              onClick={() => setView(item)}
-            >
-              {item === 'summary' ? 'Summary' : 'Analytics'}
-            </Button>
-          ))}
-        </div>
         <Popover
           open={open}
           onOpenChange={(nextOpen) => {

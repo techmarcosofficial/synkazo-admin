@@ -36,6 +36,9 @@ import PageNotFound from './lib/PageNotFound';
 import { homeForUser } from '@/lib/workspace';
 
 const OverviewPage = lazy(() => import('@/pages/superadmin/OverviewPage'));
+const SyncOperationsPage = lazy(
+  () => import('@/pages/superadmin/SyncOperationsPage'),
+);
 const OrganisationsPage = lazy(
   () => import('@/pages/superadmin/OrganisationsPage'),
 );
@@ -341,6 +344,10 @@ function App() {
                     element={<Navigate to="/super-admin/overview" replace />}
                   />
                   <Route path="overview" element={<OverviewPage />} />
+                  <Route
+                    path="sync-operations"
+                    element={<SyncOperationsPage />}
+                  />
                   <Route path="profile" element={<PlatformProfilePage />} />
                   <Route path="organisations" element={<OrganisationsPage />} />
                   <Route

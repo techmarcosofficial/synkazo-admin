@@ -1,9 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { platformAnalyticsApi } from '@/api/platformAnalytics';
-import type {
-  AnalyticsFilters,
-  OrganisationAnalyticsFilters,
-} from '@/types/platformAnalytics';
+import type { AnalyticsFilters } from '@/types/platformAnalytics';
 
 export function usePlatformAnalytics(
   filters: AnalyticsFilters,
@@ -15,24 +12,5 @@ export function usePlatformAnalytics(
     enabled,
     staleTime: 300000,
     refetchInterval: 300000,
-  });
-}
-
-export function useOrganisationAnalytics(
-  filters: OrganisationAnalyticsFilters,
-  enabled = true,
-) {
-  return useQuery({
-    queryKey: [
-      'superAdmin',
-      'platform',
-      'analytics',
-      'organisations',
-      'v1',
-      filters,
-    ],
-    queryFn: () => platformAnalyticsApi.organisations(filters),
-    enabled,
-    staleTime: 60000,
   });
 }

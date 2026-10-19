@@ -69,38 +69,3 @@ export interface PlatformAnalyticsResponse {
   unavailableMetrics: Array<{ metric: string; reason: string }>;
   errors: Partial<Record<'revenue' | 'processing' | 'customers', string>>;
 }
-
-export interface OrganisationAnalyticsRow {
-  organisationId: string;
-  name: string;
-  status: string;
-  archived: boolean;
-  planName: string;
-  subscriptionStatus: string | null;
-  collectedMinor: string | null;
-  runs: number;
-  recordsWritten: number;
-  durationMs: number;
-  missingDurationRuns: number;
-  failedRuns: number;
-  partialRuns: number;
-  successRate: number | null;
-}
-
-export interface OrganisationAnalyticsResponse {
-  generatedAt: string;
-  currency: string;
-  quality: AnalyticsQuality;
-  data: OrganisationAnalyticsRow[];
-  total: number;
-  page: number;
-  limit: number;
-}
-
-export interface OrganisationAnalyticsFilters extends AnalyticsFilters {
-  page: number;
-  limit: number;
-  sort: 'duration' | 'runs' | 'records' | 'collections' | 'name';
-  direction: 'asc' | 'desc';
-  search?: string;
-}

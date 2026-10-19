@@ -13,6 +13,7 @@ import {
   Square,
   TriangleAlert,
   XCircle,
+  X,
   type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -59,6 +60,10 @@ export interface SyncRunProgressProps {
   onViewRun?: (runId?: string | null) => void;
   stopping?: boolean;
   variant?: 'default' | 'compact';
+  /** Render directly inside an existing dialog, drawer or card surface. */
+  embedded?: boolean;
+  /** Completed standalone summaries can be dismissed for this run. */
+  dismissible?: boolean;
   defaultOpen?: boolean;
   className?: string;
 }
@@ -314,7 +319,7 @@ function SyncStats({
   return (
     <div
       className={cn(
-        'grid border-b border-border/60',
+        'border-border/60 grid border-b',
         compact
           ? 'grid-cols-2 sm:grid-cols-3'
           : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5',
@@ -331,12 +336,12 @@ function SyncStats({
               // Separator borders matching SyncJobCard pattern
               index % 2 === 1 && 'border-l sm:border-l-0',
               index >= 2 && 'border-t sm:border-t-0',
-              index > 0 && 'sm:border-l border-border/60',
+              index > 0 && 'border-border/60 sm:border-l',
             )}
           >
             <span
               className={cn(
-                'bg-card text-card-foreground flex shrink-0 items-center justify-center rounded-xl shadow-2xs border border-border/40',
+                'bg-card text-card-foreground border-border/40 flex shrink-0 items-center justify-center rounded-xl border shadow-2xs',
                 compact ? 'size-7 rounded-lg' : 'size-8.5 rounded-xl',
               )}
             >
@@ -356,10 +361,10 @@ function SyncStats({
               >
                 {values[index].toLocaleString()}
               </strong>
-              <span className="text-muted-foreground block truncate text-xs font-medium mt-0.5">
+              <span className="text-muted-foreground mt-0.5 block truncate text-xs font-medium">
                 {label}
               </span>
-              <span className="text-muted-foreground block truncate text-[11px] mt-0.5">
+              <span className="text-muted-foreground mt-0.5 block truncate text-[11px]">
                 {description}
               </span>
             </div>
@@ -494,6 +499,8 @@ export default function SyncRunProgress({
   onViewRun,
   stopping = false,
   variant = 'default',
+  embedded = false,
+  dismissible = !embedded,
   defaultOpen = false,
   className,
 }: SyncRunProgressProps) {
@@ -518,6 +525,7 @@ export default function SyncRunProgress({
   const terminal = !['running', 'waiting'].includes(current.state);
   const active = current.state === 'running';
   const waiting = current.state === 'waiting';
+  const canDismiss = dismissible && !embedded && current.state === 'completed';
 
   const percent =
     !waiting && total != null && total > 0
@@ -542,12 +550,12 @@ export default function SyncRunProgress({
 
   const [now, setNow] = useState(() => Date.now());
   const [dismissed, setDismissed] = useState(
-    () => terminal && wasDismissed(jobId, runId),
+    () => canDismiss && wasDismissed(jobId, runId),
   );
 
   useEffect(() => {
-    setDismissed(terminal && wasDismissed(jobId, runId));
-  }, [jobId, runId, terminal]);
+    setDismissed(canDismiss && wasDismissed(jobId, runId));
+  }, [jobId, runId, canDismiss]);
 
   useEffect(() => {
     if (terminal || !startedAt) return;
@@ -555,7 +563,7 @@ export default function SyncRunProgress({
     return () => window.clearInterval(timer);
   }, [startedAt, terminal]);
 
-  if (dismissed) return null;
+  if (dismissed && canDismiss) return null;
 
   const elapsed = elapsedMs(
     startedAt,
@@ -570,6 +578,7 @@ export default function SyncRunProgress({
       : null;
 
   const handleDismiss = () => {
+    if (!canDismiss) return;
     const key = dismissalKey(jobId);
     if (key && runId) {
       try {
@@ -639,17 +648,23 @@ export default function SyncRunProgress({
     return '—';
   })();
 
+  const Container = embedded ? 'div' : Card;
   return (
-    <Card
-      surface="inner"
-      size="sm"
+    <Container
+      {...(embedded ? {} : { surface: 'inner' as const, size: 'sm' as const })}
       role="region"
       aria-live={terminal ? 'off' : 'polite'}
       aria-label={current.title}
       data-variant={variant}
+      data-embedded={embedded || undefined}
       className={cn(
-        'border-border/70 gap-0 overflow-hidden py-0 shadow-none transition-colors',
-        isCompact ? 'rounded-2xl' : 'rounded-3xl',
+        'gap-0 py-0 shadow-none transition-colors',
+        embedded
+          ? 'min-w-0 bg-transparent'
+          : [
+              'border-border/70 overflow-hidden',
+              isCompact ? 'rounded-2xl' : 'rounded-3xl',
+            ],
         className,
       )}
     >
@@ -662,29 +677,30 @@ export default function SyncRunProgress({
           className={cn(
             'group/header bg-card hover:bg-muted/20 flex cursor-pointer flex-col gap-3 transition-colors',
             isCompact
-              ? 'p-3 gap-2.5'
+              ? 'gap-2.5 p-3'
               : 'p-3.5 px-4 py-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4',
+            embedded && 'bg-transparent p-0 hover:bg-transparent',
           )}
         >
           {isCompact ? (
             /* ============================================================ */
             /* COMPACT / MODAL LAYOUT: Clean stacked rows without squishing */
             /* ============================================================ */
-            <div className="flex flex-col gap-2.5 w-full min-w-0">
+            <div className="flex w-full min-w-0 flex-col gap-2.5">
               {/* Row 1: Status Icon + Title + Direction & Stop/Dismiss/Chevron on right */}
-              <div className="flex items-center justify-between gap-2 min-w-0 w-full">
-                <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex w-full min-w-0 items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2.5">
                   <SyncStatusIcon state={current.state} compact={true} />
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <h2 className="text-foreground leading-tight font-semibold tracking-tight text-xs sm:text-sm truncate">
+                      <h2 className="text-foreground truncate text-xs leading-tight font-semibold tracking-tight sm:text-sm">
                         {current.title}
                       </h2>
                       <StatusBadge status={badgeStatus} size="sm" />
                     </div>
                     {direction && (
                       <p
-                        className="text-muted-foreground mt-0.5 truncate font-normal text-[11px]"
+                        className="text-muted-foreground mt-0.5 truncate text-[11px] font-normal"
                         title={direction}
                       >
                         {direction}
@@ -694,7 +710,7 @@ export default function SyncRunProgress({
                 </div>
 
                 {/* Right side actions in compact header */}
-                <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex shrink-0 items-center gap-1.5">
                   {current.state === 'running' && onStop ? (
                     <Button
                       variant="outline"
@@ -704,7 +720,7 @@ export default function SyncRunProgress({
                         onStop();
                       }}
                       disabled={stopping}
-                      className="border-destructive/30 text-destructive hover:bg-destructive/10 font-semibold px-2"
+                      className="border-destructive/30 text-destructive hover:bg-destructive/10 px-2 font-semibold"
                     >
                       {stopping ? (
                         <Spinner className="size-2.5" />
@@ -724,22 +740,25 @@ export default function SyncRunProgress({
                             if (onViewRun) onViewRun(runId);
                             else onViewHistory?.();
                           }}
-                          className="text-primary border-primary/30 hover:bg-primary/10 font-semibold px-2"
+                          className="text-primary border-primary/30 hover:bg-primary/10 px-2 font-semibold"
                         >
                           View Run
                         </Button>
                       )}
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDismiss();
-                        }}
-                        className="text-muted-foreground hover:text-foreground hover:bg-muted/60 font-medium px-2"
-                      >
-                        Close
-                      </Button>
+                      {canDismiss && (
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
+                          aria-label="Dismiss sync summary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDismiss();
+                          }}
+                          className="text-muted-foreground hover:text-foreground hover:bg-muted/60 px-2 font-medium"
+                        >
+                          <X className="size-3.5" aria-hidden="true" />
+                        </Button>
+                      )}
                     </>
                   ) : null}
 
@@ -764,9 +783,9 @@ export default function SyncRunProgress({
               </div>
 
               {/* Row 2: Progress Bar & Status Text */}
-              <div className="space-y-1 w-full min-w-0">
+              <div className="w-full min-w-0 space-y-1">
                 <div className="flex items-center justify-between gap-2 text-[11px]">
-                  <div className="text-foreground font-medium truncate">
+                  <div className="text-foreground truncate font-medium">
                     {batchProgressText && <span>{batchProgressText}</span>}
                     {percent != null ? (
                       <>
@@ -807,7 +826,7 @@ export default function SyncRunProgress({
                   <div
                     role="progressbar"
                     aria-label="Overall progress unknown"
-                    className="bg-muted w-full overflow-hidden rounded-full h-1.5"
+                    className="bg-muted h-1.5 w-full overflow-hidden rounded-full"
                   >
                     {(active || waiting) && (
                       <div className="bg-primary/60 h-full w-1/3 animate-pulse rounded-full" />
@@ -820,7 +839,7 @@ export default function SyncRunProgress({
                     aria-valuenow={percent}
                     aria-valuemin={0}
                     aria-valuemax={100}
-                    className="bg-muted w-full overflow-hidden rounded-full h-1.5"
+                    className="bg-muted h-1.5 w-full overflow-hidden rounded-full"
                   >
                     <div
                       className={cn(
@@ -845,7 +864,7 @@ export default function SyncRunProgress({
                   <span className="text-muted-foreground text-[10px]">
                     Completion
                   </span>
-                  <strong className="text-foreground font-semibold tabular-nums text-[11px]">
+                  <strong className="text-foreground text-[11px] font-semibold tabular-nums">
                     {percent != null ? `${percent}%` : '—'}
                   </strong>
                 </div>
@@ -853,7 +872,7 @@ export default function SyncRunProgress({
                   <span className="text-muted-foreground text-[10px]">
                     Batches
                   </span>
-                  <strong className="text-foreground font-semibold tabular-nums text-[11px]">
+                  <strong className="text-foreground text-[11px] font-semibold tabular-nums">
                     {batchesFraction}
                   </strong>
                 </div>
@@ -865,18 +884,18 @@ export default function SyncRunProgress({
             /* ============================================================ */
             <>
               {/* 1. Left: Status Icon, Title, Direction, and Badges */}
-              <div className="flex min-w-0 items-center gap-3 shrink-0 lg:max-w-[280px] xl:max-w-[320px]">
+              <div className="flex min-w-0 shrink-0 items-center gap-3 lg:max-w-[280px] xl:max-w-[320px]">
                 <SyncStatusIcon state={current.state} compact={false} />
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <h2 className="text-foreground leading-tight font-semibold tracking-tight text-sm truncate">
+                    <h2 className="text-foreground truncate text-sm leading-tight font-semibold tracking-tight">
                       {current.title}
                     </h2>
                     <StatusBadge status={badgeStatus} size="sm" />
                   </div>
                   {direction && (
                     <p
-                      className="text-muted-foreground mt-0.5 truncate font-normal text-xs"
+                      className="text-muted-foreground mt-0.5 truncate text-xs font-normal"
                       title={direction}
                     >
                       {direction}
@@ -929,7 +948,7 @@ export default function SyncRunProgress({
                   <div
                     role="progressbar"
                     aria-label="Overall progress unknown"
-                    className="bg-muted w-full overflow-hidden rounded-full h-1.5 sm:h-2"
+                    className="bg-muted h-1.5 w-full overflow-hidden rounded-full sm:h-2"
                   >
                     {(active || waiting) && (
                       <div className="bg-primary/60 h-full w-1/3 animate-pulse rounded-full" />
@@ -942,7 +961,7 @@ export default function SyncRunProgress({
                     aria-valuenow={percent}
                     aria-valuemin={0}
                     aria-valuemax={100}
-                    className="bg-muted w-full overflow-hidden rounded-full h-1.5 sm:h-2"
+                    className="bg-muted h-1.5 w-full overflow-hidden rounded-full sm:h-2"
                   >
                     <div
                       className={cn(
@@ -962,7 +981,7 @@ export default function SyncRunProgress({
               </div>
 
               {/* 3. Right: Metrics & Actions */}
-              <div className="flex shrink-0 items-center justify-between sm:justify-end gap-2 sm:gap-2.5">
+              <div className="flex shrink-0 items-center justify-between gap-2 sm:justify-end sm:gap-2.5">
                 {/* Metric Chips */}
                 <div className="flex items-center gap-1.5 sm:gap-2">
                   {/* Chip 1: Completion */}
@@ -970,7 +989,7 @@ export default function SyncRunProgress({
                     <span className="text-muted-foreground text-[11px]">
                       Completion
                     </span>
-                    <strong className="text-foreground block truncate leading-tight font-semibold tabular-nums text-xs">
+                    <strong className="text-foreground block truncate text-xs leading-tight font-semibold tabular-nums">
                       {percent != null ? `${percent}%` : '—'}
                     </strong>
                   </div>
@@ -980,7 +999,7 @@ export default function SyncRunProgress({
                     <span className="text-muted-foreground text-[11px]">
                       Batches
                     </span>
-                    <strong className="text-foreground block truncate leading-tight font-semibold tabular-nums text-xs">
+                    <strong className="text-foreground block truncate text-xs leading-tight font-semibold tabular-nums">
                       {batchesFraction}
                     </strong>
                   </div>
@@ -1021,17 +1040,20 @@ export default function SyncRunProgress({
                         View Run
                       </Button>
                     )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDismiss();
-                      }}
-                      className="text-muted-foreground hover:text-foreground hover:bg-muted/60 font-medium"
-                    >
-                      Close
-                    </Button>
+                    {canDismiss && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label="Dismiss sync summary"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDismiss();
+                        }}
+                        className="text-muted-foreground hover:text-foreground hover:bg-muted/60 font-medium"
+                      >
+                        <X className="size-4" aria-hidden="true" />
+                      </Button>
+                    )}
                   </>
                 ) : null}
 
@@ -1062,34 +1084,36 @@ export default function SyncRunProgress({
           <div
             data-slot="sync-summary-collapsed-bar"
             className={cn(
-              'bg-muted/40 border-t border-border/60 flex items-center justify-between gap-3 text-xs transition-colors',
+              'bg-muted/40 border-border/60 flex items-center justify-between gap-3 border-t text-xs transition-colors',
               isCompact ? 'px-3 py-1.5' : 'px-4 py-2',
             )}
           >
-            <div className="flex items-center gap-2 text-muted-foreground min-w-0">
+            <div className="text-muted-foreground flex min-w-0 items-center gap-2">
               {current.state === 'failed' ? (
                 <XCircle
-                  className="size-3.5 shrink-0 text-destructive"
+                  className="text-destructive size-3.5 shrink-0"
                   aria-hidden="true"
                 />
               ) : current.state === 'stopped' ? (
                 <CircleStop
-                  className="size-3.5 shrink-0 text-warning"
+                  className="text-warning size-3.5 shrink-0"
                   aria-hidden="true"
                 />
               ) : failed > 0 ? (
                 <TriangleAlert
-                  className="size-3.5 shrink-0 text-warning"
+                  className="text-warning size-3.5 shrink-0"
                   aria-hidden="true"
                 />
               ) : (
                 <CheckCircle2
-                  className="size-3.5 shrink-0 text-success"
+                  className="text-success size-3.5 shrink-0"
                   aria-hidden="true"
                 />
               )}
               <span className="truncate">
-                {processed.toLocaleString()} records processed · {created.toLocaleString()} created, {updated.toLocaleString()} updated{failed > 0 ? `, ${failed.toLocaleString()} failed` : ''}
+                {processed.toLocaleString()} records processed ·{' '}
+                {created.toLocaleString()} created, {updated.toLocaleString()}{' '}
+                updated{failed > 0 ? `, ${failed.toLocaleString()} failed` : ''}
               </span>
             </div>
             {(onViewRun || onViewHistory) && (
@@ -1101,7 +1125,7 @@ export default function SyncRunProgress({
                   if (onViewRun) onViewRun(runId);
                   else onViewHistory?.();
                 }}
-                className="h-auto p-0 text-xs font-semibold text-primary hover:underline shrink-0 inline-flex items-center gap-1"
+                className="text-primary inline-flex h-auto shrink-0 items-center gap-1 p-0 text-xs font-semibold hover:underline"
               >
                 View Run
                 <ArrowRight className="size-3" aria-hidden="true" />
@@ -1112,7 +1136,12 @@ export default function SyncRunProgress({
 
         {/* Collapsible Content Area */}
         <CollapsibleContent>
-          <div className="bg-muted/40 border-t border-border/70">
+          <div
+            className={cn(
+              'border-border/70 border-t',
+              embedded ? 'mt-3 bg-transparent' : 'bg-muted/40',
+            )}
+          >
             {/* 1. Separator-based Stat Metrics Grid */}
             <SyncStats
               values={[processed, created, updated, skipped, failed]}
@@ -1122,8 +1151,9 @@ export default function SyncRunProgress({
             {/* 2. Metadata and Action Guidance Footer */}
             <footer
               className={cn(
-                'space-y-2.5 bg-muted/60',
+                'bg-muted/60 space-y-2.5',
                 isCompact ? 'p-2.5 sm:p-3' : 'px-4 py-3 sm:px-5',
+                embedded && 'bg-transparent px-0 sm:px-0',
               )}
             >
               {/* Metadata items row */}
@@ -1141,26 +1171,26 @@ export default function SyncRunProgress({
 
               {/* Edge Case Guidance Banner & Sync History Navigation */}
               {terminal && (onViewRun || onViewHistory) && (
-                <div className="border-t border-border/50 pt-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-                  <div className="flex items-center gap-2 text-muted-foreground min-w-0">
+                <div className="border-border/50 flex flex-col justify-between gap-2 border-t pt-2.5 text-xs sm:flex-row sm:items-center">
+                  <div className="text-muted-foreground flex min-w-0 items-center gap-2">
                     {current.state === 'failed' ? (
                       <TriangleAlert
-                        className="size-3.5 shrink-0 text-destructive"
+                        className="text-destructive size-3.5 shrink-0"
                         aria-hidden="true"
                       />
                     ) : current.state === 'stopped' ? (
                       <CircleStop
-                        className="size-3.5 shrink-0 text-warning"
+                        className="text-warning size-3.5 shrink-0"
                         aria-hidden="true"
                       />
                     ) : failed > 0 ? (
                       <TriangleAlert
-                        className="size-3.5 shrink-0 text-warning"
+                        className="text-warning size-3.5 shrink-0"
                         aria-hidden="true"
                       />
                     ) : (
                       <CheckCircle2
-                        className="size-3.5 shrink-0 text-success"
+                        className="text-success size-3.5 shrink-0"
                         aria-hidden="true"
                       />
                     )}
@@ -1183,7 +1213,7 @@ export default function SyncRunProgress({
                       if (onViewRun) onViewRun(runId);
                       else onViewHistory?.();
                     }}
-                    className="h-auto p-0 text-xs font-medium text-primary hover:underline shrink-0 self-start sm:self-auto inline-flex items-center gap-1"
+                    className="text-primary inline-flex h-auto shrink-0 items-center gap-1 self-start p-0 text-xs font-medium hover:underline sm:self-auto"
                   >
                     View in Sync History
                     <ArrowRight className="size-3" aria-hidden="true" />
@@ -1194,6 +1224,6 @@ export default function SyncRunProgress({
           </div>
         </CollapsibleContent>
       </Collapsible>
-    </Card>
+    </Container>
   );
 }

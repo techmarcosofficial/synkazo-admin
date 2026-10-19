@@ -1,5 +1,4 @@
 import { Activity, Layers, ShieldCheck } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import {
   Area,
   AreaChart,
@@ -9,7 +8,6 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { Button } from '@/components/ui/button';
 import {
   ChartContainer,
   ChartTooltip,
@@ -38,12 +36,10 @@ export function OverviewProcessing({
   processing,
   loading,
   error,
-  analyticsLink,
 }: {
   processing?: Processing | null;
   loading: boolean;
   error?: string;
-  analyticsLink: string;
 }) {
   return (
     <>
@@ -53,11 +49,6 @@ export function OverviewProcessing({
         description="Records created and updated in the selected period."
         loading={loading}
         error={error}
-        action={
-          <Button variant="ghost" size="sm" asChild>
-            <Link to={analyticsLink}>Details</Link>
-          </Button>
-        }
       >
         <p className="text-2xl leading-7 font-semibold tracking-tight tabular-nums">
           {processing ? fullNumber(processing.totals.recordsWritten) : '—'}
@@ -123,11 +114,6 @@ export function OverviewProcessing({
           description="Successful, partial and failed sync runs."
           loading={loading}
           error={error}
-          action={
-            <Button variant="ghost" size="sm" asChild>
-              <Link to={analyticsLink}>Details</Link>
-            </Button>
-          }
         >
           <p className="text-2xl leading-7 font-semibold tracking-tight tabular-nums">
             {percentage(processing?.totals.successRate)}
