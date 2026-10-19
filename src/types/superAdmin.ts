@@ -102,6 +102,14 @@ export interface SuperAdminInvitationListItem {
   revokedAt: string | null;
 }
 
+export interface SuperAdminCreateProjectDto {
+  name: string;
+  description?: string;
+  sourcePlatformId: string;
+  destPlatformId: string;
+  syncMode: 'one_way' | 'two_way';
+}
+
 export interface SuperAdminProjectListItem {
   id: string;
   organisationId: string;

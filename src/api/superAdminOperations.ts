@@ -10,6 +10,7 @@ import type {
 
 import type {
   SuperAdminPage,
+  SuperAdminCreateProjectDto,
   SuperAdminJobDetail,
   SuperAdminJobListItem,
   SuperAdminCreateJobDto,
@@ -63,6 +64,17 @@ export interface ListProjectsParams {
 // user.organisationId. Matches synkazo-api's SuperAdminProjectsController
 // on the /super-admin/organisations/:organisationId/projects route tree.
 export const superAdminOperationsApi = {
+  createProject: (
+    organisationId: string,
+    dto: SuperAdminCreateProjectDto,
+  ): Promise<{ id: string }> =>
+    apiClient
+      .post<{ data: { id: string } }>(
+        `/super-admin/organisations/${organisationId}/projects`,
+        dto,
+      )
+      .then(d),
+
   listProjects: (
     organisationId: string,
     params: ListProjectsParams = {},

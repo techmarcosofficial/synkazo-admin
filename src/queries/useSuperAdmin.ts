@@ -41,6 +41,7 @@ import type {
   RetryInvoiceDto,
   SuperAdminConnectionEnvironment,
   SuperAdminCreateJobDto,
+  SuperAdminCreateProjectDto,
   SuperAdminFieldMappingInput,
   SuperAdminCreateAssociationRuleDto,
   SuperAdminDeleteAssociationRuleDto,
@@ -423,6 +424,17 @@ export function useResendSuperAdminInvitationMutation(organisationId: string) {
 }
 
 // ── Projects + jobs + manual run ──────────────────────────────────────
+
+export function useCreateSuperAdminProjectMutation(organisationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: SuperAdminCreateProjectDto) =>
+      superAdminOperationsApi.createProject(organisationId, dto),
+    onSuccess: () => {
+      invalidateOrgAfterLifecycle(queryClient, organisationId);
+    },
+  });
+}
 
 export function useSuperAdminProjectsQuery(
   organisationId: string,

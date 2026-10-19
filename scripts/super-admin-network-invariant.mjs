@@ -14,6 +14,7 @@ const userDataDir = await mkdtemp(join(tmpdir(), 'synkazo-platform-network-'));
 const requests = [];
 const monitorQueries = [];
 const organisationQueries = [];
+const projectCreates = [];
 let historicalMeSeen = false;
 let monitorNoActive = false;
 let browser;
@@ -670,6 +671,46 @@ function connectCdp(url) {
                                               : { data: {} };
       if (url.pathname === '/api/super-admin/platform/analytics')
         data = { data: analyticsFixture(url) };
+      if (url.pathname === '/api/platforms')
+        data = {
+          data: [
+            {
+              platformId: 'servicetitan',
+              label: 'ServiceTitan',
+              supportsOAuth: false,
+              supportsEnvironments: true,
+            },
+            {
+              platformId: 'dataforma',
+              label: 'Dataforma',
+              supportsOAuth: false,
+              supportsEnvironments: false,
+            },
+            {
+              platformId: 'texada',
+              label: 'Texada',
+              supportsOAuth: false,
+              supportsEnvironments: false,
+            },
+            {
+              platformId: 'hubspot',
+              label: 'HubSpot',
+              supportsOAuth: true,
+              supportsEnvironments: true,
+            },
+          ],
+        };
+      if (
+        request.method === 'POST' &&
+        url.pathname === '/api/super-admin/organisations/org-1/projects'
+      ) {
+        projectCreates.push(JSON.parse(request.postData));
+        data = {
+          success: true,
+          message: 'Project created',
+          data: { id: 'project-1' },
+        };
+      }
       const monitor = url.pathname.startsWith(
         '/api/super-admin/platform/sync-operations',
       );
@@ -893,6 +934,114 @@ try {
         throw new Error(
           'Run history still renders the overview progress summary',
         );
+    }
+    if (route === '/super-admin/organisations/org-1/projects') {
+      for (const width of [375, 768, 1440]) {
+        await cdp.send('Emulation.setDeviceMetricsOverride', {
+          width,
+          height: 900,
+          deviceScaleFactor: 1,
+          mobile: width < 768,
+        });
+        await wait(150);
+        const header = (
+          await cdp.send('Runtime.evaluate', {
+            expression: `(() => { const h = document.querySelector('main input[aria-label="Search projects"]')?.closest('header'); const link = document.querySelector('main a[href="/super-admin/organisations/org-1/projects/project-1"]'); return { separate: !!h && !!link && !h.contains(link), create: !!h && [...h.querySelectorAll('button')].some(b => b.textContent.includes('Create Project')), overflow: document.documentElement.scrollWidth > innerWidth + 1 }; })()`,
+            returnByValue: true,
+          })
+        ).result.value;
+        if (!header.separate || !header.create || header.overflow)
+          throw new Error(
+            `Project directory layout failed at ${width}px: ${JSON.stringify(header)}`,
+          );
+        if (process.env.SUPER_ADMIN_SCREENSHOT_DIR) {
+          const shot = await cdp.send('Page.captureScreenshot', {
+            format: 'png',
+          });
+          await writeFile(
+            join(
+              process.env.SUPER_ADMIN_SCREENSHOT_DIR,
+              `project-directory-${width}.png`,
+            ),
+            Buffer.from(shot.data, 'base64'),
+          );
+        }
+        await cdp.send('Runtime.evaluate', {
+          expression: `[...document.querySelectorAll('main button')].find(b => b.textContent.includes('Create Project')).click()`,
+        });
+        for (let attempt = 0; attempt < 40; attempt++) {
+          const ready = (
+            await cdp.send('Runtime.evaluate', {
+              expression: `!!document.querySelector('[role="dialog"] #source-platform-servicetitan')`,
+              returnByValue: true,
+            })
+          ).result.value;
+          if (ready) break;
+          await wait(100);
+        }
+        const dialog = (
+          await cdp.send('Runtime.evaluate', {
+            expression: `(() => { const d = document.querySelector('[role="dialog"]'); const b = d?.getBoundingClientRect(); return { organisation: d?.textContent.includes('Test Organisation'), fits: b && b.left >= 0 && b.right <= innerWidth + 1 && b.bottom <= innerHeight + 1, overflow: d && d.scrollWidth > d.clientWidth + 1, bodyOverflow: d?.querySelector('form')?.scrollWidth > d?.querySelector('form')?.clientWidth + 1 }; })()`,
+            returnByValue: true,
+          })
+        ).result.value;
+        if (
+          !dialog.organisation ||
+          !dialog.fits ||
+          dialog.overflow ||
+          dialog.bodyOverflow
+        )
+          throw new Error(
+            `Project create dialog layout failed at ${width}px: ${JSON.stringify(dialog)}`,
+          );
+        if (process.env.SUPER_ADMIN_SCREENSHOT_DIR) {
+          const shot = await cdp.send('Page.captureScreenshot', {
+            format: 'png',
+          });
+          await writeFile(
+            join(
+              process.env.SUPER_ADMIN_SCREENSHOT_DIR,
+              `project-create-${width}.png`,
+            ),
+            Buffer.from(shot.data, 'base64'),
+          );
+        }
+        if (width < 1440) {
+          await cdp.send('Runtime.evaluate', {
+            expression: `[...document.querySelectorAll('[role="dialog"] button')].find(b => b.textContent === 'Cancel').click()`,
+          });
+          await wait(150);
+        }
+      }
+      await cdp.send('Runtime.evaluate', {
+        expression: `(() => { const input = document.getElementById('sa-project-name'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, 'Browser-created project'); input.dispatchEvent(new Event('input', { bubbles: true })); document.getElementById('source-platform-servicetitan').click(); document.getElementById('sa-project-two-way').click(); })()`,
+      });
+      await wait(100);
+      await cdp.send('Runtime.evaluate', {
+        expression: `[...document.querySelectorAll('[role="dialog"] button')].find(b => b.textContent === 'Create Project').click()`,
+      });
+      let created = false;
+      for (let attempt = 0; attempt < 50; attempt++) {
+        created = (
+          await cdp.send('Runtime.evaluate', {
+            expression: `location.pathname === '/super-admin/organisations/org-1/projects/project-1' && !document.querySelector('[role="dialog"]')`,
+            returnByValue: true,
+          })
+        ).result.value;
+        if (created) break;
+        await wait(100);
+      }
+      if (
+        !created ||
+        projectCreates.length !== 1 ||
+        projectCreates[0].name !== 'Browser-created project' ||
+        projectCreates[0].syncMode !== 'two_way' ||
+        projectCreates[0].sourcePlatformId !== 'servicetitan' ||
+        projectCreates[0].destPlatformId !== 'hubspot' ||
+        'organisationId' in projectCreates[0] ||
+        'bypass' in projectCreates[0]
+      )
+        throw new Error('Scoped project creation or navigation failed');
     }
     if (route === '/super-admin/sync-operations') {
       const baselineStreams = requests.filter((request) =>
@@ -1449,15 +1598,7 @@ try {
       await cdp.send('Emulation.clearDeviceMetricsOverride');
     }
     if (route === '/super-admin/organisations/org-1/projects') {
-      const hasDetailLink = (
-        await cdp.send('Runtime.evaluate', {
-          expression:
-            'Boolean(document.querySelector("main a[href=\\"/super-admin/organisations/org-1/projects/project-1\\"]"))',
-          returnByValue: true,
-        })
-      ).result.value;
-      if (!hasDetailLink)
-        throw new Error('Project directory has no detail entry link');
+      // Detail links are checked at every viewport before the create flow navigates.
       if (
         !state.mainText.includes('Association rules') ||
         !state.mainText.includes('Migration')
@@ -1646,6 +1787,8 @@ try {
     );
   const unclassified = requests.filter(
     (request) =>
+      request !== 'GET /api/platforms' &&
+      request !== 'OPTIONS /api/platforms' &&
       !/^\w+ \/api\/(?:auth\/|users(?:\/me)?$|super-admin\/)/.test(request),
   );
   if (unclassified.length)
