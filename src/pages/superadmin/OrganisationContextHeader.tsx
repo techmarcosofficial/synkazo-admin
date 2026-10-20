@@ -144,7 +144,9 @@ export default function OrganisationContextHeader() {
   const projectTab =
     searchParams.get('tab') === 'settings' || projectSection.length > 0
       ? 'settings'
-      : 'sync-rules';
+      : searchParams.get('tab') === 'connections'
+        ? 'connections'
+        : 'sync-rules';
   const pipelineRequired =
     project?.destPlatformId === 'hubspot' &&
     Boolean(job && KNOWN_PIPELINE_OBJECTS.has(job.destObject.toLowerCase()));
@@ -175,6 +177,11 @@ export default function OrganisationContextHeader() {
         }))
       : level === 'project'
         ? [
+            {
+              label: 'Connections',
+              to: `${projectPath}?tab=connections`,
+              active: projectTab === 'connections',
+            },
             {
               label: 'Sync Flows',
               to: `${projectPath}?tab=sync-rules`,

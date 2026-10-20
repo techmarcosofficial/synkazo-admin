@@ -129,6 +129,7 @@ export interface SuperAdminProjectListItem {
 export interface SuperAdminProjectDetail extends SuperAdminProjectListItem {
   schedulerMode: string;
   activeEnvironment: string;
+  environmentActivatedAt: string | null;
   totalRecordsSynced: number;
   totalErrorCount: number;
 }

@@ -15,6 +15,9 @@ const requests = [];
 const monitorQueries = [];
 const organisationQueries = [];
 const projectCreates = [];
+let projectConnectionView = false;
+let projectConnectionRows = [];
+const connectionActions = [];
 let historicalMeSeen = false;
 let monitorNoActive = false;
 let browser;
@@ -329,7 +332,7 @@ function connectCdp(url) {
         },
         {
           name: 'Access-Control-Allow-Methods',
-          value: 'GET,POST,PATCH,OPTIONS',
+          value: 'GET,POST,PATCH,DELETE,OPTIONS',
         },
         { name: 'Content-Type', value: 'application/json' },
       ];
@@ -671,6 +674,98 @@ function connectCdp(url) {
                                               : { data: {} };
       if (url.pathname === '/api/super-admin/platform/analytics')
         data = { data: analyticsFixture(url) };
+      const projectConnectionsPath =
+        '/api/super-admin/organisations/org-1/projects/project-1/connections';
+      if (
+        projectConnectionView &&
+        url.pathname ===
+          '/api/super-admin/organisations/org-1/projects/project-1'
+      ) {
+        data.data = {
+          ...data.data,
+          sourcePlatformId: 'servicetitan',
+          destPlatformId: 'hubspot',
+          activeEnvironment: 'sandbox',
+          environmentActivatedAt: '2026-10-01T00:00:00.000Z',
+        };
+      }
+      if (
+        projectConnectionView &&
+        url.pathname.startsWith(projectConnectionsPath)
+      ) {
+        connectionActions.push({
+          method: request.method,
+          path: url.pathname,
+          body: request.postData ? JSON.parse(request.postData) : null,
+        });
+        const source = {
+          id: 'source-connection',
+          platformId: 'servicetitan',
+          connectionType: 'source',
+          environment: 'sandbox',
+          status: 'disconnected',
+          accountName: 'Customer service account',
+          connectedAt: null,
+          lastCheckedAt: null,
+        };
+        const hubspot = {
+          ...source,
+          id: 'hubspot-connection',
+          platformId: 'hubspot',
+          connectionType: 'destination',
+          status: 'connected',
+          accountName: 'Customer HubSpot account',
+        };
+        if (
+          url.pathname === projectConnectionsPath &&
+          request.method === 'POST'
+        ) {
+          projectConnectionRows = [source];
+          data = { data: source };
+        } else if (
+          request.method === 'POST' &&
+          (url.pathname.endsWith('/hubspot/oauth') ||
+            url.pathname.endsWith('/hubspot/reconnect'))
+        ) {
+          projectConnectionRows = [
+            ...projectConnectionRows.filter((row) => row.id !== hubspot.id),
+            hubspot,
+          ];
+          const result = url.pathname.endsWith('/hubspot/reconnect')
+            ? 'rescoped=hubspot-connection&added=0&removed=0'
+            : 'connected=hubspot';
+          data = {
+            data: {
+              redirectUrl: `http://127.0.0.1:${appPort}/super-admin/organisations/org-1/projects/project-1?tab=connections&env=sandbox&${result}`,
+            },
+          };
+        } else if (
+          request.method === 'POST' &&
+          url.pathname.endsWith('/test')
+        ) {
+          const id = url.pathname.split('/').at(-2);
+          projectConnectionRows = projectConnectionRows.map((row) =>
+            row.id === id ? { ...row, status: 'connected' } : row,
+          );
+          data = { data: { success: true, message: 'Connection verified' } };
+        } else if (url.pathname.endsWith('/permissions')) {
+          data = {
+            data: {
+              platformId: 'hubspot',
+              kind: 'hubspot_oauth',
+              scopes: ['crm.objects.contacts.read'],
+              status: 'connected',
+              accountName: hubspot.accountName,
+            },
+          };
+        } else if (request.method === 'DELETE') {
+          projectConnectionRows = projectConnectionRows.filter(
+            (row) => row.id !== url.pathname.split('/').at(-1),
+          );
+          data = { data: { removed: true } };
+        } else if (url.pathname === projectConnectionsPath)
+          data = { data: projectConnectionRows };
+      }
       if (url.pathname === '/api/platforms')
         data = {
           data: [
@@ -815,6 +910,7 @@ try {
     '/super-admin/organisations/org-1/overview',
     '/super-admin/organisations/org-1/projects',
     '/super-admin/organisations/org-1/projects/project-1',
+    '/super-admin/organisations/org-1/projects/project-1?tab=connections',
     '/super-admin/organisations/org-1/projects/project-1?tab=settings',
     '/super-admin/organisations/org-1/projects/project-1/jobs/job-1',
     '/super-admin/organisations/org-1/projects/project-1/jobs/job-1?tab=field-mapping',
@@ -826,6 +922,7 @@ try {
     '/super-admin/super-admins',
     ...tenantRoutes,
   ]) {
+    projectConnectionView = route.endsWith('project-1?tab=connections');
     const requestStart = requests.length;
     await cdp.send('Page.navigate', {
       url: `http://127.0.0.1:${appPort}${route}`,
@@ -841,6 +938,10 @@ try {
       ['/super-admin/organisations?status=suspended', 'Test Organisation'],
       ['/super-admin/organisations/org-1/overview', 'Scoped project'],
       ['/super-admin/organisations/org-1/projects/project-1', 'Scoped job'],
+      [
+        '/super-admin/organisations/org-1/projects/project-1?tab=connections',
+        'Connect source',
+      ],
       [
         '/super-admin/organisations/org-1/projects/project-1?tab=settings',
         'Support operations',
@@ -1042,6 +1143,148 @@ try {
         'bypass' in projectCreates[0]
       )
         throw new Error('Scoped project creation or navigation failed');
+    }
+    if (route.endsWith('project-1?tab=connections')) {
+      if (
+        requests
+          .slice(requestStart)
+          .some((request) => /^(POST|PATCH|PUT|DELETE) \/api\//.test(request))
+      )
+        throw new Error('Connection page mutated before operator interaction');
+      const waitForExpression = async (expression) => {
+        for (let i = 0; i < 60; i++) {
+          const result = await cdp.send('Runtime.evaluate', {
+            expression,
+            returnByValue: true,
+          });
+          if (result.result?.value) return;
+          await wait(100);
+        }
+        throw new Error(`Connection flow timed out: ${expression}`);
+      };
+      await waitForExpression(
+        `!![...document.querySelectorAll('main button')].find(b => b.textContent.includes('Connect ServiceTitan'))`,
+      );
+      await cdp.send('Runtime.evaluate', {
+        expression: `[...document.querySelectorAll('main button')].find(b => b.textContent.includes('Connect ServiceTitan')).click()`,
+      });
+      await waitForExpression(
+        `!!document.querySelector('[role="dialog"] input[placeholder="Enter your client ID"]')`,
+      );
+      await cdp.send('Runtime.evaluate', {
+        expression: `(() => { const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; for (const [placeholder, value] of [['Enter your client ID', 'fixture-client'], ['Enter your client secret', 'fixture-secret'], ['Enter your application key', 'fixture-key'], ['e.g. 1234567', '1234']]) { const el = document.querySelector('input[placeholder="' + placeholder + '"]'); set.call(el, value); el.dispatchEvent(new Event('input', { bubbles: true })); } })()`,
+      });
+      await cdp.send('Runtime.evaluate', {
+        expression: `[...document.querySelectorAll('[role="dialog"] button')].find(b => b.textContent === 'Submit').click()`,
+      });
+      await waitForExpression(
+        `!document.querySelector('[role="dialog"]') && !![...document.querySelectorAll('main button')].find(b => b.textContent.includes('Connect HubSpot') && !b.disabled)`,
+      );
+      const sourceAction = connectionActions.find(
+        (action) =>
+          action.method === 'POST' && action.path.endsWith('/connections'),
+      );
+      if (
+        !sourceAction ||
+        sourceAction.body.platformId !== 'servicetitan' ||
+        'status' in sourceAction.body ||
+        'organisationId' in sourceAction.body
+      )
+        throw new Error(
+          'Source connection did not use the scoped credential contract',
+        );
+      await cdp.send('Runtime.evaluate', {
+        expression: `[...document.querySelectorAll('main button')].find(b => b.textContent.includes('Connect HubSpot')).click()`,
+      });
+      await waitForExpression(
+        `location.search === '?tab=connections' && !![...document.querySelectorAll('main button')].find(b => b.textContent === 'Reconnect') && !document.querySelector('[role="dialog"]')`,
+      );
+      if (
+        !connectionActions.some(
+          (action) =>
+            action.path.endsWith('/hubspot/oauth') &&
+            action.method === 'POST' &&
+            action.body.environment === 'sandbox',
+        )
+      )
+        throw new Error('HubSpot did not start scoped OAuth');
+      for (const width of [375, 768, 1440]) {
+        await cdp.send('Emulation.setDeviceMetricsOverride', {
+          width,
+          height: 900,
+          deviceScaleFactor: 1,
+          mobile: width < 768,
+        });
+        await wait(150);
+        const fits = (
+          await cdp.send('Runtime.evaluate', {
+            expression: `(() => { const env = document.querySelector('[data-slot="card-header"] [data-slot="dropdown-menu-trigger"]'); const r = env?.getBoundingClientRect(); return document.documentElement.scrollWidth <= innerWidth + 1 && !!document.querySelector('a[href$="?tab=connections"][aria-current="page"]') && r && r.left >= 0 && r.right <= innerWidth; })()`,
+            returnByValue: true,
+          })
+        ).result.value;
+        if (!fits)
+          throw new Error(
+            `Project Connections overflow or inactive navigation at ${width}px`,
+          );
+        if (process.env.SUPER_ADMIN_SCREENSHOT_DIR) {
+          const shot = await cdp.send('Page.captureScreenshot', {
+            format: 'png',
+            captureBeyondViewport: true,
+          });
+          await writeFile(
+            join(
+              process.env.SUPER_ADMIN_SCREENSHOT_DIR,
+              `project-connections-${width}.png`,
+            ),
+            Buffer.from(shot.data, 'base64'),
+          );
+        }
+      }
+      await cdp.send('Runtime.evaluate', {
+        expression: `[...document.querySelectorAll('main button')].find(b => b.textContent === 'Reconnect').click()`,
+      });
+      await waitForExpression(
+        `location.search === '?tab=connections' && !![...document.querySelectorAll('main button')].find(b => b.textContent === 'Reconnect')`,
+      );
+      if (
+        !connectionActions.some((action) =>
+          action.path.endsWith('/hubspot-connection/hubspot/reconnect'),
+        )
+      )
+        throw new Error('HubSpot reconnect used an incorrect endpoint');
+      await cdp.send('Runtime.evaluate', {
+        expression: `document.querySelector('button[aria-label="Retest HubSpot"]').click()`,
+      });
+      await waitForExpression(
+        `!!document.querySelector('button[aria-label="Retest HubSpot"]:not(:disabled)')`,
+      );
+      await cdp.send('Runtime.evaluate', {
+        expression: `[...document.querySelectorAll('main button')].filter(b => b.textContent === 'Disconnect').at(-1).click()`,
+      });
+      await waitForExpression(
+        `!!document.getElementById('lifecycle-name-confirm')`,
+      );
+      await cdp.send('Runtime.evaluate', {
+        expression: `(() => { for (const [id, value, ctor] of [['lifecycle-name-confirm', 'Scoped project', HTMLInputElement], ['lifecycle-reason', 'Customer requested reconnection', HTMLTextAreaElement]]) { const el = document.getElementById(id); Object.getOwnPropertyDescriptor(ctor.prototype, 'value').set.call(el, value); el.dispatchEvent(new Event('input', { bubbles: true })); } })()`,
+      });
+      await cdp.send('Runtime.evaluate', {
+        expression: `[...document.querySelectorAll('[role="dialog"] button')].find(b => b.textContent === 'Disconnect').click()`,
+      });
+      await waitForExpression(
+        `!document.querySelector('[role="dialog"]') && !![...document.querySelectorAll('main button')].find(b => b.textContent.includes('Connect HubSpot'))`,
+      );
+      if (
+        !connectionActions.some(
+          (action) =>
+            action.method === 'DELETE' &&
+            action.body.confirmation === 'Scoped project' &&
+            action.body.reason === 'Customer requested reconnection',
+        )
+      )
+        throw new Error(
+          'Disconnect confirmation was not sent to the scoped API',
+        );
+      await cdp.send('Emulation.clearDeviceMetricsOverride');
     }
     if (route === '/super-admin/sync-operations') {
       const baselineStreams = requests.filter((request) =>
@@ -1496,7 +1739,8 @@ try {
       await cdp.send('Emulation.clearDeviceMetricsOverride');
     }
     if (
-      route.startsWith('/super-admin/organisations/org-1/projects/project-1')
+      route.startsWith('/super-admin/organisations/org-1/projects/project-1') &&
+      !projectConnectionView
     ) {
       const mutations = requests
         .slice(requestStart)

@@ -19,13 +19,12 @@ import { toast } from 'sonner';
 import LifecycleConfirmDialog from './lifecycle/LifecycleConfirmDialog';
 import OrganisationCreateJobDialog from './OrganisationCreateJobDialog';
 import OrganisationProjectSettings from './OrganisationProjectSettings';
+import OrganisationProjectConnections from './projects/OrganisationProjectConnections';
 
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
 import SkeletonList from '@/components/shared/skeletons/SkeletonList';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs } from '@/components/ui/tabs';
 import SyncFlowCard from '@/features/projects/components/detail/SyncFlowCard';
 import SyncFlowMetrics from '@/features/projects/components/detail/SyncFlowMetrics';
@@ -38,12 +37,9 @@ import {
   useSuperAdminProjectConnectionsQuery,
   useSuperAdminProjectQuery,
 } from '@/queries/useSuperAdmin';
-import type {
-  SuperAdminJobListItem,
-  SuperAdminProjectConnection,
-} from '@/types/superAdmin';
+import type { SuperAdminJobListItem } from '@/types/superAdmin';
 
-type ProjectTab = 'sync-rules' | 'settings';
+type ProjectTab = 'sync-rules' | 'settings' | 'connections';
 
 function errorMessage(error: unknown): string {
   const response = error as { response?: { data?: { message?: string } } };
@@ -143,45 +139,6 @@ function PlatformSyncFlow({
   );
 }
 
-function ConnectionsSummary({
-  connections,
-}: {
-  connections: SuperAdminProjectConnection[];
-}) {
-  return (
-    <Card className="gap-0 py-0">
-      <CardHeader className="px-4 py-3">
-        <CardTitle>Connection status</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2 px-4 pb-4">
-        {connections.length === 0 ? (
-          <p className="text-muted-foreground text-sm">
-            No connections are configured for this project. Connection setup may
-            need action from the customer.
-          </p>
-        ) : (
-          connections.map((connection) => (
-            <div
-              key={connection.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border px-3 py-2.5"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">
-                  {connection.accountName ?? connection.platformId}
-                </p>
-                <p className="text-muted-foreground text-xs">
-                  {connection.platformId} · {connection.environment}
-                </p>
-              </div>
-              <Badge variant="outline">{connection.status}</Badge>
-            </div>
-          ))
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
 export default function OrganisationProjectDetailPage() {
   const navigate = useNavigate();
   const { organisationId, projectId } = useParams<{
@@ -195,7 +152,11 @@ export default function OrganisationProjectDetailPage() {
   const id = projectId ?? '';
   const projectPath = `/super-admin/organisations/${orgId}/projects/${id}`;
   const tab: ProjectTab =
-    searchParams.get('tab') === 'settings' ? 'settings' : 'sync-rules';
+    searchParams.get('tab') === 'settings'
+      ? 'settings'
+      : searchParams.get('tab') === 'connections'
+        ? 'connections'
+        : 'sync-rules';
 
   const orgQuery = useSuperAdminOrganisationQuery(organisationId);
   const projectQuery = useSuperAdminProjectQuery(orgId, projectId);
@@ -296,18 +257,15 @@ export default function OrganisationProjectDetailPage() {
                 ))
               )}
             </SyncFlowPanel>
-            {connectionsQuery.isLoading ? (
-              <SkeletonList count={2} />
-            ) : connectionsQuery.isError ? (
-              <ErrorState
-                title="Could not load connection status"
-                description={errorMessage(connectionsQuery.error)}
-                onRetry={() => connectionsQuery.refetch()}
-              />
-            ) : (
-              <ConnectionsSummary connections={connectionsQuery.data ?? []} />
-            )}
           </div>
+        ) : tab === 'connections' ? (
+          <OrganisationProjectConnections
+            organisationId={orgId}
+            organisationName={organisationName}
+            project={project}
+            jobs={jobsQuery.data}
+            onContinue={() => setCreateOpen(true)}
+          />
         ) : (
           <OrganisationProjectSettings
             organisationId={orgId}

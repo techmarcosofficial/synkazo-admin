@@ -1,7 +1,8 @@
 import { Check, KeyRound, RefreshCw, ShieldCheck, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import { connectionsApi } from '@/api/connections';
+import { useConnectionAccess } from '@/components/connections/ConnectionAccessContext';
+import { redirectToOAuth } from '@/lib/oauthRedirect';
 import { PLATFORM_META } from '@/components/connections/platformMeta';
 import type { ExtConnection } from '@/components/connections/types';
 import PageContextAlert from '@/components/shared/PageContextAlert';
@@ -68,6 +69,7 @@ export default function ConnectionPermissionsDialog({
   open,
   onOpenChange,
 }: ConnectionPermissionsDialogProps) {
+  const { api: connectionsApi } = useConnectionAccess();
   const meta = PLATFORM_META[conn.platformId] ?? { label: conn.platformId };
   const { hasRole } = useSynkazoAuth();
   // Rank-based, so a role added above org_admin is included automatically.
@@ -103,6 +105,7 @@ export default function ConnectionPermissionsDialog({
   }, [open, conn.id, conn.projectId]);
 
   const handleResync = async () => {
+    if (!connectionsApi.forceResyncWebhooks) return;
     setResyncing(true);
     try {
       const subscriptions = await connectionsApi.forceResyncWebhooks(
@@ -137,7 +140,7 @@ export default function ConnectionPermissionsDialog({
       const { redirectUrl } = await connectionsApi.startHubSpotRescope(conn.id);
       // Do NOT open in a new tab — the user needs to see the consent screen
       // and return to the same tab, which our callback redirects back to.
-      window.location.href = redirectUrl;
+      redirectToOAuth(redirectUrl);
     } catch {
       showToast.error(
         "Couldn't start the reconnect flow. Please try again in a moment.",

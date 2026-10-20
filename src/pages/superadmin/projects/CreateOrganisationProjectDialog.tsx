@@ -86,7 +86,7 @@ export default function CreateOrganisationProjectDialog({
       showToast.success('Project created');
       onClose();
       navigate(
-        `/super-admin/organisations/${organisationId}/projects/${project.id}`,
+        `/super-admin/organisations/${organisationId}/projects/${project.id}?tab=connections`,
       );
     } catch (err) {
       setError(
