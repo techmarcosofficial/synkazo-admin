@@ -452,6 +452,14 @@ export default function LimitSyncModal({
 
   const isFinished =
     step === 'running' && !!runLog && runLog.status !== 'running';
+  const runSucceeded =
+    isFinished &&
+    !!runLog &&
+    ['completed', 'success'].includes(runLog.status) &&
+    (!runLog.executionStatus ||
+      ['completed', 'success'].includes(runLog.executionStatus)) &&
+    failed === 0;
+  const exitLabel = runSucceeded ? 'Done' : 'Back to overview';
 
   const footerNode = (
     <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -471,11 +479,11 @@ export default function LimitSyncModal({
           >
             Run another sync
           </Button>
-          <Button onClick={onClose}>Close</Button>
+          <Button onClick={onClose}>{exitLabel}</Button>
         </>
       ) : (
         <Button variant="outline" onClick={onClose}>
-          Close
+          {exitLabel}
         </Button>
       )}
     </div>
@@ -488,6 +496,7 @@ export default function LimitSyncModal({
   }, [
     step,
     isFinished,
+    runSucceeded,
     safeLimit,
     safeStart,
     safeBatch,
@@ -907,6 +916,8 @@ export default function LimitSyncModal({
         {step === 'running' && (
           <div className="flex flex-col gap-4">
             <SyncRunProgress
+              embedded
+              className={!embedded ? 'px-4 py-3' : undefined}
               runId={runLog?.id}
               jobId={jobId}
               status={runLog?.status ? runLog.status : 'running'}
@@ -966,7 +977,7 @@ export default function LimitSyncModal({
                   </Button>
                 )}
                 <Button onClick={onClose} className="flex-1">
-                  Close
+                  {exitLabel}
                 </Button>
               </DialogFooter>
             )}
@@ -995,7 +1006,7 @@ export default function LimitSyncModal({
             {!compact && (
               <DialogFooter>
                 <Button variant="outline" onClick={onClose} className="w-full">
-                  Close
+                  {exitLabel}
                 </Button>
               </DialogFooter>
             )}

@@ -2,10 +2,9 @@ import { useEffect, useState } from 'react';
 
 import { CRED_SCHEMAS } from './platformMeta';
 
-import { connectionsApi } from '@/api/connections';
+import { useConnectionAccess } from './ConnectionAccessContext';
 import FormDialog from '@/components/form/FormDialog';
 import { PlatformIcon } from '@/components/platform';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { DialogDescription } from '@/components/ui/dialog';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
@@ -23,12 +22,9 @@ import {
 } from '../ui/popover';
 import {
   AlertCircle,
-  AlertTriangle,
-  ArrowLeft,
   CheckCircle2,
   CircleHelp,
   ExternalLink,
-  KeyRound,
 } from 'lucide-react';
 
 interface ConnectionPayload {
@@ -49,8 +45,6 @@ interface CredentialsModalProps {
     environment?: string;
     providerMetadata?: { installSource?: 'marketplace' | 'manual' };
   };
-  syncMode?: 'one_way' | 'two_way' | null;
-  onOAuth?: () => void;
   onSaved: () => void | Promise<void>;
   onClose: () => void;
   onContinue?: () => void;
@@ -65,13 +59,11 @@ interface CredentialsModalProps {
   onTestingChange?: (testing: boolean) => void;
 }
 
-type ModalPhase = 'method' | 'form' | 'success';
+type ModalPhase = 'form' | 'success';
 
 export default function CredentialsModal({
   projectId,
   conn,
-  syncMode = null,
-  onOAuth,
   onSaved,
   onClose,
   onContinue,
@@ -82,16 +74,11 @@ export default function CredentialsModal({
   onVerificationError,
   onTestingChange,
 }: CredentialsModalProps) {
+  const { api: connectionsApi } = useConnectionAccess();
   const platformId = conn.platformId ?? 'servicetitan';
   const schema = CRED_SCHEMAS[platformId] ?? CRED_SCHEMAS.servicetitan;
   const isEdit = !!conn?.id;
-  const supportsOAuth = platformId === 'hubspot' && !!onOAuth;
-  const manualDisabled = platformId === 'hubspot' && syncMode === 'two_way';
-  const manualEnabled = !manualDisabled;
-
-  const initialPhase: ModalPhase =
-    initialError || !supportsOAuth || isEdit ? 'form' : 'method';
-  const [phase, setPhase] = useState<ModalPhase>(initialPhase);
+  const [phase, setPhase] = useState<ModalPhase>('form');
   const [verifyStep, setVerifyStep] = useState<VerifyStep>('idle');
   const [form, setForm] = useState<Record<string, string>>(() => {
     const defaults = Object.fromEntries(schema.fields.map((f) => [f.key, '']));
@@ -101,7 +88,9 @@ export default function CredentialsModal({
   const [loading, setLoading] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(isEdit);
   const [verifyError, setVerifyError] = useState<string | null>(initialError);
-  const [currentConnId, setCurrentConnId] = useState<string | undefined>(conn?.id);
+  const [currentConnId, setCurrentConnId] = useState<string | undefined>(
+    conn?.id,
+  );
 
   useEffect(() => {
     if (!isEdit) return;
@@ -323,7 +312,11 @@ export default function CredentialsModal({
   };
 
   const fieldsDisabled = loading || previewLoading;
-  const environmentLabel = conn.environment === 'sandbox' ? 'Sandbox' : 'Production';
+  const environmentLabel =
+    conn.environment === 'sandbox' ? 'Sandbox' : 'Production';
+
+  // HubSpot is connected directly from its card using OAuth, including legacy-token replacement.
+  if (platformId === 'hubspot') return null;
 
   return (
     <FormDialog
@@ -332,37 +325,21 @@ export default function CredentialsModal({
       title={
         phase === 'success'
           ? `${environmentLabel} connections ready`
-          : phase === 'method'
-            ? `Connect ${schema.title}`
-            : isEdit
-              ? `Edit ${schema.title} Connection`
-              : `Connect ${schema.title}`
+          : isEdit
+            ? `Edit ${schema.title} Connection`
+            : `Connect ${schema.title}`
       }
       description={
         phase === 'success'
           ? undefined
-          : phase === 'method'
-            ? 'Choose how to authenticate'
-            : isEdit
-              ? 'Update your API credentials'
-              : 'Enter your API credentials'
+          : isEdit
+            ? 'Update your API credentials'
+            : 'Enter your API credentials'
       }
       size={phase === 'success' ? 'xs' : 'sm'}
       compact={phase === 'success'}
       preventOutsideClose={loading}
       footer={(requestClose) => {
-        if (phase === 'method') {
-          return (
-            <Button
-              variant="outline"
-              onClick={requestClose}
-              className="w-full"
-            >
-              Cancel
-            </Button>
-          );
-        }
-
         if (phase === 'success') {
           return (
             <div className="flex w-full items-center gap-2">
@@ -399,9 +376,16 @@ export default function CredentialsModal({
               className="flex-1"
             >
               {verifyStep === 'validating' || verifyStep === 'verifying' ? (
-                <span className="flex items-center justify-center gap-1.5" role="status">
+                <span
+                  className="flex items-center justify-center gap-1.5"
+                  role="status"
+                >
                   <Spinner className="size-4" />
-                  <span>{verifyStep === 'validating' ? 'Validating…' : 'Verifying with server…'}</span>
+                  <span>
+                    {verifyStep === 'validating'
+                      ? 'Validating…'
+                      : 'Verifying with server…'}
+                  </span>
                 </span>
               ) : verifyError ? (
                 'Retry verification'
@@ -413,104 +397,6 @@ export default function CredentialsModal({
         );
       }}
     >
-      {/* Phase 0: Method Selection State */}
-      {phase === 'method' && (
-        <div className="space-y-3">
-          {manualDisabled && (
-            <Alert className="mb-1">
-              <AlertTriangle className="size-4" />
-              <AlertDescription>
-                This project is set to Two Way sync, which relies on HubSpot
-                webhooks to catch changes in real time — HubSpot has no way to
-                manage webhook subscriptions for a Private App (manual) token,
-                only for an OAuth connection. Use &ldquo;Login with HubSpot&rdquo; below to
-                connect.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={manualEnabled ? () => setPhase('form') : undefined}
-              disabled={!manualEnabled}
-              className={cn(
-                'flex flex-col items-start gap-3 rounded-2xl border p-4 text-left transition-all',
-                manualEnabled
-                  ? 'hover:border-primary/50 hover:bg-muted/60 bg-muted/30 cursor-pointer active:scale-[0.99]'
-                  : 'bg-muted/10 cursor-not-allowed opacity-40',
-              )}
-            >
-              <div
-                className={cn(
-                  'flex size-9 items-center justify-center rounded-xl',
-                  manualEnabled
-                    ? 'bg-primary/10 text-primary'
-                    : 'bg-muted text-muted-foreground',
-                )}
-              >
-                <KeyRound className="size-4" />
-              </div>
-              <div>
-                <div
-                  className={cn(
-                    'mb-0.5 text-sm font-semibold',
-                    !manualEnabled && 'text-muted-foreground',
-                  )}
-                >
-                  Manual Setup
-                </div>
-                <div className="text-muted-foreground text-xs leading-relaxed">
-                  {manualEnabled
-                    ? 'Enter API credentials'
-                    : 'Not available for two-way sync'}
-                </div>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              onClick={supportsOAuth ? onOAuth : undefined}
-              disabled={!supportsOAuth}
-              className={cn(
-                'flex flex-col items-start gap-3 rounded-2xl border p-4 text-left transition-all',
-                supportsOAuth
-                  ? 'hover:border-hubspot/50 hover:bg-muted/60 bg-muted/30 cursor-pointer active:scale-[0.99]'
-                  : 'bg-muted/10 cursor-not-allowed opacity-40',
-              )}
-            >
-              <div
-                className={cn(
-                  'flex size-9 items-center justify-center rounded-xl',
-                  supportsOAuth
-                    ? 'bg-hubspot/15 text-hubspot'
-                    : 'bg-muted text-muted-foreground',
-                )}
-              >
-                <KeyRound className="size-4" />
-              </div>
-              <div>
-                <div
-                  className={cn(
-                    'mb-0.5 text-sm font-semibold',
-                    !supportsOAuth && 'text-muted-foreground',
-                  )}
-                >
-                  {platformId === 'hubspot' ? 'Login with HubSpot' : 'OAuth'}
-                </div>
-                <div className="text-muted-foreground text-xs leading-relaxed">
-                  {supportsOAuth
-                    ? 'Continue with HubSpot account'
-                    : platformId === 'hubspot'
-                      ? 'Not available — use Manual Setup'
-                      : 'Not applicable'}
-                </div>
-              </div>
-            </button>
-          </div>
-        </div>
-      )}
-
       {previewLoading && (
         <div className="text-muted-foreground flex items-center gap-2 text-xs">
           <Spinner className="size-3" /> Loading saved details…
@@ -525,7 +411,8 @@ export default function CredentialsModal({
           </div>
           <div className="min-w-0 space-y-1">
             <DialogDescription className="text-xs leading-relaxed">
-              Both connections verified. Your project activates automatically; create a sync flow next.
+              Both connections verified. Your project activates automatically;
+              create a sync flow next.
             </DialogDescription>
           </div>
         </div>
@@ -534,28 +421,13 @@ export default function CredentialsModal({
       {/* The form remains visible while validation and server verification run. */}
       {phase === 'form' && (
         <>
-          {!isEdit && supportsOAuth && (
-            <div className="mb-3">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setPhase('method')}
-                className="text-muted-foreground hover:text-foreground -ml-2 h-7 gap-1.5 px-2 text-xs"
-              >
-                <ArrowLeft className="size-3.5" />
-                Back to authentication methods
-              </Button>
-            </div>
-          )}
-
           {verifyError && (
             <div
               role="alert"
-              className="bg-destructive/10 text-destructive flex items-start gap-2.5 rounded-2xl border border-destructive/20 p-3 text-xs mb-4"
+              className="bg-destructive/10 text-destructive border-destructive/20 mb-4 flex items-start gap-2.5 rounded-2xl border p-3 text-xs"
             >
-              <AlertCircle className="size-4 shrink-0 mt-0.5" />
-              <div className="space-y-0.5 min-w-0">
+              <AlertCircle className="mt-0.5 size-4 shrink-0" />
+              <div className="min-w-0 space-y-0.5">
                 <p className="font-semibold">Verification Failed</p>
                 <p className="text-destructive/90 break-words">{verifyError}</p>
               </div>
@@ -595,7 +467,7 @@ export default function CredentialsModal({
                     aria-invalid={!!fieldError}
                     className={cn(
                       fieldError &&
-                        'border-destructive ring-0.5 ring-[0.5px] ring-destructive aria-invalid:border-destructive aria-invalid:ring-0.5 aria-invalid:ring-[0.5px] aria-invalid:ring-destructive',
+                        'border-destructive ring-0.5 ring-destructive aria-invalid:border-destructive aria-invalid:ring-0.5 aria-invalid:ring-destructive ring-[0.5px] aria-invalid:ring-[0.5px]',
                     )}
                   />
                   {fieldError && (
@@ -607,7 +479,7 @@ export default function CredentialsModal({
           </FieldGroup>
 
           {schema.note && (
-            <p className="text-muted-foreground text-xs mt-3">{schema.note}</p>
+            <p className="text-muted-foreground mt-3 text-xs">{schema.note}</p>
           )}
         </>
       )}
@@ -630,7 +502,7 @@ function KnowMore({ label, helpText, helpUrl }: KnowMoreProps) {
           type="button"
           variant="ghost"
           size="icon-xs"
-                className="text-muted-foreground hover:text-foreground size-5"
+          className="text-muted-foreground hover:text-foreground size-5"
           aria-label={`Help with ${label}`}
         >
           <CircleHelp className="size-3.5" />

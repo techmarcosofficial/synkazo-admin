@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import CredentialsModal from './CredentialsModal';
@@ -47,7 +53,11 @@ describe('CredentialsModal In-Modal Verification', () => {
     render(
       <CredentialsModal
         projectId="proj-1"
-        conn={{ platformId: 'servicetitan', connectionType: 'source', environment: 'production' }}
+        conn={{
+          platformId: 'servicetitan',
+          connectionType: 'source',
+          environment: 'production',
+        }}
         onClose={onCloseMock}
         onSaved={onSavedMock}
       />,
@@ -60,9 +70,12 @@ describe('CredentialsModal In-Modal Verification', () => {
     fireEvent.change(screen.getByPlaceholderText('Enter your client secret'), {
       target: { value: 'bad-secret' },
     });
-    fireEvent.change(screen.getByPlaceholderText('Enter your application key'), {
-      target: { value: 'bad-key' },
-    });
+    fireEvent.change(
+      screen.getByPlaceholderText('Enter your application key'),
+      {
+        target: { value: 'bad-key' },
+      },
+    );
     fireEvent.change(screen.getByPlaceholderText('e.g. 1234567'), {
       target: { value: '12345' },
     });
@@ -72,7 +85,10 @@ describe('CredentialsModal In-Modal Verification', () => {
 
     // Verify modal does NOT close
     await waitFor(() => {
-      expect(connectionsApi.testConnection).toHaveBeenCalledWith('proj-1', 'conn-new-1');
+      expect(connectionsApi.testConnection).toHaveBeenCalledWith(
+        'proj-1',
+        'conn-new-1',
+      );
     });
 
     // Error is displayed inline inside the modal
@@ -94,7 +110,9 @@ describe('CredentialsModal In-Modal Verification', () => {
     // Verify other fields are NOT marked as invalid
     const secretInput = screen.getByPlaceholderText('Enter your client secret');
     expect(secretInput).toHaveAttribute('aria-invalid', 'false');
-    expect(screen.queryByText('Check Client Secret value')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Check Client Secret value'),
+    ).not.toBeInTheDocument();
 
     // The same form remains available for a correction and retry.
     expect(
@@ -106,36 +124,63 @@ describe('CredentialsModal In-Modal Verification', () => {
     let finishSave!: (value: Connection) => void;
     let finishTest!: (value: { success: boolean; message: string }) => void;
     vi.mocked(connectionsApi.createConnection).mockReturnValue(
-      new Promise<Connection>((resolve) => { finishSave = resolve; }),
+      new Promise<Connection>((resolve) => {
+        finishSave = resolve;
+      }),
     );
     vi.mocked(connectionsApi.testConnection).mockReturnValue(
-      new Promise((resolve) => { finishTest = resolve; }),
+      new Promise((resolve) => {
+        finishTest = resolve;
+      }),
     );
 
     render(
       <CredentialsModal
         projectId="proj-1"
-        conn={{ platformId: 'hubspot', connectionType: 'destination', environment: 'sandbox' }}
+        conn={{
+          platformId: 'dataforma',
+          connectionType: 'source',
+          environment: 'sandbox',
+        }}
         onClose={onCloseMock}
         onSaved={onSavedMock}
       />,
     );
 
-    fireEvent.change(screen.getByPlaceholderText('Enter your HubSpot access token'), {
-      target: { value: 'invalid-token' },
-    });
+    fireEvent.change(
+      screen.getByPlaceholderText('Enter your Dataforma API key'),
+      {
+        target: { value: 'invalid-token' },
+      },
+    );
+    fireEvent.change(
+      screen.getByPlaceholderText('Enter your company service code'),
+      { target: { value: 'service-1' } },
+    );
     fireEvent.click(screen.getByRole('button', { name: /^submit$/i }));
 
-    expect(await screen.findByRole('button', { name: /validating/i })).toBeDisabled();
-    expect(screen.getByPlaceholderText('Enter your HubSpot access token')).toHaveValue('invalid-token');
+    expect(
+      await screen.findByRole('button', { name: /validating/i }),
+    ).toBeDisabled();
+    expect(
+      screen.getByPlaceholderText('Enter your Dataforma API key'),
+    ).toHaveValue('invalid-token');
 
     finishSave({ id: 'conn-1' } as Connection);
-    expect(await screen.findByRole('button', { name: /verifying with server/i })).toBeDisabled();
-    expect(screen.getByPlaceholderText('Enter your HubSpot access token')).toHaveValue('invalid-token');
+    expect(
+      await screen.findByRole('button', { name: /verifying with server/i }),
+    ).toBeDisabled();
+    expect(
+      screen.getByPlaceholderText('Enter your Dataforma API key'),
+    ).toHaveValue('invalid-token');
 
-    finishTest({ success: false, message: 'Token rejected by HubSpot' });
-    expect(await screen.findByText('Token rejected by HubSpot')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /retry verification/i })).toBeEnabled();
+    finishTest({ success: false, message: 'Token rejected by Dataforma' });
+    expect(
+      await screen.findByText('Token rejected by Dataforma'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /retry verification/i }),
+    ).toBeEnabled();
     expect(onCloseMock).not.toHaveBeenCalled();
   });
 
@@ -143,15 +188,24 @@ describe('CredentialsModal In-Modal Verification', () => {
     render(
       <CredentialsModal
         projectId="proj-1"
-        conn={{ id: 'conn-1', platformId: 'servicetitan', connectionType: 'source', environment: 'sandbox' }}
+        conn={{
+          id: 'conn-1',
+          platformId: 'servicetitan',
+          connectionType: 'source',
+          environment: 'sandbox',
+        }}
         initialError="Invalid client key for ServiceTitan API"
         onClose={onCloseMock}
         onSaved={onSavedMock}
       />,
     );
 
-    expect(screen.getByText('Invalid client key for ServiceTitan API')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /retry verification/i })).toBeInTheDocument();
+    expect(
+      screen.getByText('Invalid client key for ServiceTitan API'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /retry verification/i }),
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /^cancel$/i }));
     expect(onCloseMock).toHaveBeenCalledTimes(1);
   });
@@ -172,7 +226,11 @@ describe('CredentialsModal In-Modal Verification', () => {
     render(
       <CredentialsModal
         projectId="proj-1"
-        conn={{ platformId: 'servicetitan', connectionType: 'source', environment: 'production' }}
+        conn={{
+          platformId: 'servicetitan',
+          connectionType: 'source',
+          environment: 'production',
+        }}
         onClose={onCloseMock}
         onSaved={onSavedMock}
       />,
@@ -184,9 +242,12 @@ describe('CredentialsModal In-Modal Verification', () => {
     fireEvent.change(screen.getByPlaceholderText('Enter your client secret'), {
       target: { value: 'secret-val-123' },
     });
-    fireEvent.change(screen.getByPlaceholderText('Enter your application key'), {
-      target: { value: 'ak1.gnsaqrz29jw3k6473bhibpugf' },
-    });
+    fireEvent.change(
+      screen.getByPlaceholderText('Enter your application key'),
+      {
+        target: { value: 'ak1.gnsaqrz29jw3k6473bhibpugf' },
+      },
+    );
     fireEvent.change(screen.getByPlaceholderText('e.g. 1234567'), {
       target: { value: '1293100835' },
     });
@@ -194,7 +255,9 @@ describe('CredentialsModal In-Modal Verification', () => {
     fireEvent.click(screen.getByRole('button', { name: /^submit$/i }));
 
     expect(await screen.findByText('Verification Failed')).toBeInTheDocument();
-    expect(screen.getByText('ServiceTitan auth error: invalid_client')).toBeInTheDocument();
+    expect(
+      screen.getByText('ServiceTitan auth error: invalid_client'),
+    ).toBeInTheDocument();
 
     // ONLY Client ID should be marked
     expect(screen.getByText('Check Client ID value')).toBeInTheDocument();
@@ -203,10 +266,14 @@ describe('CredentialsModal In-Modal Verification', () => {
 
     // App Key, Client Secret, and Tenant ID MUST NOT be marked
     expect(screen.queryByText('Check App Key value')).not.toBeInTheDocument();
-    expect(screen.queryByText('Check Client Secret value')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Check Client Secret value'),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText('Check Tenant ID value')).not.toBeInTheDocument();
 
-    const appKeyInput = screen.getByPlaceholderText('Enter your application key');
+    const appKeyInput = screen.getByPlaceholderText(
+      'Enter your application key',
+    );
     expect(appKeyInput).toHaveAttribute('aria-invalid', 'false');
 
     const secretInput = screen.getByPlaceholderText('Enter your client secret');
@@ -232,7 +299,11 @@ describe('CredentialsModal In-Modal Verification', () => {
     render(
       <CredentialsModal
         projectId="proj-1"
-        conn={{ platformId: 'servicetitan', connectionType: 'source', environment: 'production' }}
+        conn={{
+          platformId: 'servicetitan',
+          connectionType: 'source',
+          environment: 'production',
+        }}
         onClose={onCloseMock}
         onSaved={onSavedMock}
       />,
@@ -244,9 +315,12 @@ describe('CredentialsModal In-Modal Verification', () => {
     fireEvent.change(screen.getByPlaceholderText('Enter your client secret'), {
       target: { value: 'valid-secret' },
     });
-    fireEvent.change(screen.getByPlaceholderText('Enter your application key'), {
-      target: { value: 'valid-key' },
-    });
+    fireEvent.change(
+      screen.getByPlaceholderText('Enter your application key'),
+      {
+        target: { value: 'valid-key' },
+      },
+    );
     fireEvent.change(screen.getByPlaceholderText('e.g. 1234567'), {
       target: { value: '12345' },
     });
@@ -260,33 +334,44 @@ describe('CredentialsModal In-Modal Verification', () => {
     expect(screen.queryByText(/connections ready/i)).not.toBeInTheDocument();
   });
 
-  it('verifies HubSpot destination credentials successfully on first connection', async () => {
+  it('verifies Dataforma source credentials successfully on first connection', async () => {
     vi.mocked(connectionsApi.createConnection).mockResolvedValue({
-      id: 'conn-hubspot-1',
+      id: 'conn-dataforma-1',
       projectId: 'proj-1',
-      platformId: 'hubspot',
-      connectionType: 'destination',
+      platformId: 'dataforma',
+      connectionType: 'source',
       status: 'connected',
     } as any);
 
     vi.mocked(connectionsApi.testConnection).mockResolvedValue({
       success: true,
-      message: 'HubSpot connected and verified',
+      message: 'Dataforma connected and verified',
     });
 
     render(
       <CredentialsModal
         projectId="proj-1"
-        conn={{ platformId: 'hubspot', connectionType: 'destination', environment: 'sandbox' }}
+        conn={{
+          platformId: 'dataforma',
+          connectionType: 'source',
+          environment: 'sandbox',
+        }}
         onClose={onCloseMock}
         onSaved={onSavedMock}
       />,
     );
 
-    // Fill in HubSpot private app token
-    fireEvent.change(screen.getByPlaceholderText('Enter your HubSpot access token'), {
-      target: { value: 'pat-eu1-12345678-abcd' },
-    });
+    // Fill in Dataforma private app token
+    fireEvent.change(
+      screen.getByPlaceholderText('Enter your Dataforma API key'),
+      {
+        target: { value: 'pat-eu1-12345678-abcd' },
+      },
+    );
+    fireEvent.change(
+      screen.getByPlaceholderText('Enter your company service code'),
+      { target: { value: 'service-1' } },
+    );
 
     fireEvent.click(screen.getByRole('button', { name: /^submit$/i }));
 
@@ -300,22 +385,26 @@ describe('CredentialsModal In-Modal Verification', () => {
   it('shows the environment-specific pair confirmation and creates a sync flow on request', async () => {
     const onContinueMock = vi.fn();
     vi.mocked(connectionsApi.createConnection).mockResolvedValue({
-      id: 'conn-hubspot-complete',
+      id: 'conn-dataforma-complete',
       projectId: 'proj-1',
-      platformId: 'hubspot',
-      connectionType: 'destination',
+      platformId: 'dataforma',
+      connectionType: 'source',
       status: 'connected',
     } as any);
 
     vi.mocked(connectionsApi.testConnection).mockResolvedValue({
       success: true,
-      message: 'HubSpot connected and verified',
+      message: 'Dataforma connected and verified',
     });
 
     render(
       <CredentialsModal
         projectId="proj-1"
-        conn={{ platformId: 'hubspot', connectionType: 'destination', environment: 'sandbox' }}
+        conn={{
+          platformId: 'dataforma',
+          connectionType: 'source',
+          environment: 'sandbox',
+        }}
         willCompleteBoth={true}
         onClose={onCloseMock}
         onSaved={onSavedMock}
@@ -323,23 +412,40 @@ describe('CredentialsModal In-Modal Verification', () => {
       />,
     );
 
-    fireEvent.change(screen.getByPlaceholderText('Enter your HubSpot access token'), {
-      target: { value: 'pat-eu1-12345678-abcd' },
-    });
+    fireEvent.change(
+      screen.getByPlaceholderText('Enter your Dataforma API key'),
+      {
+        target: { value: 'pat-eu1-12345678-abcd' },
+      },
+    );
+    fireEvent.change(
+      screen.getByPlaceholderText('Enter your company service code'),
+      { target: { value: 'service-1' } },
+    );
 
     fireEvent.click(screen.getByRole('button', { name: /^submit$/i }));
 
-    expect(await screen.findByText('Sandbox connections ready')).toBeInTheDocument();
     expect(
-      screen.getByText('Both connections verified. Your project activates automatically; create a sync flow next.'),
+      await screen.findByText('Sandbox connections ready'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Both connections verified. Your project activates automatically; create a sync flow next.',
+      ),
     ).toBeInTheDocument();
 
     const dialog = screen.getByRole('dialog');
     expect(dialog).toHaveAttribute('data-size', 'xs');
-    expect(dialog.querySelector('[data-slot="dialog-header"]')).not.toHaveClass('border-b');
-    expect(dialog.querySelector('[data-slot="dialog-footer"]')).not.toHaveClass('border-t');
+    expect(dialog.querySelector('[data-slot="dialog-header"]')).not.toHaveClass(
+      'border-b',
+    );
+    expect(dialog.querySelector('[data-slot="dialog-footer"]')).not.toHaveClass(
+      'border-t',
+    );
 
-    const continueBtn = screen.getByRole('button', { name: /create sync flow/i });
+    const continueBtn = screen.getByRole('button', {
+      name: /create sync flow/i,
+    });
     expect(continueBtn).toBeInTheDocument();
     fireEvent.click(continueBtn);
 
@@ -348,137 +454,22 @@ describe('CredentialsModal In-Modal Verification', () => {
     expect(onContinueMock).toHaveBeenCalledTimes(1);
   });
 
-  it('renders method selection view for new OAuth-capable platform and transitions to form on Manual Setup', async () => {
-    const onOAuthMock = vi.fn();
-
-    render(
-      <CredentialsModal
-        projectId="proj-1"
-        conn={{ platformId: 'hubspot', connectionType: 'destination', environment: 'sandbox' }}
-        onOAuth={onOAuthMock}
-        onClose={onCloseMock}
-        onSaved={onSavedMock}
-      />,
-    );
-
-    // Initial view should be method selection
-    expect(screen.getByText('Choose how to authenticate')).toBeInTheDocument();
-    expect(screen.getByText('Manual Setup')).toBeInTheDocument();
-    expect(screen.getByText('Login with HubSpot')).toBeInTheDocument();
-
-    // Clicking "Manual Setup" replaces content in-place with the form
-    fireEvent.click(screen.getByText('Manual Setup'));
-
-    expect(screen.getByText('Enter your API credentials')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Enter your HubSpot access token')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /back to authentication methods/i })).toBeInTheDocument();
-  });
-
-  it('preserves entered form inputs when returning to method selection via Back button', async () => {
-    const onOAuthMock = vi.fn();
-
-    render(
-      <CredentialsModal
-        projectId="proj-1"
-        conn={{ platformId: 'hubspot', connectionType: 'destination', environment: 'sandbox' }}
-        onOAuth={onOAuthMock}
-        onClose={onCloseMock}
-        onSaved={onSavedMock}
-      />,
-    );
-
-    // Go to manual form
-    fireEvent.click(screen.getByText('Manual Setup'));
-
-    // Enter a token
-    const tokenInput = screen.getByPlaceholderText('Enter your HubSpot access token');
-    fireEvent.change(tokenInput, { target: { value: 'pat-preserved-value-123' } });
-    expect(tokenInput).toHaveValue('pat-preserved-value-123');
-
-    // Click "Back to authentication methods"
-    fireEvent.click(screen.getByRole('button', { name: /back to authentication methods/i }));
-
-    // We are back at method selection
-    expect(screen.getByText('Choose how to authenticate')).toBeInTheDocument();
-
-    // Return to Manual Setup
-    fireEvent.click(screen.getByText('Manual Setup'));
-
-    // The previously entered token should still be there!
-    const restoredInput = screen.getByPlaceholderText('Enter your HubSpot access token');
-    expect(restoredInput).toHaveValue('pat-preserved-value-123');
-  });
-
-  it('triggers onOAuth callback when clicking Login with HubSpot', async () => {
-    const onOAuthMock = vi.fn();
-
-    render(
-      <CredentialsModal
-        projectId="proj-1"
-        conn={{ platformId: 'hubspot', connectionType: 'destination', environment: 'sandbox' }}
-        onOAuth={onOAuthMock}
-        onClose={onCloseMock}
-        onSaved={onSavedMock}
-      />,
-    );
-
-    const oauthBtn = screen.getByRole('button', { name: /login with hubspot/i });
-    fireEvent.click(oauthBtn);
-
-    expect(onOAuthMock).toHaveBeenCalledTimes(1);
-  });
-
-  it('shows warning and disables Manual Setup when syncMode is two_way for HubSpot', async () => {
-    const onOAuthMock = vi.fn();
-
-    render(
-      <CredentialsModal
-        projectId="proj-1"
-        conn={{ platformId: 'hubspot', connectionType: 'destination', environment: 'sandbox' }}
-        syncMode="two_way"
-        onOAuth={onOAuthMock}
-        onClose={onCloseMock}
-        onSaved={onSavedMock}
-      />,
-    );
-
-    // Warning alert is present
-    expect(
-      screen.getByText(/this project is set to two way sync/i),
-    ).toBeInTheDocument();
-
-    // Manual setup button is disabled
-    const manualBtn = screen.getByRole('button', { name: /manual setup/i });
-    expect(manualBtn).toBeDisabled();
-  });
-
-  it('directly opens form view for existing connection edit, bypassing method selection', async () => {
-    const onOAuthMock = vi.fn();
-
+  it('never offers a manual HubSpot credential form', () => {
     render(
       <CredentialsModal
         projectId="proj-1"
         conn={{
-          id: 'conn-existing-1',
           platformId: 'hubspot',
           connectionType: 'destination',
           environment: 'sandbox',
         }}
-        onOAuth={onOAuthMock}
         onClose={onCloseMock}
         onSaved={onSavedMock}
       />,
     );
-
-    // Starts directly in edit form
-    expect(screen.getByText('Edit HubSpot Connection')).toBeInTheDocument();
-    expect(screen.getByText('Update your API credentials')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(
-      screen.getByPlaceholderText('Leave blank to keep existing token'),
-    ).toBeInTheDocument();
-    // Back button should NOT be present on edit mode
-    expect(
-      screen.queryByRole('button', { name: /back to authentication methods/i }),
+      screen.queryByPlaceholderText('Enter your HubSpot access token'),
     ).not.toBeInTheDocument();
   });
 });

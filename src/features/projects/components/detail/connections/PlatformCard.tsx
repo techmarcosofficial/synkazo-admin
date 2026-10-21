@@ -18,6 +18,7 @@ import DisconnectImpactBody from '@/components/connections/DisconnectImpactBody'
 import { PLATFORM_META } from '@/components/connections/platformMeta';
 import type { ExtConnection } from '@/components/connections/types';
 import { useConnectionTestAndDisconnect } from '@/components/connections/useConnectionTestAndDisconnect';
+import { useConnectionAccess } from '@/components/connections/ConnectionAccessContext';
 import { PlatformIcon } from '@/components/platform';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -40,6 +41,7 @@ interface PlatformCardProps {
   isTesting?: boolean;
   onTestingChange?: (testing: boolean) => void;
   onTestError?: (message: string) => void;
+  oauthPending?: boolean;
 }
 
 export default function PlatformCard({
@@ -51,11 +53,16 @@ export default function PlatformCard({
   isTesting = false,
   onTestingChange,
   onTestError,
+  oauthPending = false,
 }: PlatformCardProps) {
+  const access = useConnectionAccess();
   const meta = PLATFORM_META[conn.platformId] ?? { label: conn.platformId };
   const envLabel = conn.environment === 'sandbox' ? 'Sandbox' : 'Production';
   const { hasRole } = useSynkazoAuth();
-  const canManage = hasRole('org_admin');
+  const canManage =
+    access.audience === 'super_admin'
+      ? hasRole('super_admin')
+      : hasRole('org_admin');
   const { confirm } = useConfirmDialog();
   const { testing, testResult, handleTest, handleDisconnect } =
     useConnectionTestAndDisconnect(conn, onUpdated, onTestError);
@@ -101,14 +108,18 @@ export default function PlatformCard({
             </div>
           </div>
 
-          {activeTesting ? (
+          {oauthPending ? (
+            <Button size="sm" loading className="w-full md:ml-auto md:w-auto">
+              Opening HubSpot…
+            </Button>
+          ) : activeTesting ? (
             <Button
               variant="outline"
               size="sm"
               disabled
-              className="w-full md:ml-auto md:w-auto gap-1.5"
+              className="w-full gap-1.5 md:ml-auto md:w-auto"
             >
-              <RefreshCw className="animate-spin size-3.5" />
+              <RefreshCw className="size-3.5 animate-spin" />
               Verifying…
             </Button>
           ) : isSlot ? (
@@ -162,7 +173,9 @@ export default function PlatformCard({
                         disabled={!canManage}
                       >
                         <SquarePen className="size-3.5" />
-                        Update Credentials
+                        {conn.platformId === 'hubspot'
+                          ? 'Reconnect HubSpot'
+                          : 'Update Credentials'}
                       </Button>
                     </ActionTooltip>
 
@@ -181,14 +194,20 @@ export default function PlatformCard({
                         disabled={!canManage}
                         onClick={() =>
                           canManage &&
-                          confirm({
-                            variant: 'danger',
-                            title: `Remove ${meta.label} setup?`,
-                            description: `${envLabel} environment — this will remove the stored credentials.`,
-                            body: <DisconnectImpactBody projectId={conn.projectId} />,
-                            confirmLabel: 'Yes, Remove',
-                            onConfirm: handleDisconnect,
-                          })
+                          (access.onDisconnect
+                            ? access.onDisconnect(conn, () => onUpdated(null))
+                            : confirm({
+                                variant: 'danger',
+                                title: `Remove ${meta.label} setup?`,
+                                description: `${envLabel} environment — this will remove the stored credentials.`,
+                                body: (
+                                  <DisconnectImpactBody
+                                    projectId={conn.projectId}
+                                  />
+                                ),
+                                confirmLabel: 'Yes, Remove',
+                                onConfirm: handleDisconnect,
+                              }))
                         }
                       >
                         <Trash2 className="size-3.5" />
@@ -211,7 +230,7 @@ export default function PlatformCard({
                       }
                     >
                       {testing ? (
-                        <RefreshCw className="animate-spin size-3.5" />
+                        <RefreshCw className="size-3.5 animate-spin" />
                       ) : (
                         <WifiSync className="size-3.5" />
                       )}
@@ -232,7 +251,7 @@ export default function PlatformCard({
                         disabled={!canManage}
                       >
                         <SquarePen className="size-3.5" />
-                        Edit
+                        {conn.platformId === 'hubspot' ? 'Reconnect' : 'Edit'}
                       </Button>
                     </ActionTooltip>
 
@@ -261,14 +280,20 @@ export default function PlatformCard({
                         disabled={!canManage}
                         onClick={() =>
                           canManage &&
-                          confirm({
-                            variant: 'danger',
-                            title: `Disconnect ${meta.label}?`,
-                            description: `${envLabel} environment — this will remove the stored credentials.`,
-                            body: <DisconnectImpactBody projectId={conn.projectId} />,
-                            confirmLabel: 'Yes, Disconnect',
-                            onConfirm: handleDisconnect,
-                          })
+                          (access.onDisconnect
+                            ? access.onDisconnect(conn, () => onUpdated(null))
+                            : confirm({
+                                variant: 'danger',
+                                title: `Disconnect ${meta.label}?`,
+                                description: `${envLabel} environment — this will remove the stored credentials.`,
+                                body: (
+                                  <DisconnectImpactBody
+                                    projectId={conn.projectId}
+                                  />
+                                ),
+                                confirmLabel: 'Yes, Disconnect',
+                                onConfirm: handleDisconnect,
+                              }))
                         }
                       >
                         <Trash2 className="size-3.5" />
@@ -285,7 +310,10 @@ export default function PlatformCard({
         {!activeTesting && isError && (
           <div className="bg-destructive/10 text-destructive flex items-center gap-2 rounded-2xl px-3 py-1.5 text-xs">
             <AlertCircle className="size-3.5 shrink-0" />
-            <span>Connection verification failed or credentials expired. Update credentials to restore sync.</span>
+            <span>
+              Connection verification failed or credentials expired. Update
+              credentials to restore sync.
+            </span>
           </div>
         )}
 

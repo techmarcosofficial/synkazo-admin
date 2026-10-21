@@ -261,6 +261,7 @@ export default function OverviewTab() {
   ) =>
     showingSummary ? (
       <SyncRunProgress
+        dismissible
         variant={variant}
         defaultOpen={defaultOpen}
         runId={summaryRun?.id}
@@ -536,14 +537,16 @@ export default function OverviewTab() {
         />
       )}
 
-      {scheduleModalOpen && <JobScheduleModal
-        projectId={projectId}
-        jobId={job.id}
-        job={job}
-        open={scheduleModalOpen}
-        onOpenChange={setScheduleModalOpen}
-        onSaved={refetch}
-      />}
+      {scheduleModalOpen && (
+        <JobScheduleModal
+          projectId={projectId}
+          jobId={job.id}
+          job={job}
+          open={scheduleModalOpen}
+          onOpenChange={setScheduleModalOpen}
+          onSaved={refetch}
+        />
+      )}
 
       <UpgradeRequiredDialog
         open={upgradeDialog.open}

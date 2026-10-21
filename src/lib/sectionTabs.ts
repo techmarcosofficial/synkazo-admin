@@ -87,13 +87,6 @@ export const ORGANIZATION_SECTION: SectionDef = {
       id: 'billing',
       label: 'Billing & Usage',
       minRole: 'org_admin',
-      children: [
-        { id: 'overview', label: 'Overview' },
-        { id: 'subscription', label: 'Subscription' },
-        { id: 'payment-methods', label: 'Payment Methods' },
-        { id: 'invoices', label: 'Invoices' },
-        { id: 'payment-history', label: 'Payment History' },
-      ],
     },
   ],
 };

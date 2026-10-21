@@ -1,20 +1,14 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
-import BillingGuidedTour from '@/components/billing/BillingGuidedTour';
 import { showToast } from '@/lib/toast';
 import { useRefreshPlanMutation } from '@/queries/useBilling';
 
-const TOUR_DONE_KEY = 'sb_billing_tour_done';
-
 /**
- * Wraps the billing sub-tabs with the two concerns that must outlive them.
+ * Wraps the billing workspace with Stripe checkout-return handling.
  *
- * The Stripe checkout-return handshake and the guided tour used to live in the
- * component that rendered all six tabs. Now each sub-tab is its own route, so
- * anything owned by a tab would re-run (or stop running) as the user moves
- * between them — this sits one level up instead, where it fires once per
- * arrival regardless of which sub-tab the URL landed on.
+ * Silently syncs the plan from Stripe upon returning from checkout and
+ * redirects if a safe destination was provided.
  */
 export default function BillingSectionShell({
   children,
@@ -25,7 +19,6 @@ export default function BillingSectionShell({
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const handledCheckoutReturn = useRef(false);
-  const [showTour, setShowTour] = useState(false);
 
   // Returning from Stripe Checkout: pull fresh state straight from Stripe (don't
   // depend on the webhook having landed), then greet the user.
@@ -35,8 +28,6 @@ export default function BillingSectionShell({
     handledCheckoutReturn.current = true;
 
     if (checkout === 'success') {
-      // The checkout page already showed "Subscription purchased successfully"
-      // before redirecting here — silently sync the plan, no second toast.
       refreshPlan
         .mutateAsync()
         .catch(() =>
@@ -55,15 +46,7 @@ export default function BillingSectionShell({
           ? redirectParam
           : null;
 
-      // CheckoutPage only adds this for a brand-new signup, never a plan change,
-      // so it's a reliable "first time" signal — but still gate on localStorage
-      // in case the user bookmarks/revisits this URL.
-      if (
-        searchParams.get('first_checkout') === 'true' &&
-        !localStorage.getItem(TOUR_DONE_KEY)
-      ) {
-        setShowTour(true);
-      } else if (safeRedirect) {
+      if (safeRedirect) {
         navigate(safeRedirect, { replace: true });
       }
     } else if (checkout === 'cancelled') {
@@ -74,18 +57,7 @@ export default function BillingSectionShell({
     searchParams.delete('first_checkout');
     searchParams.delete('redirect');
     setSearchParams(searchParams, { replace: true });
-  }, [searchParams]);
+  }, [searchParams, navigate, refreshPlan, setSearchParams]);
 
-  return (
-    <>
-      {children}
-      <BillingGuidedTour
-        active={showTour}
-        onDone={() => {
-          setShowTour(false);
-          localStorage.setItem(TOUR_DONE_KEY, 'true');
-        }}
-      />
-    </>
-  );
+  return <>{children}</>;
 }

@@ -66,6 +66,7 @@ const project: SuperAdminProjectDetail = {
   updatedAt: '2026-01-01T00:00:00Z',
   schedulerMode: 'individual',
   activeEnvironment: 'sandbox',
+  environmentActivatedAt: null,
   totalRecordsSynced: 0,
   totalErrorCount: 0,
 };

@@ -102,6 +102,14 @@ export interface SuperAdminInvitationListItem {
   revokedAt: string | null;
 }
 
+export interface SuperAdminCreateProjectDto {
+  name: string;
+  description?: string;
+  sourcePlatformId: string;
+  destPlatformId: string;
+  syncMode: 'one_way' | 'two_way';
+}
+
 export interface SuperAdminProjectListItem {
   id: string;
   organisationId: string;
@@ -121,6 +129,7 @@ export interface SuperAdminProjectListItem {
 export interface SuperAdminProjectDetail extends SuperAdminProjectListItem {
   schedulerMode: string;
   activeEnvironment: string;
+  environmentActivatedAt: string | null;
   totalRecordsSynced: number;
   totalErrorCount: number;
 }
@@ -590,6 +599,7 @@ export interface PlatformOverviewResponse {
     severity: 'info' | 'warning' | 'critical';
     userEmail: string | null;
     organisationId: string | null;
+    organisationName: string | null;
     summary: string;
     createdAt: string;
   }>;

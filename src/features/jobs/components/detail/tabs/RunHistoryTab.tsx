@@ -36,7 +36,6 @@ import HeadingPair from '@/components/shared/HeadingPair';
 import ListStack from '@/components/shared/list/ListStack';
 import PaginationBar from '@/components/shared/PaginationBar';
 import StatusBadge from '@/components/shared/StatusBadge';
-import SyncRunProgress from '@/components/sync/SyncRunProgress';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -1034,17 +1033,8 @@ function RunLogRow({
 }
 
 export default function RunHistoryTab() {
-  const {
-    projectId,
-    job,
-    activeRunLog,
-    liveProgress,
-    runLogs: detailRunLogs,
-    hasConnection,
-    stopping,
-    refetch,
-    handleStop,
-  } = useJobDetailContext();
+  const { projectId, job, activeRunLog, hasConnection, refetch } =
+    useJobDetailContext();
   const jobId = job.id;
 
   const [searchParams] = useSearchParams();
@@ -1130,47 +1120,6 @@ export default function RunHistoryTab() {
     }, 200);
     return () => clearTimeout(timer);
   }, [targetRunId, runLogsQuery.isLoading, runLogs]);
-
-  const summaryRun =
-    activeRunLog?.status === 'running' || activeRunLog?.id
-      ? activeRunLog
-      : detailRunLogs[0];
-  const summaryRunning = summaryRun?.status === 'running';
-  const currentProgress =
-    liveProgress && (!summaryRun?.id || liveProgress.runId === summaryRun.id)
-      ? liveProgress
-      : null;
-  const createdCount = Math.max(
-    currentProgress?.createdCount ?? 0,
-    summaryRun?.createdCount ?? 0,
-  );
-  const updatedCount = Math.max(
-    currentProgress?.updatedCount ?? 0,
-    summaryRun?.updatedCount ?? 0,
-  );
-  const skippedCount = Math.max(
-    currentProgress?.skippedCount ?? 0,
-    summaryRun?.skippedCount ?? 0,
-  );
-  const failedCount = Math.max(
-    currentProgress?.failedCount ?? 0,
-    summaryRun?.failedCount ?? 0,
-  );
-  const summaryProcessed = Math.max(
-    currentProgress?.recordsAttempted ?? 0,
-    (currentProgress?.recordsProcessed ?? 0) +
-      (currentProgress?.failedCount ?? 0),
-    summaryRun?.status === 'completed' ? (summaryRun.totalFetched ?? 0) : 0,
-    createdCount + updatedCount + skippedCount + failedCount,
-  );
-  const summaryTotal =
-    (summaryRun?.status === 'completed' ? summaryRun.totalFetched : null) ??
-    currentProgress?.totalRecords ??
-    (summaryRun?.triggeredBy === 'limit_sync'
-      ? summaryRun.recordLimit
-      : summaryRunning && summaryRun?.triggeredBy !== 'sync_all'
-        ? summaryRun?.totalFetched
-        : undefined);
 
   const clearFilters = () => {
     setStatus(ALL_FILTER_VALUE);
@@ -1266,47 +1215,6 @@ export default function RunHistoryTab() {
           Run filters narrow this history. Record filters stay scoped to the
           page you expand.
         </div>
-
-        {summaryRun && (
-          <SyncRunProgress
-            runId={summaryRun.id}
-            jobId={jobId}
-            status={
-              summaryRunning
-                ? 'running'
-                : (summaryRun.executionStatus ?? summaryRun.status)
-            }
-            totalRecords={summaryTotal}
-            processedRecords={summaryProcessed}
-            completedBatches={Math.max(
-              currentProgress?.page ?? 0,
-              summaryRun.totalPages ?? 0,
-            )}
-            currentBatch={currentProgress?.currentBatch}
-            batchProcessed={currentProgress?.batchProcessed}
-            batchTotal={currentProgress?.batchTotal}
-            totalBatches={
-              summaryRun.status === 'completed'
-                ? summaryRun.totalPages
-                : currentProgress?.totalBatches
-            }
-            createdCount={createdCount}
-            updatedCount={updatedCount}
-            skippedCount={skippedCount}
-            failedCount={failedCount}
-            etaSeconds={currentProgress?.etaSeconds}
-            startedAt={summaryRun.startedAt}
-            finishedAt={summaryRun.finishedAt}
-            durationMs={summaryRun.durationMs}
-            triggeredBy={summaryRun.triggeredBy}
-            sourceLabel={summaryRun.sourceObject ?? job.sourceObject}
-            destinationLabel={summaryRun.destObject ?? job.destObject}
-            errorMessage={summaryRun.errorMessage}
-            defaultOpen={false}
-            onStop={summaryRunning ? () => void handleStop() : undefined}
-            stopping={stopping}
-          />
-        )}
 
         {runLogsQuery.isError ? (
           <ErrorState onRetry={() => runLogsQuery.refetch()} />

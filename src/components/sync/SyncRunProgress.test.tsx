@@ -9,6 +9,61 @@ afterEach(() => {
 });
 
 describe('SyncRunProgress', () => {
+  it.each([
+    'queued',
+    'running',
+    'failed',
+    'cancelled',
+    'paused',
+    'limit_reached',
+    'time_limit_reached',
+  ])(
+    'keeps %s summaries visible even if an older dismissal was stored',
+    (status) => {
+      localStorage.setItem('synkazo:sync-summary-dismissed:job-1', 'run-1');
+      const { rerender } = render(
+        <SyncRunProgress jobId="job-1" runId="run-1" status={status} />,
+      );
+      expect(screen.getByRole('region')).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'Dismiss sync summary' }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'Close' }),
+      ).not.toBeInTheDocument();
+      rerender(
+        <SyncRunProgress jobId="job-1" runId="next-run" status="completed" />,
+      );
+      expect(
+        screen.getByRole('button', { name: 'Dismiss sync summary' }),
+      ).toBeInTheDocument();
+    },
+  );
+  it('renders embedded progress without a nested card or overview dismissal state', () => {
+    localStorage.setItem('synkazo:sync-summary-dismissed:job-1', 'run-1');
+    render(
+      <SyncRunProgress
+        embedded
+        variant="compact"
+        jobId="job-1"
+        runId="run-1"
+        status="completed"
+        defaultOpen
+      />,
+    );
+    const summary = screen.getByRole('region', { name: 'Sync completed' });
+    expect(summary.closest('[data-slot="card"]')).toBeNull();
+    expect(summary).toHaveAttribute('data-embedded', 'true');
+    expect(
+      screen.queryByRole('button', { name: 'Dismiss sync summary' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Close' }),
+    ).not.toBeInTheDocument();
+    expect(localStorage.getItem('synkazo:sync-summary-dismissed:job-1')).toBe(
+      'run-1',
+    );
+  });
   it('shows one live overall bar with record and batch counts', () => {
     const { rerender } = render(
       <SyncRunProgress
@@ -116,7 +171,9 @@ describe('SyncRunProgress', () => {
       screen.queryByRole('button', { name: 'Stop sync' }),
     ).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Dismiss sync summary' }),
+    );
     expect(screen.queryByText('Sync completed')).not.toBeInTheDocument();
     expect(localStorage.getItem('synkazo:sync-summary-dismissed:job-1')).toBe(
       'run-complete',
@@ -221,14 +278,20 @@ describe('SyncRunProgress', () => {
 
     const expandBtn = screen.getByRole('button', { name: 'Expand' });
     expect(expandBtn).toBeInTheDocument();
-    expect(screen.queryByLabelText('Record statistics')).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText('Record statistics'),
+    ).not.toBeInTheDocument();
 
-    const header = screen.getByText('Sync in progress').closest('[data-slot="sync-summary-header"]');
+    const header = screen
+      .getByText('Sync in progress')
+      .closest('[data-slot="sync-summary-header"]');
     expect(header).toBeInTheDocument();
     expect(header).toHaveClass('bg-card', 'hover:bg-muted/20');
     fireEvent.click(header!);
 
-    expect(screen.getByRole('button', { name: 'Collapse' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Collapse' }),
+    ).toBeInTheDocument();
     expect(screen.getByLabelText('Record statistics')).toBeInTheDocument();
   });
 

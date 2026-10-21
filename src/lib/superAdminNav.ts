@@ -3,6 +3,7 @@ import {
   Building2,
   ClipboardList,
   Gauge,
+  Activity,
   Megaphone,
   Percent,
   Settings2,
@@ -33,6 +34,12 @@ export const SUPER_ADMIN_NAV: NavGroup[] = [
         title: 'Organisations',
         url: '/super-admin/organisations',
         icon: Building2,
+        minRole: 'super_admin',
+      },
+      {
+        title: 'Sync operations',
+        url: '/super-admin/sync-operations',
+        icon: Activity,
         minRole: 'super_admin',
       },
       {

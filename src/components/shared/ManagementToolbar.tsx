@@ -97,7 +97,9 @@ export default function ManagementToolbar({
           className={cn(
             'row-start-2 grid min-w-0 gap-2 xl:col-auto xl:row-auto xl:shrink-0',
             filterCount === 2
-              ? 'col-span-2 grid-cols-2 xl:w-60'
+              ? !viewMode && !action
+                ? 'col-span-full grid-cols-2 xl:w-60'
+                : 'col-span-2 grid-cols-2 xl:w-60'
               : 'col-start-1 grid-cols-1 xl:w-32',
           )}
         >

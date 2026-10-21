@@ -117,8 +117,11 @@ export function useAddPaymentMethodMutation() {
   return useMutation({
     mutationFn: (paymentMethodId: string) =>
       billingApi.addPaymentMethod(paymentMethodId),
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: queryKeys.billing.paymentMethods }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.billing.paymentMethods });
+      qc.invalidateQueries({ queryKey: queryKeys.billing.subscription });
+      qc.invalidateQueries({ queryKey: queryKeys.billing.plan });
+    },
   });
 }
 
@@ -126,8 +129,11 @@ export function useSetDefaultPaymentMethodMutation() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => billingApi.setDefaultPaymentMethod(id),
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: queryKeys.billing.paymentMethods }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.billing.paymentMethods });
+      qc.invalidateQueries({ queryKey: queryKeys.billing.subscription });
+      qc.invalidateQueries({ queryKey: queryKeys.billing.plan });
+    },
   });
 }
 
@@ -135,8 +141,11 @@ export function useRemovePaymentMethodMutation() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => billingApi.removePaymentMethod(id),
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: queryKeys.billing.paymentMethods }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.billing.paymentMethods });
+      qc.invalidateQueries({ queryKey: queryKeys.billing.subscription });
+      qc.invalidateQueries({ queryKey: queryKeys.billing.plan });
+    },
   });
 }
 

@@ -110,6 +110,12 @@ describe('selected organisation context header', () => {
     expect(
       within(sections).getByRole('link', { name: 'Sync Flows' }),
     ).toHaveAttribute('aria-current', 'page');
+    fireEvent.click(
+      within(sections).getByRole('link', { name: 'Connections' }),
+    );
+    expect(
+      within(sections).getByRole('link', { name: 'Connections' }),
+    ).toHaveAttribute('aria-current', 'page');
     fireEvent.click(within(sections).getByRole('link', { name: 'Settings' }));
     expect(
       within(sections).getByRole('link', { name: 'Settings' }),

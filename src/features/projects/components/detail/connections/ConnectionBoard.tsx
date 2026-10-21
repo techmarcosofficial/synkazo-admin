@@ -4,7 +4,8 @@ import ConnectionsReadyDialog from './ConnectionsReadyDialog';
 import PlatformCard from './PlatformCard';
 import SourcePlatformPicker from './SourcePlatformPicker';
 
-import { connectionsApi } from '@/api/connections';
+import { useConnectionAccess } from '@/components/connections/ConnectionAccessContext';
+import ErrorState from '@/components/shared/ErrorState';
 import ConnectionEnvDropdown from '@/components/connections/ConnectionEnvToggle';
 import { PLATFORM_META } from '@/components/connections/platformMeta';
 import HeadingPair from '@/components/shared/HeadingPair';
@@ -25,6 +26,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import type { Connection } from '@/types';
@@ -226,8 +228,11 @@ export default function ConnectionBoard({
   onContinue,
   className,
 }: ConnectionBoardProps) {
+  const { api: connectionsApi, audience } = useConnectionAccess();
   const {
     loading,
+    loadError,
+    oauthPending,
     activeEnv,
     setActiveEnv,
     sourceConn,
@@ -240,7 +245,6 @@ export default function ConnectionBoard({
     refreshConnections,
     activeConn,
     showManualModal,
-    handleOAuth,
     resetModals,
   } = useConnectionsManager({
     projectId,
@@ -323,6 +327,15 @@ export default function ConnectionBoard({
       </Card>
     );
   }
+
+  if (loadError)
+    return (
+      <ErrorState
+        title="Could not load connections"
+        description={loadError}
+        onRetry={() => void refreshConnections()}
+      />
+    );
 
   const sourceComplete = sourceConn?.status === 'connected';
   const destinationComplete = destConn?.status === 'connected';
@@ -451,8 +464,11 @@ export default function ConnectionBoard({
   return (
     <>
       <Card className={cn('w-full', className)}>
-        <CardHeader visualLevel="section" className="gap-1">
-          <div className="flex items-center gap-2">
+        <CardHeader
+          visualLevel="section"
+          className="gap-2 has-data-[slot=card-action]:grid-cols-1 sm:has-data-[slot=card-action]:grid-cols-[minmax(0,1fr)_auto]"
+        >
+          <div className="flex flex-wrap items-center gap-2">
             <CardTitle>Connections</CardTitle>
             <StatusBadge
               status={activeEnv === 'production' ? 'production' : 'sandbox'}
@@ -471,7 +487,7 @@ export default function ConnectionBoard({
           </div>
           <CardDescription>{boardDescription}</CardDescription>
           {!hideEnvironmentToggle && (
-            <CardAction>
+            <CardAction className="col-start-1 row-span-1 row-start-3 w-full justify-self-start sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:w-auto sm:justify-self-end">
               <ConnectionEnvDropdown
                 activeEnv={activeEnv}
                 onChange={setActiveEnv}
@@ -504,6 +520,9 @@ export default function ConnectionBoard({
                 <PlatformCard
                   conn={sourceSlot}
                   onConnect={openConnect}
+                  oauthPending={
+                    oauthPending && sourceSlot.platformId === 'hubspot'
+                  }
                   onUpdated={(updated) =>
                     handleConnectionUpdated(sourceSlot, updated)
                   }
@@ -512,8 +531,12 @@ export default function ConnectionBoard({
                   isTesting={testingSource}
                   onTestingChange={setTestingSource}
                 />
-              ) : (
+              ) : audience === 'tenant' ? (
                 <SourcePlatformPicker projectId={projectId} />
+              ) : (
+                <p className="text-muted-foreground px-4 py-3 text-sm">
+                  This project has no source platform configured.
+                </p>
               )}
             </ConnectionStep>
 
@@ -539,6 +562,9 @@ export default function ConnectionBoard({
                 <PlatformCard
                   conn={destinationSlot}
                   onConnect={openConnect}
+                  oauthPending={
+                    oauthPending && destinationSlot.platformId === 'hubspot'
+                  }
                   onUpdated={(updated) =>
                     handleConnectionUpdated(destinationSlot, updated)
                   }
@@ -558,16 +584,25 @@ export default function ConnectionBoard({
             </ConnectionStep>
           </div>
         </CardContent>
+        {sourceComplete &&
+        destinationComplete &&
+        onContinue &&
+        !showReadyDialog ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 px-4">
+            <p className="text-muted-foreground text-sm">
+              Both platforms are connected. Create a sync flow to start syncing.
+            </p>
+            <Button size="sm" onClick={onContinue}>
+              Create Sync Flow
+            </Button>
+          </div>
+        ) : null}
       </Card>
 
       {showManualModal && activeConn && (
         <CredentialsModal
           projectId={projectId}
           conn={activeConn}
-          syncMode={syncMode}
-          onOAuth={
-            activeConn.platformId === 'hubspot' ? handleOAuth : undefined
-          }
           initialForm={cachedForms[borderFeedbackKey(projectId, activeConn)]}
           onSubmitCredentials={(creds, existingId) =>
             handleSubmitCredentials(activeConn, creds, existingId)

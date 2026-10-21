@@ -36,6 +36,8 @@ vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() },
 }));
 
+vi.mock('@/lib/oauthRedirect', () => ({ redirectToOAuth: vi.fn() }));
+
 afterEach(cleanup);
 
 describe('ConnectionBoard credential journey', () => {
@@ -172,27 +174,20 @@ describe('ConnectionBoard credential journey', () => {
     expect(sourceCard()).toHaveAttribute('data-border-state', 'success');
     expect(sourceCard()).toHaveClass('border-success');
 
+    vi.mocked(connectionsApi.getHubSpotOAuthUrl).mockResolvedValue(
+      'https://app.hubspot.com/oauth/authorize',
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Connect HubSpot' }));
-    fireEvent.click(screen.getByRole('button', { name: /Manual Setup/i }));
-    fireEvent.change(
-      screen.getByPlaceholderText('Enter your HubSpot access token'),
-      {
-        target: { value: 'pat-1' },
-      },
-    );
-    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
-
-    expect(
-      await screen.findByText(/sandbox connections ready/i),
-    ).toBeInTheDocument();
     await waitFor(() =>
-      expect(destinationCard()).toHaveAttribute('data-border-state', 'success'),
+      expect(connectionsApi.getHubSpotOAuthUrl).toHaveBeenCalledWith(
+        'proj-1',
+        'destination',
+        'sandbox',
+      ),
     );
-    expect(
-      screen.queryByText('Connections Ready · Project Active'),
-    ).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Create Sync Flow' }));
-    expect(onContinue).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByText('Manual Setup')).not.toBeInTheDocument();
+    expect(connectionsApi.createConnection).toHaveBeenCalledTimes(1);
   });
 
   it('keeps a saved connection recoverable when verification cannot reach the server', async () => {

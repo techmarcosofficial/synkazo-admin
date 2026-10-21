@@ -36,6 +36,9 @@ import PageNotFound from './lib/PageNotFound';
 import { homeForUser } from '@/lib/workspace';
 
 const OverviewPage = lazy(() => import('@/pages/superadmin/OverviewPage'));
+const SyncOperationsPage = lazy(
+  () => import('@/pages/superadmin/SyncOperationsPage'),
+);
 const OrganisationsPage = lazy(
   () => import('@/pages/superadmin/OrganisationsPage'),
 );
@@ -266,20 +269,28 @@ function App() {
                   <Route path="members" element={<OrgMembersTab />} />
                   <Route path="invitations" element={<OrgInvitationsTab />} />
 
-                  {/* Third level — sub-views of one area, so a rail beside the
-                    content rather than a second tab row (see BillingLayout). */}
+                  {/* Billing workspace — unified single dashboard */}
                   <Route path="billing" element={<BillingLayout />}>
-                    <Route index element={<Navigate to="overview" replace />} />
-                    <Route path="overview" element={<BillingOverviewTab />} />
-                    <Route path="subscription" element={<SubscriptionTab />} />
+                    <Route index element={<BillingOverviewTab />} />
+                    <Route
+                      path="overview"
+                      element={<Navigate to="/organization/billing" replace />}
+                    />
+                    <Route
+                      path="subscription"
+                      element={<Navigate to="/organization/billing" replace />}
+                    />
                     <Route
                       path="payment-methods"
-                      element={<PaymentMethodsTab />}
+                      element={<Navigate to="/organization/billing" replace />}
                     />
-                    <Route path="invoices" element={<InvoicesTab />} />
+                    <Route
+                      path="invoices"
+                      element={<Navigate to="/organization/billing" replace />}
+                    />
                     <Route
                       path="payment-history"
-                      element={<PaymentHistoryTab />}
+                      element={<Navigate to="/organization/billing" replace />}
                     />
                   </Route>
 
@@ -333,6 +344,10 @@ function App() {
                     element={<Navigate to="/super-admin/overview" replace />}
                   />
                   <Route path="overview" element={<OverviewPage />} />
+                  <Route
+                    path="sync-operations"
+                    element={<SyncOperationsPage />}
+                  />
                   <Route path="profile" element={<PlatformProfilePage />} />
                   <Route path="organisations" element={<OrganisationsPage />} />
                   <Route
