@@ -1,4 +1,4 @@
-import { Box, Link2, Tag, type LucideIcon } from 'lucide-react';
+import { Tag, type LucideIcon } from 'lucide-react';
 
 import type { MigrationDiff, MigrationDiffItem } from '@/api/migration';
 
@@ -16,22 +16,10 @@ export const migrationGroups = (
   diff: MigrationDiff | null,
 ): MigrationGroup[] => [
   {
-    key: 'customObjects',
-    title: 'Custom objects',
-    icon: Box,
-    items: diff?.customObjects ?? [],
-  },
-  {
     key: 'properties',
-    title: 'Custom properties',
+    title: 'Standard-object custom fields',
     icon: Tag,
     items: diff?.properties ?? [],
-  },
-  {
-    key: 'associations',
-    title: 'Association labels',
-    icon: Link2,
-    items: diff?.associations ?? [],
   },
 ];
 
@@ -76,10 +64,6 @@ export function selectedKindCounts(
     .flatMap((group) => group.items)
     .filter((item) => selected.has(item.identityKey));
   return {
-    customObjects: selectedItems.filter((item) => item.kind === 'custom_object')
-      .length,
     properties: selectedItems.filter((item) => item.kind === 'property').length,
-    associations: selectedItems.filter((item) => item.kind === 'association')
-      .length,
   };
 }

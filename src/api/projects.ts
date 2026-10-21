@@ -20,6 +20,30 @@ export interface ProjectArchiveImpact {
   };
 }
 
+export interface ProjectEnvironmentsOverview {
+  projectId: string;
+  activeEnvironmentId: string | null;
+  environmentGeneration: string;
+  workspaces: Array<{
+    id: string;
+    key: string;
+    role: string;
+    label: string;
+    lifecycleStatus: string;
+    active: boolean;
+    jobs: number;
+    connections: number;
+    runs: number;
+    runLogs: number;
+  }>;
+  legacyUnassigned: {
+    jobs: number;
+    connections: number;
+    runs: number;
+    runLogs: number;
+  };
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const d = (r: any): any => r.data.data;
 
@@ -27,6 +51,8 @@ export const projectsApi = {
   listProjects: (): Promise<Project[]> => apiClient.get('/projects').then(d),
   getProject: (id: string): Promise<Project> =>
     apiClient.get(`/projects/${id}`).then(d),
+  getEnvironments: (id: string): Promise<ProjectEnvironmentsOverview> =>
+    apiClient.get(`/projects/${id}/environments`).then(d),
   createProject: (data: Partial<Project>): Promise<Project> =>
     apiClient.post('/projects', data).then(d),
   updateProject: (id: string, data: Partial<Project>): Promise<Project> =>

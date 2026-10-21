@@ -64,6 +64,18 @@ describe('project settings prerequisites', () => {
     ).toBe(false);
   });
 
+  it('keeps Environments available before connections or jobs exist', () => {
+    const environments = PROJECT_SETTINGS_SECTION_DEFS.find(
+      (section) => section.id === 'environments',
+    )!;
+    expect(isProjectSettingsSectionLocked(environments, false, false)).toBe(
+      false,
+    );
+    expect(projectSettingsSectionLockReason(environments, false, false)).toBe(
+      '',
+    );
+  });
+
   it('explains missing connections before missing jobs', () => {
     expect(isProjectSettingsSectionLocked(schedule, false, false)).toBe(true);
     expect(projectSettingsSectionLockReason(schedule, false, false)).toMatch(

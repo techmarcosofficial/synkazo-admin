@@ -143,8 +143,9 @@ export default function SettingsTab() {
       body: (
         <div className="space-y-2 text-sm">
           <p>
-            Runs already queued or running keep the environment captured when
-            they were queued. Newly queued syncs use {targetLabel}.
+            Check that queued and running syncs have finished before switching.
+            Queued work for the previous environment may be rejected after the
+            switch.
           </p>
           <p className="text-muted-foreground">
             This does not copy jobs, mappings, objects, or properties between
@@ -200,7 +201,7 @@ export default function SettingsTab() {
           className="min-w-0 gap-0 py-0"
           aria-labelledby="project-settings-section-title"
         >
-          <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 py-3">
+          <CardHeader className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <HeadingPair
               titleId="project-settings-section-title"
               title={activeSection.label}

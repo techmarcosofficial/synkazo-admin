@@ -128,7 +128,7 @@ describe('EnvironmentOverviewCards', () => {
     expect(onGoToConnections).toHaveBeenCalledOnce();
   });
 
-  it('confirms pinned queued-work behavior before switching', async () => {
+  it('warns about queued work before switching', async () => {
     const props = renderCards();
 
     await userEvent.click(
@@ -144,7 +144,7 @@ describe('EnvironmentOverviewCards', () => {
     render(<>{confirmation.body}</>);
     expect(
       screen.getByText(
-        /already queued or running keep the environment captured/i,
+        /queued work for the previous environment may be rejected/i,
       ),
     ).toBeInTheDocument();
 

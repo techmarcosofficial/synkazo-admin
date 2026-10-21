@@ -119,17 +119,15 @@ describe('MigrationPanel', () => {
     expect(
       await screen.findByText('Compare configuration'),
     ).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('tab', { name: 'Conflicts (1)' }));
+    expect(screen.queryByText('Custom objects')).not.toBeInTheDocument();
+    expect(screen.queryByText('Works for')).not.toBeInTheDocument();
     expect(
-      screen.getByText('The target label uses a different internal type.'),
+      screen.getByRole('tab', { name: 'Available (1)' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('tab', { name: 'Available (2)' }),
+      screen.getByRole('tab', { name: 'Conflicts (0)' }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole('tab', { name: 'Conflicts (1)' }),
-    ).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('tab', { name: 'Available (2)' }));
+    await userEvent.click(screen.getByRole('tab', { name: 'Available (1)' }));
 
     await userEvent.click(
       screen.getByRole('checkbox', { name: 'Select Customer tier' }),
@@ -214,7 +212,9 @@ describe('MigrationPanel', () => {
       screen.getByText('HubSpot schema request timed out.'),
     ).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
-    expect(await screen.findByText('Custom objects')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Standard-object custom fields'),
+    ).toBeInTheDocument();
   });
 
   it('shows an accurate in-sync state when no items are missing', async () => {
@@ -229,10 +229,10 @@ describe('MigrationPanel', () => {
     renderPanel();
 
     expect(
-      await screen.findByText('Environments are in sync'),
+      await screen.findByText('No eligible fields to transfer'),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/every comparable Sandbox item/i),
+      screen.getByText(/every eligible Sandbox field/i),
     ).toBeInTheDocument();
   });
 

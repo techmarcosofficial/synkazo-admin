@@ -1,9 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-import type { ConnectionExt, ProjectExt } from './useProjectDetail';
+import {
+  projectDetailQueryKey,
+  type ConnectionExt,
+  type ProjectDetailData,
+  type ProjectExt,
+} from './useProjectDetail';
 
 import { connectionsApi } from '@/api/connections';
+import { queryKeys } from '@/queries/queryKeys';
 import type { ProjectEnvironment } from '@/types';
 
 interface UseProjectEnvironmentActivationInput {
@@ -12,7 +19,7 @@ interface UseProjectEnvironmentActivationInput {
   connections: ConnectionExt[];
   loading: boolean;
   patchProject: (patch: Partial<ProjectExt>) => void;
-  refetch: () => void;
+  refetch: () => Promise<unknown>;
 }
 
 const envOf = (c: ConnectionExt) => c.environment ?? 'production';
@@ -30,6 +37,7 @@ export function useProjectEnvironmentActivation({
   patchProject,
   refetch,
 }: UseProjectEnvironmentActivationInput) {
+  const queryClient = useQueryClient();
   const [projectActiveEnv, setProjectActiveEnv] =
     useState<ProjectEnvironment | null>(null);
   const [envActivating, setEnvActivating] = useState(false);
@@ -71,17 +79,62 @@ export function useProjectEnvironmentActivation({
     const toastId = toast.loading(
       `Switching to ${envLabel}… validating connections`,
     );
+    let activated = false;
     try {
       await connectionsApi.activateEnvironment(projectId, env);
-      setProjectActiveEnv(env);
+      activated = true;
+      const activatedAt = new Date().toISOString();
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.projects.environments(projectId),
+      });
       patchProject({
         activeEnvironment: env,
-        environmentActivatedAt: new Date().toISOString(),
+        environmentActivatedAt: activatedAt,
       });
+      // Clear the old workspace's jobs, logs and totals immediately after the
+      // switch succeeds; they must never render under the new environment.
+      queryClient.setQueryData<ProjectDetailData>(
+        projectDetailQueryKey(projectId),
+        (old) => old && {
+          ...old,
+          jobs: [],
+          logs: [],
+          project: {
+            ...old.project,
+            activeEnvironment: env,
+            environmentActivatedAt: activatedAt,
+            totalRecordsSynced: 0,
+            totalErrorCount: 0,
+            lastSyncedAt: null,
+          },
+        },
+      );
+      queryClient.removeQueries({ queryKey: ['activity', projectId] });
+      queryClient.removeQueries({ queryKey: queryKeys.jobs.byProject(projectId) });
+      queryClient.removeQueries({ queryKey: ['jobs', 'runLogs', projectId] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all, exact: true });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.projects.all, exact: true });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.summary });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.scheduler.health });
+      setProjectActiveEnv(env);
+      const refreshed = await refetch();
+      if (
+        refreshed &&
+        typeof refreshed === 'object' &&
+        'isError' in refreshed &&
+        refreshed.isError
+      ) {
+        throw new Error('Workspace data could not be refreshed');
+      }
       toast.success(`${envLabel} activated`, { id: toastId });
       setConnReloadKey((k) => k + 1);
-      refetch();
     } catch (err) {
+      if (activated) {
+        const message = `${envLabel} was activated, but its data could not be refreshed. Reload this page.`;
+        setActivationError(message);
+        toast.error(message, { id: toastId });
+        return;
+      }
       const e = err as { response?: { data?: { message?: string } } };
       const message =
         e?.response?.data?.message ??

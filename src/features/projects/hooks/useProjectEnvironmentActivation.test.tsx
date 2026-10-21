@@ -1,7 +1,10 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useProjectEnvironmentActivation } from './useProjectEnvironmentActivation';
+import { projectDetailQueryKey } from './useProjectDetail';
 
 import { connectionsApi } from '@/api/connections';
 import type { ConnectionExt, ProjectExt } from '@/features/projects/hooks';
@@ -67,17 +70,26 @@ function setupHook(
 ) {
   const patchProject = vi.fn();
   const refetch = vi.fn();
-  const hook = renderHook(() =>
-    useProjectEnvironmentActivation({
-      projectId: project.id,
-      project: projectValue,
-      connections,
-      loading: false,
-      patchProject,
-      refetch,
-    }),
+  const queryClient = new QueryClient();
+  const hook = renderHook(
+    () =>
+      useProjectEnvironmentActivation({
+        projectId: project.id,
+        project: projectValue,
+        connections,
+        loading: false,
+        patchProject,
+        refetch,
+      }),
+    {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={queryClient}>
+          {children}
+        </QueryClientProvider>
+      ),
+    },
   );
-  return { ...hook, patchProject, refetch };
+  return { ...hook, patchProject, refetch, queryClient };
 }
 
 beforeEach(() => {
@@ -106,6 +118,28 @@ describe('useProjectEnvironmentActivation', () => {
       expect.objectContaining({ activeEnvironment: 'production' }),
     );
     expect(refetch).toHaveBeenCalled();
+  });
+
+  it('clears previous workspace jobs, logs and totals as soon as activation succeeds', async () => {
+    const { result, queryClient } = setupHook();
+    queryClient.setQueryData(projectDetailQueryKey(project.id), {
+      project: { ...project, totalRecordsSynced: 5, totalErrorCount: 1 },
+      jobs: [{ id: 'sandbox-job' }],
+      connections: sandboxPair,
+      logs: [{ id: 'sandbox-log' }],
+    });
+
+    await act(() => result.current.handleActivateEnv('production'));
+
+    expect(queryClient.getQueryData(projectDetailQueryKey(project.id))).toMatchObject({
+      jobs: [],
+      logs: [],
+      project: {
+        activeEnvironment: 'production',
+        totalRecordsSynced: 0,
+        totalErrorCount: 0,
+      },
+    });
   });
 
   it('keeps activation API failures visible and retryable', async () => {

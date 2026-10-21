@@ -90,7 +90,12 @@ export default function ActivityTab() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(readStoredPageSize);
 
-  const query = useProjectActivityQuery(projectId, page, limit);
+  const query = useProjectActivityQuery(
+    projectId,
+    project.activeEnvironmentId ?? null,
+    page,
+    limit,
+  );
   const res = query.data;
   const logs = res?.data ?? [];
   const total = res?.total ?? 0;

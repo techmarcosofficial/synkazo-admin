@@ -7,6 +7,7 @@ export const queryKeys = {
   projects: {
     all: ['projects'] as const,
     detail: (id: string) => ['projects', id] as const,
+    environments: (id: string) => ['projects', id, 'environments'] as const,
   },
   jobs: {
     all: ['jobs'] as const,
@@ -95,8 +96,8 @@ export const queryKeys = {
     notificationSettings: ['leads', 'notification-settings'] as const,
   },
   activity: {
-    list: (projectId: string, page: number, limit: number) =>
-      ['activity', projectId, page, limit] as const,
+    list: (projectId: string, workspaceId: string | null, page: number, limit: number) =>
+      ['activity', projectId, workspaceId, page, limit] as const,
   },
   associations: {
     records: (

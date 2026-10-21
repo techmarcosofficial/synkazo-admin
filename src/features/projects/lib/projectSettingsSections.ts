@@ -39,7 +39,6 @@ export const PROJECT_SETTINGS_SECTION_DEFS: ProjectSettingsSectionDef[] = [
     id: 'environments',
     label: 'Environments',
     description: 'Choose where syncs run and transfer configuration safely.',
-    requires: { connections: true, jobs: true },
   },
 ];
 

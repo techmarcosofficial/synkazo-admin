@@ -21,6 +21,7 @@ export interface Project {
   syncMode?: ProjectSyncMode | null;
   status: ProjectStatus;
   active_environment?: ProjectEnvironment;
+  activeEnvironmentId?: string | null;
   schedulerMode?: SchedulerMode;
   lastSyncedAt?: string | null;
   totalRecordsSynced?: number;

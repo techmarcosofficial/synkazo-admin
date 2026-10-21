@@ -21,6 +21,14 @@ export function useProjectQuery(id: string) {
   });
 }
 
+export function useProjectEnvironmentsQuery(id: string) {
+  return useQuery({
+    queryKey: queryKeys.projects.environments(id),
+    queryFn: () => projectsApi.getEnvironments(id),
+    enabled: !!id,
+  });
+}
+
 export function useCreateProjectMutation() {
   const queryClient = useQueryClient();
   return useMutation({

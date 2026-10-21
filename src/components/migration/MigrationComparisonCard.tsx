@@ -261,10 +261,11 @@ function TransferConfirmation({
           <p className="flex items-center gap-2 text-sm font-semibold">
             {fromLabel} <ArrowRight className="size-4" /> {toLabel}
           </p>
-          <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-            <Metric label="Objects" value={counts.customObjects} />
-            <Metric label="Properties" value={counts.properties} />
-            <Metric label="Associations" value={counts.associations} />
+          <div className="mt-3 text-center">
+            <Metric
+              label="Standard-object custom fields"
+              value={counts.properties}
+            />
           </div>
         </div>
 
@@ -377,8 +378,9 @@ export default function MigrationComparisonCard({
         <div>
           <CardTitle>Compare configuration</CardTitle>
           <CardDescription>
-            Review differences first, then select only missing items to create
-            in the target.
+            Transfer custom fields on standard objects. Create custom-object
+            schemas, their fields, association labels and jobs that use custom
+            objects manually in each workspace.
           </CardDescription>
         </div>
         <div className="flex flex-wrap gap-2 sm:justify-end">
@@ -494,14 +496,14 @@ export default function MigrationComparisonCard({
                     : filter === 'conflict'
                       ? 'No conflicts found'
                       : filter === 'missing'
-                        ? 'Environments are in sync'
+                        ? 'No eligible fields to transfer'
                         : 'No items in this view'
                 }
                 description={
                   filter === 'selected'
                     ? `Select available items to stage them for ${toLabel}.`
                     : filter === 'missing'
-                      ? `Every comparable ${fromLabel} item already exists in ${toLabel}.`
+                      ? `Every eligible ${fromLabel} field already exists in ${toLabel}.`
                       : 'Choose another filter to review the comparison.'
                 }
               />

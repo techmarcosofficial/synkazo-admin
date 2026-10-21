@@ -138,8 +138,9 @@ export default function EnvironmentOverviewCards({
       body: (
         <div className="space-y-2 text-sm">
           <p>
-            Runs already queued or running keep the environment captured when
-            they were queued. Newly queued syncs use {targetLabel}.
+            Check that queued and running syncs have finished before switching.
+            Queued work for the previous environment may be rejected after the
+            switch.
           </p>
           <p className="text-muted-foreground">
             This does not copy jobs, mappings, objects, or properties between
@@ -176,7 +177,7 @@ export default function EnvironmentOverviewCards({
                   label={
                     activeEnvironment === 'production'
                       ? 'Production (Live)'
-                      : 'Sandbox (Test Mode)'
+                      : 'Sandbox workspace'
                   }
                   size="sm"
                 />
@@ -230,7 +231,7 @@ export default function EnvironmentOverviewCards({
                 {activeEnvironment === 'sandbox' ? (
                   <div className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
                     <CheckCircle2 className="text-success size-3.5 shrink-0" />
-                    <span>Syncs running</span>
+                    <span>Selected workspace</span>
                   </div>
                 ) : readiness.sandbox.ready ? (
                   canActivate ? (
@@ -308,7 +309,7 @@ export default function EnvironmentOverviewCards({
                 {activeEnvironment === 'production' ? (
                   <div className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
                     <CheckCircle2 className="text-success size-3.5 shrink-0" />
-                    <span>Syncs running</span>
+                    <span>Selected workspace</span>
                   </div>
                 ) : !readiness.production.ready ? (
                   /* SINGLE primary action button: only Configure Production */

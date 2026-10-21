@@ -42,29 +42,27 @@ const diff: MigrationDiff = {
 };
 
 describe('migrationModel', () => {
-  it('counts each comparison state and selected item kind', () => {
+  it('shows only eligible standard-object fields in the transfer selection', () => {
     const groups = migrationGroups(diff);
-    const selected = new Set(['object:a']);
+    const selected = new Set(['property:b']);
     expect(migrationCounts(groups, selected)).toEqual({
-      all: 3,
-      missing: 1,
-      conflict: 1,
+      all: 1,
+      missing: 0,
+      conflict: 0,
       selected: 1,
       in_sync: 1,
     });
     expect(selectedKindCounts(groups, selected)).toEqual({
-      customObjects: 1,
-      properties: 0,
-      associations: 0,
+      properties: 1,
     });
   });
 
-  it('filters conflicts and staged selections independently', () => {
+  it('does not expose custom schemas or associations in the transfer list', () => {
     const items = migrationGroups(diff).flatMap((group) => group.items);
-    expect(filterMigrationItems(items, 'conflict', new Set())).toHaveLength(1);
+    expect(filterMigrationItems(items, 'conflict', new Set())).toHaveLength(0);
     expect(
-      filterMigrationItems(items, 'selected', new Set(['object:a']))[0]
+      filterMigrationItems(items, 'selected', new Set(['property:b']))[0]
         .identityKey,
-    ).toBe('object:a');
+    ).toBe('property:b');
   });
 });
