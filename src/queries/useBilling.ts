@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from './queryKeys';
 
 import { billingApi, billingAdminApi } from '@/api/billing';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import type {
   BillingInterval,
   EmbeddedCheckoutRequest,
@@ -19,10 +20,13 @@ import type {
 } from '@/types';
 
 export function usePlanQuery(options?: { enabled?: boolean }) {
+  const { currentUser } = useSynkazoAuth();
+  const hasTenantOrganisation =
+    !!currentUser?.organisationId && currentUser.role !== 'super_admin';
   return useQuery({
     queryKey: queryKeys.billing.plan,
     queryFn: billingApi.getPlan,
-    enabled: options?.enabled ?? true,
+    enabled: hasTenantOrganisation && (options?.enabled ?? true),
     refetchInterval: 30000,
   });
 }
