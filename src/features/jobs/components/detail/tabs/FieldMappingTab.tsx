@@ -1,12 +1,9 @@
 import {
   AlertTriangle,
-  Check,
   ExternalLink,
   Filter,
   Link2,
-  RotateCcw,
   ShieldCheck,
-  Sparkles,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -23,17 +20,17 @@ import DefaultValuesDialog from '@/components/fieldmapping/DefaultValuesDialog';
 import { validateDestinationSkipConditions } from '@/components/fieldmapping/DestinationSkipConditionsEditor';
 import { validateExcludeConditions } from '@/components/fieldmapping/ExcludeConditionsEditor';
 import FieldMappingCanvas, {
-  IconLegend,
   type FieldDef as CanvasFieldDef,
   type MappingRow as CanvasMappingRow,
 } from '@/components/fieldmapping/FieldMappingCanvas';
+import { FieldMappingDraftFooter, FieldMappingWorkspaceHeader } from '@/components/fieldmapping/FieldMappingWorkspaceChrome';
+import { supportsCrossObjectProperties } from '@/components/fieldmapping/supportsCrossObjectProperties';
+export { supportsCrossObjectProperties } from '@/components/fieldmapping/supportsCrossObjectProperties';
 import JobFiltersDialog from '@/components/fieldmapping/JobFiltersDialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { useSidebar } from '@/components/ui/sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Spinner } from '@/components/ui/spinner';
 import {
   consolidateMappings,
   type ConsolidatedMapping,
@@ -87,11 +84,6 @@ function normalizeMappings(
 }
 
 /** A constant mapping — one side deliberately empty (see the FieldMapping entity). */
-export const supportsCrossObjectProperties = (platformId: string) =>
-  platformId === 'servicetitan' ||
-  platformId === 'dataforma' ||
-  platformId === 'texada';
-
 const isConstant = (m: { sourceField: string; destField: string }) =>
   !m.sourceField || !m.destField;
 
@@ -244,7 +236,6 @@ export default function FieldMappingTab() {
   const clearTabDraft = useFieldMappingDraftStore(
     (state) => state.clearTabDraft,
   );
-  const { state: sidebarState } = useSidebar();
   const [searchParams, setSearchParams] = useSearchParams();
   const workspaceRef = useRef<HTMLDivElement>(null);
   const [mappingToolbarContainer, setMappingToolbarContainer] =
@@ -785,100 +776,18 @@ export default function FieldMappingTab() {
 
       <Card className="border-border bg-card gap-0 py-0 shadow-xs">
         <CardContent className="p-0">
-          {/* Unified Workspace Header matching Dialog Header & Content design */}
-          <div className="bg-muted/30 dark:bg-card/90 border-border flex flex-col gap-4 border-b px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex min-w-0 flex-col gap-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="font-heading text-foreground text-base font-semibold tracking-tight">
-                  Field Mappings
-                </h3>
-                <IconLegend size="icon-xs" variant="ghost" />
-                <Badge variant="secondary" className="text-xs font-medium">
-                  {fieldMappings.length} mapped
-                </Badge>
-                {anyDirty && (
-                  <span className="text-muted-foreground hidden items-center gap-1.5 text-xs font-normal sm:inline-flex">
-                    <span className="bg-warning size-1.5 animate-pulse rounded-full" />
-                    Draft saved locally
-                  </span>
-                )}
-              </div>
-              <p className="text-muted-foreground text-xs leading-relaxed">
-                Map fields between your connected platforms to synchronize
-                record data accurately.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setShowJobFiltersDialog(true)}
-                className="h-8 gap-1.5 text-xs font-medium"
-              >
-                <ShieldCheck className="text-primary size-3.5" />
-                <span>Job Filters</span>
-                {totalFiltersCount > 0 && (
-                  <Badge
-                    variant="secondary"
-                    size="xs"
-                    className="ml-1 text-[10px]"
-                  >
-                    {totalFiltersCount}
-                  </Badge>
-                )}
-              </Button>
-
-              {supportsCrossObjectProperties(srcPlatform) && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowCrossObjectDialog(true)}
-                  className="h-8 gap-1.5 text-xs font-medium"
-                >
-                  <Link2 className="text-primary size-3.5" />
-                  <span>Cross-Object</span>
-                  {crossObjectProperties.length > 0 && (
-                    <Badge
-                      variant="secondary"
-                      size="xs"
-                      className="ml-1 text-[10px]"
-                    >
-                      {crossObjectProperties.length}
-                    </Badge>
-                  )}
-                </Button>
-              )}
-
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setShowDefaultValuesDialog(true)}
-                className="h-8 gap-1.5 text-xs font-medium"
-              >
-                <Sparkles className="text-primary size-3.5" />
-                <span>Default Values</span>
-                {defaultValuesCount > 0 && (
-                  <Badge
-                    variant="secondary"
-                    size="xs"
-                    className="ml-1 text-[10px]"
-                  >
-                    {defaultValuesCount}
-                  </Badge>
-                )}
-              </Button>
-
-              {/* Portal mount for FieldMappingCanvas controls */}
-              <div
-                ref={setMappingToolbarContainer}
-                className="flex flex-wrap items-center gap-2"
-              />
-            </div>
-          </div>
+          <FieldMappingWorkspaceHeader
+            mappedCount={fieldMappings.length}
+            dirty={anyDirty}
+            filtersCount={totalFiltersCount}
+            defaultsCount={defaultValuesCount}
+            crossObjectCount={crossObjectProperties.length}
+            showCrossObject={supportsCrossObjectProperties(srcPlatform)}
+            onOpenFilters={() => setShowJobFiltersDialog(true)}
+            onOpenDefaults={() => setShowDefaultValuesDialog(true)}
+            onOpenCrossObject={() => setShowCrossObjectDialog(true)}
+            setToolbarContainer={setMappingToolbarContainer}
+          />
 
           <div className="space-y-4 p-5">
             {fieldMappings.length > 0 &&
@@ -1050,54 +959,13 @@ export default function FieldMappingTab() {
         </CardContent>
       </Card>
 
-      {/* Floating Save Draft Bar */}
-      {anyDirty && (
-        <div
-          className={`border-border/60 bg-card/35 dark:bg-card/40 fixed right-0 bottom-0 left-0 z-40 max-w-full overflow-x-clip border-t shadow-[0_-4px_20px_rgba(0,0,0,0.05)] backdrop-blur-md transition-all duration-200 dark:border-white/10 dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)] ${
-            sidebarState === 'collapsed'
-              ? 'md:left-(--sidebar-width-icon)'
-              : 'md:left-(--sidebar-width)'
-          }`}
-        >
-          <div className="container mx-auto flex max-w-full min-w-0 flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:px-5 lg:px-6">
-            <div className="flex min-w-0 flex-1 items-start gap-3">
-              <div className="relative mt-1 flex size-2.5 shrink-0 items-center justify-center">
-                <span className="bg-warning/75 absolute inline-flex size-full animate-ping rounded-full opacity-75" />
-                <span className="bg-warning relative inline-flex size-2 rounded-full shadow-xs" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-foreground text-sm leading-snug font-semibold">
-                  Unsaved draft
-                </p>
-                <p className="text-muted-foreground mt-0.5 text-xs leading-normal">
-                  Your changes are auto-saved locally. Save to apply them to
-                  your sync job, or discard to restore saved state.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center justify-end gap-2.5">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleDiscard}
-                disabled={saving}
-                className="bg-background/60 hover:bg-background border-border/80 dark:bg-background/30 dark:hover:bg-background/60 cursor-pointer shadow-2xs"
-              >
-                <RotateCcw className="size-3.5" /> Discard changes
-              </Button>
-              <Button
-                onClick={handleSave}
-                disabled={!anyDirty || saving}
-                variant={anyDirty ? 'default' : 'outline'}
-                className="cursor-pointer shadow-xs"
-              >
-                {saving ? <Spinner /> : <Check className="size-3.5" />}
-                {saving ? 'Saving...' : saved ? 'Saved!' : 'Save changes'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <FieldMappingDraftFooter
+        dirty={anyDirty}
+        saving={saving}
+        saved={saved}
+        onDiscard={handleDiscard}
+        onSave={() => void handleSave()}
+      />
 
       {/* Job Filters Dialog */}
       <DefaultValuesDialog

@@ -3181,7 +3181,7 @@ export default function FieldMappingCanvas({
                           <TableRow
                             key={n.id}
                             className={cn(
-                              'hover:bg-muted/30 bg-card border-border/70 border-b transition-colors',
+                              'bg-card border-border/70 border-b transition-colors',
                               n.blocking
                                 ? 'bg-destructive/[0.04] dark:bg-destructive/[0.07]'
                                 : 'bg-warning/[0.035] dark:bg-warning/[0.06]',
@@ -3416,21 +3416,21 @@ export default function FieldMappingCanvas({
                 <Table className="bg-card min-w-[960px]">
                   <TableHeader className="bg-muted/50 dark:bg-muted/25 border-border border-b">
                     <TableRow className="border-border border-b hover:bg-transparent">
-                      <TableHead className="text-foreground/80 dark:text-foreground/75 w-[34%] py-3 pr-2 pl-4 text-xs font-semibold tracking-wider uppercase">
+                      <TableHead className="text-foreground/80 dark:text-foreground/75 w-[34%] py-3 pr-2 pl-4 text-xs font-semibold">
                         Source field
                       </TableHead>
-                      <TableHead className="text-foreground/80 dark:text-foreground/75 w-[34%] px-2 py-3 text-xs font-semibold tracking-wider uppercase">
+                      <TableHead className="text-foreground/80 dark:text-foreground/75 w-[34%] px-2 py-3 text-xs font-semibold">
                         Destination field
                       </TableHead>
                       {showDirectionToggle && (
-                        <TableHead className="text-foreground/80 dark:text-foreground/75 w-28 px-2 py-3 text-xs font-semibold tracking-wider uppercase">
+                        <TableHead className="text-foreground/80 dark:text-foreground/75 w-28 px-2 py-3 text-xs font-semibold">
                           Direction
                         </TableHead>
                       )}
-                      <TableHead className="text-foreground/80 dark:text-foreground/75 w-32 px-2 py-3 text-xs font-semibold tracking-wider uppercase">
+                      <TableHead className="text-foreground/80 dark:text-foreground/75 w-32 px-2 py-3 text-xs font-semibold">
                         Identifier
                       </TableHead>
-                      <TableHead className="text-foreground/80 dark:text-foreground/75 py-3 pr-4 pl-2 text-right text-xs font-semibold tracking-wider uppercase">
+                      <TableHead className="text-foreground/80 dark:text-foreground/75 py-3 pr-4 pl-2 text-right text-xs font-semibold">
                         Actions
                       </TableHead>
                     </TableRow>
@@ -3493,7 +3493,7 @@ export default function FieldMappingCanvas({
                           key={pairKey}
                           id={`mapping-row-${pairKey}`}
                           className={cn(
-                            'group/row hover:bg-muted/30 border-border/70 bg-card border-b transition-all duration-300',
+                            'group/row border-border/70 bg-card border-b transition-all duration-300',
                             hasAttentionIssue &&
                               (hasBlockingIssue
                                 ? 'bg-destructive/[0.04] dark:bg-destructive/[0.07]'

@@ -1,5 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, render, screen } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -73,26 +79,69 @@ afterEach(() => {
 });
 
 describe('OrganisationsPage', () => {
-  it('renders the table and links each row to the detail page', async () => {
+  it('opens organisation details from the default card and the list view', async () => {
     renderAt('/super-admin/organisations');
 
     expect(await screen.findByText('Northwind HVAC')).toBeInTheDocument();
-    expect(screen.getByText('owner@northwind.example')).toBeInTheDocument();
-    expect(screen.getByText('Pro')).toBeInTheDocument();
+    const directoryHeading = screen.getByRole('heading', {
+      level: 1,
+      name: 'Organisations',
+    });
+    const pageHeader = directoryHeading.closest('header');
+    expect(pageHeader).not.toBeNull();
+    const results = screen.getByRole('region', {
+      name: 'Organisation results',
+    });
+    expect(
+      within(pageHeader as HTMLElement).getByRole('button', {
+        name: 'Provision organisation',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      within(pageHeader as HTMLElement).getByText(
+        'Review status, billing, and customer workspaces.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(pageHeader as HTMLElement).getByLabelText('1 organisation total'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Manage organisations')).not.toBeInTheDocument();
+    expect(
+      screen.getByText('Owner: owner@northwind.example'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Plan: Pro')).toBeInTheDocument();
+    expect(screen.getByText('View organisation')).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
 
     const nameLink = screen.getByText('Northwind HVAC').closest('a');
     expect(nameLink).toHaveAttribute(
       'href',
       '/super-admin/organisations/org-1/overview',
     );
+
+    fireEvent.click(screen.getByLabelText('List view'));
+    const tableCard = screen.getByRole('table').closest('[data-slot="card"]');
+    expect(tableCard).not.toBeNull();
+    expect(tableCard).not.toContainElement(pageHeader);
+    expect(screen.getByText('owner@northwind.example')).toBeInTheDocument();
   });
 
   it('forwards status URL params to the query so deep-links pre-filter', async () => {
     renderAt('/super-admin/organisations?status=suspended');
     await screen.findByText('Northwind HVAC');
-    expect((mocks.lastParams as { status?: string })?.status).toBe(
-      'suspended',
-    );
+    expect((mocks.lastParams as { status?: string })?.status).toBe('suspended');
+  });
+
+  it('clears a directory search from the search field', async () => {
+    renderAt('/super-admin/organisations?search=northwind');
+    await screen.findByText('Northwind HVAC');
+
+    const search = screen.getByRole('textbox', {
+      name: 'Search organisations',
+    });
+    expect(search).toHaveValue('northwind');
+    fireEvent.click(screen.getByRole('button', { name: 'Clear search' }));
+    expect(search).toHaveValue('');
   });
 
   it('forwards subscriptionStatus URL params to the query', async () => {
@@ -120,8 +169,6 @@ describe('OrganisationsPage', () => {
 
     renderAt('/super-admin/organisations');
 
-    expect(
-      await screen.findByText('No organisations match your filters'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('No organisations yet')).toBeInTheDocument();
   });
 });

@@ -246,7 +246,7 @@ function JobsTableHeader({
 }) {
   return (
     <TableHeader>
-      <TableRow className="bg-muted hover:bg-muted/50">
+      <TableRow>
         <SortableTableHead
           active={sortKey === 'name'}
           direction={direction}

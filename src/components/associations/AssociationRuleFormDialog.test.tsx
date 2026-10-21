@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import AssociationRuleFormDialog, {
   sourceFieldOptionLabel,
+  type AssociationRuleFormOperations,
 } from './AssociationRuleFormDialog';
 
 import { associationsApi } from '@/api/associations';
@@ -89,6 +90,58 @@ describe('AssociationRuleFormDialog', () => {
     expect(
       document.querySelector('[data-slot="sheet-content"]'),
     ).not.toBeInTheDocument();
+  });
+
+  it('uses scoped operations and requires an operator reason before editing', async () => {
+    const updateRule = vi.fn().mockResolvedValue({});
+    const operations: AssociationRuleFormOperations = {
+      getProjectObjects: vi
+        .fn()
+        .mockResolvedValue([
+          { sourceObject: 'Customer', hsObjectType: 'contacts' },
+        ]),
+      getAssociationFields: vi
+        .fn()
+        .mockResolvedValue([
+          { field: 'company_domain', label: 'Company domain', isArray: false },
+        ]),
+      getOwnerFields: vi.fn().mockResolvedValue([]),
+      getAssociationTypes: vi.fn().mockResolvedValue([]),
+      createRule: vi.fn().mockResolvedValue({}),
+      updateRule,
+    };
+    const user = userEvent.setup();
+    render(
+      <AssociationRuleFormDialog
+        mode="edit"
+        projectId="project-1"
+        rule={rule}
+        operations={operations}
+        onSuccess={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    expect(
+      screen.getByText('Enter a reason of at least 10 characters'),
+    ).toBeInTheDocument();
+    expect(updateRule).not.toHaveBeenCalled();
+
+    await user.type(
+      screen.getByLabelText(/Operator reason/),
+      'Customer requested association update',
+    );
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() =>
+      expect(updateRule).toHaveBeenCalledWith(
+        'project-1',
+        'rule-1',
+        expect.objectContaining({ name: 'Contact to company' }),
+        'Customer requested association update',
+      ),
+    );
+    expect(associationsApi.updateRule).not.toHaveBeenCalled();
   });
 
   it('shows configured combined and imported source fields with labels', async () => {

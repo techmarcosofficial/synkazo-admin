@@ -1,11 +1,24 @@
 import type { AxiosResponse } from 'axios';
 
 import apiClient from './apiClient';
+import type { ProjectArchiveImpact } from './projects';
+import type { PipelineItem } from '@/features/jobs/types';
+import type {
+  CrossObjectProperty,
+  CrossObjectPropertyOption,
+} from '@/api/jobs';
 
 import type {
   SuperAdminPage,
+  SuperAdminCreateProjectDto,
   SuperAdminJobDetail,
   SuperAdminJobListItem,
+  SuperAdminCreateJobDto,
+  SuperAdminDiscoveredObject,
+  SuperAdminDiscoveredField,
+  SuperAdminFieldMapping,
+  SuperAdminFieldMappingInput,
+  SuperAdminJobRunListItem,
   SuperAdminProjectConnection,
   SuperAdminProjectDetail,
   SuperAdminProjectListItem,
@@ -51,6 +64,17 @@ export interface ListProjectsParams {
 // user.organisationId. Matches synkazo-api's SuperAdminProjectsController
 // on the /super-admin/organisations/:organisationId/projects route tree.
 export const superAdminOperationsApi = {
+  createProject: (
+    organisationId: string,
+    dto: SuperAdminCreateProjectDto,
+  ): Promise<{ id: string }> =>
+    apiClient
+      .post<{ data: { id: string } }>(
+        `/super-admin/organisations/${organisationId}/projects`,
+        dto,
+      )
+      .then(d),
+
   listProjects: (
     organisationId: string,
     params: ListProjectsParams = {},
@@ -69,6 +93,55 @@ export const superAdminOperationsApi = {
     apiClient
       .get<{ data: SuperAdminProjectDetail }>(
         `/super-admin/organisations/${organisationId}/projects/${projectId}`,
+      )
+      .then(d),
+
+  updateProject: (
+    organisationId: string,
+    projectId: string,
+    dto: { name?: string; description?: string },
+  ): Promise<SuperAdminProjectDetail> =>
+    apiClient
+      .patch<{ data: SuperAdminProjectDetail }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}`,
+        dto,
+      )
+      .then(d),
+
+  getProjectArchiveImpact: (
+    organisationId: string,
+    projectId: string,
+  ): Promise<ProjectArchiveImpact> =>
+    apiClient
+      .get<{ data: ProjectArchiveImpact }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}/archive-impact`,
+      )
+      .then(d),
+
+  archiveProject: (
+    organisationId: string,
+    projectId: string,
+    confirmation: string,
+    reason: string,
+  ): Promise<ProjectArchiveImpact> =>
+    apiClient
+      .delete<{ data: ProjectArchiveImpact }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}`,
+        { data: { confirmation, reason } },
+      )
+      .then(d),
+
+  activateProjectEnvironment: (
+    organisationId: string,
+    projectId: string,
+    dto: { environment: 'sandbox' | 'production'; reason: string },
+  ): Promise<{ environment: 'sandbox' | 'production'; message: string }> =>
+    apiClient
+      .post<{
+        data: { environment: 'sandbox' | 'production'; message: string };
+      }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}/activate-environment`,
+        dto,
       )
       .then(d),
 
@@ -92,6 +165,203 @@ export const superAdminOperationsApi = {
         `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs/${jobId}`,
       )
       .then(d),
+
+  createJob: (
+    organisationId: string,
+    projectId: string,
+    dto: SuperAdminCreateJobDto,
+  ): Promise<SuperAdminJobDetail> =>
+    apiClient
+      .post<{ data: SuperAdminJobDetail }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs`,
+        dto,
+      )
+      .then(d),
+
+  updateJob: (
+    organisationId: string,
+    projectId: string,
+    jobId: string,
+    dto: Partial<SuperAdminCreateJobDto>,
+  ): Promise<SuperAdminJobDetail> =>
+    apiClient
+      .patch<{ data: SuperAdminJobDetail }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs/${jobId}`,
+        dto,
+      )
+      .then(d),
+
+  setJobEnabled: (
+    organisationId: string,
+    projectId: string,
+    jobId: string,
+    enabled: boolean,
+  ): Promise<SuperAdminJobDetail> =>
+    apiClient
+      .patch<{ data: SuperAdminJobDetail }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs/${jobId}/enabled`,
+        { enabled },
+      )
+      .then(d),
+
+  setJobSyncEnabled: (
+    organisationId: string,
+    projectId: string,
+    jobId: string,
+    enabled: boolean,
+  ): Promise<SuperAdminJobDetail> =>
+    apiClient
+      .patch<{ data: SuperAdminJobDetail }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs/${jobId}/sync-enabled`,
+        { enabled },
+      )
+      .then(d),
+
+  discoverObjects: (
+    organisationId: string,
+    projectId: string,
+    platform: string,
+  ): Promise<SuperAdminDiscoveredObject[]> =>
+    apiClient
+      .get<{ data: SuperAdminDiscoveredObject[] }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}/discovery/${platform}/objects`,
+      )
+      .then(d),
+
+  discoverFields: (
+    organisationId: string,
+    projectId: string,
+    platform: string,
+    objectType: string,
+  ): Promise<SuperAdminDiscoveredField[]> =>
+    apiClient
+      .get<{ data: { properties: SuperAdminDiscoveredField[] } }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}/discovery/${platform}/${encodeURIComponent(objectType)}/properties`,
+      )
+      .then((response) => response.data.data.properties),
+
+  discoverPipelines: (
+    organisationId: string,
+    projectId: string,
+    objectType: string,
+  ): Promise<PipelineItem[]> =>
+    apiClient
+      .get<{ data: PipelineItem[] }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}/discovery/hubspot/pipelines`,
+        { params: { objectType } },
+      )
+      .then(d),
+
+  discoverStatuses: (
+    organisationId: string,
+    projectId: string,
+  ): Promise<Array<{ id: string; label: string }>> =>
+    apiClient
+      .get<{ data: Array<{ id: string; label: string }> }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}/discovery/servicetitan/project-statuses`,
+      )
+      .then(d),
+
+  listJobMappings: (
+    organisationId: string,
+    projectId: string,
+    jobId: string,
+  ): Promise<SuperAdminFieldMapping[]> =>
+    apiClient
+      .get<{ data: SuperAdminFieldMapping[] }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs/${jobId}/field-mappings`,
+      )
+      .then(d),
+
+  getJobFilterSample: (
+    organisationId: string,
+    projectId: string,
+    jobId: string,
+  ): Promise<Record<string, unknown> | null> =>
+    apiClient
+      .get<{ data: Record<string, unknown> | null }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs/${jobId}/filter-sample`,
+      )
+      .then(d),
+
+  replaceJobMappings: (
+    organisationId: string,
+    projectId: string,
+    jobId: string,
+    mappings: SuperAdminFieldMappingInput[],
+  ): Promise<SuperAdminFieldMapping[]> =>
+    apiClient
+      .put<{ data: SuperAdminFieldMapping[] }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs/${jobId}/field-mappings`,
+        mappings,
+      )
+      .then(d),
+
+  getJobCrossObjectOptions: (
+    organisationId: string,
+    projectId: string,
+    jobId: string,
+  ): Promise<{ objects: CrossObjectPropertyOption[] }> =>
+    apiClient
+      .get<{ data: { objects: CrossObjectPropertyOption[] } }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs/${jobId}/cross-object-properties/options`,
+      )
+      .then(d),
+
+  listJobCrossObjectProperties: (
+    organisationId: string,
+    projectId: string,
+    jobId: string,
+  ): Promise<CrossObjectProperty[]> =>
+    apiClient
+      .get<{ data: CrossObjectProperty[] }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs/${jobId}/cross-object-properties`,
+      )
+      .then(d),
+
+  createJobCrossObjectProperty: (
+    organisationId: string,
+    projectId: string,
+    jobId: string,
+    data: {
+      relatedObject: string;
+      lookupMode: 'id' | 'name';
+      lookupField: string;
+      importedProperty: string;
+    },
+  ): Promise<CrossObjectProperty> =>
+    apiClient
+      .post<{ data: CrossObjectProperty }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs/${jobId}/cross-object-properties`,
+        data,
+      )
+      .then(d),
+
+  removeJobCrossObjectProperty: (
+    organisationId: string,
+    projectId: string,
+    jobId: string,
+    propertyId: string,
+  ): Promise<void> =>
+    apiClient
+      .delete(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs/${jobId}/cross-object-properties/${propertyId}`,
+      )
+      .then(() => undefined),
+
+  listJobRuns: (
+    organisationId: string,
+    projectId: string,
+    jobId: string,
+    page = 1,
+    limit = 20,
+  ): Promise<SuperAdminPage<SuperAdminJobRunListItem>> =>
+    apiClient
+      .get<PaginatedEnvelope<SuperAdminJobRunListItem>>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs/${jobId}/sync-logs`,
+        { params: { page, limit } },
+      )
+      .then(paginated<SuperAdminJobRunListItem>),
 
   // Manual run. Never carries a bypass boolean — the API derives
   // enforcementMode from the caller's identity. See SA-BIZ-005.

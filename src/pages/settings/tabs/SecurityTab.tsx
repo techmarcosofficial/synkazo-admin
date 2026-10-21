@@ -14,6 +14,14 @@ import {
 } from '@/components/ui/card';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { getPasswordError } from '@/lib/passwordValidation';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
@@ -31,7 +39,11 @@ const errorMessage = (err: unknown, fallback: string) =>
 /**
  * Password and account-lifecycle sections composed into Profile & Account.
  */
-export default function SecurityTab() {
+export default function SecurityTab({
+  allowDeleteAccount = true,
+}: {
+  allowDeleteAccount?: boolean;
+}) {
   const { logout } = useSynkazoAuth();
   const changePasswordMutation = useChangePasswordMutation();
   const deleteMeMutation = useDeleteMeMutation();
@@ -110,58 +122,58 @@ export default function SecurityTab() {
       body: (
         <div className="space-y-3 text-sm">
           <div className="bg-muted overflow-hidden rounded-2xl border">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-border/60 border-b text-left">
-                  <th className="px-4 py-2 font-medium">Account Assets</th>
-                  <th className="px-4 py-2 text-right font-medium">Count</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-border/60 border-b">
-                  <td className="px-4 py-2">Projects</td>
-                  <td className="px-4 py-2 text-right">
+            <Table className="w-full text-sm">
+              <TableHeader>
+                <TableRow className="border-border/60 border-b text-left">
+                  <TableHead className="px-4 py-2">Account assets</TableHead>
+                  <TableHead className="px-4 py-2 text-right">Count</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow className="border-border/60 border-b">
+                  <TableCell className="px-4 py-2">Projects</TableCell>
+                  <TableCell className="px-4 py-2 text-right">
                     {summary?.projectsCount ?? 0}
-                  </td>
-                </tr>
-                <tr className="border-border/60 border-b">
-                  <td className="px-4 py-2">Total Jobs</td>
-                  <td className="px-4 py-2 text-right">
+                  </TableCell>
+                </TableRow>
+                <TableRow className="border-border/60 border-b">
+                  <TableCell className="px-4 py-2">Total Jobs</TableCell>
+                  <TableCell className="px-4 py-2 text-right">
                     {summary?.jobsCount ?? 0}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-2">Synced Records</td>
-                  <td className="px-4 py-2 text-right">
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="px-4 py-2">Synced Records</TableCell>
+                  <TableCell className="px-4 py-2 text-right">
                     {(summary?.totalRecordsSynced ?? 0).toLocaleString()}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
           </div>
           <div className="bg-muted overflow-hidden rounded-2xl border">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-border/60 border-b text-left">
-                  <th className="px-4 py-2 font-medium">Job Activity</th>
-                  <th className="px-4 py-2 text-right font-medium">Count</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-border/60 border-b">
-                  <td className="px-4 py-2">Currently Running</td>
-                  <td className="px-4 py-2 text-right">
+            <Table className="w-full text-sm">
+              <TableHeader>
+                <TableRow className="border-border/60 border-b text-left">
+                  <TableHead className="px-4 py-2">Job activity</TableHead>
+                  <TableHead className="px-4 py-2 text-right">Count</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow className="border-border/60 border-b">
+                  <TableCell className="px-4 py-2">Currently Running</TableCell>
+                  <TableCell className="px-4 py-2 text-right">
                     {summary?.runningJobsCount ?? 0}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-2">Active Scheduled</td>
-                  <td className="px-4 py-2 text-right">
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="px-4 py-2">Active Scheduled</TableCell>
+                  <TableCell className="px-4 py-2 text-right">
                     {summary?.scheduledJobsCount ?? 0}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
           </div>
           <p className="text-muted-foreground">
             This data will remain in the system but will no longer be attributed
@@ -251,33 +263,35 @@ export default function SecurityTab() {
         </CardContent>
       </Card>
 
-      <Card className="border-destructive/30 lg:col-span-2">
-        <CardHeader visualLevel="section">
-          <CardTitle className="text-destructive flex items-center gap-2">
-            <ShieldAlert className="size-4" /> Danger Zone
-          </CardTitle>
-          <CardDescription>
-            Destructive account actions cannot be undone.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="border-destructive/20 bg-destructive/5 flex flex-col gap-3 rounded-3xl border p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-medium">Delete Account</p>
-              <p className="text-muted-foreground text-xs">
-                Permanently delete your account and all associated access.
-              </p>
+      {allowDeleteAccount && (
+        <Card className="border-destructive/30 lg:col-span-2">
+          <CardHeader visualLevel="section">
+            <CardTitle className="text-destructive flex items-center gap-2">
+              <ShieldAlert className="size-4" /> Danger Zone
+            </CardTitle>
+            <CardDescription>
+              Destructive account actions cannot be undone.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="border-destructive/20 bg-destructive/5 flex flex-col gap-3 rounded-3xl border p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-medium">Delete Account</p>
+                <p className="text-muted-foreground text-xs">
+                  Permanently delete your account and all associated access.
+                </p>
+              </div>
+              <Button
+                className="w-fit shrink-0"
+                variant="destructive"
+                onClick={handleDeleteAccount}
+              >
+                Delete Account
+              </Button>
             </div>
-            <Button
-              className="w-fit shrink-0"
-              variant="destructive"
-              onClick={handleDeleteAccount}
-            >
-              Delete Account
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </>
   );
 }

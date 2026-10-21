@@ -1,479 +1,332 @@
 import { formatDistanceToNow } from 'date-fns';
-import { ArrowLeft, Database, FolderOpen, Link2, Pause, Play } from 'lucide-react';
+import {
+  ArrowLeftRight,
+  ArrowRight,
+  CalendarClock,
+  Clock,
+  FolderOpen,
+  Power,
+} from 'lucide-react';
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from 'react-router-dom';
+import { toast } from 'sonner';
 
 import LifecycleConfirmDialog from './lifecycle/LifecycleConfirmDialog';
-import RunJobDialog, { type RunJobDialogValues } from './projects/RunJobDialog';
-import RunStatusPoller from './projects/RunStatusPoller';
+import OrganisationCreateJobDialog from './OrganisationCreateJobDialog';
+import OrganisationProjectSettings from './OrganisationProjectSettings';
+import OrganisationProjectConnections from './projects/OrganisationProjectConnections';
 
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
-import PageHeader from '@/components/shared/PageHeader';
 import SkeletonList from '@/components/shared/skeletons/SkeletonList';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { showToast } from '@/lib/toast';
+import { Tabs } from '@/components/ui/tabs';
+import SyncFlowCard from '@/features/projects/components/detail/SyncFlowCard';
+import SyncFlowMetrics from '@/features/projects/components/detail/SyncFlowMetrics';
+import SyncFlowPanel from '@/features/projects/components/detail/SyncFlowPanel';
 import {
   useHoldSuperAdminProjectMutation,
   useResumeSuperAdminProjectMutation,
-  useRunSuperAdminJobMutation,
   useSuperAdminJobsQuery,
   useSuperAdminOrganisationQuery,
   useSuperAdminProjectConnectionsQuery,
   useSuperAdminProjectQuery,
 } from '@/queries/useSuperAdmin';
+import type { SuperAdminJobListItem } from '@/types/superAdmin';
 
-function extractErrorMessage(err: unknown): string {
-  const e = err as { response?: { data?: { message?: string } } };
-  return e?.response?.data?.message ?? 'The request failed. Try again.';
+type ProjectTab = 'sync-rules' | 'settings' | 'connections';
+
+function errorMessage(error: unknown): string {
+  const response = error as { response?: { data?: { message?: string } } };
+  return response.response?.data?.message ?? 'The request failed. Try again.';
 }
 
-interface ActiveRun {
-  jobId: string;
-  jobName: string;
-  bullJobId: string;
+function timeLabel(value: string | null): string {
+  if (!value) return 'Never';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? 'Unavailable'
+    : formatDistanceToNow(date, { addSuffix: true });
 }
 
-interface JobRowProps {
-  organisationId: string;
-  projectId: string;
-  job: ReturnType<typeof useSuperAdminJobsQuery>['data'] extends
-    | infer T
-    | undefined
-    ? T extends readonly (infer U)[]
-      ? U
-      : never
-    : never;
-  onRun: (jobId: string, jobName: string) => void;
-  runDisabled: boolean;
-}
+function PlatformSyncFlow({
+  job,
+  detailPath,
+  backTo,
+}: {
+  job: SuperAdminJobListItem;
+  detailPath: string;
+  backTo: string;
+}) {
+  const twoWay = job.syncDirection === 'two_way';
+  const scheduleLabel =
+    job.scheduleState.toLowerCase() === 'active'
+      ? 'Scheduled'
+      : job.scheduleState.toLowerCase() === 'held'
+        ? 'On hold'
+        : job.scheduleState;
+  const linkState = {
+    jobBackTo: backTo,
+    jobBackLabel: 'Back to Sync Flows',
+  };
 
-function JobRow({ job, onRun, runDisabled }: JobRowProps) {
   return (
-    <TableRow key={job.id}>
-      <TableCell className="font-medium">{job.name}</TableCell>
-      <TableCell>
-        <Badge variant="outline">{job.syncDirection}</Badge>
-      </TableCell>
-      <TableCell>
-        {job.isEnabled ? (
-          <Badge className="bg-emerald-100 text-emerald-900">Enabled</Badge>
-        ) : (
-          <Badge className="bg-muted text-muted-foreground">Disabled</Badge>
-        )}
-      </TableCell>
-      <TableCell>
-        <Badge variant="outline">{job.scheduleState}</Badge>
-      </TableCell>
-      <TableCell>
-        {job.isRunning ? (
-          <Badge className="bg-blue-100 text-blue-900">Running</Badge>
-        ) : (
-          <Badge variant="outline">Idle</Badge>
-        )}
-      </TableCell>
-      <TableCell className="text-muted-foreground text-sm">
-        {job.lastSyncedAt
-          ? formatDistanceToNow(new Date(job.lastSyncedAt), { addSuffix: true })
-          : 'Never'}
-      </TableCell>
-      <TableCell className="text-muted-foreground text-sm">
-        {job.nextRunAt
-          ? formatDistanceToNow(new Date(job.nextRunAt), { addSuffix: true })
-          : '—'}
-      </TableCell>
-      {/* GAP-014 — checkpoint visibility. The next run resumes from
-          checkpointPage/checkpointSince. `—` when the job has never
-          run or has just completed a full sweep. */}
-      <TableCell className="text-muted-foreground text-sm">
-        {job.checkpointPage != null || job.checkpointSince != null ? (
-          <span
-            title={
-              job.checkpointRunId
-                ? `Set by run ${job.checkpointRunId}`
-                : 'Latest checkpoint'
-            }
-          >
-            {job.checkpointPage != null ? `page ${job.checkpointPage}` : ''}
-            {job.checkpointPage != null && job.checkpointSince != null
-              ? ' · '
-              : ''}
-            {job.checkpointSince
-              ? `since ${new Date(job.checkpointSince).toISOString().slice(0, 10)}`
-              : ''}
-          </span>
-        ) : (
-          '—'
-        )}
-      </TableCell>
-      <TableCell className="text-right">
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => onRun(job.id, job.name)}
-          disabled={runDisabled || job.isRunning}
-          title={
-            runDisabled
-              ? 'Another run is in flight from this page. Dismiss it first.'
-              : job.isRunning
-                ? 'Job is already running.'
-                : undefined
-          }
+    <SyncFlowCard
+      name={job.name}
+      twoWay={twoWay}
+      scheduleText={scheduleLabel}
+      status={job.isRunning ? 'running' : job.status}
+      defaultOpen={false}
+      hasMetrics
+      titleLink={
+        <Link
+          to={detailPath}
+          state={linkState}
+          className="hover:text-primary text-foreground block truncate text-sm font-semibold transition-colors hover:underline"
         >
-          <Play className="size-3.5" aria-hidden />
-          Run now
+          {job.name}
+        </Link>
+      }
+      subtitle={
+        <span className="truncate">
+          {twoWay ? 'Two-way sync' : 'One-way sync'}
+        </span>
+      }
+      action={
+        <Button asChild variant="outline" size="sm">
+          <Link to={detailPath} state={linkState}>
+            View details
+            <ArrowRight data-icon="inline-end" />
+          </Link>
         </Button>
-      </TableCell>
-    </TableRow>
+      }
+      details={
+        <SyncFlowMetrics
+          metrics={[
+            {
+              label: 'Last sync',
+              value: timeLabel(job.lastSyncedAt),
+              description: 'Most recent sync',
+              icon: Clock,
+            },
+            {
+              label: 'Next run',
+              value: job.nextRunAt ? timeLabel(job.nextRunAt) : 'Not scheduled',
+              description: 'Next scheduled run',
+              icon: CalendarClock,
+            },
+            {
+              label: 'Schedule',
+              value: scheduleLabel,
+              description: 'Current schedule state',
+              icon: CalendarClock,
+            },
+            {
+              label: 'Enabled',
+              value: job.isEnabled ? 'Yes' : 'No',
+              description: 'Job enabled state',
+              icon: Power,
+            },
+          ]}
+        />
+      }
+    />
   );
 }
 
 export default function OrganisationProjectDetailPage() {
+  const navigate = useNavigate();
   const { organisationId, projectId } = useParams<{
     organisationId: string;
     projectId: string;
   }>();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [holdKind, setHoldKind] = useState<'hold' | 'resume' | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const orgId = organisationId ?? '';
+  const id = projectId ?? '';
+  const projectPath = `/super-admin/organisations/${orgId}/projects/${id}`;
+  const tab: ProjectTab =
+    searchParams.get('tab') === 'settings'
+      ? 'settings'
+      : searchParams.get('tab') === 'connections'
+        ? 'connections'
+        : 'sync-rules';
 
   const orgQuery = useSuperAdminOrganisationQuery(organisationId);
-  const projectQuery = useSuperAdminProjectQuery(
-    organisationId ?? '',
-    projectId,
-  );
-  const jobsQuery = useSuperAdminJobsQuery(
-    organisationId ?? '',
-    projectId ?? '',
-  );
-  const connectionsQuery = useSuperAdminProjectConnectionsQuery(
-    organisationId ?? '',
-    projectId ?? '',
-  );
-
-  const [runDialog, setRunDialog] = useState<{
-    jobId: string;
-    jobName: string;
-  } | null>(null);
-  const [activeRun, setActiveRun] = useState<ActiveRun | null>(null);
-  const [holdKind, setHoldKind] = useState<'hold' | 'resume' | null>(null);
-
-  const runMutation = useRunSuperAdminJobMutation(
-    organisationId ?? '',
-    projectId ?? '',
-    runDialog?.jobId ?? '',
-  );
-
-  const holdMutation = useHoldSuperAdminProjectMutation(
-    organisationId ?? '',
-    projectId ?? '',
-  );
-  const resumeMutation = useResumeSuperAdminProjectMutation(
-    organisationId ?? '',
-    projectId ?? '',
-  );
+  const projectQuery = useSuperAdminProjectQuery(orgId, projectId);
+  const jobsQuery = useSuperAdminJobsQuery(orgId, id);
+  const connectionsQuery = useSuperAdminProjectConnectionsQuery(orgId, id);
+  const hold = useHoldSuperAdminProjectMutation(orgId, id);
+  const resume = useResumeSuperAdminProjectMutation(orgId, id);
 
   if (!organisationId || !projectId) {
     return (
       <EmptyState
         icon={FolderOpen}
-        title="Missing route parameters"
-        description="Both organisation and project ids are required."
+        title="Missing project address"
+        description="Open this project from a selected organisation."
       />
     );
   }
-
-  if (projectQuery.isLoading) {
-    return <SkeletonList count={5} />;
-  }
-  if (projectQuery.isError) {
+  if (projectQuery.isLoading) return <SkeletonList count={5} />;
+  if (projectQuery.isError || !projectQuery.data) {
     return (
       <ErrorState
         title="Could not load project"
-        description={extractErrorMessage(projectQuery.error)}
+        description={errorMessage(projectQuery.error)}
         onRetry={() => projectQuery.refetch()}
       />
     );
   }
 
-  const project = projectQuery.data!;
-  const jobs = jobsQuery.data ?? [];
-
-  const startRun = (jobId: string, jobName: string) => {
-    setRunDialog({ jobId, jobName });
+  const project = projectQuery.data;
+  const organisationName = orgQuery.data?.name ?? 'Selected organisation';
+  const submitHold = async ({ reason }: { reason: string }) => {
+    if (!holdKind) return;
+    try {
+      if (holdKind === 'hold') {
+        const result = await hold.mutateAsync(reason);
+        toast.success(`${result.heldJobs} active jobs held.`);
+      } else {
+        const result = await resume.mutateAsync(reason);
+        toast.success(`${result.resumedJobs} held jobs resumed.`);
+      }
+      setHoldKind(null);
+    } catch {
+      // The dialog renders the server error and stays open for correction.
+    }
   };
 
-  const submitRun = (values: RunJobDialogValues) => {
-    if (!runDialog) return;
-    runMutation.mutate(values, {
-      onSuccess: (response) => {
-        if (response?.success === false) {
-          showToast.info(response.message ?? 'A run is already in progress.');
-          return;
-        }
-        const bullJobId = response?.bullJobId;
-        if (bullJobId) {
-          setActiveRun({
-            jobId: runDialog.jobId,
-            jobName: runDialog.jobName,
-            bullJobId,
-          });
-          setRunDialog(null);
-          showToast.success('Run queued.');
-        }
-      },
-    });
+  const openHoldDialog = (kind: 'hold' | 'resume') => {
+    hold.reset();
+    resume.reset();
+    setHoldKind(kind);
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <Link
-          to={`/super-admin/organisations/${organisationId}/projects`}
-          className="text-muted-foreground hover:text-foreground mb-2 inline-flex items-center gap-1 text-sm"
-        >
-          <ArrowLeft className="size-3.5" aria-hidden />
-          All projects
-        </Link>
-        <PageHeader
-          title={project.name}
-          description={orgQuery.data?.name ?? organisationId}
-        />
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <Badge variant="secondary">{project.status}</Badge>
-          <Badge variant="outline">{project.syncMode}</Badge>
-          <Badge variant="outline">
-            {project.sourcePlatformId} → {project.destPlatformId}
-          </Badge>
-          <Badge variant="outline">{project.schedulerMode}</Badge>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Button asChild size="sm" variant="outline">
-            <Link
-              to={`/super-admin/organisations/${organisationId}/projects/${projectId}/associations`}
+    <Tabs
+      value={tab}
+      onValueChange={(value) => {
+        setSearchParams((previous) => {
+          const next = new URLSearchParams(previous);
+          next.set('tab', value);
+          return next;
+        });
+      }}
+      className="gap-0"
+    >
+      <div className="space-y-4">
+        {tab === 'sync-rules' ? (
+          <div className="space-y-4">
+            <SyncFlowPanel
+              hasFlows={(jobsQuery.data?.length ?? 0) > 0}
+              action={
+                <Button onClick={() => setCreateOpen(true)}>
+                  Create Sync Flow
+                </Button>
+              }
             >
-              <Link2 className="size-3.5" aria-hidden />
-              Association rules
-            </Link>
-          </Button>
-          <Button asChild size="sm" variant="outline">
-            <Link
-              to={`/super-admin/organisations/${organisationId}/projects/${projectId}/migration`}
-            >
-              <Database className="size-3.5" aria-hidden />
-              Environment migration
-            </Link>
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setHoldKind('hold')}
-          >
-            <Pause className="size-3.5" aria-hidden />
-            Hold project
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setHoldKind('resume')}
-          >
-            <Play className="size-3.5" aria-hidden />
-            Resume project
-          </Button>
-        </div>
-      </div>
-
-      {activeRun ? (
-        <RunStatusPoller
-          organisationId={organisationId}
-          projectId={projectId}
-          jobId={activeRun.jobId}
-          bullJobId={activeRun.bullJobId}
-          onDismiss={() => setActiveRun(null)}
-        />
-      ) : null}
-
-      <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold">Jobs</h2>
-        {jobsQuery.isLoading ? (
-          <SkeletonList count={3} />
-        ) : jobsQuery.isError ? (
-          <ErrorState
-            title="Could not load jobs"
-            description={extractErrorMessage(jobsQuery.error)}
-            onRetry={() => jobsQuery.refetch()}
-          />
-        ) : jobs.length === 0 ? (
-          <EmptyState
-            icon={FolderOpen}
-            title="No jobs in this project"
-            description="Members can create jobs from the tenant workspace."
-          />
-        ) : (
-          <div className="bg-card overflow-hidden rounded-lg border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Direction</TableHead>
-                  <TableHead>Enabled</TableHead>
-                  <TableHead>Schedule</TableHead>
-                  <TableHead>Live</TableHead>
-                  <TableHead>Last sync</TableHead>
-                  <TableHead>Next run</TableHead>
-                  <TableHead>Checkpoint</TableHead>
-                  <TableHead className="w-24 text-right"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {jobs.map((job) => (
-                  <JobRow
+              {jobsQuery.isLoading ? (
+                <SkeletonList count={3} />
+              ) : jobsQuery.isError ? (
+                <ErrorState
+                  title="Could not load sync flows"
+                  description={errorMessage(jobsQuery.error)}
+                  onRetry={() => jobsQuery.refetch()}
+                />
+              ) : !jobsQuery.data?.length ? (
+                <EmptyState
+                  icon={ArrowLeftRight}
+                  title="No sync flows configured yet"
+                  description="This project has no sync flows to inspect."
+                />
+              ) : (
+                jobsQuery.data.map((job) => (
+                  <PlatformSyncFlow
                     key={job.id}
-                    organisationId={organisationId}
-                    projectId={projectId}
                     job={job}
-                    onRun={startRun}
-                    runDisabled={!!activeRun}
+                    detailPath={`${projectPath}/jobs/${job.id}`}
+                    backTo={`${projectPath}?tab=sync-rules`}
                   />
-                ))}
-              </TableBody>
-            </Table>
+                ))
+              )}
+            </SyncFlowPanel>
           </div>
-        )}
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold">Platform connections</h2>
-        {connectionsQuery.isLoading ? (
-          <SkeletonList count={2} />
-        ) : connectionsQuery.isError ? (
-          <ErrorState
-            title="Could not load connections"
-            description={extractErrorMessage(connectionsQuery.error)}
-            onRetry={() => connectionsQuery.refetch()}
-          />
-        ) : (connectionsQuery.data?.length ?? 0) === 0 ? (
-          <EmptyState
-            icon={FolderOpen}
-            title="No connections"
-            description="This project has not connected any platforms yet."
+        ) : tab === 'connections' ? (
+          <OrganisationProjectConnections
+            organisationId={orgId}
+            organisationName={organisationName}
+            project={project}
+            jobs={jobsQuery.data}
+            onContinue={() => setCreateOpen(true)}
           />
         ) : (
-          <div className="bg-card overflow-hidden rounded-lg border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Platform</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Environment</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Account</TableHead>
-                  <TableHead>Last checked</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {connectionsQuery.data!.map((c) => (
-                  <TableRow key={c.id}>
-                    <TableCell className="font-medium">{c.platformId}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{c.connectionType}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{c.environment}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        className={
-                          c.status === 'connected'
-                            ? 'bg-emerald-100 text-emerald-900'
-                            : c.status === 'error'
-                              ? 'bg-red-100 text-red-900'
-                              : 'bg-muted text-muted-foreground'
-                        }
-                      >
-                        {c.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {c.accountName ?? '—'}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {c.lastCheckedAt
-                        ? formatDistanceToNow(new Date(c.lastCheckedAt), {
-                            addSuffix: true,
-                          })
-                        : '—'}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <OrganisationProjectSettings
+            organisationId={orgId}
+            organisationName={organisationName}
+            project={project}
+            onHold={() => openHoldDialog('hold')}
+            onResume={() => openHoldDialog('resume')}
+            operationPending={hold.isPending || resume.isPending}
+          />
         )}
-        <div className="text-muted-foreground text-xs">
-          Credentials are never shown. Only platform identity + health state.
-        </div>
-      </section>
-
-      <RunJobDialog
-        open={!!runDialog}
-        onOpenChange={(o) => (o ? undefined : setRunDialog(null))}
-        jobName={runDialog?.jobName ?? ''}
-        isSubmitting={runMutation.isPending}
-        errorMessage={
-          runMutation.isError ? extractErrorMessage(runMutation.error) : null
-        }
-        onSubmit={submitRun}
-      />
+      </div>
+      {createOpen && (
+        <OrganisationCreateJobDialog
+          organisationId={orgId}
+          project={project}
+          connections={connectionsQuery.data ?? []}
+          jobs={jobsQuery.data ?? []}
+          onClose={() => setCreateOpen(false)}
+          onCreated={(jobId) => {
+            setCreateOpen(false);
+            navigate(`${projectPath}/jobs/${jobId}`, {
+              state: {
+                jobBackTo: `${projectPath}?tab=sync-rules`,
+                jobBackLabel: 'Back to Sync Flows',
+              },
+            });
+          }}
+        />
+      )}
 
       <LifecycleConfirmDialog
         open={holdKind !== null}
-        onOpenChange={(o) => (o ? undefined : setHoldKind(null))}
-        title={holdKind === 'hold' ? 'Hold every active job' : 'Resume held jobs'}
-        description={
+        onOpenChange={(open) => {
+          if (!open) setHoldKind(null);
+        }}
+        title={
           holdKind === 'hold'
-            ? 'Every active job on this project flips to HELD and stops scheduling until explicitly resumed.'
-            : 'Every operator-held job on this project flips back to ACTIVE. Tenant-paused jobs are not touched.'
+            ? 'Hold active project jobs'
+            : 'Resume held project jobs'
         }
-        actionLabel={holdKind === 'hold' ? 'Hold project' : 'Resume project'}
-        tone={holdKind === 'hold' ? 'warning' : 'warning'}
-        organisationName=""
+        description={`${organisationName} · ${project.name}`}
+        bodyWarning={
+          holdKind === 'hold'
+            ? 'Future scheduled runs for active jobs on this project will stop. Runs already queued or running are not cancelled.'
+            : 'Only jobs held by a platform operator will resume. Customer-paused jobs remain paused.'
+        }
+        actionLabel={holdKind === 'hold' ? 'Hold jobs' : 'Resume jobs'}
+        tone="warning"
+        organisationName={organisationName}
         requiresNameConfirm={false}
         minReasonLength={10}
-        reasonPlaceholder={
-          holdKind === 'hold'
-            ? 'Why is this project being held?'
-            : 'Why is this project being resumed?'
-        }
-        isSubmitting={holdMutation.isPending || resumeMutation.isPending}
+        isSubmitting={hold.isPending || resume.isPending}
         errorMessage={
-          holdKind === 'hold' && holdMutation.isError
-            ? extractErrorMessage(holdMutation.error)
-            : holdKind === 'resume' && resumeMutation.isError
-              ? extractErrorMessage(resumeMutation.error)
+          hold.isError
+            ? errorMessage(hold.error)
+            : resume.isError
+              ? errorMessage(resume.error)
               : null
         }
-        onSubmit={({ reason }) => {
-          const mutation = holdKind === 'hold' ? holdMutation : resumeMutation;
-          const verb = holdKind === 'hold' ? 'held' : 'resumed';
-          mutation.mutate(reason, {
-            onSuccess: (data) => {
-              const count =
-                holdKind === 'hold'
-                  ? (data as { heldJobs: number }).heldJobs
-                  : (data as { resumedJobs: number }).resumedJobs;
-              showToast.success(`${count} job${count === 1 ? '' : 's'} ${verb}.`);
-              setHoldKind(null);
-            },
-          });
-        }}
+        onSubmit={submitHold}
       />
-    </div>
+    </Tabs>
   );
 }

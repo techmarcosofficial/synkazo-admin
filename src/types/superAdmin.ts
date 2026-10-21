@@ -8,11 +8,15 @@
 // this file additionally exports `SuperAdminPage<T>` for the {data, total,
 // page, limit} response envelope every /super-admin/* list endpoint uses.
 
-import type { SubscriptionStatus } from './billing';
+import type {
+  HistoryItem,
+  PaymentMethodView,
+  SubscriptionStatus,
+} from './billing';
 
 export type OrgStatus = 'active' | 'suspended' | 'pending' | 'archived';
 
-export type { SubscriptionStatus };
+export type { HistoryItem, PaymentMethodView, SubscriptionStatus };
 
 export interface SuperAdminOwnerSummary {
   id: string;
@@ -81,6 +85,9 @@ export interface SuperAdminMemberListItem {
   // Optional for forward-compat with older cached responses that
   // predate the flag.
   isOwner?: boolean;
+  department?: string | null;
+  isEmailVerified?: boolean;
+  permissions?: string[] | null;
   lastLoginAt: string | null;
   createdAt: string;
 }
@@ -93,6 +100,14 @@ export interface SuperAdminInvitationListItem {
   createdAt: string;
   expiresAt: string | null;
   revokedAt: string | null;
+}
+
+export interface SuperAdminCreateProjectDto {
+  name: string;
+  description?: string;
+  sourcePlatformId: string;
+  destPlatformId: string;
+  syncMode: 'one_way' | 'two_way';
 }
 
 export interface SuperAdminProjectListItem {
@@ -114,6 +129,7 @@ export interface SuperAdminProjectListItem {
 export interface SuperAdminProjectDetail extends SuperAdminProjectListItem {
   schedulerMode: string;
   activeEnvironment: string;
+  environmentActivatedAt: string | null;
   totalRecordsSynced: number;
   totalErrorCount: number;
 }
@@ -123,11 +139,20 @@ export interface SuperAdminJobListItem {
   projectId: string;
   organisationId: string;
   name: string;
+  sourceObject: string;
+  destObject: string;
   isEnabled: boolean;
   syncEnabled: boolean;
   isRunning: boolean;
+  recordsSynced: number;
   status: string;
   scheduleState: string;
+  scheduleMode: string | null;
+  scheduleTimes: string[] | null;
+  intervalMinutes: number | null;
+  scheduleDays: number[] | null;
+  timezone: string | null;
+  cronExpression: string | null;
   syncDirection: string;
   lastSyncedAt: string | null;
   nextRunAt: string | null;
@@ -138,18 +163,132 @@ export interface SuperAdminJobListItem {
   checkpointSince: string | null;
   checkpointRunId: string | null;
   syncAllPage: number | null;
+  dataformaStartingCustomerId: number | null;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface SuperAdminJobDetail extends SuperAdminJobListItem {
+  sourceObject: string;
+  destObject: string;
+  sourceOfTruth: string | null;
+  conflictResolutionStrategy: string;
+  deleteHandling: string;
+  syncTrigger: string;
+  idMappingSourceField: string | null;
+  idMappingDestField: string | null;
+  hubspotWebhookEnabled: boolean;
+  destPipelineId: string | null;
+  statusMapping: Record<string, string> | null;
+  defaultValues: {
+    destination?: Record<string, unknown>;
+    source?: Record<string, unknown>;
+  } | null;
+  excludeConditions: import('./conditions').ExcludeCondition[] | null;
+  excludeConditionLogic: 'AND' | 'OR';
+  destinationSkipConditions:
+    import('./conditions').DestinationSkipCondition[] | null;
+  skipUpdateOnMatch: boolean;
+  maxRetries: number;
+  retryBackoffBaseSec: number;
   scheduleMode: string | null;
+  scheduleTimes: string[] | null;
   intervalMinutes: number | null;
-  sourceObjectId: string | null;
-  destObjectId: string | null;
+  scheduleDays: number[] | null;
+  timezone: string | null;
+  cronExpression: string | null;
   dependsOnJobId: string | null;
+  fieldMappings?: SuperAdminFieldMapping[];
   // GAP-050 / SA-602 — last 5 failed sync runs; omitted on list.
   recentFailures?: SuperAdminJobRecentFailure[];
+}
+
+export interface SuperAdminFieldMapping {
+  id: string;
+  sourceField: string;
+  destField: string;
+  direction: string | null;
+  onEmpty: string | null;
+  isRequired: boolean;
+  isMatchField: boolean;
+  defaultValue: string | null;
+  reverseOnEmpty: string | null;
+  reverseDefaultValue: string | null;
+  matchPriority: number | null;
+  updatePolicy: string;
+  conflictScope: string | null;
+  transformType: string | null;
+  transformConfig: Record<string, unknown> | null;
+}
+
+export interface SuperAdminDiscoveredObject {
+  id: string;
+  label: string;
+  tier?: 'core' | 'extended' | 'custom';
+  module?: string;
+  group?: string;
+  isCustom?: boolean;
+  scopeGranted?: { read: boolean; write: boolean };
+}
+
+export interface SuperAdminDiscoveredField {
+  name: string;
+  label: string;
+  type: string;
+  required?: boolean;
+  isCustom?: boolean;
+  readOnly?: boolean;
+  groupName?: string;
+  options?: Array<{ value: string; label: string }>;
+  hasUniqueValue?: boolean;
+}
+
+export interface SuperAdminCreateJobDto {
+  name: string;
+  sourceObject: string;
+  destObject: string;
+  dataformaStartingCustomerId?: number | null;
+  syncDirection?: 'one_way' | 'two_way';
+  syncTrigger?: 'new' | 'updated' | 'both';
+  sourceOfTruth?: string;
+  deleteHandling?: 'ignore' | 'soft_archive' | 'hard_delete';
+  hubspotWebhookEnabled?: boolean;
+  idMappingSourceField?: string;
+  idMappingDestField?: string;
+  scheduleMode?: 'daily_time' | 'interval' | 'day_specific' | null;
+  scheduleTimes?: string[] | null;
+  scheduleDays?: number[] | null;
+  intervalMinutes?: number | null;
+  timezone?: string;
+  destPipelineId?: string;
+  statusMapping?: Record<string, string>;
+  skipUpdateOnMatch?: boolean;
+  maxRetries?: number;
+  retryBackoffBaseSec?: number;
+  defaultValues?: import('./job').DefaultValuesConfig | null;
+  excludeConditions?: import('./conditions').ExcludeCondition[] | null;
+  excludeConditionLogic?: 'AND' | 'OR';
+  destinationSkipConditions?:
+    import('./conditions').DestinationSkipCondition[] | null;
+}
+
+export type SuperAdminFieldMappingInput = import('./job').FieldMapping;
+
+export interface SuperAdminJobRunListItem {
+  id: string;
+  jobId: string;
+  projectId: string;
+  status: string;
+  executionStatus: string;
+  triggeredBy: string;
+  startedAt: string;
+  finishedAt: string | null;
+  durationMs: number | null;
+  totalFetched: number;
+  createdCount: number;
+  updatedCount: number;
+  skippedCount: number;
+  failedCount: number;
 }
 
 export interface SuperAdminRunStatus {
@@ -161,6 +300,9 @@ export interface SuperAdminRunStatus {
 
 export interface SuperAdminBillingOverview {
   plan: {
+    planAccessSource?: 'free' | 'stripe_subscription' | 'manual_override';
+    pastDueStartedAt?: string | null;
+    paymentHoldActive?: boolean;
     planId: string | null;
     planName: string;
     subscriptionStatus: SubscriptionStatus;
@@ -189,24 +331,64 @@ export interface SuperAdminInvoiceListItem {
   id: string;
   invoiceNumber: string | null;
   status: string;
+  amount?: number;
+  totalAmount?: number;
   amountDue: number;
   amountPaid: number;
   currency: string;
   createdAt: string;
   paidAt: string | null;
   dueDate: string | null;
+  periodStart?: string | null;
+  periodEnd?: string | null;
+  receiptUrl?: string | null;
   hostedInvoiceUrl: string | null;
+}
+
+export interface SuperAdminInvoiceDetail extends Partial<SuperAdminInvoiceListItem> {
+  id: string;
+  currency: string;
+  status: string;
+  subtotal: number;
+  discountAmount: number;
+  taxAmount: number;
+}
+
+export interface SuperAdminSubscriptionDetail {
+  id: string;
+  planId: string | null;
+  planName: string;
+  status: SubscriptionStatus | string;
+  trialEndAt: string | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+  pendingPlanId: string | null;
+  pendingPriceId: string | null;
+  pendingPlanChangeAt: string | null;
+  creditBalance: number;
+  defaultPaymentMethod: string | null;
+  paymentMethod: PaymentMethodView | null;
+}
+
+export interface SuperAdminUsageDetail {
+  projects: { count: number; limit: number | null; over: boolean };
+  jobs: { count: number; limit: number | null; over: boolean };
+  teamMembers: { count: number; limit: number | null; over: boolean };
+  records: {
+    count: number;
+    limit: number | null;
+    remaining: number | null;
+    periodStart: string;
+  };
 }
 
 export interface SuperAdminActivityEntry {
   id: string;
   action: string;
-  resource: string;
+  resource: string | null;
   resourceId: string | null;
   severity: 'INFO' | 'WARNING' | 'ERROR';
-  userId: string | null;
-  userEmail: string | null;
-  organisationId: string;
+  actor: { id: string | null; email: string | null } | null;
   details: Record<string, unknown> | null;
   createdAt: string;
 }
@@ -417,6 +599,7 @@ export interface PlatformOverviewResponse {
     severity: 'info' | 'warning' | 'critical';
     userEmail: string | null;
     organisationId: string | null;
+    organisationName: string | null;
     summary: string;
     createdAt: string;
   }>;

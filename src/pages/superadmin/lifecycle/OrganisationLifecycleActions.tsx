@@ -1,5 +1,6 @@
 import {
   Archive,
+  ChevronDown,
   CircleStop,
   CreditCard,
   Play,
@@ -11,6 +12,12 @@ import { useState } from 'react';
 import LifecycleConfirmDialog from './LifecycleConfirmDialog';
 
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { showToast } from '@/lib/toast';
 import {
   useClearPaymentHoldMutation,
@@ -21,10 +28,7 @@ import {
 } from '@/queries/useSuperAdmin';
 import type { SuperAdminOrganisationDetail } from '@/types';
 
-// Actions bar for the Organisation Detail page. Each button opens its
-// dedicated dialog — the doc explicitly says "hold, resume, and cancel
-// are separately audited and separately authorised; never present them
-// behind a single button labelled 'Stop'." One button per intent here.
+// Each menu item keeps a separate intent and opens its own confirmation dialog.
 
 type ActionKey =
   | 'suspend'
@@ -43,8 +47,10 @@ function extractErrorMessage(err: unknown): string {
 
 export default function OrganisationLifecycleActions({
   organisation,
+  compact = false,
 }: {
   organisation: SuperAdminOrganisationDetail;
+  compact?: boolean;
 }) {
   const [openAction, setOpenAction] = useState<ActionKey | null>(null);
   const closeDialog = () => setOpenAction(null);
@@ -57,10 +63,7 @@ export default function OrganisationLifecycleActions({
   const imposeHoldMutation = useImposePaymentHoldMutation(organisation.id);
   const clearHoldMutation = useClearPaymentHoldMutation(organisation.id);
 
-  const paymentHoldActive =
-    (organisation as SuperAdminOrganisationDetail & {
-      paymentHoldActive?: boolean;
-    }).paymentHoldActive ?? false;
+  const paymentHoldActive = organisation.paymentHoldActive ?? false;
 
   const handleTransition = (
     targetStatus: 'active' | 'suspended' | 'archived',
@@ -99,7 +102,10 @@ export default function OrganisationLifecycleActions({
           if (cascade.queuesAffected && cascade.queuesAffected.length > 0) {
             parts.push(`queues: ${cascade.queuesAffected.join(', ')}`);
           }
-          if (cascade.billingTreatment && cascade.billingTreatment !== 'preserved') {
+          if (
+            cascade.billingTreatment &&
+            cascade.billingTreatment !== 'preserved'
+          ) {
             parts.push(`billing: ${cascade.billingTreatment}`);
           }
           const detail = parts.length > 0 ? ` — ${parts.join(', ')}.` : '';
@@ -118,80 +124,64 @@ export default function OrganisationLifecycleActions({
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2">
-        {canSuspend ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setOpenAction('suspend')}
-          >
-            <ShieldCheck className="size-4" aria-hidden />
-            Suspend
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm" aria-label="Manage organisation">
+            {compact ? 'Manage' : 'Manage organisation'}
+            <ChevronDown className="size-4" aria-hidden="true" />
           </Button>
-        ) : null}
-        {canReactivate ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setOpenAction('reactivate')}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-52">
+          {canSuspend ? (
+            <DropdownMenuItem onSelect={() => setOpenAction('suspend')}>
+              <ShieldCheck className="size-4" aria-hidden />
+              Suspend
+            </DropdownMenuItem>
+          ) : null}
+          {canReactivate ? (
+            <DropdownMenuItem onSelect={() => setOpenAction('reactivate')}>
+              <PlayCircle className="size-4" aria-hidden />
+              Reactivate
+            </DropdownMenuItem>
+          ) : null}
+          {canArchive ? (
+            <DropdownMenuItem onSelect={() => setOpenAction('archive')}>
+              <Archive className="size-4" aria-hidden />
+              Archive
+            </DropdownMenuItem>
+          ) : null}
+          {canRestore ? (
+            <DropdownMenuItem onSelect={() => setOpenAction('restore')}>
+              <PlayCircle className="size-4" aria-hidden />
+              Restore from archive
+            </DropdownMenuItem>
+          ) : null}
+          {canHold ? (
+            <DropdownMenuItem onSelect={() => setOpenAction('hold')}>
+              <CircleStop className="size-4" aria-hidden />
+              Hold work
+            </DropdownMenuItem>
+          ) : null}
+          {canHold ? (
+            <DropdownMenuItem onSelect={() => setOpenAction('resume')}>
+              <Play className="size-4" aria-hidden />
+              Resume held work
+            </DropdownMenuItem>
+          ) : null}
+          <DropdownMenuItem
+            onSelect={() =>
+              setOpenAction(
+                paymentHoldActive
+                  ? 'clear-payment-hold'
+                  : 'impose-payment-hold',
+              )
+            }
           >
-            <PlayCircle className="size-4" aria-hidden />
-            Reactivate
-          </Button>
-        ) : null}
-        {canArchive ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setOpenAction('archive')}
-          >
-            <Archive className="size-4" aria-hidden />
-            Archive
-          </Button>
-        ) : null}
-        {canRestore ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setOpenAction('restore')}
-          >
-            <PlayCircle className="size-4" aria-hidden />
-            Restore from archive
-          </Button>
-        ) : null}
-        {canHold ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setOpenAction('hold')}
-          >
-            <CircleStop className="size-4" aria-hidden />
-            Hold work
-          </Button>
-        ) : null}
-        {canHold ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setOpenAction('resume')}
-          >
-            <Play className="size-4" aria-hidden />
-            Resume held work
-          </Button>
-        ) : null}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() =>
-            setOpenAction(
-              paymentHoldActive ? 'clear-payment-hold' : 'impose-payment-hold',
-            )
-          }
-        >
-          <CreditCard className="size-4" aria-hidden />
-          {paymentHoldActive ? 'Clear payment hold' : 'Impose payment hold'}
-        </Button>
-      </div>
+            <CreditCard className="size-4" aria-hidden />
+            {paymentHoldActive ? 'Clear payment hold' : 'Impose payment hold'}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       <LifecycleConfirmDialog
         open={openAction === 'suspend'}

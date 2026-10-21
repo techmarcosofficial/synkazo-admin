@@ -27,6 +27,11 @@ export interface UpdateUserPayload extends Partial<User> {
   projectAccess?: ProjectAccessGrant[];
 }
 
+export interface ResetPasswordResponse {
+  success: boolean;
+  message: string;
+}
+
 export const usersApi = {
   getMe: (): Promise<User> => apiClient.get('/users/me').then(d),
   updateMe: (data: Partial<User>): Promise<User> =>
@@ -45,6 +50,13 @@ export const usersApi = {
     apiClient.get(`/users/${id}/project-access`).then(d),
   updateUser: (id: string, data: UpdateUserPayload): Promise<User> =>
     apiClient.patch(`/users/${id}`, data).then(d),
+  resetPassword: (
+    id: string,
+    newPassword?: string,
+  ): Promise<ResetPasswordResponse> =>
+    apiClient
+      .post(`/users/${id}/reset-password`, { newPassword })
+      .then((r) => r.data),
   deleteUser: (id: string): Promise<void> =>
     apiClient.delete(`/users/${id}`).then(d),
 };

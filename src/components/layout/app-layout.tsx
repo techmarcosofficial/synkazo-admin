@@ -1,37 +1,37 @@
 // Done
 
 import { useEffect, useState } from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 
 import GlobalLoader, { PageLoader } from '../shared/GlobalLoader';
 import WelcomeGuideModal from '../shared/WelcomeGuideModal';
 
-import SiteHeader from './site-header';
+import WorkspaceShell from './workspace-shell';
 
 import SubscriptionPaywall from '@/components/billing/SubscriptionPaywall';
-import { AppSidebar } from '@/components/layout/app-sidebar';
 import { TenantAdminVisualContext } from '@/components/shared/TenantAdminVisualContext';
-import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import SourceSetupDialog from '@/features/projects/components/setup/SourceSetupDialog';
 import CreateProjectDialog from '@/features/projects/components/create/CreateProjectDialog';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
+import { PLATFORM_HOME } from '@/lib/workspace';
 import { usePlanQuery } from '@/queries/useBilling';
 
-// Subscription states with no live billing relationship, or where renewal has fully failed
-// (Stripe's retries exhausted) — these are paywalled. `past_due` is Stripe's automatic
-// retry/grace window (card may still succeed on retry) and keeps dashboard access via
-// PastDueBanner instead of a hard lockout. Mirrors CronGateService's own distinction between
-// "syncing paused" (unpaid) and "still retrying" (past_due).
-const PAYWALL_STATUSES = new Set(['none', 'canceled', 'incomplete', 'unpaid']);
+// The API decides when renewal grace expires and returns paymentHoldActive.
+// Billing remains available so an organisation can repair its payment method.
+const ACCESS_STATUSES = new Set([
+  'active',
+  'trialing',
+  'past_due',
+  'pending_cancel',
+]);
 
 export default function AppLayout() {
-  const { currentUser, isLoading, hasRole, hasPermission } = useSynkazoAuth();
+  const location = useLocation();
+  const { currentUser, isLoading } = useSynkazoAuth();
   const [showWelcome, setShowWelcome] = useState(false);
 
-  // Platform operators are exempt from the paywall so they can't lock themselves out of
-  // admin/plan-management. Skip the plan fetch entirely for them.
-  const isSuperAdmin = hasRole('super_admin');
-  const planQuery = usePlanQuery({ enabled: !!currentUser && !isSuperAdmin });
+  const isTenant = !!currentUser && currentUser.role !== 'super_admin';
+  const planQuery = usePlanQuery({ enabled: isTenant });
 
   useEffect(() => {
     if (!currentUser) return;
@@ -50,33 +50,29 @@ export default function AppLayout() {
     return <Navigate to="/login" replace />;
   }
 
-  // Subscription gate (super_admins exempt). Wait for the plan to resolve before deciding so
-  // we never flash the dashboard, then fail closed: only active/trialing orgs get through.
-  if (!isSuperAdmin) {
-    if (planQuery.isLoading) {
-      return <PageLoader className="z-[70]" label="Loading subscription" />;
-    }
-    if (PAYWALL_STATUSES.has(planQuery.data?.subscriptionStatus ?? 'none')) {
-      return <SubscriptionPaywall />;
-    }
+  if (!isTenant) return <Navigate to={PLATFORM_HOME} replace />;
+
+  // Wait for the tenant plan before allowing a tenant page to paint.
+  if (planQuery.isLoading) {
+    return <PageLoader className="z-[70]" label="Loading subscription" />;
+  }
+  if (
+    !location.pathname.startsWith('/organization/billing') &&
+    (planQuery.data?.paymentHoldActive ||
+      !ACCESS_STATUSES.has(planQuery.data?.subscriptionStatus ?? 'none'))
+  ) {
+    return <SubscriptionPaywall />;
   }
 
   return (
     <TenantAdminVisualContext.Provider value={true}>
-      <SidebarProvider data-admin-shell="workspace">
+      <WorkspaceShell kind="tenant">
         {showWelcome && (
           <WelcomeGuideModal onClose={() => setShowWelcome(false)} />
         )}
         <SourceSetupDialog />
         <CreateProjectDialog />
-        <AppSidebar />
-        <SidebarInset className="min-w-0 max-w-full overflow-x-clip [--app-shell-header-height:--spacing(16)]">
-          <SiteHeader />
-          <main className="container mx-auto flex w-full min-w-0 max-w-full flex-1 flex-col gap-4 px-5 py-4 sm:px-7 sm:py-6 lg:px-8 xl:px-10">
-            <Outlet />
-          </main>
-        </SidebarInset>
-      </SidebarProvider>
+      </WorkspaceShell>
     </TenantAdminVisualContext.Provider>
   );
 }

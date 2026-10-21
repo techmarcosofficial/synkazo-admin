@@ -106,18 +106,7 @@ describe('sectionMinRole', () => {
 });
 
 describe('billing section', () => {
-  it('derives its tabs from the Organization billing tab, not a second list', () => {
-    expect(BILLING_SECTION.tabs.map((t) => t.id)).toEqual([
-      'overview',
-      'subscription',
-      'payment-methods',
-      'invoices',
-      'payment-history',
-    ]);
-  });
-
-  it('is visible to org_admin and above', () => {
-    expect(visibleTabs(BILLING_SECTION.tabs, orgAdmin)).toHaveLength(5);
-    expect(visibleTabs(BILLING_SECTION.tabs, superAdmin)).toHaveLength(5);
+  it('is a unified section without nested sub-tabs', () => {
+    expect(BILLING_SECTION.tabs).toEqual([]);
   });
 });

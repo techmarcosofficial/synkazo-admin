@@ -21,21 +21,28 @@ export default function SortableTableHead({
   className,
 }: SortableTableHeadProps) {
   return (
-    <TableHead className={className}>
+    <TableHead
+      className={className}
+      aria-sort={
+        active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none'
+      }
+    >
       <button
         type="button"
         onClick={onClick}
-        className={cn('flex items-center gap-1 font-semibold')}
+        className={cn(
+          'hover:text-foreground focus-visible:ring-ring flex cursor-pointer items-center gap-1 rounded-sm text-left font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none',
+        )}
       >
         {children}
         {active ? (
           direction === 'asc' ? (
-            <ArrowUp className="size-3.5" />
+            <ArrowUp className="size-3.5" aria-hidden />
           ) : (
-            <ArrowDown className="size-3.5" />
+            <ArrowDown className="size-3.5" aria-hidden />
           )
         ) : (
-          <ArrowUpDown className="size-3.5 opacity-40" />
+          <ArrowUpDown className="size-3.5 opacity-40" aria-hidden />
         )}
       </button>
     </TableHead>

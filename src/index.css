@@ -710,3 +710,23 @@ html:has([data-admin-shell]) {
     transition: none;
   }
 }
+
+/* Elevate Stripe.js Testing Assistant & test autofill widgets above modal dialog overlays */
+body > iframe[src*="stripe" i],
+body > iframe[name*="stripe" i],
+body > iframe[name*="__privateStripe" i],
+body > div:has(> iframe[src*="stripe" i]),
+body > div:has(> iframe[name*="__privateStripe" i]),
+body > [style*="bottom"][style*="right"],
+body > div[style*="bottom"][style*="right"],
+body > iframe[style*="bottom"][style*="right"],
+[class*="stripe-assistant" i],
+[id*="stripe-assistant" i],
+[class*="stripe_assistant" i],
+[id*="stripe_assistant" i],
+[class*="marvin" i],
+[id*="marvin" i] {
+  z-index: 999999 !important;
+  pointer-events: auto !important;
+}
+

@@ -20,6 +20,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -36,27 +37,53 @@ import {
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
-interface ProjectObject {
+export interface ProjectObject {
   sourceObject: string;
   hsObjectType: string;
 }
 
-interface ObjectField {
+export interface ObjectField {
   field: string;
   isArray: boolean;
   label?: string;
 }
 
-interface AssociationType {
+export interface AssociationType {
   typeId: number | string;
   category: string;
   label: string;
+}
+
+export interface AssociationRuleFormOperations {
+  getProjectObjects: (projectId: string) => Promise<ProjectObject[]>;
+  getAssociationFields: (
+    projectId: string,
+    sourceObject: string,
+  ) => Promise<ObjectField[]>;
+  getOwnerFields: (projectId: string) => Promise<ObjectField[]>;
+  getAssociationTypes: (
+    projectId: string,
+    from: string,
+    to: string,
+  ) => Promise<AssociationType[]>;
+  createRule: (
+    projectId: string,
+    input: Partial<AssociationRule>,
+    reason: string,
+  ) => Promise<unknown>;
+  updateRule: (
+    projectId: string,
+    ruleId: string,
+    input: Partial<AssociationRule>,
+    reason: string,
+  ) => Promise<unknown>;
 }
 
 interface AssociationRuleFormDialogBaseProps {
   projectId: string;
   onSuccess: () => void;
   onClose: () => void;
+  operations?: AssociationRuleFormOperations;
 }
 
 type AssociationRuleFormDialogProps = AssociationRuleFormDialogBaseProps &
@@ -70,6 +97,7 @@ interface FormErrors {
   conditions?: string;
   name?: string;
   hsAssociationTypeId?: string;
+  reason?: string;
 }
 
 const STEPS = ['Match records', 'Rule details'];
@@ -88,8 +116,7 @@ export function sourceFieldOptionLabel(
     return `Imported property ${index + 1}`;
   return label || field.field;
 }
-const isRecordOwner = (targetObject: string) =>
-  targetObject === OWNER_OBJECT;
+const isRecordOwner = (targetObject: string) => targetObject === OWNER_OBJECT;
 const targetObjectLabel = (targetObject: string) =>
   isRecordOwner(targetObject) ? 'Record Owner' : targetObject;
 
@@ -126,6 +153,7 @@ export default function AssociationRuleFormDialog({
   rule,
   onSuccess,
   onClose,
+  operations,
 }: AssociationRuleFormDialogProps) {
   const [step, setStep] = useState(mode === 'edit' ? 1 : 0);
   const [saving, setSaving] = useState(false);
@@ -169,6 +197,7 @@ export default function AssociationRuleFormDialog({
   );
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [reason, setReason] = useState('');
 
   // Dirty once the user has advanced past step 0 or filled in any field —
   // drives the "Discard changes?" confirmation on close.
@@ -176,21 +205,25 @@ export default function AssociationRuleFormDialog({
     mode === 'edit'
       ? form.name !== (rule.name ?? '') ||
         conditionLogic !== (rule.conditionLogic ?? 'AND') ||
-        JSON.stringify(conditions) !== JSON.stringify(rule.conditions ?? [])
+        JSON.stringify(conditions) !== JSON.stringify(rule.conditions ?? []) ||
+        reason.trim().length > 0
       : step > 0 ||
         conditions.length > 0 ||
         conditionLogic !== 'AND' ||
+        reason.trim().length > 0 ||
         Object.values(form).some(
           (v) => v !== '' && v !== 'many_to_many' && v !== 'HUBSPOT_DEFINED',
         );
 
   useEffect(() => {
-    associationsApi
-      .getProjectObjects(projectId)
+    (operations
+      ? operations.getProjectObjects(projectId)
+      : associationsApi.getProjectObjects(projectId)
+    )
       .then((data: unknown) => setProjectObjects(data as ProjectObject[]))
       .catch(() => setProjectObjects([]))
       .finally(() => setLoadingObjects(false));
-  }, [projectId]);
+  }, [projectId, operations]);
 
   useEffect(() => {
     if (!form.sourceObject) {
@@ -201,8 +234,10 @@ export default function AssociationRuleFormDialog({
     setSourceFields([]);
     setLoadingSourceFields(true);
     setSourceFieldsError(false);
-    associationsApi
-      .getAssociationFields(projectId, form.sourceObject)
+    (operations
+      ? operations.getAssociationFields(projectId, form.sourceObject)
+      : associationsApi.getAssociationFields(projectId, form.sourceObject)
+    )
       .then((fields) => {
         if (active) setSourceFields(fields);
       })
@@ -215,7 +250,7 @@ export default function AssociationRuleFormDialog({
     return () => {
       active = false;
     };
-  }, [form.sourceObject, projectId]);
+  }, [form.sourceObject, projectId, operations]);
 
   useEffect(() => {
     if (!form.targetObject) {
@@ -228,8 +263,12 @@ export default function AssociationRuleFormDialog({
     setTargetFieldsError(false);
     const request =
       form.targetObject === OWNER_OBJECT
-        ? associationsApi.getOwnerFields(projectId)
-        : associationsApi.getAssociationFields(projectId, form.targetObject);
+        ? operations
+          ? operations.getOwnerFields(projectId)
+          : associationsApi.getOwnerFields(projectId)
+        : operations
+          ? operations.getAssociationFields(projectId, form.targetObject)
+          : associationsApi.getAssociationFields(projectId, form.targetObject);
     request
       .then((fields) => {
         if (!active) return;
@@ -252,7 +291,7 @@ export default function AssociationRuleFormDialog({
     return () => {
       active = false;
     };
-  }, [form.targetObject, mode, projectId]);
+  }, [form.targetObject, mode, projectId, operations]);
 
   useEffect(() => {
     if (mode === 'edit' || form.name) return;
@@ -271,12 +310,18 @@ export default function AssociationRuleFormDialog({
       return;
     if (mode === 'edit') return;
     setLoadingTypes(true);
-    associationsApi
-      .getAssociationTypes(
-        projectId,
-        form.hsSourceObjectType,
-        form.hsTargetObjectType,
-      )
+    (operations
+      ? operations.getAssociationTypes(
+          projectId,
+          form.hsSourceObjectType,
+          form.hsTargetObjectType,
+        )
+      : associationsApi.getAssociationTypes(
+          projectId,
+          form.hsSourceObjectType,
+          form.hsTargetObjectType,
+        )
+    )
       .then((data: unknown) => setAssociationTypes(data as AssociationType[]))
       .catch(() => setAssociationTypes([]))
       .finally(() => setLoadingTypes(false));
@@ -286,6 +331,7 @@ export default function AssociationRuleFormDialog({
     form.targetObject,
     mode,
     projectId,
+    operations,
   ]);
 
   const validate = () => {
@@ -330,6 +376,8 @@ export default function AssociationRuleFormDialog({
         !form.hsAssociationTypeId
       )
         errs.hsAssociationTypeId = 'Select an association type';
+      if (operations && reason.trim().length < 10)
+        errs.reason = 'Enter a reason of at least 10 characters';
     }
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -345,17 +393,20 @@ export default function AssociationRuleFormDialog({
     setSubmitError(null);
     try {
       if (mode === 'edit') {
-        await associationsApi.updateRule(projectId, rule.id, {
+        const input = {
           name: form.name.trim(),
           conditions,
           conditionLogic,
-        });
+        };
+        if (operations)
+          await operations.updateRule(projectId, rule.id, input, reason.trim());
+        else await associationsApi.updateRule(projectId, rule.id, input);
         toast.success('Association rule saved');
       } else {
         const selectedType = associationTypes.find(
           (t) => String(t.typeId) === String(form.hsAssociationTypeId),
         );
-        await associationsApi.createRule(projectId, {
+        const input = {
           name: form.name.trim(),
           sourceObject: form.sourceObject,
           sourceMatchField: form.sourceMatchField,
@@ -372,7 +423,10 @@ export default function AssociationRuleFormDialog({
           cardinality: form.cardinality,
           conditions: conditions.length > 0 ? conditions : undefined,
           conditionLogic,
-        });
+        };
+        if (operations)
+          await operations.createRule(projectId, input, reason.trim());
+        else await associationsApi.createRule(projectId, input);
         toast.success('Association rule created');
       }
       onSuccess();
@@ -925,6 +979,27 @@ export default function AssociationRuleFormDialog({
                     setConditionLogic(logic);
                   }}
                 />
+                {operations && (
+                  <Field data-invalid={!!errors.reason}>
+                    <FieldLabel htmlFor="association-operator-reason" required>
+                      Operator reason
+                    </FieldLabel>
+                    <Textarea
+                      id="association-operator-reason"
+                      value={reason}
+                      onChange={(event) => setReason(event.target.value)}
+                      rows={2}
+                      minLength={10}
+                      maxLength={500}
+                      placeholder="Why is this rule being changed for the organisation?"
+                    />
+                    {errors.reason && (
+                      <p className="text-destructive text-xs" role="alert">
+                        {errors.reason}
+                      </p>
+                    )}
+                  </Field>
+                )}
               </div>
             )}
           </>

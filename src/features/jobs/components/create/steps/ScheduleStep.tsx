@@ -28,20 +28,7 @@ import {
 } from '@/features/jobs/utils';
 import { useEntitlements } from '@/queries/useEntitlements';
 
-export default function ScheduleStep({
-  schedMode,
-  setSchedMode,
-  schedTimes,
-  setSchedTimes,
-  schedDays,
-  setSchedDays,
-  schedInterval,
-  setSchedInterval,
-  startEnabled,
-  setStartEnabled,
-  summaryItems,
-  syncDirection = 'one_way',
-}: {
+export interface ScheduleStepProps {
   schedMode: string;
   setSchedMode: Dispatch<SetStateAction<string>>;
   schedTimes: string[];
@@ -54,7 +41,30 @@ export default function ScheduleStep({
   setStartEnabled: Dispatch<SetStateAction<boolean>>;
   summaryItems: [string, string][];
   syncDirection?: string;
-}) {
+  showStartEnabled?: boolean;
+}
+
+export interface SchedulePolicy {
+  frequency: (key: string) => boolean;
+  minIntervalMinutes: number;
+}
+
+export function ScheduleStepView({
+  schedMode,
+  setSchedMode,
+  schedTimes,
+  setSchedTimes,
+  schedDays,
+  setSchedDays,
+  schedInterval,
+  setSchedInterval,
+  startEnabled,
+  setStartEnabled,
+  summaryItems,
+  syncDirection = 'one_way',
+  showStartEnabled = true,
+  policy,
+}: ScheduleStepProps & { policy: SchedulePolicy }) {
   const getIntervalMinutes = () =>
     schedInterval.unit === 'hours'
       ? schedInterval.amount * 60
@@ -63,16 +73,13 @@ export default function ScheduleStep({
 
   // Plan gating: `sync_frequency` decides whether the user picks a fixed cadence or gets the
   // hand-built editor; `scheduling_modes` and `min_interval_minutes` constrain that editor.
-  const entitlements = useEntitlements();
-  const canCustomise = entitlements.frequency('custom');
-  const hasPresets = FREQUENCY_PRESET_ORDER.some((k) =>
-    entitlements.frequency(k),
-  );
+  const canCustomise = policy.frequency('custom');
+  const hasPresets = FREQUENCY_PRESET_ORDER.some((k) => policy.frequency(k));
   const [freqChoice, setFreqChoice] = useState<string | null>(null);
   const frequency =
     freqChoice ?? matchFrequency(schedMode, getIntervalMinutes(), schedTimes);
   const showEditor = canCustomise && (!hasPresets || frequency === 'custom');
-  const minIntervalMinutes = entitlements.minIntervalMinutes;
+  const minIntervalMinutes = policy.minIntervalMinutes;
   const minIntervalAmount =
     schedInterval.unit === 'hours'
       ? Math.max(1, Math.ceil(minIntervalMinutes / 60))
@@ -260,27 +267,29 @@ export default function ScheduleStep({
           </>
         )}
 
-        <div className="space-y-3 border-t pt-6">
-          <h3 className="text-sm font-medium">Start As</h3>
-          <RadioGroup
-            value={String(startEnabled)}
-            onValueChange={(v) => setStartEnabled(v === 'true')}
-            className="grid grid-cols-1 gap-3 sm:grid-cols-2"
-          >
-            <ChoiceCardItem
-              value="true"
-              id="start-as-true"
-              title="Active (Automated)"
-              description="Sync on schedule automatically as soon as setup finishes"
-            />
-            <ChoiceCardItem
-              value="false"
-              id="start-as-false"
-              title="Paused"
-              description="Activate manually later when you are ready"
-            />
-          </RadioGroup>
-        </div>
+        {showStartEnabled && (
+          <div className="space-y-3 border-t pt-6">
+            <h3 className="text-sm font-medium">Start As</h3>
+            <RadioGroup
+              value={String(startEnabled)}
+              onValueChange={(v) => setStartEnabled(v === 'true')}
+              className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+            >
+              <ChoiceCardItem
+                value="true"
+                id="start-as-true"
+                title="Active (Automated)"
+                description="Sync on schedule automatically as soon as setup finishes"
+              />
+              <ChoiceCardItem
+                value="false"
+                id="start-as-false"
+                title="Paused"
+                description="Activate manually later when you are ready"
+              />
+            </RadioGroup>
+          </div>
+        )}
       </div>
 
       <div className="bg-muted/40 space-y-3 rounded-4xl border p-4 lg:sticky lg:top-0">
@@ -301,5 +310,21 @@ export default function ScheduleStep({
         </Table>
       </div>
     </div>
+  );
+}
+
+export default function ScheduleStep(props: ScheduleStepProps) {
+  const entitlements = useEntitlements();
+  return (
+    <ScheduleStepView
+      {...props}
+      policy={{
+        frequency: (key) =>
+          entitlements.frequency(
+            key as Parameters<typeof entitlements.frequency>[0],
+          ),
+        minIntervalMinutes: entitlements.minIntervalMinutes,
+      }}
+    />
   );
 }

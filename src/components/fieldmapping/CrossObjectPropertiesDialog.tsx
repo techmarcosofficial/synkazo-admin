@@ -1,6 +1,6 @@
 import { Link2 } from 'lucide-react';
 
-import CrossObjectPropertiesPanel from './CrossObjectPropertiesPanel';
+import CrossObjectPropertiesPanel, { type CrossObjectPropertyActions } from './CrossObjectPropertiesPanel';
 import type { FieldDef } from './FieldMappingCanvas';
 
 import type { CrossObjectProperty } from '@/api/jobs';
@@ -25,6 +25,7 @@ export interface CrossObjectPropertiesDialogProps {
   sourceFields: FieldDef[];
   properties: CrossObjectProperty[];
   onPropertiesChange: (properties: CrossObjectProperty[]) => void;
+  actions?: CrossObjectPropertyActions;
 }
 
 export default function CrossObjectPropertiesDialog({
@@ -37,6 +38,7 @@ export default function CrossObjectPropertiesDialog({
   sourceFields,
   properties,
   onPropertiesChange,
+  actions,
 }: CrossObjectPropertiesDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -82,6 +84,7 @@ export default function CrossObjectPropertiesDialog({
             sourceFields={sourceFields}
             properties={properties}
             onPropertiesChange={onPropertiesChange}
+            actions={actions}
           />
         </div>
 

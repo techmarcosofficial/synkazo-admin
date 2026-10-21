@@ -26,8 +26,12 @@ import { roleLabel } from '@/lib/permissions';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
 interface UserMenuProps {
   variant?: 'sidebar' | 'avatar';
+  settingsPath?: string;
 }
-export function NavUser({ variant = 'sidebar' }: UserMenuProps) {
+export function NavUser({
+  variant = 'sidebar',
+  settingsPath = '/settings',
+}: UserMenuProps) {
   const { currentUser, logout } = useSynkazoAuth();
   const { isMobile } = useSidebar();
   const { confirm } = useConfirmDialog();
@@ -124,7 +128,7 @@ export function NavUser({ variant = 'sidebar' }: UserMenuProps) {
 
             <DropdownMenuGroup>
               <DropdownMenuItem asChild>
-                <Link to="/settings">
+                <Link to={settingsPath}>
                   <Settings2 />
                   Settings
                 </Link>

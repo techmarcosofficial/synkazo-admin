@@ -1,16 +1,10 @@
 import type { DropResult } from '@hello-pangea/dnd';
 import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd';
-import { GripVertical, Plus, Save, X } from 'lucide-react';
+import { GripVertical, Plus, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import type { UpdateAssociationQueuePayload } from '@/api/priorityQueue';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -19,13 +13,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
-import {
-  useAssociationRuleOptionsQuery,
-  useUpdateAssociationConfigMutation,
-} from '@/queries/usePriorityQueue';
+import AssociationQueueComposer, {
+  type AssociationQueueDraft,
+} from './AssociationQueueComposer';
+import { useAssociationRuleOptionsQuery } from '@/queries/usePriorityQueue';
 import type { AssociationQueueItem, ProjectQueue } from '@/types';
 
 interface LocalItem {
@@ -40,13 +33,16 @@ export default function AssociationQueueCard({
   projectId,
   queue,
   items,
+  onChange,
+  savedRevision,
 }: {
   projectId: string;
   queue: ProjectQueue | null;
   items: AssociationQueueItem[];
+  onChange: (draft: UpdateAssociationQueuePayload) => void;
+  savedRevision: number;
 }) {
   const optionsQuery = useAssociationRuleOptionsQuery(projectId);
-  const updateMutation = useUpdateAssociationConfigMutation(projectId);
 
   const [enabled, setEnabled] = useState(
     queue?.associationQueueEnabled ?? false,
@@ -62,7 +58,7 @@ export default function AssociationQueueCard({
     })),
   );
   const [dirty, setDirty] = useState(false);
-  const [addingRuleId, setAddingRuleId] = useState('');
+  const [composerOpen, setComposerOpen] = useState(false);
 
   useEffect(() => {
     if (dirty) return;
@@ -75,7 +71,20 @@ export default function AssociationQueueCard({
     );
   }, [queue, items]);
 
+  useEffect(() => {
+    setDirty(false);
+  }, [savedRevision]);
+
   const delayMinutes = delayUnit === 'hours' ? delayAmount * 60 : delayAmount;
+
+  useEffect(() => {
+    if (!dirty) return;
+    onChange({
+      enabled,
+      delayMinutes,
+      items: localItems.map((item, position) => ({ ...item, position })),
+    });
+  }, [dirty, enabled, delayMinutes, localItems, onChange]);
 
   const ruleOptions = optionsQuery.data ?? [];
   const ruleById = new Map(ruleOptions.map((r) => [r.id, r]));
@@ -95,14 +104,8 @@ export default function AssociationQueueCard({
     markDirty();
   };
 
-  const addRule = (associationRuleId: string) => {
-    if (
-      !associationRuleId ||
-      localItems.some((i) => i.associationRuleId === associationRuleId)
-    )
-      return;
-    setLocalItems((prev) => [...prev, { associationRuleId, enabled: true }]);
-    setAddingRuleId('');
+  const addRules = (drafts: AssociationQueueDraft[]) => {
+    setLocalItems((current) => [...current, ...drafts]);
     markDirty();
   };
 
@@ -124,50 +127,59 @@ export default function AssociationQueueCard({
     markDirty();
   };
 
-  const handleSave = () => {
-    updateMutation.mutate(
-      {
-        enabled,
-        delayMinutes,
-        items: localItems.map((i, index) => ({
-          associationRuleId: i.associationRuleId,
-          position: index,
-          enabled: i.enabled,
-        })),
-      },
-      { onSuccess: () => setDirty(false) },
-    );
-  };
-
   return (
-    <Card size="sm" className="gap-3">
-      <CardHeader className="flex items-center justify-between gap-3">
+    <section
+      className="space-y-3 border-t px-4 py-4"
+      aria-label="Association queue rules"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
-            2
-          </div>
-          <div className="flex flex-col gap-1">
-            <CardTitle>Association Queue</CardTitle>
-            <CardDescription>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-sm font-semibold">
+                Step 2 · Association Queue
+              </h3>
+              <span className="text-muted-foreground text-xs">
+                {localItems.length} configured{' '}
+                {localItems.length === 1 ? 'rule' : 'rules'}
+              </span>
+              {!enabled && (
+                <span className="text-muted-foreground text-xs">· Off</span>
+              )}
+            </div>
+            <p className="text-muted-foreground text-xs">
               Runs after the Priority Queue completes.
-            </CardDescription>
+            </p>
           </div>
         </div>
-        <Switch
-          checked={enabled}
-          onCheckedChange={(v) => {
-            setEnabled(v);
-            markDirty();
-          }}
-          aria-label="Enable association queue"
-        />
-      </CardHeader>
+        <div className="flex items-center gap-2">
+          {enabled && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={composerOpen || availableOptions.length === 0}
+              onClick={() => setComposerOpen(true)}
+            >
+              <Plus /> Add rule
+            </Button>
+          )}
+          <Switch
+            checked={enabled}
+            onCheckedChange={(v) => {
+              setEnabled(v);
+              markDirty();
+            }}
+            aria-label="Enable association queue"
+          />
+        </div>
+      </div>
 
       {enabled && (
-        <CardContent className="space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="mr-1 text-xs font-medium">
-              Delay After Jobs Complete
+        <div className="space-y-3">
+          <div className="bg-muted/40 flex flex-wrap items-center gap-2 rounded-xl px-3 py-2">
+            <label className="mr-auto text-xs font-medium">
+              Wait before association rules
             </label>
             <Input
               type="number"
@@ -197,7 +209,7 @@ export default function AssociationQueueCard({
             </Select>
           </div>
 
-          {localItems.length === 0 ? (
+          {localItems.length === 0 && !composerOpen ? (
             <p className="text-muted-foreground rounded-3xl border py-6 text-center text-xs">
               No association rules added to the queue yet.
             </p>
@@ -241,6 +253,15 @@ export default function AssociationQueueCard({
                         Actions
                       </div>
                     </div>
+                    <AssociationQueueComposer
+                      open={composerOpen}
+                      onClose={() => setComposerOpen(false)}
+                      options={ruleOptions}
+                      existingRuleIds={localItems.map(
+                        (item) => item.associationRuleId,
+                      )}
+                      onApply={addRules}
+                    />
                     {localItems.map((item, index) => {
                       const rule = ruleById.get(item.associationRuleId);
                       return (
@@ -331,60 +352,8 @@ export default function AssociationQueueCard({
               </Droppable>
             </DragDropContext>
           )}
-
-          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-            <div className="flex min-w-0 items-center gap-2">
-              <Select
-                value={addingRuleId}
-                onValueChange={addRule}
-                disabled={availableOptions.length === 0}
-              >
-                <SelectTrigger size="sm" className="w-72 max-w-full">
-                  <SelectValue
-                    placeholder={
-                      availableOptions.length > 0
-                        ? 'Add an association rule…'
-                        : 'All association rules added'
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableOptions.map((r) => (
-                    <SelectItem key={r.id} value={r.id}>
-                      {r.name} ({r.sourceObject} → {r.targetObject})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Plus
-                className="text-muted-foreground size-4 shrink-0"
-                aria-hidden="true"
-              />
-            </div>
-            <Button
-              size="sm"
-              onClick={handleSave}
-              disabled={!dirty || updateMutation.isPending}
-            >
-              {updateMutation.isPending ? <Spinner /> : <Save />}
-              Save Association Queue
-            </Button>
-          </div>
-        </CardContent>
+        </div>
       )}
-
-      {!enabled && dirty && (
-        <CardContent className="flex justify-end">
-          <Button
-            size="sm"
-            onClick={handleSave}
-            disabled={updateMutation.isPending}
-          >
-            {updateMutation.isPending ? <Spinner /> : <Save />}
-            Save Association Queue
-          </Button>
-        </CardContent>
-      )}
-    </Card>
+    </section>
   );
 }

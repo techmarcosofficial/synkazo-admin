@@ -1,17 +1,17 @@
 import { formatDistanceToNow } from 'date-fns';
-import { AlertTriangle, ArrowLeft, ArrowRight, Database, Play } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Database, Play } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 
 import LifecycleConfirmDialog from '../lifecycle/LifecycleConfirmDialog';
 
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
-import PageHeader from '@/components/shared/PageHeader';
 import SkeletonList from '@/components/shared/skeletons/SkeletonList';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -22,11 +22,12 @@ import {
 } from '@/components/ui/table';
 import { showToast } from '@/lib/toast';
 import {
+  useActivateSuperAdminProjectEnvironmentMutation,
   useRunSuperAdminMigrationMutation,
   useSuperAdminMigrationDiffQuery,
   useSuperAdminMigrationRunItemsQuery,
   useSuperAdminMigrationRunsQuery,
-  useSuperAdminOrganisationQuery,
+  useSuperAdminProjectConnectionsQuery,
   useSuperAdminProjectQuery,
 } from '@/queries/useSuperAdmin';
 import type {
@@ -54,17 +55,20 @@ function DiffSection({
   if (items.length === 0) return null;
   return (
     <div className="flex flex-col gap-2">
-      <h3 className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+      <h3 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
         {title}
         <span className="ml-2 normal-case">
-          {promotable.length} promotable · {items.length - promotable.length} in sync
+          {promotable.length} promotable · {items.length - promotable.length} in
+          sync
         </span>
       </h3>
       <div className="bg-card overflow-hidden rounded-lg border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-10"></TableHead>
+              <TableHead className="w-10">
+                <span className="sr-only">Select</span>
+              </TableHead>
               <TableHead>Item</TableHead>
               <TableHead>Object</TableHead>
               <TableHead>Status</TableHead>
@@ -124,12 +128,43 @@ export default function OrganisationProjectMigrationPage() {
     organisationId: string;
     projectId: string;
   }>();
+  if (!organisationId || !projectId) {
+    return (
+      <EmptyState
+        icon={Database}
+        title="Missing route parameters"
+        description="Both organisation and project ids are required."
+      />
+    );
+  }
+  return (
+    <OrganisationProjectMigrationPanel
+      organisationId={organisationId}
+      projectId={projectId}
+    />
+  );
+}
 
-  const orgQuery = useSuperAdminOrganisationQuery(organisationId);
-  const projectQuery = useSuperAdminProjectQuery(
-    organisationId ?? '',
+export function OrganisationProjectMigrationPanel({
+  organisationId,
+  projectId,
+  organisationName = '',
+}: {
+  organisationId: string;
+  projectId: string;
+  organisationName?: string;
+}) {
+  const projectQuery = useSuperAdminProjectQuery(organisationId, projectId);
+  const connectionsQuery = useSuperAdminProjectConnectionsQuery(
+    organisationId,
     projectId,
   );
+  const activate = useActivateSuperAdminProjectEnvironmentMutation(
+    organisationId,
+    projectId,
+  );
+  const [activationTarget, setActivationTarget] =
+    useState<SuperAdminConnectionEnvironment | null>(null);
 
   const [from, setFrom] = useState<SuperAdminConnectionEnvironment>('sandbox');
   const [to, setTo] = useState<SuperAdminConnectionEnvironment>('production');
@@ -138,24 +173,21 @@ export default function OrganisationProjectMigrationPage() {
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
 
   const diffQuery = useSuperAdminMigrationDiffQuery(
-    organisationId ?? '',
-    projectId ?? '',
+    organisationId,
+    projectId,
     from,
     to,
   );
-  const runsQuery = useSuperAdminMigrationRunsQuery(
-    organisationId ?? '',
-    projectId ?? '',
-  );
+  const runsQuery = useSuperAdminMigrationRunsQuery(organisationId, projectId);
   const runItemsQuery = useSuperAdminMigrationRunItemsQuery(
-    organisationId ?? '',
-    projectId ?? '',
+    organisationId,
+    projectId,
     expandedRunId,
   );
 
   const runMutation = useRunSuperAdminMigrationMutation(
-    organisationId ?? '',
-    projectId ?? '',
+    organisationId,
+    projectId,
   );
 
   useEffect(() => {
@@ -166,9 +198,11 @@ export default function OrganisationProjectMigrationPage() {
 
   const allPromotable = useMemo(() => {
     if (!diff) return [] as SuperAdminMigrationDiffItem[];
-    return [...diff.customObjects, ...diff.properties, ...diff.associations].filter(
-      (i) => i.status !== 'in_sync',
-    );
+    return [
+      ...diff.customObjects,
+      ...diff.properties,
+      ...diff.associations,
+    ].filter((i) => i.status !== 'in_sync');
   }, [diff]);
 
   const toggle = (key: string) => {
@@ -213,40 +247,82 @@ export default function OrganisationProjectMigrationPage() {
     );
   };
 
-  if (!organisationId || !projectId) {
-    return (
-      <EmptyState
-        icon={Database}
-        title="Missing route parameters"
-        description="Both organisation and project ids are required."
-      />
-    );
-  }
-
-  const project = projectQuery.data;
-
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <Link
-          to={`/super-admin/organisations/${organisationId}/projects/${projectId}`}
-          className="text-muted-foreground hover:text-foreground mb-2 inline-flex items-center gap-1 text-sm"
-        >
-          <ArrowLeft className="size-3.5" aria-hidden />
-          Back to project
-        </Link>
-        <PageHeader
-          title="Environment migration"
-          description={
-            project
-              ? `${project.name} · ${orgQuery.data?.name ?? organisationId}`
-              : organisationId
-          }
-        />
-      </div>
-
+    <div className="flex flex-col gap-5">
+      <Card className="gap-0 py-0">
+        <CardHeader className="px-4 py-3">
+          <CardTitle>Active environment</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 px-4 pb-4">
+          <p className="text-muted-foreground text-sm">
+            New sync runs use the active environment. Activation checks live
+            destination credentials and a verified source connection.
+          </p>
+          {projectQuery.isLoading || connectionsQuery.isLoading ? (
+            <SkeletonList count={2} />
+          ) : projectQuery.isError || connectionsQuery.isError ? (
+            <ErrorState
+              title="Could not load environment status"
+              description={extractErrorMessage(
+                projectQuery.error ?? connectionsQuery.error,
+              )}
+              onRetry={() => {
+                void projectQuery.refetch();
+                void connectionsQuery.refetch();
+              }}
+            />
+          ) : (
+            <div className="grid gap-2 sm:grid-cols-2">
+              {(['sandbox', 'production'] as const).map((environment) => {
+                const active =
+                  projectQuery.data?.activeEnvironment === environment;
+                const connections = (connectionsQuery.data ?? []).filter(
+                  (item) => item.environment === environment,
+                );
+                return (
+                  <div
+                    key={environment}
+                    className="bg-card flex flex-col gap-2 rounded-xl border p-3"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <strong className="text-sm capitalize">
+                        {environment}
+                      </strong>
+                      {active && <Badge variant="secondary">Active</Badge>}
+                    </div>
+                    <p className="text-muted-foreground text-xs">
+                      {connections.length
+                        ? connections
+                            .map(
+                              (item) =>
+                                `${item.platformId} ${item.connectionType}: ${item.status}`,
+                            )
+                            .join(' · ')
+                        : 'No connections configured'}
+                    </p>
+                    {!active && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="mt-auto self-start"
+                        disabled={activate.isPending}
+                        onClick={() => {
+                          activate.reset();
+                          setActivationTarget(environment);
+                        }}
+                      >
+                        Activate {environment}
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
       <section className="flex flex-col gap-3">
-        <div className="flex items-center gap-3 rounded-lg border bg-card p-3">
+        <div className="bg-card flex flex-wrap items-center gap-2 rounded-xl border p-3 sm:gap-3">
           <div className="flex items-center gap-2 text-sm">
             <label htmlFor="mig-from">From</label>
             <select
@@ -279,7 +355,7 @@ export default function OrganisationProjectMigrationPage() {
               <option value="sandbox">sandbox</option>
             </select>
           </div>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto">
             <Button
               size="sm"
               variant="outline"
@@ -306,8 +382,8 @@ export default function OrganisationProjectMigrationPage() {
               {diff.message ??
                 'Both environments must be connected before a migration can run.'}
               <span className="ml-2 text-xs">
-                sandbox: {diff.sandboxConnected ? 'connected' : 'missing'} · production:{' '}
-                {diff.productionConnected ? 'connected' : 'missing'}
+                sandbox: {diff.sandboxConnected ? 'connected' : 'missing'} ·
+                production: {diff.productionConnected ? 'connected' : 'missing'}
               </span>
             </AlertDescription>
           </Alert>
@@ -434,7 +510,8 @@ export default function OrganisationProjectMigrationPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
-                          {run.succeeded}✓ · {run.skipped}↷ · {run.failed}✗ / {run.totalItems}
+                          {run.succeeded}✓ · {run.skipped}↷ · {run.failed}✗ /{' '}
+                          {run.totalItems}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
                           {duration != null ? `${duration.toFixed(1)}s` : '—'}
@@ -485,8 +562,12 @@ export default function OrganisationProjectMigrationPage() {
                                     >
                                       {item.status}
                                     </Badge>
-                                    <span className="font-medium">{item.displayName}</span>
-                                    <span className="text-muted-foreground">· {item.kind}</span>
+                                    <span className="font-medium">
+                                      {item.displayName}
+                                    </span>
+                                    <span className="text-muted-foreground">
+                                      · {item.kind}
+                                    </span>
                                     {item.errorMessage ? (
                                       <span className="text-destructive ml-2 truncate">
                                         {item.errorMessage}
@@ -509,6 +590,39 @@ export default function OrganisationProjectMigrationPage() {
       </section>
 
       <LifecycleConfirmDialog
+        open={activationTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setActivationTarget(null);
+        }}
+        title={`Activate ${activationTarget ?? 'environment'}`}
+        description={`Live-validate the ${activationTarget ?? 'selected'} connections for ${organisationName || 'this organisation'} before newly queued syncs use it.`}
+        bodyWarning="Runs already queued or running keep their captured environment. Activation is blocked if live validation fails."
+        actionLabel="Validate and activate"
+        tone="warning"
+        organisationName={organisationName}
+        requiresNameConfirm={false}
+        minReasonLength={10}
+        reasonPlaceholder="Why is this environment being activated?"
+        isSubmitting={activate.isPending}
+        errorMessage={
+          activate.isError ? extractErrorMessage(activate.error) : null
+        }
+        onSubmit={async ({ reason }) => {
+          if (!activationTarget) return;
+          try {
+            const result = await activate.mutateAsync({
+              environment: activationTarget,
+              reason,
+            });
+            showToast.success(result.message);
+            setActivationTarget(null);
+          } catch {
+            // Keep the confirmation dialog open with its server validation error.
+          }
+        }}
+      />
+
+      <LifecycleConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
         title="Run environment migration"
@@ -516,7 +630,7 @@ export default function OrganisationProjectMigrationPage() {
         bodyWarning="Runs on behalf of the organisation. Every promoted item creates schema in the target environment; already-in-sync items are skipped."
         actionLabel="Run migration"
         tone="warning"
-        organisationName=""
+        organisationName={organisationName}
         requiresNameConfirm={false}
         minReasonLength={10}
         reasonPlaceholder="Why is this migration being run now?"

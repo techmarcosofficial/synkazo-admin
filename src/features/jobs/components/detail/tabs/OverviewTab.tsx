@@ -7,13 +7,13 @@ import {
   RotateCcw,
   Timer,
   X,
-  type LucideIcon,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 
 import { useJobDetailContext } from '../context';
+import JobSummaryMetric from '../JobSummaryMetric';
 
 import StatusBadge from '@/components/shared/StatusBadge';
 import UpgradeRequiredDialog from '@/components/shared/UpgradeRequiredDialog';
@@ -46,37 +46,6 @@ import {
 import { BROWSER_TIMEZONE } from '@/lib/timezones';
 import { usePriorityQueueQuery } from '@/queries/usePriorityQueue';
 import type { Project, ProjectEnvironment } from '@/types';
-
-function SyncSummaryCard({
-  icon: Icon,
-  label,
-  value,
-  description,
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: string;
-  description: string;
-}) {
-  return (
-    <div className="bg-secondary/40 border-border/60 min-w-0 space-y-2 rounded-2xl border p-4 transition-colors">
-      <span className="bg-background text-muted-foreground border-border/40 flex size-8 items-center justify-center rounded-xl border">
-        <Icon className="size-3.5" aria-hidden="true" />
-      </span>
-      <div className="min-w-0">
-        <p className="text-foreground text-base leading-tight font-bold tracking-tight tabular-nums">
-          {value}
-        </p>
-        <p className="text-muted-foreground mt-0.5 text-xs font-medium">
-          {label}
-        </p>
-        <p className="text-muted-foreground/80 mt-0.5 text-[11px] leading-tight font-normal">
-          {description}
-        </p>
-      </div>
-    </div>
-  );
-}
 
 export default function OverviewTab() {
   const {
@@ -292,6 +261,7 @@ export default function OverviewTab() {
   ) =>
     showingSummary ? (
       <SyncRunProgress
+        dismissible
         variant={variant}
         defaultOpen={defaultOpen}
         runId={summaryRun?.id}
@@ -474,7 +444,7 @@ export default function OverviewTab() {
 
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
               {summaryCards.map((card) => (
-                <SyncSummaryCard key={card.label} {...card} />
+                <JobSummaryMetric key={card.label} {...card} />
               ))}
             </div>
 
@@ -567,14 +537,16 @@ export default function OverviewTab() {
         />
       )}
 
-      <JobScheduleModal
-        projectId={projectId}
-        jobId={job.id}
-        job={job}
-        open={scheduleModalOpen}
-        onOpenChange={setScheduleModalOpen}
-        onSaved={refetch}
-      />
+      {scheduleModalOpen && (
+        <JobScheduleModal
+          projectId={projectId}
+          jobId={job.id}
+          job={job}
+          open={scheduleModalOpen}
+          onOpenChange={setScheduleModalOpen}
+          onSaved={refetch}
+        />
+      )}
 
       <UpgradeRequiredDialog
         open={upgradeDialog.open}

@@ -61,6 +61,16 @@ export const superAdminMembersApi = {
       )
       .then(paginated<SuperAdminMemberListItem>),
 
+  getMember: (
+    organisationId: string,
+    userId: string,
+  ): Promise<SuperAdminMemberListItem> =>
+    apiClient
+      .get<{ data: SuperAdminMemberListItem }>(
+        `/super-admin/organisations/${organisationId}/members/${userId}`,
+      )
+      .then(d),
+
   listInvitations: (
     organisationId: string,
     params: ListInvitationsParams = {},

@@ -131,6 +131,7 @@ export interface FieldMapping {
   sourceField: string;
   destField: string;
   isMatchField?: boolean;
+  isRequired?: boolean;
   /** Priority tier when more than one field is flagged isMatchField (lower
    *  tried first, e.g. email=1 falling back to customer_number=2). Leave
    *  unset to AND all match fields together instead (default behaviour). */

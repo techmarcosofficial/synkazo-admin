@@ -4,8 +4,9 @@ import { toast } from 'sonner';
 
 import type { ExtConnection } from './types';
 
-import { connectionsApi } from '@/api/connections';
+import { useConnectionAccess } from './ConnectionAccessContext';
 import { sseClient } from '@/lib/sseClient';
+import { redirectToOAuth } from '@/lib/oauthRedirect';
 import type { Connection, PlatformId } from '@/types';
 
 interface UseConnectionsManagerParams {
@@ -26,11 +27,14 @@ export function useConnectionsManager({
   reloadKey = 0,
   projectActiveEnv = null,
 }: UseConnectionsManagerParams) {
+  const { api: connectionsApi, audience } = useConnectionAccess();
   const [connections, setConnections] = useState<ExtConnection[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [oauthPending, setOAuthPending] = useState(false);
+  const oauthInFlight = useRef(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeConn, setActiveConn] = useState<ExtConnection | null>(null);
-  const [showMethodModal, setShowMethodModal] = useState(false);
   const [showManualModal, setShowManualModal] = useState(false);
   const [activeEnv, setActiveEnv] = useState(projectActiveEnv ?? 'sandbox');
   const envInitializedRef = useRef(!!projectActiveEnv);
@@ -50,7 +54,6 @@ export function useConnectionsManager({
     }
   }, [searchParams]);
 
-
   const onChangeRef = useRef(onConnectionsChange);
   onChangeRef.current = onConnectionsChange;
 
@@ -65,15 +68,18 @@ export function useConnectionsManager({
         const conns = await connectionsApi.listProjectConnections(projectId);
         const list = (Array.isArray(conns) ? conns : []) as ExtConnection[];
         setConnections(list);
+        setLoadError(null);
         onChangeRef.current?.(list);
         initialLoadDoneRef.current = true;
       } catch {
+        if (!initialLoadDoneRef.current)
+          setLoadError('Could not load project connections. Try again.');
         if (!silent) toast.error('Failed to load connections');
       } finally {
         if (shouldShowLoading) setLoading(false);
       }
     },
-    [projectId],
+    [projectId, connectionsApi],
   );
 
   useEffect(() => {
@@ -85,7 +91,7 @@ export function useConnectionsManager({
   }, [reloadKey, loadConnections]);
 
   useEffect(() => {
-    if (!projectId) return;
+    if (!projectId || audience !== 'tenant') return;
     const handler = (data: unknown) => {
       const d = data as { projectId?: string } | null;
       if (d?.projectId === projectId) loadConnections(true);
@@ -96,7 +102,7 @@ export function useConnectionsManager({
       offUpdated();
       offRemoved();
     };
-  }, [projectId, loadConnections]);
+  }, [projectId, loadConnections, audience]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -133,6 +139,7 @@ export function useConnectionsManager({
       next.delete('rescoped');
       next.delete('added');
       next.delete('removed');
+      next.delete('env');
       setSearchParams(next, { replace: true });
     } else if (connected === 'hubspot') {
       toast.success('HubSpot connected via OAuth');
@@ -148,49 +155,58 @@ export function useConnectionsManager({
           'Permission update cancelled. Your existing HubSpot connection is unchanged.',
         );
       } else {
-        toast.error(`HubSpot OAuth failed: ${oauthError}`);
+        toast.error(
+          oauthError === 'state_expired'
+            ? 'HubSpot authorization expired. Start again from this project.'
+            : 'Could not complete HubSpot authorization. Try connecting again.',
+        );
       }
       resetModals();
       const next = new URLSearchParams(searchParams);
       next.delete('hubspot_error');
       next.delete('env');
+      next.delete('reason');
       setSearchParams(next, { replace: true });
     }
   }, []);
 
   const resetModals = () => {
-    setShowMethodModal(false);
     setShowManualModal(false);
     setActiveConn(null);
   };
 
   const openConnect = (conn: ExtConnection) => {
+    if (conn.platformId === 'hubspot') {
+      void handleOAuth(conn);
+      return;
+    }
     setActiveConn(conn);
     setShowManualModal(true);
-    setShowMethodModal(false);
   };
 
-  const handleManual = () => {
-    setShowMethodModal(false);
-    setShowManualModal(true);
-  };
   const handleSaved = () => {
     resetModals();
     loadConnections(true);
   };
 
-  const handleOAuth = async () => {
-    if (!activeConn) return;
+  const handleOAuth = async (connection = activeConn) => {
+    if (!connection || oauthInFlight.current) return;
+    oauthInFlight.current = true;
+    setOAuthPending(true);
     try {
-      const redirectUrl = await connectionsApi.getHubSpotOAuthUrl(
-        projectId,
-        activeConn.connectionType as 'source' | 'destination',
-        (activeConn.environment ?? activeEnv) as 'production' | 'sandbox',
-      );
+      const redirectUrl = connection.id
+        ? (await connectionsApi.startHubSpotRescope(connection.id)).redirectUrl
+        : await connectionsApi.getHubSpotOAuthUrl(
+            projectId,
+            connection.connectionType as 'source' | 'destination',
+            (connection.environment ?? activeEnv) as 'production' | 'sandbox',
+          );
       resetModals();
-      window.location.href = redirectUrl;
+      redirectToOAuth(redirectUrl);
     } catch {
       toast.error('Failed to start HubSpot OAuth');
+      oauthInFlight.current = false;
+      setOAuthPending(false);
     }
   };
 
@@ -250,6 +266,8 @@ export function useConnectionsManager({
 
   return {
     loading,
+    loadError,
+    oauthPending,
     activeEnv,
     setActiveEnv,
     sourceConn,
@@ -261,9 +279,7 @@ export function useConnectionsManager({
     handleRowUpdated,
     refreshConnections: () => loadConnections(true),
     activeConn,
-    showMethodModal,
     showManualModal,
-    handleManual,
     handleOAuth,
     handleSaved,
     resetModals,

@@ -20,6 +20,10 @@ interface GetPropertiesOptions {
   environment?: HubSpotEnvironment;
 }
 
+export type ConnectionWrite = Partial<Connection> & {
+  credentials?: Record<string, string>;
+};
+
 export const connectionsApi = {
   listAllConnections: (): Promise<Connection[]> =>
     apiClient.get('/connections').then(d),
@@ -68,12 +72,12 @@ export const connectionsApi = {
       .then(d),
   createConnection: (
     projectId: string,
-    data: Partial<Connection>,
+    data: ConnectionWrite,
   ): Promise<Connection> => apiClient.post(p(projectId), data).then(d),
   updateConnection: (
     projectId: string,
     connId: string,
-    data: Partial<Connection>,
+    data: ConnectionWrite,
   ): Promise<Connection> =>
     apiClient.patch(`${p(projectId)}/${connId}`, data).then(d),
   deleteConnection: (projectId: string, connId: string): Promise<void> =>
@@ -185,7 +189,9 @@ export const connectionsApi = {
    * browser to redirect to. Post-consent, HubSpot returns to our callback,
    * which updates the same connection row in place (plan §2.8, §3.1).
    */
-  startHubSpotRescope: (connectionId: string): Promise<{ redirectUrl: string }> =>
+  startHubSpotRescope: (
+    connectionId: string,
+  ): Promise<{ redirectUrl: string }> =>
     apiClient
       .post('/connections/hubspot/rescope', { connectionId })
       .then((r) => r.data.data),

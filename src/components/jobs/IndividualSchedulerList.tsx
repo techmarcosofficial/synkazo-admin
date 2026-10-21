@@ -1,513 +1,236 @@
-import type { DropResult } from '@hello-pangea/dnd';
-import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd';
-import { differenceInSeconds, format, formatDistanceToNow } from 'date-fns';
-import {
-  AlertCircle,
-  ArrowDown,
-  ArrowRight,
-  ArrowUp,
-  ChevronDown,
-  ChevronUp,
-  Clock,
-  GripVertical,
-  Pause,
-  Play,
-  RefreshCw,
-  Save,
-} from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { toast } from 'sonner';
+import { AlertCircle, Pause, Play } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { jobsApi } from '@/api/jobs';
-import ListRow from '@/components/shared/list/ListRow';
+import IndividualScheduleRow from '@/components/jobs/scheduler/IndividualScheduleRow';
+import {
+  canPauseIndividualSchedule,
+  canResumeIndividualSchedule,
+} from '@/components/jobs/scheduler/individualScheduleActions';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
-import { cn } from '@/lib/utils';
-import type { SchedulerJob, SchedulerRecentRun } from '@/types';
+import JobScheduleModal from '@/features/jobs/components/schedule/JobScheduleModal';
+import {
+  buildScheduleUpdatePayload,
+  hasScheduleDefinition,
+} from '@/features/jobs/lib/jobScheduleSettings';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
+import { showToast } from '@/lib/toast';
+import type { SchedulerJob } from '@/types';
 
-function readableCron(expr: string): string {
-  if (!expr) return 'Manual only';
-  const map: Record<string, string> = {
-    '* * * * *': 'Every minute',
-    '*/5 * * * *': 'Every 5 min',
-    '*/15 * * * *': 'Every 15 min',
-    '*/30 * * * *': 'Every 30 min',
-    '0 * * * *': 'Every hour',
-    '0 */2 * * *': 'Every 2 h',
-    '0 */4 * * *': 'Every 4 h',
-    '0 */6 * * *': 'Every 6 h',
-    '0 */12 * * *': 'Every 12 h',
-    '0 0 * * *': 'Daily',
-    '0 0 * * 0': 'Weekly',
-  };
-  return map[expr] ?? expr;
-}
+export type IndividualScheduleDraft = ReturnType<
+  typeof buildScheduleUpdatePayload
+>;
 
-function runDuration(run: SchedulerRecentRun): string | null {
-  if (!run.startedAt) return null;
-  const end = run.finishedAt ? new Date(run.finishedAt) : new Date();
-  const secs = differenceInSeconds(end, new Date(run.startedAt));
-  if (secs < 60) return `${secs}s`;
-  return `${Math.round(secs / 60)}m`;
-}
-
-// A job's schedule is only actually running when both syncEnabled is on AND
-// scheduleState isn't paused (manually or by a plan-limit pause) — mirrors
-// JobDetail.tsx's handleScheduleToggle so the Scheduler page and the Job
-// detail page never disagree about status. retry_pending/resume_pending are
-// transitional but still schedule-driven, so they count as running.
-function isScheduleRunning(job: SchedulerJob): boolean {
+function scheduleActive(job: SchedulerJob): boolean {
   return (
+    job.syncDirection !== 'two_way' &&
+    !!job.isEnabled &&
+    hasScheduleDefinition(job) &&
     !!job.syncEnabled &&
     job.scheduleState !== 'paused' &&
     job.scheduleState !== 'paused_limit_reached'
   );
 }
 
-function StatusPill({ job }: { job: SchedulerJob }) {
-  if (job.isRunning)
-    return (
-      <Badge className="bg-muted text-muted-foreground gap-1">
-        <Spinner className="text-primary size-2.5" /> Running
-      </Badge>
-    );
-  if (!job.isEnabled) return <Badge variant="secondary">Inactive</Badge>;
-  if (job.scheduleState === 'paused_limit_reached')
-    return (
-      <Badge className="bg-warning/10 text-warning gap-1">
-        <Pause className="size-2.5" /> Plan limit reached
-      </Badge>
-    );
-  if (!isScheduleRunning(job))
-    return (
-      <Badge className="bg-muted text-muted-foreground gap-1">
-        <Pause className="text-warning size-2.5" /> Paused
-      </Badge>
-    );
+function schedulePaused(job: SchedulerJob): boolean {
   return (
-    <Badge className="bg-muted text-muted-foreground gap-1">
-      <Play className="text-success size-2.5" /> Scheduled
-    </Badge>
-  );
-}
-
-const RUN_STATUS_DOT: Record<string, string> = {
-  completed: 'bg-success',
-  failed: 'bg-destructive',
-  cancelled: 'bg-warning',
-  running: 'bg-primary',
-};
-
-// `triggeredBy` is a raw backend enum-ish string — "cron", "limit_sync", or a
-// "manual:<userId>" composite. Rendered as-is that composite printed a UUID where a short
-// human label belongs; this maps it down to what the user actually needs to see.
-function triggerLabel(triggeredBy?: string): string {
-  if (!triggeredBy) return '—';
-  if (triggeredBy === 'cron') return 'Scheduled';
-  if (triggeredBy === 'limit_sync') return 'Custom Sync';
-  if (triggeredBy.startsWith('manual')) return 'Manual';
-  return triggeredBy;
-}
-
-function RunHistory({ runs }: { runs?: SchedulerRecentRun[] }) {
-  if (!runs?.length)
-    return <p className="text-muted-foreground py-1 text-xs">No runs yet.</p>;
-
-  return (
-    <div>
-      {runs.map((run) => (
-        <ListRow key={run.id} className="gap-2 text-xs">
-          <span
-            className={cn(
-              'size-2 shrink-0 rounded-full',
-              RUN_STATUS_DOT[run.status] ?? 'bg-muted-foreground',
-            )}
-          />
-          <span className="text-muted-foreground w-28 shrink-0 font-mono">
-            {format(new Date(run.startedAt), 'MMM d HH:mm')}
-          </span>
-          <span className="w-20 shrink-0" title={run.triggeredBy}>
-            {triggerLabel(run.triggeredBy)}
-          </span>
-          <span className="text-success ml-auto">
-            {run.recordsProcessed} records
-          </span>
-          {(run.errorCount ?? 0) > 0 && (
-            <span className="text-destructive">{run.errorCount} err</span>
-          )}
-          <span className="text-muted-foreground w-8 text-right">
-            {runDuration(run)}
-          </span>
-        </ListRow>
-      ))}
-    </div>
-  );
-}
-
-interface JobCardProps {
-  job: SchedulerJob & { recentRuns?: SchedulerRecentRun[] };
-  index: number;
-  projectId: string;
-  rank: number;
-  jobCount: number;
-  onRefresh: () => void;
-  onMove: (index: number, offset: -1 | 1) => void;
-}
-
-function JobCard({
-  job,
-  index,
-  projectId,
-  rank,
-  jobCount,
-  onRefresh,
-  onMove,
-}: JobCardProps) {
-  const [expanded, setExpanded] = useState(false);
-  const [toggling, setToggling] = useState(false);
-
-  const running = isScheduleRunning(job);
-
-  const handleSyncToggle = async () => {
-    setToggling(true);
-    try {
-      if (running) {
-        await jobsApi.pauseSchedule(projectId, job.id);
-        toast.success('Schedule paused. Runs will not fire until resumed.');
-      } else if (
-        job.scheduleState === 'paused' ||
-        job.scheduleState === 'paused_limit_reached'
-      ) {
-        await jobsApi.resumeSchedule(projectId, job.id);
-        toast.success('Schedule resumed — catching up on missed changes.');
-      } else {
-        await jobsApi.setSyncEnabled(projectId, job.id, true);
-        toast.success(
-          'Schedule started — sync will run per configured interval.',
-        );
-      }
-      onRefresh();
-    } catch {
-      toast.error('Failed to update job');
-    } finally {
-      setToggling(false);
-    }
-  };
-
-  return (
-    <Draggable draggableId={job.id} index={index}>
-      {(provided, snapshot) => (
-        <Card
-          ref={provided.innerRef}
-          {...provided.draggableProps}
-          className={cn(
-            'gap-0 overflow-hidden py-0',
-            snapshot.isDragging && 'ring-paused/40 ring-2',
-          )}
-          style={provided.draggableProps.style}
-        >
-          <div className="grid grid-cols-[auto_auto_minmax(0,1fr)] items-center gap-3 px-4 py-3 lg:grid-cols-[auto_auto_minmax(0,1fr)_auto]">
-            <div className="flex shrink-0 items-center">
-              <div
-                {...provided.dragHandleProps}
-                className="text-muted-foreground hover:bg-muted focus-visible:ring-ring/30 flex size-8 shrink-0 cursor-grab items-center justify-center rounded-3xl outline-none focus-visible:ring-3"
-                aria-label={`Drag to reorder ${job.name}`}
-              >
-                <GripVertical className="size-4" />
-              </div>
-              <div className="flex flex-col">
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  onClick={() => onMove(index, -1)}
-                  disabled={index === 0}
-                  aria-label={`Move ${job.name} up`}
-                >
-                  <ArrowUp />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  onClick={() => onMove(index, 1)}
-                  disabled={index === jobCount - 1}
-                  aria-label={`Move ${job.name} down`}
-                >
-                  <ArrowDown />
-                </Button>
-              </div>
-            </div>
-
-            <div className="bg-muted text-muted-foreground flex size-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold">
-              {rank}
-            </div>
-
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="truncate text-sm font-semibold">
-                  {job.name}
-                </span>
-                <StatusPill job={job} />
-              </div>
-              <div className="text-muted-foreground mt-0.5 flex gap-1 truncate text-xs">
-                <span>{job.sourceObject}</span>
-                <ArrowRight size={15} />
-                <span>{job.destObject}</span>
-              </div>
-              <div className="text-muted-foreground mt-1 flex items-center gap-3 text-xs">
-                {job.lastSyncedAt && (
-                  <span>
-                    Last:{' '}
-                    {formatDistanceToNow(new Date(job.lastSyncedAt), {
-                      addSuffix: true,
-                    })}
-                  </span>
-                )}
-                {job.nextRunAt &&
-                  running &&
-                  !job.isRunning &&
-                  new Date(job.nextRunAt) > new Date() && (
-                    <span>
-                      Next:{' '}
-                      {formatDistanceToNow(new Date(job.nextRunAt), {
-                        addSuffix: true,
-                      })}
-                    </span>
-                  )}
-              </div>
-            </div>
-
-            <div className="col-start-3 flex flex-wrap items-center justify-end gap-2 lg:col-start-auto">
-              <span className="text-muted-foreground ml-auto flex shrink-0 items-center gap-1 text-xs">
-                <Clock className="size-2.5" />
-                {job.syncDirection === 'two_way'
-                  ? 'Auto · ~2 min'
-                  : `${readableCron(job.cronExpression ?? '')} · ${job.timezone ?? 'Timezone not set'}`}
-              </span>
-              {job.isEnabled && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleSyncToggle}
-                  disabled={toggling || job.isRunning}
-                  className={cn(running ? 'text-warning' : 'text-success')}
-                >
-                  {toggling ? <Spinner /> : running ? <Pause /> : <Play />}
-                  {running ? 'Pause' : 'Resume'}
-                </Button>
-              )}
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => setExpanded((e) => !e)}
-                aria-label={`${expanded ? 'Collapse' : 'Expand'} ${job.name}`}
-              >
-                {expanded ? <ChevronUp /> : <ChevronDown />}
-              </Button>
-            </div>
-          </div>
-
-          {expanded && (
-            <div className="border-t p-3">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-3 px-1">
-                <p className="text-muted-foreground text-xs">
-                  Edit cadence, timezone, retry behavior, and schedule state in
-                  the job workspace.
-                </p>
-                <Button asChild variant="outline" size="sm">
-                  <Link
-                    to={`/projects/${projectId}/jobs/${job.id}?tab=settings&section=schedule`}
-                  >
-                    Edit schedule
-                  </Link>
-                </Button>
-              </div>
-              <div className="overflow-hidden rounded-3xl border">
-                <div className="bg-muted px-4 py-3">
-                  <p className="text-xs font-semibold tracking-wider uppercase">
-                    Recent Runs
-                  </p>
-                </div>
-                <RunHistory runs={job.recentRuns} />
-              </div>
-            </div>
-          )}
-        </Card>
-      )}
-    </Draggable>
+    job.syncDirection !== 'two_way' &&
+    !!job.isEnabled &&
+    hasScheduleDefinition(job) &&
+    job.scheduleState === 'paused'
   );
 }
 
 export default function IndividualSchedulerList({
   projectId,
   refreshKey = 0,
+  scheduleDrafts = {},
+  onStageSchedule,
 }: {
   projectId: string;
   refreshKey?: number;
+  scheduleDrafts?: Record<string, IndividualScheduleDraft>;
+  onStageSchedule?: (jobId: string, draft: IndividualScheduleDraft) => void;
 }) {
-  const [jobs, setJobs] = useState<
-    (SchedulerJob & { recentRuns?: SchedulerRecentRun[] })[]
-  >([]);
+  const { confirm } = useConfirmDialog();
+  const [jobs, setJobs] = useState<SchedulerJob[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dirty, setDirty] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const lastRefreshKey = useRef(refreshKey);
-
-  const load = useCallback(
-    async (silent = false) => {
-      if (!silent) setLoading(true);
-      else setRefreshing(true);
-      setLoadError(null);
-      try {
-        const data = await jobsApi.getSchedulerView(projectId);
-        setJobs(Array.isArray(data) ? data : (data as any).jobs);
-        setDirty(false);
-      } catch {
-        setLoadError('Job schedules could not be loaded. Please try again.');
-        toast.error('Failed to load scheduler');
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    },
-    [projectId],
-  );
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [configuringJobId, setConfiguringJobId] = useState<string | null>(null);
+  const load = useCallback(async () => {
+    try {
+      const result = await jobsApi.getSchedulerView(projectId);
+      setJobs(result);
+      setError(null);
+    } catch {
+      setError('Job schedules could not be loaded. Try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [projectId]);
 
   useEffect(() => {
     void load();
-  }, [load]);
-
-  useEffect(() => {
-    if (refreshKey === lastRefreshKey.current) return;
-    lastRefreshKey.current = refreshKey;
-    void load(true);
   }, [load, refreshKey]);
 
-  const onDragEnd = (result: DropResult) => {
-    if (!result.destination) return;
-    if (result.destination.index === result.source.index) return;
-    const reordered = Array.from(jobs);
-    const [moved] = reordered.splice(result.source.index, 1);
-    reordered.splice(result.destination.index, 0, moved);
-    setJobs(reordered);
-    setDirty(true);
-  };
-
-  const moveJob = (index: number, offset: -1 | 1) => {
-    const destination = index + offset;
-    if (destination < 0 || destination >= jobs.length) return;
-    const reordered = Array.from(jobs);
-    const [moved] = reordered.splice(index, 1);
-    reordered.splice(destination, 0, moved);
-    setJobs(reordered);
-    setDirty(true);
-  };
-
-  const saveOrder = async () => {
-    setSaving(true);
+  const run = async (action: 'pause' | 'resume', jobId?: string) => {
+    setBusy(jobId ?? action);
     try {
-      const updates = jobs.map((job, i) => ({ id: job.id, priority: i + 1 }));
-      await jobsApi.updatePriorities(projectId, updates);
-      toast.success('Execution order saved');
-      setDirty(false);
-      load(true);
-    } catch (err) {
-      const e = err as { response?: { data?: { message?: string } } };
-      toast.error(e?.response?.data?.message ?? 'Failed to save order');
+      if (jobId) {
+        if (action === 'pause') await jobsApi.pauseSchedule(projectId, jobId);
+        else {
+          const job = jobs.find((item) => item.id === jobId);
+          if (job && !job.syncEnabled && !schedulePaused(job))
+            await jobsApi.setSyncEnabled(projectId, jobId, true);
+          else {
+            await jobsApi.resumeSchedule(projectId, jobId);
+            if (job && !job.syncEnabled)
+              await jobsApi.setSyncEnabled(projectId, jobId, true);
+          }
+        }
+      } else if (action === 'pause') await jobsApi.pauseAllJobs(projectId);
+      else await jobsApi.resumeAllJobs(projectId);
+      await load();
+      showToast.success(
+        action === 'pause' ? 'Schedule paused.' : 'Schedule resumed.',
+      );
+    } catch {
+      showToast.error('Schedule could not be updated.');
     } finally {
-      setSaving(false);
+      setBusy(null);
     }
   };
 
-  if (loading) {
+  const requestBulk = (action: 'pause' | 'resume') => {
+    confirm({
+      variant: action === 'pause' ? 'warning' : 'info',
+      title:
+        action === 'pause'
+          ? 'Pause active schedules?'
+          : 'Resume paused schedules?',
+      description:
+        action === 'pause'
+          ? 'Scheduled runs will stop until the schedules are resumed.'
+          : 'Paused jobs will continue on their saved individual schedules.',
+      confirmLabel: action === 'pause' ? 'Pause schedules' : 'Resume schedules',
+      onConfirm: () => run(action),
+    });
+  };
+
+  if (loading)
     return (
-      <div className="flex h-40 items-center justify-center">
-        <Spinner className="text-paused size-6" />
+      <div className="flex h-32 items-center justify-center">
+        <Spinner />
       </div>
     );
-  }
-
-  if (loadError && jobs.length === 0) {
+  if (error && jobs.length === 0)
     return (
       <Alert variant="destructive">
         <AlertCircle aria-hidden="true" />
-        <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
-          <span>{loadError}</span>
-          <Button variant="outline" size="sm" onClick={() => void load()}>
+        <AlertDescription className="flex items-center justify-between gap-2">
+          {error}
+          <Button size="sm" variant="outline" onClick={() => void load()}>
             Retry
           </Button>
         </AlertDescription>
       </Alert>
     );
-  }
 
+  const pausable = jobs.filter(canPauseIndividualSchedule).length;
+  const resumable = jobs.filter(canResumeIndividualSchedule).length;
+  const configuringJob = jobs.find((job) => job.id === configuringJobId);
+  const configuringDraft = configuringJobId
+    ? scheduleDrafts[configuringJobId]
+    : undefined;
   return (
-    <div className="space-y-4">
-      {loadError && (
-        <Alert variant="destructive">
-          <AlertCircle aria-hidden="true" />
-          <AlertDescription>{loadError}</AlertDescription>
-        </Alert>
-      )}
-      <div className="flex items-center justify-end gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => load(true)}
-          disabled={refreshing}
-        >
-          <RefreshCw className={cn(refreshing && 'animate-spin')} />
-          Refresh
-        </Button>
-        {dirty && (
-          <Button size="sm" onClick={saveOrder} disabled={saving}>
-            {saving ? <Spinner /> : <Save />}
-            {saving ? 'Saving…' : 'Save Order'}
+    <div className="space-y-3">
+      {error && <p className="text-destructive text-sm">{error}</p>}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold">Project job schedules</h3>
+          <p className="text-muted-foreground text-xs">
+            Review each cadence and next run. Configure a job to change its
+            schedule.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy !== null || pausable === 0}
+            onClick={() => requestBulk('pause')}
+          >
+            {busy === 'pause' ? <Spinner /> : <Pause />} Pause all
           </Button>
-        )}
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy !== null || resumable === 0}
+            onClick={() => requestBulk('resume')}
+          >
+            {busy === 'resume' ? <Spinner /> : <Play />} Resume all
+          </Button>
+        </div>
       </div>
-
+      {jobs.length > 0 && pausable === 0 && resumable === 0 && (
+        <p className="text-muted-foreground text-xs">
+          No schedules can be paused or resumed. These actions need an enabled
+          one-way job with a configured schedule.
+        </p>
+      )}
       {jobs.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="py-10 text-center">
-            <p className="mb-1 text-sm font-medium">No jobs yet</p>
-            <p className="text-muted-foreground text-xs">
-              Create jobs in the Sync Jobs tab — they will appear here
-              automatically.
-            </p>
-          </CardContent>
-        </Card>
+        <p className="text-muted-foreground rounded-xl border p-5 text-sm">
+          No scheduled jobs in this project.
+        </p>
       ) : (
-        <DragDropContext onDragEnd={onDragEnd}>
-          <Droppable droppableId="scheduler">
-            {(provided) => (
-              <div
-                ref={provided.innerRef}
-                {...provided.droppableProps}
-                className="space-y-2"
-              >
-                {jobs.map((job, i) => (
-                  <JobCard
-                    key={job.id}
-                    job={job}
-                    index={i}
-                    rank={i + 1}
-                    jobCount={jobs.length}
-                    projectId={projectId}
-                    onRefresh={() => load(true)}
-                    onMove={moveJob}
-                  />
-                ))}
-                {provided.placeholder}
-              </div>
-            )}
-          </Droppable>
-        </DragDropContext>
+        <div className="overflow-hidden rounded-xl border">
+          {jobs.map((job) => {
+            const draft = scheduleDrafts[job.id];
+            return (
+              <IndividualScheduleRow
+                key={job.id}
+                job={draft ? { ...job, ...draft } : job}
+                pendingSchedule={!!draft}
+                href={`/projects/${projectId}/jobs/${job.id}?tab=settings&section=schedule`}
+                busy={busy !== null}
+                onConfigure={() => setConfiguringJobId(job.id)}
+                onToggle={
+                  draft
+                    ? undefined
+                    : () =>
+                        void run(
+                          scheduleActive(job) ? 'pause' : 'resume',
+                          job.id,
+                        )
+                }
+              />
+            );
+          })}
+        </div>
+      )}
+      {configuringJob && (
+        <JobScheduleModal
+          projectId={projectId}
+          jobId={configuringJob.id}
+          job={
+            configuringDraft
+              ? { ...configuringJob, ...configuringDraft }
+              : configuringJob
+          }
+          open
+          onOpenChange={(open) => !open && setConfiguringJobId(null)}
+          onSaved={onStageSchedule ? undefined : () => void load()}
+          saveSchedule={
+            onStageSchedule
+              ? async (payload) => onStageSchedule(configuringJob.id, payload)
+              : undefined
+          }
+          skipPriorityQueue
+          stageOnly={!!onStageSchedule}
+        />
       )}
     </div>
   );

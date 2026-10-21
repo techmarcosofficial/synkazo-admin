@@ -23,19 +23,21 @@ import { useProjectsQuery } from '@/queries/useProjects';
 interface ProjectMultiSelectProps {
   value: string[];
   onChange: (projectIds: string[]) => void;
+  organisationId?: string;
 }
 
 export default function ProjectMultiSelect({
   value,
   onChange,
+  organisationId,
 }: ProjectMultiSelectProps) {
   const { currentUser } = useSynkazoAuth();
   const projectsQuery = useProjectsQuery();
-  // GET /projects returns every org's projects for a super_admin (needed by the platform-wide
-  // admin pages) — grants here must stay within the inviting admin's own organisation, which is
-  // also what the backend enforces when creating the invitation (see InvitationsService.create).
+  // Filter projects by target organisationId if provided (for super_admin acting on a tenant),
+  // else fall back to the inviting admin's own organisation.
+  const effectiveOrgId = organisationId || currentUser?.organisationId;
   const projects = (projectsQuery.data ?? []).filter(
-    (p) => p.organisationId === currentUser?.organisationId,
+    (p) => !effectiveOrgId || p.organisationId === effectiveOrgId,
   );
   const [open, setOpen] = useState(false);
 

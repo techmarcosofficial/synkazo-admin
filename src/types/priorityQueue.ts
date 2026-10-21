@@ -93,6 +93,19 @@ export interface QueueJob {
   lastErrorMessage?: string | null;
 }
 
+/** Fields used by the shared priority queue list across tenant and operator views. */
+export type PriorityQueueJobDisplay = Omit<QueueJob, 'job'> & {
+  job?: Pick<
+    Job,
+    | 'id'
+    | 'name'
+    | 'sourceObject'
+    | 'destObject'
+    | 'checkpointPage'
+    | 'syncAllPage'
+  > | null;
+};
+
 export interface QueueExecution {
   id: string;
   queueId: string;

@@ -137,6 +137,11 @@ export const queryKeys = {
   // its second slot so React Query never returns Organisation A's cached
   // data while the sidebar is displaying Organisation B (SA-202, SA-213).
   superAdmin: {
+    all: ['superAdmin'] as const,
+    billingRecovery: {
+      settings: ['superAdmin', 'billingRecovery', 'settings'] as const,
+      status: ['superAdmin', 'billingRecovery', 'status'] as const,
+    },
     platform: {
       overview: ['superAdmin', 'platform', 'overview'] as const,
       failedPayments: (
@@ -177,6 +182,8 @@ export const queryKeys = {
           limit,
           filters,
         ] as const,
+      detail: (organisationId: string, userId: string) =>
+        ['superAdmin', organisationId, 'members', userId] as const,
     },
     invitations: {
       list: (
@@ -242,6 +249,10 @@ export const queryKeys = {
     billing: {
       overview: (organisationId: string) =>
         ['superAdmin', organisationId, 'billing', 'overview'] as const,
+      subscription: (organisationId: string) =>
+        ['superAdmin', organisationId, 'billing', 'subscription'] as const,
+      usage: (organisationId: string) =>
+        ['superAdmin', organisationId, 'billing', 'usage'] as const,
       invoices: (organisationId: string, page: number, limit: number) =>
         [
           'superAdmin',
@@ -250,6 +261,29 @@ export const queryKeys = {
           'invoices',
           page,
           limit,
+        ] as const,
+      invoiceDetail: (organisationId: string, invoiceId: string) =>
+        [
+          'superAdmin',
+          organisationId,
+          'billing',
+          'invoices',
+          invoiceId,
+        ] as const,
+      history: (
+        organisationId: string,
+        page: number,
+        limit: number,
+        onlyPayments = false,
+      ) =>
+        [
+          'superAdmin',
+          organisationId,
+          'billing',
+          'history',
+          page,
+          limit,
+          onlyPayments,
         ] as const,
     },
     activity: {
@@ -351,6 +385,7 @@ export const queryKeys = {
       ['superAdmin', organisationId] as const,
   },
   billing: {
+    all: ['billing'] as const,
     plan: ['billing', 'plan'] as const,
     usage: ['billing', 'usage'] as const,
     plans: (interval?: string) =>

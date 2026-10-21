@@ -7,7 +7,7 @@ const d = (r: any): any => r.data.data;
 
 const base = '/super-admin/two-way-sync/intervals';
 
-// Super-admin-only "Two-Way Sync Time" settings — per source platform polling
+// Super-admin-only "Schedule & Time" settings — per source platform polling
 // interval. Regular users cannot schedule two-way sync at all (item 5).
 export const twoWaySyncApi = {
   listIntervals: (): Promise<TwoWaySyncInterval[]> =>

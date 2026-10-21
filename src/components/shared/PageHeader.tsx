@@ -1,11 +1,15 @@
 import { ChevronLeft } from 'lucide-react';
-import { type ReactNode } from 'react';
+import { lazy, Suspense, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
-import AccountContextAlert from '@/components/shared/AccountContextAlert';
 import HeadingPair from '@/components/shared/HeadingPair';
 import { cn } from '@/lib/utils';
 import { useHeaderStore } from '@/stores/useHeaderStore';
+import { useWorkspaceKind } from '@/lib/workspace-context';
+
+const AccountContextAlert = lazy(
+  () => import('@/components/shared/AccountContextAlert'),
+);
 
 interface PageHeaderProps {
   title: string;
@@ -50,9 +54,10 @@ export default function PageHeader({
   actions,
   badge,
   backTo,
-  showAccountContextAlert = true,
+  showAccountContextAlert,
 }: PageHeaderProps) {
   const storeActions = useHeaderStore((s) => s.actions);
+  const workspaceKind = useWorkspaceKind();
 
   const hasActions = actions || storeActions;
 
@@ -85,17 +90,17 @@ export default function PageHeader({
             >
               <div className="flex min-w-0 items-center gap-3">
                 <h1 className="min-w-0 flex-1">
-                  <span className="text-muted-foreground block text-xs sm:text-sm leading-5">
+                  <span className="text-muted-foreground block text-xs leading-5 sm:text-sm">
                     {greeting},
                   </span>
-                  <span className="text-foreground mt-0.5 block text-2xl sm:text-[28px] leading-tight font-bold tracking-tight [overflow-wrap:anywhere]">
+                  <span className="text-foreground mt-0.5 block text-2xl leading-tight font-bold tracking-tight [overflow-wrap:anywhere] sm:text-[28px]">
                     {title}
                   </span>
                 </h1>
                 {badge}
               </div>
               {description && (
-                <p className="text-muted-foreground mt-1 text-xs sm:text-sm leading-5">
+                <p className="text-muted-foreground mt-1 text-xs leading-5 sm:text-sm">
                   {description}
                 </p>
               )}
@@ -119,7 +124,11 @@ export default function PageHeader({
           )}
         </div>
       </header>
-      {showAccountContextAlert && <AccountContextAlert />}
+      {(showAccountContextAlert ?? workspaceKind !== 'platform') && (
+        <Suspense fallback={null}>
+          <AccountContextAlert />
+        </Suspense>
+      )}
     </>
   );
 }

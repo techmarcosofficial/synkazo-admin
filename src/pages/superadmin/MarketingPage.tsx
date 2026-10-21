@@ -525,7 +525,7 @@ export default function MarketingPage() {
               <div className="overflow-hidden overflow-x-auto rounded-3xl border">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-muted hover:bg-muted/50">
+                    <TableRow>
                       <TableHead>Contact</TableHead>
                       <TableHead>Company / platforms</TableHead>
                       <TableHead>Request</TableHead>

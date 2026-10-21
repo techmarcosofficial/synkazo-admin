@@ -11,6 +11,7 @@
     "format": "prettier --write \"src/**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:platform-network": "VITE_API_BASE_URL=http://127.0.0.1:3001/api vite build --logLevel warn && node scripts/super-admin-network-invariant.mjs",
     "test:coverage": "vitest run --coverage",
     "preview": "vite preview"
   },

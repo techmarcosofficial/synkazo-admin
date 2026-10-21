@@ -1,18 +1,17 @@
 import { formatDistanceToNow } from 'date-fns';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, FolderOpen } from 'lucide-react';
 import { useEffect, useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 import ErrorState from '@/components/shared/ErrorState';
-import HeadingPair from '@/components/shared/HeadingPair';
+import ManagementCardHeader from '@/components/shared/ManagementCardHeader';
 import ManagementToolbar from '@/components/shared/ManagementToolbar';
-import PageHeader from '@/components/shared/PageHeader';
 import PaginationBar from '@/components/shared/PaginationBar';
 import SkeletonCardGrid from '@/components/shared/skeletons/SkeletonCardGrid';
 import SkeletonTable from '@/components/shared/skeletons/SkeletonTable';
 import SortableTableHead from '@/components/shared/SortableTableHead';
 import StatusBadge from '@/components/shared/StatusBadge';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -48,7 +47,6 @@ import { useViewMode } from '@/hooks/useViewMode';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { useJobsQuery } from '@/queries/useJobs';
 import { useProjectsQuery } from '@/queries/useProjects';
-import { useHeaderStore } from '@/stores/useHeaderStore';
 
 type ProjectWithMeta = ProjectExtended & {
   jobCount: number;
@@ -134,7 +132,12 @@ export default function ProjectsPage() {
         { replace: true },
       );
     }
-  }, [searchParams, canCreateProject, openCreateProjectDialog, setSearchParams]);
+  }, [
+    searchParams,
+    canCreateProject,
+    openCreateProjectDialog,
+    setSearchParams,
+  ]);
 
   const projectsQuery = useProjectsQuery();
   const jobsQuery = useJobsQuery();
@@ -174,16 +177,6 @@ export default function ProjectsPage() {
 
   const handleProjectCreated = (project: ProjectExtended) =>
     navigate(`/projects/${project.id}`);
-  const setActions = useHeaderStore((state) => state.setActions);
-  const clearActions = useHeaderStore((state) => state.clearActions);
-
-  useEffect(() => {
-    if (canCreateProject && projects.length > 0)
-      setActions(<CreateProjectButton />);
-    else clearActions();
-    return () => clearActions();
-  }, [canCreateProject, clearActions, projects.length, setActions]);
-
   const clearFilters = () => setFilters({ search: '', status: 'all' });
   const hasResults = !isLoading && !isError && filteredProjects.length > 0;
   const cardSortValue = CARD_SORT_OPTIONS.find(
@@ -204,109 +197,112 @@ export default function ProjectsPage() {
 
   return (
     <div className="w-full space-y-6">
-      <PageHeader
-        title="Projects"
-        description={
-          isLoading
-            ? 'A project connects a source and destination platform'
-            : `${projects.length} project${projects.length !== 1 ? 's' : ''} · connect, monitor, and manage your syncs`
-        }
-      />
-
-      <Card>
-        <CardContent className="space-y-6">
-          <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
-            <HeadingPair
-              title="Manage projects"
-              subtitle="Find a project, review its status, or open it to manage syncs."
-            />
-            <ManagementToolbar
-              searchValue={filters.search}
-              onSearchChange={(search) => setFilters({ ...filters, search })}
-              searchPlaceholder="Search projects…"
-              viewMode={viewMode}
-              onViewModeChange={setViewMode}
-              filters={
-                <>
-                  <Select
-                    value={filters.status}
-                    onValueChange={(status: ProjectStatusFilter) =>
-                      setFilters({ ...filters, status })
-                    }
+      <section className="space-y-3" aria-label="Project results">
+        <ManagementCardHeader
+          title="Projects"
+          subtitle="Connect, monitor, and manage your syncs."
+          icon={FolderOpen}
+          count={filteredProjects.length}
+          countLabel={filteredProjects.length === 1 ? 'project' : 'projects'}
+          isLoading={isLoading}
+          action={
+            canCreateProject && projects.length > 0 ? (
+              <CreateProjectButton />
+            ) : undefined
+          }
+        >
+          <ManagementToolbar
+            directoryLayout
+            filterCount={1}
+            searchValue={filters.search}
+            onSearchChange={(search) => setFilters({ ...filters, search })}
+            searchPlaceholder="Search projects…"
+            searchLabel="Search projects"
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            filters={
+              <Select
+                value={filters.status}
+                onValueChange={(status: ProjectStatusFilter) =>
+                  setFilters({ ...filters, status })
+                }
+              >
+                <SelectTrigger
+                  size="sm"
+                  className="border-border/80 bg-card hover:border-foreground/25 dark:bg-card w-full min-w-0"
+                  aria-label="Filter projects by status"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PROJECT_STATUS_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            }
+            sort={
+              viewMode === 'card' ? (
+                <Select
+                  value={cardSortValue}
+                  onValueChange={(value) => {
+                    const option = CARD_SORT_OPTIONS.find(
+                      (candidate) => candidate.value === value,
+                    );
+                    if (option) setSort(option.key, option.direction);
+                  }}
+                >
+                  <SelectTrigger
+                    size="sm"
+                    className="border-border/80 bg-card hover:border-foreground/25 dark:bg-card w-full min-w-0 [&_[data-slot=select-value]]:truncate"
+                    aria-label="Sort projects"
                   >
-                    <SelectTrigger
-                      className="bg-muted sm:w-40"
-                      aria-label="Filter projects by status"
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PROJECT_STATUS_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <SelectValue placeholder="Sort projects" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CARD_SORT_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : undefined
+            }
+          />
+        </ManagementCardHeader>
 
-                  {viewMode === 'card' && (
-                    <Select
-                      value={cardSortValue}
-                      onValueChange={(value) => {
-                        const option = CARD_SORT_OPTIONS.find(
-                          (candidate) => candidate.value === value,
-                        );
-                        if (option) setSort(option.key, option.direction);
-                      }}
-                    >
-                      <SelectTrigger
-                        className="bg-muted sm:w-48"
-                        aria-label="Sort projects"
-                      >
-                        <SelectValue placeholder="Sort projects" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CARD_SORT_OPTIONS.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </>
-              }
-            />
-          </div>
-
-          {isLoading ? (
-            viewMode === 'table' ? (
-              <Card className="overflow-hidden py-0">
-                <SkeletonTable rows={6} columns={7} />
-              </Card>
-            ) : (
-              <SkeletonCardGrid count={6} />
-            )
-          ) : isError ? (
-            <ErrorState
-              onRetry={() => {
-                projectsQuery.refetch();
-                jobsQuery.refetch();
-              }}
-            />
-          ) : filteredProjects.length === 0 ? (
-            <ProjectEmptyState
-              hasNoProjects={projects.length === 0}
-              onCreated={handleProjectCreated}
-              onClearFilters={clearFilters}
-              canCreate={canCreateProject}
-              viewMode={viewMode}
-            />
-          ) : viewMode === 'table' ? (
-            <div className="border-border overflow-x-auto rounded-3xl border">
+        {isLoading ? (
+          viewMode === 'table' ? (
+            <Card className="overflow-hidden py-0">
+              <SkeletonTable rows={6} columns={7} />
+            </Card>
+          ) : (
+            <SkeletonCardGrid count={6} />
+          )
+        ) : isError ? (
+          <ErrorState
+            onRetry={() => {
+              projectsQuery.refetch();
+              jobsQuery.refetch();
+            }}
+          />
+        ) : filteredProjects.length === 0 ? (
+          <ProjectEmptyState
+            hasNoProjects={projects.length === 0}
+            onCreated={handleProjectCreated}
+            onClearFilters={clearFilters}
+            canCreate={canCreateProject}
+            viewMode={viewMode}
+          />
+        ) : viewMode === 'table' ? (
+          <Card size="sm" className="py-0">
+            <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-muted hover:bg-muted/50">
+                  <TableRow>
                     <SortableTableHead
                       active={sortKey === 'name'}
                       direction={direction}
@@ -428,7 +424,10 @@ export default function ProjectsPage() {
                             className="text-primary focus-visible:ring-ring inline-flex items-center gap-1 rounded-sm text-sm font-medium outline-none hover:underline focus-visible:ring-2"
                           >
                             View
-                            <ArrowRight className="size-3.5" aria-hidden="true" />
+                            <ArrowRight
+                              className="size-3.5"
+                              aria-hidden="true"
+                            />
                           </Link>
                         </TableCell>
                       </TableRow>
@@ -437,18 +436,18 @@ export default function ProjectsPage() {
                 </TableBody>
               </Table>
             </div>
-          ) : null}
-        </CardContent>
-      </Card>
+          </Card>
+        ) : null}
 
-      {hasResults && viewMode === 'card' && (
-        <ProjectGrid
-          projects={pageItems}
-          jobCountsByProject={jobCountsByProject}
-        />
-      )}
+        {hasResults && viewMode === 'card' && (
+          <ProjectGrid
+            projects={pageItems}
+            jobCountsByProject={jobCountsByProject}
+          />
+        )}
 
-      {hasResults && paginationBar}
+        {hasResults && paginationBar}
+      </section>
     </div>
   );
 }

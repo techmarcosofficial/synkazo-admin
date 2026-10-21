@@ -13,10 +13,12 @@ export default function JobRetryCard({
   projectId,
   job,
   onUpdated,
+  saveJob,
 }: {
   projectId: string;
-  job: ExtJob;
-  onUpdated: (patch: Partial<ExtJob>) => void;
+  job: Pick<ExtJob, 'id' | 'maxRetries' | 'retryBackoffBaseSec'>;
+  onUpdated: (patch: { maxRetries: number; retryBackoffBaseSec: number }) => void;
+  saveJob?: (patch: { maxRetries: number; retryBackoffBaseSec: number }) => Promise<unknown>;
 }) {
   const [maxRetries, setMaxRetries] = useState(job.maxRetries ?? 0);
   const [retryBackoff, setRetryBackoff] = useState(
@@ -28,10 +30,9 @@ export default function JobRetryCard({
   const handleSave = async () => {
     setSaving(true);
     try {
-      await jobsApi.updateJob(projectId, job.id, {
-        maxRetries,
-        retryBackoffBaseSec: retryBackoff,
-      });
+      const patch = { maxRetries, retryBackoffBaseSec: retryBackoff };
+      if (saveJob) await saveJob(patch);
+      else await jobsApi.updateJob(projectId, job.id, patch);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
       showToast.success('Retry settings saved.');

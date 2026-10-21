@@ -32,6 +32,8 @@ interface PlatformPairFieldProps {
   destError?: string;
   /** Uses stacked, compact platform cards for space-constrained forms. */
   compact?: boolean;
+  /** Stack the platform pickers on narrow screens instead of squeezing their labels. */
+  stackOnMobile?: boolean;
 }
 
 export default function PlatformPairField({
@@ -48,6 +50,7 @@ export default function PlatformPairField({
   sourceError,
   destError,
   compact = false,
+  stackOnMobile = false,
 }: PlatformPairFieldProps) {
   const connectorRef = useRef<HTMLDivElement | null>(null);
   const sourceRefs = useRef<Partial<Record<PlatformId, HTMLDivElement | null>>>(
@@ -132,7 +135,9 @@ export default function PlatformPairField({
     <div
       className={
         compact
-          ? 'relative grid w-full grid-cols-[minmax(0,13rem)_minmax(6rem,1fr)_minmax(0,13rem)] items-stretch'
+          ? stackOnMobile
+            ? 'relative grid w-full grid-cols-1 items-stretch gap-4 sm:grid-cols-[minmax(0,13rem)_minmax(6rem,1fr)_minmax(0,13rem)] sm:gap-0'
+            : 'relative grid w-full grid-cols-[minmax(0,13rem)_minmax(6rem,1fr)_minmax(0,13rem)] items-stretch'
           : 'relative grid grid-cols-[20%_20%_20%_auto_25%] items-stretch'
       }
     >
@@ -152,7 +157,7 @@ export default function PlatformPairField({
       />
 
       {/* Rope connector between source and destination */}
-      <div className="flex">
+      <div className={stackOnMobile ? 'hidden sm:flex' : 'flex'}>
         <div ref={connectorRef} className="relative h-full min-w-20 flex-1">
           {rope &&
             rope.height > 0 &&
@@ -214,7 +219,13 @@ export default function PlatformPairField({
       </div>
 
       <PlatformSelector
-        className={compact ? 'col-start-3 w-full min-w-0' : 'col-start-5'}
+        className={
+          compact
+            ? stackOnMobile
+              ? 'w-full min-w-0 sm:col-start-3'
+              : 'col-start-3 w-full min-w-0'
+            : 'col-start-5'
+        }
         label="Destination Platform"
         description="Where records will be synced to."
         value={destValue}
@@ -231,7 +242,7 @@ export default function PlatformPairField({
 
       {(sourceError || destError) && (
         <div
-          className={`${compact ? 'col-span-3' : 'col-span-5'} mt-4 space-y-2`}
+          className={`${compact ? (stackOnMobile ? 'sm:col-span-3' : 'col-span-3') : 'col-span-5'} mt-4 space-y-2`}
         >
           {sourceError && (
             <p className="text-destructive text-sm">{sourceError}</p>

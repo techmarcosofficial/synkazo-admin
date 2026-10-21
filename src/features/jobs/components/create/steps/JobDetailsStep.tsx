@@ -1,7 +1,9 @@
 import { ArrowLeftRight, InfoIcon, Sparkles } from 'lucide-react';
-import type { Dispatch, SetStateAction } from 'react';
+import type { ComponentType, Dispatch, ReactNode, SetStateAction } from 'react';
 
-import PlatformObjectSelector from '../PlatformObjectSelector';
+import PlatformObjectSelector, {
+  type PlatformObjectSelectorProps,
+} from '../PlatformObjectSelector';
 
 import HeadingPair from '@/components/shared/HeadingPair';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -32,7 +34,8 @@ const PRESET_RECIPES: SyncRecipe[] = [
   {
     id: 'st-hb-customers-contacts',
     title: 'Customers → Contacts',
-    description: 'Sync homeowner and commercial client profiles into HubSpot CRM contacts.',
+    description:
+      'Sync homeowner and commercial client profiles into HubSpot CRM contacts.',
     sourcePlatform: 'servicetitan',
     destPlatform: 'hubspot',
     sourceObject: 'customers',
@@ -43,7 +46,8 @@ const PRESET_RECIPES: SyncRecipe[] = [
   {
     id: 'st-hb-customers-companies',
     title: 'Customers → Companies',
-    description: 'Sync commercial accounts and business clients into HubSpot CRM companies.',
+    description:
+      'Sync commercial accounts and business clients into HubSpot CRM companies.',
     sourcePlatform: 'servicetitan',
     destPlatform: 'hubspot',
     sourceObject: 'customers',
@@ -54,7 +58,8 @@ const PRESET_RECIPES: SyncRecipe[] = [
   {
     id: 'st-hb-jobs-deals',
     title: 'Jobs → Deals',
-    description: 'Sync booked, active, and completed jobs into HubSpot sales pipeline deals.',
+    description:
+      'Sync booked, active, and completed jobs into HubSpot sales pipeline deals.',
     sourcePlatform: 'servicetitan',
     destPlatform: 'hubspot',
     sourceObject: 'jobs',
@@ -64,7 +69,8 @@ const PRESET_RECIPES: SyncRecipe[] = [
   {
     id: 'st-hb-invoices-deals',
     title: 'Invoices → Deals',
-    description: 'Track invoice totals, payments, and balances directly inside HubSpot deals.',
+    description:
+      'Track invoice totals, payments, and balances directly inside HubSpot deals.',
     sourcePlatform: 'servicetitan',
     destPlatform: 'hubspot',
     sourceObject: 'invoices',
@@ -74,7 +80,8 @@ const PRESET_RECIPES: SyncRecipe[] = [
   {
     id: 'hb-st-contacts-customers',
     title: 'Contacts → Customers',
-    description: 'Sync inbound CRM marketing leads and contacts into ServiceTitan customer records.',
+    description:
+      'Sync inbound CRM marketing leads and contacts into ServiceTitan customer records.',
     sourcePlatform: 'hubspot',
     destPlatform: 'servicetitan',
     sourceObject: 'contacts',
@@ -85,7 +92,8 @@ const PRESET_RECIPES: SyncRecipe[] = [
   {
     id: 'hb-st-companies-customers',
     title: 'Companies → Customers',
-    description: 'Sync CRM company accounts into ServiceTitan customer records.',
+    description:
+      'Sync CRM company accounts into ServiceTitan customer records.',
     sourcePlatform: 'hubspot',
     destPlatform: 'servicetitan',
     sourceObject: 'companies',
@@ -131,6 +139,10 @@ export default function JobDetailsStep({
   projectSyncMode = null,
   compact = false,
   existingJobs = [],
+  ObjectSelector = PlatformObjectSelector,
+  allowCustomObjectCreation = true,
+  allowPlatformSwap = true,
+  twoWayNotice,
 }: {
   config: JobConfig;
   setConfig: Dispatch<SetStateAction<JobConfig>>;
@@ -153,6 +165,10 @@ export default function JobDetailsStep({
     destObject?: string;
     status?: string;
   }>;
+  ObjectSelector?: ComponentType<PlatformObjectSelectorProps>;
+  allowCustomObjectCreation?: boolean;
+  allowPlatformSwap?: boolean;
+  twoWayNotice?: ReactNode;
 }) {
   const relevantRecipes = PRESET_RECIPES.filter((r) => {
     if (
@@ -208,8 +224,8 @@ export default function JobDetailsStep({
       {/* Recommended Recipes (showing 2 at a time) */}
       {displayedRecipes.length > 0 && (
         <section aria-label="Recommended sync recipes" className="space-y-2">
-          <h3 className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-            <Sparkles className="size-3.5 text-primary" />
+          <h3 className="text-muted-foreground flex items-center gap-1.5 text-xs font-semibold">
+            <Sparkles className="text-primary size-3.5" />
             Recommended Sync Recipes (1-Click)
           </h3>
           <div className="space-y-1.5">
@@ -245,13 +261,13 @@ export default function JobDetailsStep({
                 >
                   <span className="min-w-0 flex-1">
                     <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                      <span className="text-xs font-semibold text-foreground group-hover:text-primary">
+                      <span className="text-foreground group-hover:text-primary text-xs font-semibold">
                         {recipe.title}
                       </span>
                       {recipe.badge && (
                         <Badge
                           variant="secondary"
-                          className="border-primary/20 bg-primary/10 text-primary shrink-0 px-1.5 py-0 text-[10px] font-medium leading-4"
+                          className="border-primary/20 bg-primary/10 text-primary shrink-0 px-1.5 py-0 text-[10px] leading-4 font-medium"
                         >
                           {recipe.badge}
                         </Badge>
@@ -293,7 +309,7 @@ export default function JobDetailsStep({
 
         <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-[1fr_auto_1fr]">
           <div>
-            <PlatformObjectSelector
+            <ObjectSelector
               label="Source"
               platformId={config.sourcePlatform}
               platformLabel={
@@ -307,7 +323,9 @@ export default function JobDetailsStep({
               error={errors.sourceObject}
               customObjects={customSourceObjects}
               onAddCustomObject={() => onAddCustomObject('source')}
-              canAddCustomObject={sourceGating.canAddCustomObject}
+              canAddCustomObject={
+                allowCustomObjectCreation && sourceGating.canAddCustomObject
+              }
               customObjectTooltip={sourceGating.customObjectTooltip}
               customObjectsWarning={sourceGating.customObjectsWarning}
             />
@@ -317,6 +335,7 @@ export default function JobDetailsStep({
             type="button"
             variant="outline"
             size="icon"
+            disabled={!allowPlatformSwap}
             onClick={() =>
               setConfig((c) => ({
                 ...c,
@@ -327,13 +346,13 @@ export default function JobDetailsStep({
                 name: '',
               }))
             }
-            title="Swap source and destination"
+            title={allowPlatformSwap ? 'Swap source and destination' : 'The project platform direction is fixed'}
           >
             <ArrowLeftRight />
           </Button>
 
           <div>
-            <PlatformObjectSelector
+            <ObjectSelector
               label="Destination"
               platformId={config.destPlatform}
               platformLabel={
@@ -347,7 +366,9 @@ export default function JobDetailsStep({
               error={errors.destObject}
               customObjects={customDestObjects}
               onAddCustomObject={() => onAddCustomObject('dest')}
-              canAddCustomObject={destGating.canAddCustomObject}
+              canAddCustomObject={
+                allowCustomObjectCreation && destGating.canAddCustomObject
+              }
               customObjectTooltip={destGating.customObjectTooltip}
               customObjectsWarning={destGating.customObjectsWarning}
             />
@@ -421,6 +442,7 @@ export default function JobDetailsStep({
           sourceConnection={sourceConnection}
           destConnection={destConnection}
           projectId={projectId}
+          twoWayNotice={twoWayNotice}
           onSyncDirectionChange={(v) =>
             setConfig({ ...config, syncDirection: v })
           }

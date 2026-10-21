@@ -1,12 +1,14 @@
 import type { DropResult } from '@hello-pangea/dnd';
 import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd';
 import { ArrowRight, GripVertical, Pencil, X } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
-import type { QueueJob } from '@/types';
+import type { PriorityQueueJobDisplay } from '@/types/priorityQueue';
+import type { QueueJobDraft, QueueJobOption } from './QueueJobInlineEditor';
 
 const QUEUE_GRID_CLASS =
   'grid min-w-[900px] grid-cols-[4.5rem_minmax(13rem,1.5fr)_minmax(12rem,1.2fr)_8rem_8rem_5.5rem_9rem]';
@@ -18,7 +20,7 @@ function formatWindow(sec: number): string {
   return `${hours % 1 === 0 ? hours : hours.toFixed(1)} h`;
 }
 
-function StatusBadge({ queueJob }: { queueJob: QueueJob }) {
+function StatusBadge({ queueJob }: { queueJob: PriorityQueueJobDisplay }) {
   if (queueJob.blocked) {
     return (
       <Badge variant="destructive">
@@ -49,28 +51,42 @@ function StatusBadge({ queueJob }: { queueJob: QueueJob }) {
 
 // Reflects Job.checkpointPage/syncAllPage — the same "still has pending work this cycle"
 // signal the backend's iteration draining reads (see baseline.util.ts:jobHasPendingWork).
-function hasPendingWork(queueJob: QueueJob): boolean {
+function hasPendingWork(queueJob: PriorityQueueJobDisplay): boolean {
   return (
     queueJob.job?.checkpointPage != null || queueJob.job?.syncAllPage != null
   );
 }
 
-export default function QueueJobList({
+export default function QueueJobList<T extends PriorityQueueJobDisplay>({
   queueJobs,
   onReorderLocal,
   onEdit,
   onToggleEnabled,
   onRetry,
   onRemove,
+  composer,
+  drafts = [],
+  jobs = [],
+  onRemoveDraft,
+  draftsBusy = false,
+  editingQueueJobId = null,
 }: {
-  queueJobs: QueueJob[];
-  onReorderLocal: (reordered: QueueJob[]) => void;
-  onEdit: (queueJob: QueueJob) => void;
-  onToggleEnabled: (queueJob: QueueJob) => void;
+  queueJobs: T[];
+  onReorderLocal: (reordered: T[]) => void;
+  onEdit: (queueJob: T) => void;
+  onToggleEnabled: (queueJob: T) => void;
   onRetry: (queueJobId: string) => void;
   onRemove: (queueJobId: string) => void;
+  composer?: ReactNode;
+  drafts?: QueueJobDraft[];
+  jobs?: QueueJobOption[];
+  onRemoveDraft?: (draftId: string) => void;
+  draftsBusy?: boolean;
+  editingQueueJobId?: string | null;
 }) {
+  const listLocked = editingQueueJobId !== null;
   const onDragEnd = (result: DropResult) => {
+    if (listLocked) return;
     if (!result.destination) return;
     if (result.destination.index === result.source.index) return;
     const reordered = Array.from(queueJobs);
@@ -119,11 +135,18 @@ export default function QueueJobList({
                 Actions
               </div>
             </div>
+            {composer}
+            {queueJobs.length === 0 && drafts.length === 0 && (
+              <div className="text-muted-foreground px-4 py-8 text-center text-xs">
+                No jobs have been added to the priority queue yet.
+              </div>
+            )}
             {queueJobs.map((queueJob, index) => (
               <Draggable
                 key={queueJob.id}
                 draggableId={queueJob.id}
                 index={index}
+                isDragDisabled={listLocked}
               >
                 {(dragProvided, snapshot) => (
                   <div
@@ -132,11 +155,15 @@ export default function QueueJobList({
                     style={dragProvided.draggableProps.style}
                     className={cn(
                       QUEUE_GRID_CLASS,
-                      'bg-card hover:bg-muted/40 items-center border-t text-xs transition-colors',
+                      'items-center border-t text-xs transition-colors',
+                      listLocked
+                        ? 'bg-muted/50 opacity-60'
+                        : 'bg-card hover:bg-muted/40',
                       snapshot.isDragging &&
                         'ring-ring rounded-4xl shadow-sm ring-2',
                     )}
                     role="row"
+                    aria-disabled={listLocked}
                   >
                     <div
                       className="flex items-center gap-1 px-2 py-1.5"
@@ -145,6 +172,7 @@ export default function QueueJobList({
                       <button
                         type="button"
                         {...dragProvided.dragHandleProps}
+                        disabled={listLocked}
                         className="text-muted-foreground hover:bg-muted focus-visible:ring-ring/30 flex size-7 shrink-0 cursor-grab items-center justify-center rounded-lg outline-none focus-visible:ring-3"
                         aria-label={`Reorder ${queueJob.job?.name ?? 'job'}`}
                       >
@@ -197,6 +225,7 @@ export default function QueueJobList({
                       <Switch
                         size="sm"
                         checked={queueJob.enabled}
+                        disabled={listLocked}
                         onCheckedChange={() => onToggleEnabled(queueJob)}
                         aria-label={`Toggle ${queueJob.job?.name ?? 'job'}`}
                       />
@@ -209,6 +238,7 @@ export default function QueueJobList({
                         <Button
                           variant="outline"
                           size="xs"
+                          disabled={listLocked}
                           onClick={() => onRetry(queueJob.id)}
                         >
                           Retry
@@ -217,6 +247,7 @@ export default function QueueJobList({
                       <Button
                         variant="ghost"
                         size="icon-xs"
+                        disabled={listLocked}
                         onClick={() => onEdit(queueJob)}
                         aria-label={`Edit ${queueJob.job?.name ?? 'job'}`}
                       >
@@ -225,6 +256,7 @@ export default function QueueJobList({
                       <Button
                         variant="ghost"
                         size="icon-xs"
+                        disabled={listLocked}
                         onClick={() => onRemove(queueJob.id)}
                         aria-label={`Remove ${queueJob.job?.name ?? 'job'}`}
                       >
@@ -235,6 +267,59 @@ export default function QueueJobList({
                 )}
               </Draggable>
             ))}
+            {drafts.map((draft, index) => {
+              const job = jobs.find((option) => option.id === draft.jobId);
+              return (
+                <div
+                  key={draft.draftId}
+                  className={cn(
+                    QUEUE_GRID_CLASS,
+                    'bg-primary/5 animate-in fade-in-0 slide-in-from-top-2 items-center border-t text-xs duration-200',
+                  )}
+                  role="row"
+                >
+                  <div className="px-3 py-2 text-right" role="cell">
+                    {queueJobs.length + index + 1}
+                  </div>
+                  <div className="min-w-0 px-2 py-2 font-medium" role="cell">
+                    <span className="truncate">{job?.name ?? draft.jobId}</span>
+                  </div>
+                  <div
+                    className="text-muted-foreground min-w-0 truncate px-2 py-2"
+                    role="cell"
+                  >
+                    {job ? `${job.sourceObject} → ${job.destObject}` : '—'}
+                  </div>
+                  <div className="px-2 py-2" role="cell">
+                    <span className="text-muted-foreground">Pending save</span>
+                  </div>
+                  <div className="px-2 py-2" role="cell">
+                    {draft.executionWindowMinutes} min
+                  </div>
+                  <div className="flex justify-center px-2 py-2" role="cell">
+                    <Switch
+                      size="sm"
+                      checked={draft.enabled}
+                      disabled
+                      aria-label={`Enabled for new ${job?.name ?? 'job'}`}
+                    />
+                  </div>
+                  <div className="flex justify-center px-2 py-2" role="cell">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-xs"
+                      disabled={draftsBusy || listLocked}
+                      onClick={() => onRemoveDraft?.(draft.draftId)}
+                      aria-label={`Remove new ${job?.name ?? 'job'}`}
+                      className="border-destructive/40 text-destructive border-dashed"
+                    >
+                      <X />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
             {provided.placeholder}
           </div>
         )}

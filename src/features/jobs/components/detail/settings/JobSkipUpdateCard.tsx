@@ -26,10 +26,12 @@ export default function JobSkipUpdateCard({
   projectId,
   job,
   onUpdated,
+  saveJob,
 }: {
   projectId: string;
-  job: ExtJob;
-  onUpdated: (patch: Partial<ExtJob>) => void;
+  job: Pick<ExtJob, 'id' | 'skipUpdateOnMatch'>;
+  onUpdated: (patch: { skipUpdateOnMatch: boolean }) => void;
+  saveJob?: (skipUpdateOnMatch: boolean) => Promise<unknown>;
 }) {
   const form = useForm<JobSkipUpdateValues>({
     resolver: zodResolver(jobSkipUpdateSchema),
@@ -50,7 +52,8 @@ export default function JobSkipUpdateCard({
 
   const onSubmit = form.handleSubmit(async (values) => {
     try {
-      await jobsApi.updateJob(projectId, job.id, values);
+      if (saveJob) await saveJob(values.skipUpdateOnMatch);
+      else await jobsApi.updateJob(projectId, job.id, values);
       showToast.success('Job updated.');
       onUpdated(values);
       form.reset(values);

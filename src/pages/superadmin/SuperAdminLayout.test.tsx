@@ -6,8 +6,8 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import SuperAdminLayout from './SuperAdminLayout';
 
 // GAP-040 / SA-109 — route-level tests for the Super Admin workspace
-// layout. Covers the layout switch (SA sidebar, not tenant sidebar),
-// the return link, the amber platform-context banner, the loading and
+// layout. Covers the platform configuration of the shared shell,
+// the profile link, the amber platform-context banner, the loading and
 // redirect-to-login branches, and rendering of nested outlet content
 // through direct refresh + unknown-route fallback.
 
@@ -28,7 +28,9 @@ vi.mock('@/lib/synkazoAuth', () => ({
 }));
 
 vi.mock('@/components/layout/nav-user', () => ({
-  NavUser: () => <div data-testid="nav-user" />,
+  NavUser: ({ settingsPath }: { settingsPath: string }) => (
+    <a href={settingsPath}>Settings</a>
+  ),
 }));
 
 vi.mock('@/components/layout/NotificationsMenu', () => ({
@@ -36,6 +38,7 @@ vi.mock('@/components/layout/NotificationsMenu', () => ({
 }));
 
 vi.mock('@/components/branding/SynkazoMark', () => ({
+  SynkazoMark: () => <span data-testid="synkazo-mark">Synkazo</span>,
   SynkazoWordmark: () => <span data-testid="synkazo-wordmark">Synkazo</span>,
 }));
 
@@ -91,16 +94,17 @@ describe('SuperAdminLayout', () => {
   it('surfaces the amber platform-context banner on every SA page (SA-107)', () => {
     renderAt('/super-admin/overview');
     expect(
-      screen.getByText(
-        /You are operating as a Synkazo platform admin/i,
-      ),
+      screen.getByText(/You are operating as a Synkazo platform admin/i),
     ).toBeInTheDocument();
   });
 
-  it('shows the "Return to workspace" link that points back at /dashboard', () => {
+  it('keeps account settings inside the platform workspace', () => {
     renderAt('/super-admin/overview');
-    const link = screen.getByRole('link', { name: /return to workspace/i });
-    expect(link).toHaveAttribute('href', '/dashboard');
+    const link = screen.getByRole('link', { name: /settings/i });
+    expect(link).toHaveAttribute('href', '/super-admin/profile');
+    expect(
+      screen.queryByRole('link', { name: /return to workspace/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('renders the SA sidebar navigation groups, not tenant links', () => {
@@ -113,6 +117,9 @@ describe('SuperAdminLayout', () => {
     expect(orgsLinks.length).toBeGreaterThan(0);
     const overviewLinks = screen.getAllByRole('link', { name: /overview/i });
     expect(overviewLinks.length).toBeGreaterThan(0);
+    expect(
+      screen.queryByRole('link', { name: /dashboard/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('redirects to /login when the auth session has no currentUser', () => {

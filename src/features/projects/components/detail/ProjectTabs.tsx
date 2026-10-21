@@ -6,12 +6,17 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import type { ProjectDetailTabView } from '@/features/projects/hooks';
+export interface ProjectTabView {
+  id: string;
+  label: string;
+  locked?: boolean;
+  lockReason?: string;
+}
 
 export default function ProjectTabs({
   tabs,
 }: {
-  tabs: ProjectDetailTabView[];
+  tabs: readonly ProjectTabView[];
 }) {
   return (
     <TabsList variant="line" className="h-10 min-w-max overflow-hidden p-0">

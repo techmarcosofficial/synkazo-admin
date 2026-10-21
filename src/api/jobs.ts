@@ -194,8 +194,22 @@ export const jobsApi = {
   getSourceStatuses: (projectId: string, jobId: string): Promise<string[]> =>
     apiClient.get(`${p(projectId)}/${jobId}/source-statuses`).then(d),
 
-  getSchedulerView: (projectId: string): Promise<SchedulerJob[]> =>
-    apiClient.get(`${p(projectId)}/scheduler`).then(d),
+  getSchedulerView: async (projectId: string): Promise<SchedulerJob[]> => {
+    const response = await apiClient.get<{ data: unknown }>(
+      `${p(projectId)}/scheduler`,
+    );
+    const payload = response.data.data;
+    if (Array.isArray(payload)) return payload;
+    if (
+      payload !== null &&
+      typeof payload === 'object' &&
+      'jobs' in payload &&
+      Array.isArray(payload.jobs)
+    ) {
+      return payload.jobs;
+    }
+    throw new Error('Invalid scheduler response');
+  },
   updatePriorities: (
     projectId: string,
     updates: PriorityUpdate[],

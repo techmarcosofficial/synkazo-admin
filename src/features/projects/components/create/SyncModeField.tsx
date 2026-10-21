@@ -15,7 +15,7 @@ import type { ProjectSyncMode } from '@/types/project';
 const SYNC_MODE_HELP: Record<'' | ProjectSyncMode, string> = {
   '': "Choose how data flows between platforms for jobs in this project. This is a project-wide setting and can't be changed after the project is created.",
   one_way:
-    'Jobs sync in a single direction only — records flow from the source platform into HubSpot. Changes made in HubSpot are never written back. You can connect HubSpot manually (API token) or with OAuth.',
+    'Jobs sync in a single direction only — records flow from the source platform into HubSpot. Changes made in HubSpot are never written back. Connect HubSpot using OAuth.',
   two_way:
     'Jobs can sync in both directions — a change on either platform updates the other, with per-job conflict handling (source of truth, deletes) set when you create each job. HubSpot must be connected with OAuth ("Login with HubSpot") so real-time webhooks work; manual token connection isn\'t available.',
 };

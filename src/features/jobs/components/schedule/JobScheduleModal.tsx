@@ -34,7 +34,6 @@ import {
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import TimeInput from '@/features/jobs/components/TimeInput';
-import type { ExtJob } from '@/features/jobs/hooks/useJobDetail';
 import {
   buildScheduleUpdatePayload,
   getIntervalMinutes,
@@ -50,10 +49,22 @@ import { usePriorityQueueQuery } from '@/queries/usePriorityQueue';
 interface JobScheduleModalProps {
   projectId: string;
   jobId: string;
-  job: ExtJob;
+  job: {
+    syncDirection?: string;
+    scheduleMode?: string | null;
+    scheduleTimes?: string[] | null;
+    scheduleDays?: number[] | null;
+    intervalMinutes?: number | null;
+  };
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved?: () => void;
+  saveSchedule?: (
+    payload: ReturnType<typeof buildScheduleUpdatePayload>,
+  ) => Promise<unknown>;
+  minIntervalMinutesOverride?: number;
+  skipPriorityQueue?: boolean;
+  stageOnly?: boolean;
 }
 
 const DISPLAY_WEEKDAYS = [
@@ -103,9 +114,15 @@ export default function JobScheduleModal({
   open,
   onOpenChange,
   onSaved,
+  saveSchedule,
+  minIntervalMinutesOverride,
+  skipPriorityQueue = false,
+  stageOnly = false,
 }: JobScheduleModalProps) {
   const isTwoWay = job.syncDirection === 'two_way';
-  const priorityQueueQuery = usePriorityQueueQuery(projectId);
+  const priorityQueueQuery = usePriorityQueueQuery(
+    skipPriorityQueue ? '' : projectId,
+  );
   const priorityModeActive =
     priorityQueueQuery.data?.schedulerMode === 'priority';
 
@@ -147,7 +164,8 @@ export default function JobScheduleModal({
 
   const entitlements = useEntitlements();
   const intervalMinutes = getIntervalMinutes(interval);
-  const minIntervalMinutes = entitlements.minIntervalMinutes;
+  const minIntervalMinutes =
+    minIntervalMinutesOverride ?? entitlements.minIntervalMinutes;
   const minIntervalAmount =
     interval.unit === 'hours'
       ? Math.max(1, Math.ceil(minIntervalMinutes / 60))
@@ -156,12 +174,12 @@ export default function JobScheduleModal({
   const addTime = () => setTimes((prev) => [...prev, '09:00']);
   const updateTime = (index: number, value: string) =>
     setTimes((prev) =>
-      prev.map((time, currentIndex) =>
-        currentIndex === index ? value : time,
-      ),
+      prev.map((time, currentIndex) => (currentIndex === index ? value : time)),
     );
   const removeTime = (index: number) =>
-    setTimes((prev) => prev.filter((_, currentIndex) => currentIndex !== index));
+    setTimes((prev) =>
+      prev.filter((_, currentIndex) => currentIndex !== index),
+    );
 
   const toggleDay = (day: number) =>
     setDays((prev) =>
@@ -195,12 +213,17 @@ export default function JobScheduleModal({
     setSaving(true);
     try {
       const currentDraft: ScheduleDraft = { mode, times, days, interval };
-      await jobsApi.updateJob(
-        projectId,
-        jobId,
-        buildScheduleUpdatePayload(currentDraft, BROWSER_TIMEZONE),
+      const payload = buildScheduleUpdatePayload(
+        currentDraft,
+        BROWSER_TIMEZONE,
       );
-      showToast.success('Schedule updated successfully.');
+      if (saveSchedule) await saveSchedule(payload);
+      else await jobsApi.updateJob(projectId, jobId, payload);
+      showToast.success(
+        stageOnly
+          ? 'Schedule added to pending changes.'
+          : 'Schedule updated successfully.',
+      );
       onSaved?.();
       onOpenChange(false);
     } catch (error) {
@@ -228,7 +251,10 @@ export default function JobScheduleModal({
           </div>
           <DialogDescription className="text-xs">
             Select your sync schedule type. Times use your local timezone (
-            <strong className="font-mono text-foreground">{BROWSER_TIMEZONE}</strong>).
+            <strong className="text-foreground font-mono">
+              {BROWSER_TIMEZONE}
+            </strong>
+            ).
           </DialogDescription>
         </DialogHeader>
 
@@ -251,7 +277,7 @@ export default function JobScheduleModal({
           <div className="space-y-4">
             {/* 1. Schedule Type Primary Cards */}
             <div className="space-y-2">
-              <FieldLabel className="text-xs font-semibold text-foreground">
+              <FieldLabel className="text-foreground text-xs font-semibold">
                 Schedule Type
               </FieldLabel>
 
@@ -271,9 +297,9 @@ export default function JobScheduleModal({
                       htmlFor={`sched-type-${type.id}`}
                       className={`relative flex flex-col justify-between rounded-2xl border p-3.5 transition-all ${
                         isSelected
-                          ? 'border-primary bg-primary/[0.04] ring-1 ring-primary/20 shadow-xs'
+                          ? 'border-primary bg-primary/[0.04] ring-primary/20 shadow-xs ring-1'
                           : 'border-border/80 bg-background hover:bg-muted/30 hover:border-border'
-                      } ${!allowed ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
+                      } ${!allowed ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'}`}
                     >
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
@@ -294,15 +320,15 @@ export default function JobScheduleModal({
                         </div>
 
                         <div className="space-y-0.5">
-                          <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                          <span className="text-foreground flex items-center gap-1.5 text-xs font-semibold">
                             {type.title}
                             {!allowed && (
-                              <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-[9px] text-muted-foreground font-normal">
+                              <span className="bg-muted text-muted-foreground inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-normal">
                                 <Lock className="size-2.5" /> Locked
                               </span>
                             )}
                           </span>
-                          <p className="text-[11px] text-muted-foreground leading-snug">
+                          <p className="text-muted-foreground text-[11px] leading-snug">
                             {type.subtitle}
                           </p>
                         </div>
@@ -314,12 +340,12 @@ export default function JobScheduleModal({
             </div>
 
             {/* 2. Interactive Parameters Sub-Panel based on Chosen Type */}
-            <div className="rounded-2xl border border-border/70 bg-muted/20 p-4 space-y-4">
+            <div className="border-border/70 bg-muted/20 space-y-4 rounded-2xl border p-4">
               {/* Recurring Interval Configuration */}
               {mode === 'interval' && (
                 <div className="space-y-3">
                   <div className="space-y-1.5">
-                    <FieldLabel className="text-xs font-semibold text-foreground">
+                    <FieldLabel className="text-foreground text-xs font-semibold">
                       Frequency Cadence
                     </FieldLabel>
                     <div className="flex flex-wrap gap-2">
@@ -352,12 +378,12 @@ export default function JobScheduleModal({
                             }}
                             className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium transition-all ${
                               isPresetActive
-                                ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary/30 font-semibold'
+                                ? 'border-primary bg-primary/10 text-primary ring-primary/30 font-semibold ring-1'
                                 : 'border-border/80 bg-background hover:bg-muted/40 text-foreground'
-                            } ${!isAllowed ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
+                            } ${!isAllowed ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'}`}
                           >
                             {isPresetActive && (
-                              <Check className="size-3 text-primary" />
+                              <Check className="text-primary size-3" />
                             )}
                             {preset.label}
                           </button>
@@ -369,12 +395,12 @@ export default function JobScheduleModal({
                         onClick={() => setCustomIntervalActive(true)}
                         className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium transition-all ${
                           customIntervalActive
-                            ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary/30 font-semibold'
+                            ? 'border-primary bg-primary/10 text-primary ring-primary/30 font-semibold ring-1'
                             : 'border-border/80 bg-background hover:bg-muted/40 text-foreground'
                         } cursor-pointer`}
                       >
                         {customIntervalActive && (
-                          <Check className="size-3 text-primary" />
+                          <Check className="text-primary size-3" />
                         )}
                         Custom interval
                       </button>
@@ -383,7 +409,7 @@ export default function JobScheduleModal({
 
                   {customIntervalActive && (
                     <Field className="space-y-1.5 pt-1">
-                      <FieldLabel className="text-xs font-medium text-foreground">
+                      <FieldLabel className="text-foreground text-xs font-medium">
                         Custom Duration Between Syncs
                       </FieldLabel>
                       <div className="flex items-center gap-2">
@@ -402,7 +428,7 @@ export default function JobScheduleModal({
                               ),
                             }))
                           }
-                          className="w-24 text-xs font-mono"
+                          className="w-24 font-mono text-xs"
                         />
                         <Select
                           value={interval.unit}
@@ -425,7 +451,7 @@ export default function JobScheduleModal({
                     </Field>
                   )}
 
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-muted-foreground text-[11px]">
                     Next sync triggers automatically{' '}
                     <strong className="text-foreground">
                       {interval.amount} {interval.unit}
@@ -439,7 +465,7 @@ export default function JobScheduleModal({
               {mode === 'daily_time' && (
                 <div className="space-y-3">
                   <div className="space-y-1.5">
-                    <FieldLabel className="text-xs font-semibold text-foreground">
+                    <FieldLabel className="text-foreground text-xs font-semibold">
                       Daily Execution Times
                     </FieldLabel>
                     <div className="space-y-2">
@@ -460,11 +486,12 @@ export default function JobScheduleModal({
                       className="h-auto p-0 text-xs"
                       onClick={addTime}
                     >
-                      <Plus className="size-3 mr-1" /> Add another daily run time
+                      <Plus className="mr-1 size-3" /> Add another daily run
+                      time
                     </Button>
                   </div>
 
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-muted-foreground text-[11px]">
                     This job runs once every day at each configured time listed
                     above.
                   </p>
@@ -476,14 +503,14 @@ export default function JobScheduleModal({
                 <div className="space-y-3.5">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <FieldLabel className="text-xs font-semibold text-foreground">
+                      <FieldLabel className="text-foreground text-xs font-semibold">
                         Select Active Days
                       </FieldLabel>
                       <div className="flex items-center gap-1.5">
                         <button
                           type="button"
                           onClick={() => applyDayPreset('weekdays')}
-                          className="text-[10px] text-muted-foreground hover:text-primary underline cursor-pointer"
+                          className="text-muted-foreground hover:text-primary cursor-pointer text-[10px] underline"
                         >
                           Weekdays
                         </button>
@@ -493,7 +520,7 @@ export default function JobScheduleModal({
                         <button
                           type="button"
                           onClick={() => applyDayPreset('weekends')}
-                          className="text-[10px] text-muted-foreground hover:text-primary underline cursor-pointer"
+                          className="text-muted-foreground hover:text-primary cursor-pointer text-[10px] underline"
                         >
                           Weekends
                         </button>
@@ -503,14 +530,14 @@ export default function JobScheduleModal({
                         <button
                           type="button"
                           onClick={() => applyDayPreset('all')}
-                          className="text-[10px] text-muted-foreground hover:text-primary underline cursor-pointer"
+                          className="text-muted-foreground hover:text-primary cursor-pointer text-[10px] underline"
                         >
                           All Days
                         </button>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-7 gap-1.5 sm:gap-2 w-full">
+                    <div className="grid w-full grid-cols-7 gap-1.5 sm:gap-2">
                       {DISPLAY_WEEKDAYS.map((wd) => {
                         const active = days.includes(wd.value);
                         return (
@@ -518,7 +545,7 @@ export default function JobScheduleModal({
                             key={wd.value}
                             type="button"
                             onClick={() => toggleDay(wd.value)}
-                            className={`flex h-9 w-full items-center justify-center rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                            className={`flex h-9 w-full cursor-pointer items-center justify-center rounded-xl border text-xs font-semibold transition-all ${
                               active
                                 ? 'border-primary bg-primary text-primary-foreground shadow-xs'
                                 : 'border-border/80 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground hover:border-border'
@@ -531,8 +558,8 @@ export default function JobScheduleModal({
                     </div>
                   </div>
 
-                  <div className="space-y-2 pt-1 border-t border-border/50">
-                    <FieldLabel className="text-xs font-semibold text-foreground">
+                  <div className="border-border/50 space-y-2 border-t pt-1">
+                    <FieldLabel className="text-foreground text-xs font-semibold">
                       Run Times on Selected Days
                     </FieldLabel>
                     <div className="space-y-2">
@@ -553,7 +580,7 @@ export default function JobScheduleModal({
                       className="h-auto p-0 text-xs"
                       onClick={addTime}
                     >
-                      <Plus className="size-3 mr-1" /> Add another run time
+                      <Plus className="mr-1 size-3" /> Add another run time
                     </Button>
                   </div>
                 </div>
@@ -562,7 +589,7 @@ export default function JobScheduleModal({
           </div>
         )}
 
-        <DialogFooter className="flex items-center justify-between border-t border-border/60 pt-3">
+        <DialogFooter className="border-border/60 flex items-center justify-between border-t pt-3">
           <Button
             type="button"
             variant="ghost"
@@ -575,11 +602,17 @@ export default function JobScheduleModal({
           {!isTwoWay && !priorityModeActive && (
             <Button size="sm" onClick={handleSave} disabled={saving}>
               {saving ? (
-                <Spinner className="size-3.5 mr-1" />
+                <Spinner className="mr-1 size-3.5" />
               ) : (
-                <Clock className="size-3.5 mr-1" />
+                <Clock className="mr-1 size-3.5" />
               )}
-              {saving ? 'Saving…' : 'Save Schedule'}
+              {saving
+                ? stageOnly
+                  ? 'Applying…'
+                  : 'Saving…'
+                : stageOnly
+                  ? 'Apply to draft'
+                  : 'Save Schedule'}
             </Button>
           )}
         </DialogFooter>

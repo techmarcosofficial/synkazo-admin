@@ -23,6 +23,7 @@ export function usePlanQuery(options?: { enabled?: boolean }) {
     queryKey: queryKeys.billing.plan,
     queryFn: billingApi.getPlan,
     enabled: options?.enabled ?? true,
+    refetchInterval: 30000,
   });
 }
 
@@ -116,8 +117,11 @@ export function useAddPaymentMethodMutation() {
   return useMutation({
     mutationFn: (paymentMethodId: string) =>
       billingApi.addPaymentMethod(paymentMethodId),
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: queryKeys.billing.paymentMethods }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.billing.paymentMethods });
+      qc.invalidateQueries({ queryKey: queryKeys.billing.subscription });
+      qc.invalidateQueries({ queryKey: queryKeys.billing.plan });
+    },
   });
 }
 
@@ -125,8 +129,11 @@ export function useSetDefaultPaymentMethodMutation() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => billingApi.setDefaultPaymentMethod(id),
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: queryKeys.billing.paymentMethods }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.billing.paymentMethods });
+      qc.invalidateQueries({ queryKey: queryKeys.billing.subscription });
+      qc.invalidateQueries({ queryKey: queryKeys.billing.plan });
+    },
   });
 }
 
@@ -134,8 +141,11 @@ export function useRemovePaymentMethodMutation() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => billingApi.removePaymentMethod(id),
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: queryKeys.billing.paymentMethods }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.billing.paymentMethods });
+      qc.invalidateQueries({ queryKey: queryKeys.billing.subscription });
+      qc.invalidateQueries({ queryKey: queryKeys.billing.plan });
+    },
   });
 }
 
@@ -267,10 +277,13 @@ export function useAssignPlanMutation() {
     mutationFn: ({
       organisationId,
       planId,
+      reason,
     }: {
       organisationId: string;
       planId: string;
-    }) => billingAdminApi.assignPlanToOrganisation(organisationId, planId),
+      reason: string;
+    }) =>
+      billingAdminApi.assignPlanToOrganisation(organisationId, planId, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.organisations.all });
     },

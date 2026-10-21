@@ -4,13 +4,14 @@ import { toast } from 'sonner';
 import { PLATFORM_META } from './platformMeta';
 import type { ExtConnection, TestResult } from './types';
 
-import { connectionsApi } from '@/api/connections';
+import { useConnectionAccess } from './ConnectionAccessContext';
 
 export function useConnectionTestAndDisconnect(
   conn: ExtConnection,
   onUpdated: (updated: ExtConnection | null) => void,
   onTestError?: (message: string) => void,
 ) {
+  const { api: connectionsApi } = useConnectionAccess();
   const meta = PLATFORM_META[conn.platformId] ?? { label: conn.platformId };
 
   const [testing, setTesting] = useState(false);
@@ -33,7 +34,8 @@ export function useConnectionTestAndDisconnect(
         toast.success(`${meta.label} connection verified`);
         onUpdated?.({ ...conn, status: 'connected' });
       } else {
-        const message = result?.message ?? `${meta.label} connection test failed`;
+        const message =
+          result?.message ?? `${meta.label} connection test failed`;
         onTestError?.(message);
         toast.error(message);
         onUpdated?.({ ...conn, status: 'error' });
@@ -52,6 +54,8 @@ export function useConnectionTestAndDisconnect(
 
   const handleDisconnect = async () => {
     try {
+      if (!connectionsApi.deleteConnection)
+        throw new Error('Use the project disconnect confirmation.');
       await connectionsApi.deleteConnection(conn.projectId, conn.id);
       toast.success(`${meta.label} connection removed`);
       onUpdated?.(null);

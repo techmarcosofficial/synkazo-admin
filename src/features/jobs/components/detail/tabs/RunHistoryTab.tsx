@@ -36,7 +36,6 @@ import HeadingPair from '@/components/shared/HeadingPair';
 import ListStack from '@/components/shared/list/ListStack';
 import PaginationBar from '@/components/shared/PaginationBar';
 import StatusBadge from '@/components/shared/StatusBadge';
-import SyncRunProgress from '@/components/sync/SyncRunProgress';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -60,6 +59,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
 import type { ExtSyncRun } from '@/features/jobs/hooks';
 import { cn } from '@/lib/utils';
@@ -481,39 +488,39 @@ function PageRow({
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px] text-left text-xs">
-                <thead className="bg-muted/60 text-muted-foreground">
-                  <tr>
-                    <th className="w-12 px-3 py-1.5 font-medium">#</th>
-                    <th className="px-3 py-1.5 font-medium">Source ID</th>
-                    <th className="px-3 py-1.5 font-medium">Status</th>
-                    <th className="px-3 py-1.5 font-medium">Destination ID</th>
-                    <th className="px-3 py-1.5 font-medium">Error / reason</th>
-                  </tr>
-                </thead>
-                <tbody className="align-middle">
+              <Table className="w-full min-w-[720px] text-left text-xs">
+                <TableHeader className="bg-muted/60 text-muted-foreground">
+                  <TableRow>
+                    <TableHead className="w-12 py-1.5">#</TableHead>
+                    <TableHead className="py-1.5">Source ID</TableHead>
+                    <TableHead className="py-1.5">Status</TableHead>
+                    <TableHead className="py-1.5">Destination ID</TableHead>
+                    <TableHead className="py-1.5">Error / reason</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="align-middle">
                   {records.map((record, index) => {
                     const actionConfig =
                       ACTION_CONFIG[record.action] || ACTION_CONFIG.created;
                     return (
-                      <tr
+                      <TableRow
                         key={record.id}
                         className={cn(
-                          'border-t align-middle',
+                          'align-middle',
                           record.action === 'failed' &&
-                            'bg-destructive/[0.025]',
+                            'bg-destructive/[0.025] hover:bg-destructive/[0.05]',
                         )}
                       >
-                        <td className="text-muted-foreground px-3 py-1.5 tabular-nums">
+                        <TableCell className="text-muted-foreground px-3 py-1.5 tabular-nums">
                           {(recordPage - 1) * pageSize + index + 1}
-                        </td>
-                        <td
+                        </TableCell>
+                        <TableCell
                           className="max-w-56 truncate px-3 py-1.5 font-mono"
                           title={record.sourceRecordId}
                         >
                           {record.sourceRecordId}
-                        </td>
-                        <td className="px-3 py-1.5">
+                        </TableCell>
+                        <TableCell className="px-3 py-1.5">
                           <Badge
                             variant="outline"
                             className={cn(
@@ -523,26 +530,26 @@ function PageRow({
                           >
                             {actionConfig.label}
                           </Badge>
-                        </td>
-                        <td
+                        </TableCell>
+                        <TableCell
                           className="text-muted-foreground max-w-56 truncate px-3 py-1.5 font-mono"
                           title={record.destRecordId ?? undefined}
                         >
                           {record.destRecordId || '—'}
-                        </td>
-                        <td className="max-w-sm px-3 py-1.5">
+                        </TableCell>
+                        <TableCell className="max-w-sm px-3 py-1.5 whitespace-normal">
                           <RecordReason
                             rec={record}
                             context={recordContext}
                             projectId={projectId}
                             jobId={jobId}
                           />
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     );
                   })}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           )}
 
@@ -1026,17 +1033,8 @@ function RunLogRow({
 }
 
 export default function RunHistoryTab() {
-  const {
-    projectId,
-    job,
-    activeRunLog,
-    liveProgress,
-    runLogs: detailRunLogs,
-    hasConnection,
-    stopping,
-    refetch,
-    handleStop,
-  } = useJobDetailContext();
+  const { projectId, job, activeRunLog, hasConnection, refetch } =
+    useJobDetailContext();
   const jobId = job.id;
 
   const [searchParams] = useSearchParams();
@@ -1122,47 +1120,6 @@ export default function RunHistoryTab() {
     }, 200);
     return () => clearTimeout(timer);
   }, [targetRunId, runLogsQuery.isLoading, runLogs]);
-
-  const summaryRun =
-    activeRunLog?.status === 'running' || activeRunLog?.id
-      ? activeRunLog
-      : detailRunLogs[0];
-  const summaryRunning = summaryRun?.status === 'running';
-  const currentProgress =
-    liveProgress && (!summaryRun?.id || liveProgress.runId === summaryRun.id)
-      ? liveProgress
-      : null;
-  const createdCount = Math.max(
-    currentProgress?.createdCount ?? 0,
-    summaryRun?.createdCount ?? 0,
-  );
-  const updatedCount = Math.max(
-    currentProgress?.updatedCount ?? 0,
-    summaryRun?.updatedCount ?? 0,
-  );
-  const skippedCount = Math.max(
-    currentProgress?.skippedCount ?? 0,
-    summaryRun?.skippedCount ?? 0,
-  );
-  const failedCount = Math.max(
-    currentProgress?.failedCount ?? 0,
-    summaryRun?.failedCount ?? 0,
-  );
-  const summaryProcessed = Math.max(
-    currentProgress?.recordsAttempted ?? 0,
-    (currentProgress?.recordsProcessed ?? 0) +
-      (currentProgress?.failedCount ?? 0),
-    summaryRun?.status === 'completed' ? (summaryRun.totalFetched ?? 0) : 0,
-    createdCount + updatedCount + skippedCount + failedCount,
-  );
-  const summaryTotal =
-    (summaryRun?.status === 'completed' ? summaryRun.totalFetched : null) ??
-    currentProgress?.totalRecords ??
-    (summaryRun?.triggeredBy === 'limit_sync'
-      ? summaryRun.recordLimit
-      : summaryRunning && summaryRun?.triggeredBy !== 'sync_all'
-        ? summaryRun?.totalFetched
-        : undefined);
 
   const clearFilters = () => {
     setStatus(ALL_FILTER_VALUE);
@@ -1258,47 +1215,6 @@ export default function RunHistoryTab() {
           Run filters narrow this history. Record filters stay scoped to the
           page you expand.
         </div>
-
-        {summaryRun && (
-          <SyncRunProgress
-            runId={summaryRun.id}
-            jobId={jobId}
-            status={
-              summaryRunning
-                ? 'running'
-                : (summaryRun.executionStatus ?? summaryRun.status)
-            }
-            totalRecords={summaryTotal}
-            processedRecords={summaryProcessed}
-            completedBatches={Math.max(
-              currentProgress?.page ?? 0,
-              summaryRun.totalPages ?? 0,
-            )}
-            currentBatch={currentProgress?.currentBatch}
-            batchProcessed={currentProgress?.batchProcessed}
-            batchTotal={currentProgress?.batchTotal}
-            totalBatches={
-              summaryRun.status === 'completed'
-                ? summaryRun.totalPages
-                : currentProgress?.totalBatches
-            }
-            createdCount={createdCount}
-            updatedCount={updatedCount}
-            skippedCount={skippedCount}
-            failedCount={failedCount}
-            etaSeconds={currentProgress?.etaSeconds}
-            startedAt={summaryRun.startedAt}
-            finishedAt={summaryRun.finishedAt}
-            durationMs={summaryRun.durationMs}
-            triggeredBy={summaryRun.triggeredBy}
-            sourceLabel={summaryRun.sourceObject ?? job.sourceObject}
-            destinationLabel={summaryRun.destObject ?? job.destObject}
-            errorMessage={summaryRun.errorMessage}
-            defaultOpen={false}
-            onStop={summaryRunning ? () => void handleStop() : undefined}
-            stopping={stopping}
-          />
-        )}
 
         {runLogsQuery.isError ? (
           <ErrorState onRetry={() => runLogsQuery.refetch()} />

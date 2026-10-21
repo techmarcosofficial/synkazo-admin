@@ -60,7 +60,7 @@ export interface DefaultValuesDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projectId: string;
-  job: Job;
+  job: Pick<Job, 'id' | 'syncDirection' | 'defaultValues' | 'sourceObject' | 'destObject'>;
   sourceFields: FieldDef[];
   destinationFields: FieldDef[];
   sourcePlatform: string;
@@ -68,7 +68,8 @@ export interface DefaultValuesDialogProps {
   mappedSourceKeys: string[];
   mappedDestinationKeys: string[];
   mappings: Array<{ sourceField: string; destField: string | string[] }>;
-  onSaved: (job: Job) => void;
+  onSaved: (job: { defaultValues?: DefaultValuesConfig | null }) => void;
+  saveDefaults?: (defaults: DefaultValuesConfig | null) => Promise<{ defaultValues?: DefaultValuesConfig | null }>;
 }
 
 export default function DefaultValuesDialog({
@@ -84,6 +85,7 @@ export default function DefaultValuesDialog({
   mappedDestinationKeys,
   mappings,
   onSaved,
+  saveDefaults,
 }: DefaultValuesDialogProps) {
   const twoWay = job.syncDirection === 'two_way';
   const [rows, setRows] = useState<Rows>(() => toRows(job.defaultValues));
@@ -149,9 +151,10 @@ export default function DefaultValuesDialog({
         if (Object.keys(values).length > 0) config[section] = values;
       }
       setSaving(true);
-      const updated = await jobsApi.updateJob(projectId, job.id, {
-        defaultValues: Object.keys(config).length ? config : null,
-      });
+      const defaults = Object.keys(config).length ? config : null;
+      const updated = saveDefaults
+        ? await saveDefaults(defaults)
+        : await jobsApi.updateJob(projectId, job.id, { defaultValues: defaults });
       onSaved(updated);
       onOpenChange(false);
       toast.success('Default values saved');

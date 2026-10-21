@@ -1,4 +1,5 @@
 import { KeyRound, Lock, Plus } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 import { PlatformIcon } from '@/components/platform';
 import { usePlanUpgradePrompt } from '@/components/shared/PlanGate';
@@ -110,7 +111,30 @@ function renderObjectOptions(
   ));
 }
 
-export default function PlatformObjectSelector({
+export interface PlatformObjectSelectorProps {
+  label: string;
+  platformId: string;
+  platformLabel: string;
+  objects?: ObjectItem[];
+  object: string;
+  onObjectChange: (val: string) => void;
+  error?: string;
+  disabled?: boolean;
+  customObjects?: string[];
+  onAddCustomObject?: () => void;
+  canAddCustomObject?: boolean;
+  customObjectTooltip?: string;
+  customObjectsWarning?: string;
+}
+
+export interface ObjectSelectorPolicy {
+  objectTierAllowed: (obj: ObjectItem) => boolean;
+  planAllowsCustomObjects: boolean;
+  onPlanUpgrade?: () => void;
+  upgradeDialog?: ReactNode;
+}
+
+export function PlatformObjectSelectorView({
   label,
   platformId,
   platformLabel,
@@ -124,27 +148,8 @@ export default function PlatformObjectSelector({
   canAddCustomObject = true,
   customObjectTooltip,
   customObjectsWarning,
-}: {
-  label: string;
-  platformId: string;
-  platformLabel: string;
-  objects?: ObjectItem[];
-  object: string;
-  onObjectChange: (val: string) => void;
-  error?: string;
-  disabled?: boolean;
-  customObjects?: string[];
-  onAddCustomObject?: () => void;
-  canAddCustomObject?: boolean;
-  customObjectTooltip?: string;
-  /** Set when this connection's existing custom objects may be missing from the
-   *  list below (e.g. a scope issue) — distinct from customObjectTooltip, which
-   *  explains why creating a NEW custom object is blocked. */
-  customObjectsWarning?: string;
-}) {
-  const entitlements = useEntitlements();
-  const { prompt: promptUpgrade, dialog: upgradeDialog } =
-    usePlanUpgradePrompt();
+  policy,
+}: PlatformObjectSelectorProps & { policy: ObjectSelectorPolicy }) {
   const allObjects: ObjectItem[] = [
     ...objects,
     ...customObjects.map((name) => ({
@@ -156,14 +161,12 @@ export default function PlatformObjectSelector({
 
   // Objects the discovery endpoint didn't tier (legacy cached responses) are left selectable —
   // the API re-checks the scope on job create either way.
-  const isAllowed = (obj: ObjectItem) =>
-    obj.tier === undefined || entitlements.objectTier(obj.tier);
+  const isAllowed = policy.objectTierAllowed;
 
   // Creating a custom object is its own plan capability, on top of the object scope.
   // A plan-locked button stays clickable (a `disabled` button fires no events, so it could
   // never explain itself) — only an unsupported platform truly disables it.
-  const planAllowsCustomObjects = entitlements.customObjects;
-  const planLocked = canAddCustomObject && !planAllowsCustomObjects;
+  const planLocked = canAddCustomObject && !policy.planAllowsCustomObjects;
 
   const addObjectTooltip = !canAddCustomObject
     ? customObjectTooltip || 'Custom objects not supported for this platform'
@@ -202,12 +205,7 @@ export default function PlatformObjectSelector({
                   size="xs"
                   disabled={!canAddCustomObject}
                   onClick={
-                    planLocked
-                      ? () =>
-                          promptUpgrade(
-                            "Custom objects aren't available on your current plan. Upgrade to create and sync custom object schemas.",
-                          )
-                      : onAddCustomObject
+                    planLocked ? policy.onPlanUpgrade : onAddCustomObject
                   }
                   className={planLocked ? 'text-muted-foreground' : undefined}
                 >
@@ -245,7 +243,29 @@ export default function PlatformObjectSelector({
         {error && <p className="text-destructive text-xs">{error}</p>}
       </Field>
 
-      {upgradeDialog}
+      {policy.upgradeDialog}
     </div>
+  );
+}
+
+export default function PlatformObjectSelector(
+  props: PlatformObjectSelectorProps,
+) {
+  const entitlements = useEntitlements();
+  const { prompt, dialog } = usePlanUpgradePrompt();
+  return (
+    <PlatformObjectSelectorView
+      {...props}
+      policy={{
+        objectTierAllowed: (obj) =>
+          obj.tier === undefined || entitlements.objectTier(obj.tier),
+        planAllowsCustomObjects: entitlements.customObjects,
+        onPlanUpgrade: () =>
+          prompt(
+            "Custom objects aren't available on your current plan. Upgrade to create and sync custom object schemas.",
+          ),
+        upgradeDialog: dialog,
+      }}
+    />
   );
 }
