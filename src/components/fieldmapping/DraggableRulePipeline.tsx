@@ -30,38 +30,7 @@ import {
   type RuleDefinition,
 } from '@/lib/ruleEngine';
 import { cn } from '@/lib/utils';
-
-export const REQUIRED_PARAMS: Record<string, string[]> = {
-  replace: ['find'],
-  remove_text: ['find'],
-  prefix: ['value'],
-  suffix: ['value'],
-  regex_replace: ['pattern'],
-  char_limit: ['value'],
-  word_limit: ['value'],
-  min_length: ['value'],
-  max_length: ['value'],
-  skip_if_equals: ['value'],
-  skip_if_contains: ['find'],
-  replace_if_contains: ['find'],
-  if_starts_with: ['value'],
-  if_ends_with: ['value'],
-  if_matches_regex: ['pattern'],
-  round: ['decimals'],
-  decimal_format: ['decimals'],
-  currency_format: ['currency'],
-  math_add: ['value'],
-  math_subtract: ['value'],
-  math_multiply: ['value'],
-  math_divide: ['value'],
-  date_format: ['format'],
-  date_add: ['days'],
-  date_subtract: ['days'],
-  split_by_space: ['index'],
-  split_by_delimiter: ['delimiter'],
-  value_map: ['map'],
-  value_mapping: ['map'],
-};
+import { REQUIRED_RULE_PARAMS } from '@/lib/ruleValidation';
 
 export const NUMERIC_VALUE_RULES = new Set([
   'char_limit',
@@ -108,10 +77,12 @@ function ValueMapEditor({
   rule,
   destOptions,
   onUpdate,
+  showErrors,
 }: {
   rule: Rule;
   destOptions?: { value: string; label: string }[];
   onUpdate: (rule: Rule) => void;
+  showErrors: boolean;
 }) {
   const map = (rule.map ?? {}) as Record<string, string>;
   const entries = Object.entries(map);
@@ -137,6 +108,7 @@ function ValueMapEditor({
 
   return (
     <div className="flex flex-col gap-2 px-10 pt-1 pb-3">
+      <p className="text-[10px] text-muted-foreground">Source value <span className="text-destructive">*</span> → Destination value (optional)</p>
       {entries.length === 0 && (
         <p className="text-muted-foreground text-xs">
           No values mapped yet. Add a rule for each source value to convert.
@@ -149,6 +121,7 @@ function ValueMapEditor({
             onChange={(e) => renameKey(i, e.target.value)}
             placeholder="Source value"
             className="flex-1 font-mono text-xs h-8"
+            aria-invalid={showErrors && !from.trim()}
           />
           <ArrowRight className="text-muted-foreground size-3 shrink-0" />
           {destOptions?.length ? (
@@ -207,10 +180,12 @@ function ValueMappingEditor({
   rule,
   destOptions,
   onUpdate,
+  showErrors,
 }: {
   rule: Rule;
   destOptions?: { value: string; label: string }[];
   onUpdate: (rule: Rule) => void;
+  showErrors: boolean;
 }) {
   const map = (rule.map ?? {}) as Record<string, string>;
   const entries = Object.entries(map);
@@ -276,11 +251,12 @@ function ValueMappingEditor({
             onChange={(e) => renameKey(i, e.target.value)}
             placeholder="Source value"
             className="flex-1 font-mono text-xs h-8"
+            aria-invalid={showErrors && !from.trim()}
           />
           <ArrowRight className="text-muted-foreground size-3 shrink-0" />
           {destOptions?.length ? (
             <Select value={to} onValueChange={(v) => setValue(i, v)}>
-              <SelectTrigger className="flex-1 text-xs h-8">
+              <SelectTrigger className="flex-1 text-xs h-8" aria-invalid={showErrors && !to.trim()}>
                 <SelectValue placeholder="Destination option" />
               </SelectTrigger>
               <SelectContent>
@@ -297,6 +273,7 @@ function ValueMappingEditor({
               onChange={(e) => setValue(i, e.target.value)}
               placeholder="Destination value"
               className="flex-1 font-mono text-xs h-8"
+              aria-invalid={showErrors && !to.trim()}
             />
           )}
           <Button
@@ -338,6 +315,7 @@ function ActiveRuleCard({
   destOptions,
   dragHandleProps,
   isDragging,
+  errors,
 }: {
   rule: Rule;
   index: number;
@@ -346,6 +324,7 @@ function ActiveRuleCard({
   destOptions?: { value: string; label: string }[];
   dragHandleProps: DraggableProvided['dragHandleProps'];
   isDragging: boolean;
+  errors: string[];
 }) {
   const def: RuleDefinition | undefined = RULE_DEFINITIONS.find(
     (r) => r.type === rule.type,
@@ -370,6 +349,7 @@ function ActiveRuleCard({
         'rounded-xl border bg-card transition-all',
         !isEnabled ? 'border-border/60 opacity-60 bg-muted/20' : 'border-border/80 shadow-2xs',
         isDragging && 'ring-primary/40 ring-2 shadow-md bg-background',
+        errors.length > 0 && 'border-destructive ring-1 ring-destructive/20',
       )}
     >
       <div className="flex items-center gap-2 px-3 py-2">
@@ -398,6 +378,7 @@ function ActiveRuleCard({
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
+          {errors.length > 0 && <AlertCircle className="size-4 text-destructive" aria-label="Rule needs required values" />}
           <Switch
             checked={isEnabled}
             onCheckedChange={(checked) =>
@@ -423,26 +404,25 @@ function ActiveRuleCard({
       {hasParams && isEnabled && (
         <div className="grid gap-2 px-8 pb-2 pt-1 sm:grid-cols-2">
           {(isValueMap ? ['fallback'] : inlineParams).map((p) => {
-            const isRequired = (REQUIRED_PARAMS[rule.type] || []).includes(p);
+            const isRequired = (REQUIRED_RULE_PARAMS[rule.type] || []).includes(p);
             const isNum = isParamNumeric(rule.type, p);
 
             return (
               <label key={p} className="min-w-0 space-y-0.5">
                 <span className="text-muted-foreground text-[10px] font-medium">
-                  {PARAM_LABELS[p] || p} {isRequired && '*'}
+                  {PARAM_LABELS[p] || p} {isRequired && <span className="text-destructive">*</span>}
                 </span>
                 <Input
                   value={(rule[p] as string) || ''}
                   onChange={(e) => handleParamChange(p, e.target.value)}
                   placeholder={
-                    p === 'fallback'
-                      ? 'Pass through'
-                      : isRequired
+                    isRequired
                         ? 'Required'
                         : 'Optional'
                   }
                   inputMode={isNum ? 'decimal' : 'text'}
                   className="h-7 text-xs font-mono"
+                  aria-invalid={errors.includes(p)}
                 />
               </label>
             );
@@ -455,6 +435,7 @@ function ActiveRuleCard({
           rule={rule}
           destOptions={destOptions}
           onUpdate={(next) => onUpdate(index, next)}
+          showErrors={errors.includes('map')}
         />
       )}
 
@@ -463,7 +444,23 @@ function ActiveRuleCard({
           rule={rule}
           destOptions={destOptions}
           onUpdate={(next) => onUpdate(index, next)}
+          showErrors={errors.includes('map')}
         />
+      )}
+      {errors.length > 0 && (
+        <div className="px-8 pb-3 text-[11px] text-destructive" role="alert">
+          {errors.map((param) => (
+            <p key={param}>
+              {param === 'map'
+                ? rule.type === 'value_map'
+                  ? 'Add a value pair and fill every source value.'
+                  : 'Complete every source and destination value.'
+                : (rule.type === 'min_length' || rule.type === 'max_length') && param === 'value' && String(rule.value ?? '').trim()
+                  ? 'Value must be a non-negative whole number.'
+                  : `${PARAM_LABELS[param] || param} is required.`}
+            </p>
+          ))}
+        </div>
       )}
     </div>
   );
@@ -474,6 +471,7 @@ export interface DraggableRulePipelineProps {
   onRulesChange: (rules: Rule[]) => void;
   destOptions?: { value: string; label: string }[];
   className?: string;
+  validationErrors?: Record<number, string[]>;
 }
 
 export default function DraggableRulePipeline({
@@ -481,6 +479,7 @@ export default function DraggableRulePipeline({
   onRulesChange,
   destOptions,
   className,
+  validationErrors = {},
 }: DraggableRulePipelineProps) {
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
@@ -545,6 +544,7 @@ export default function DraggableRulePipeline({
                         destOptions={destOptions}
                         dragHandleProps={dragProvided.dragHandleProps}
                         isDragging={snapshot.isDragging}
+                        errors={validationErrors[idx] ?? []}
                       />
                     </div>
                   )}

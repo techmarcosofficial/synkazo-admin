@@ -82,41 +82,12 @@ import {
   type RuleSuggestion,
 } from '@/lib/ruleSuggestions';
 import { cn } from '@/lib/utils';
+import {
+  REQUIRED_RULE_PARAMS,
+  validateRule,
+  validateRules,
+} from '@/lib/ruleValidation';
 import type { FieldMapping } from '@/types';
-
-const REQUIRED_PARAMS: Record<string, string[]> = {
-  replace: ['find', 'replacement'],
-  remove_text: ['find'],
-  prefix: ['value'],
-  suffix: ['value'],
-  regex_replace: ['pattern', 'replacement'],
-  char_limit: ['value'],
-  word_limit: ['value'],
-  min_length: ['value'],
-  max_length: ['value'],
-  replace_if_contains: ['find', 'replacement'],
-  if_starts_with: ['value', 'action'],
-  if_ends_with: ['value', 'action'],
-  if_matches_regex: ['pattern', 'action'],
-  skip_if_equals: ['value'],
-  skip_if_contains: ['find'],
-  default_if_empty: ['value'],
-  round: ['decimals'],
-  decimal_format: ['decimals'],
-  currency_format: ['currency'],
-  math_add: ['value'],
-  math_subtract: ['value'],
-  math_multiply: ['value'],
-  math_divide: ['value'],
-  date_format: ['format'],
-  timezone: ['tz'],
-  date_add: ['days'],
-  date_subtract: ['days'],
-  split_by_space: ['index'],
-  split_by_delimiter: ['delimiter', 'index'],
-  value_map: ['map'],
-  value_mapping: ['map'],
-};
 
 const NUMERIC_VALUE_RULES = new Set([
   'char_limit',
@@ -235,6 +206,10 @@ function ValueMapEditor({
 
   return (
     <div className="flex flex-col gap-2 px-14 pt-1 pb-3">
+      <p className="text-muted-foreground text-xs">
+        Source value <span className="text-destructive">*</span> → Destination
+        value (optional)
+      </p>
       {entries.length === 0 && (
         <p className="text-muted-foreground text-xs">
           No values mapped yet — add one for each source value this field can
@@ -253,11 +228,7 @@ function ValueMapEditor({
           <ArrowRight className="text-muted-foreground size-3 shrink-0" />
           {destOptions?.length ? (
             <Select value={to} onValueChange={(v) => setValue(i, v)}>
-              <SelectTrigger
-                size="sm"
-                className="flex-1"
-                aria-invalid={showErrors && !to.trim()}
-              >
+              <SelectTrigger size="sm" className="flex-1">
                 <SelectValue placeholder="Destination value" />
               </SelectTrigger>
               <SelectContent>
@@ -274,7 +245,6 @@ function ValueMapEditor({
               onChange={(e) => setValue(i, e.target.value)}
               placeholder="Destination value"
               className="flex-1 font-mono"
-              aria-invalid={showErrors && !to.trim()}
             />
           )}
           <Button
@@ -567,24 +537,21 @@ function ActiveRule({
       {hasParams && isEnabled && (
         <div className="grid gap-2 px-12 pb-2.5 sm:grid-cols-2">
           {(isValueMap ? ['fallback'] : inlineParams).map((p) => {
-            const isRequired = (REQUIRED_PARAMS[rule.type] || []).includes(p);
+            const isRequired = (REQUIRED_RULE_PARAMS[rule.type] || []).includes(
+              p,
+            );
             const isNum = isParamNumeric(rule.type, p);
             const showError = isRequired && ruleErrors.includes(p);
             return (
               <label key={p} className="min-w-0 space-y-1">
                 <span className="text-muted-foreground text-xs font-medium">
-                  {PARAM_LABELS[p] || p}
+                  {PARAM_LABELS[p] || p}{' '}
+                  {isRequired && <span className="text-destructive">*</span>}
                 </span>
                 <Input
                   value={(rule[p] as string) || ''}
                   onChange={(e) => handleParamChange(p, e.target.value)}
-                  placeholder={
-                    p === 'fallback'
-                      ? 'Pass through'
-                      : isRequired
-                        ? 'Required'
-                        : 'Optional'
-                  }
+                  placeholder={isRequired ? 'Required' : 'Optional'}
                   inputMode={isNum ? 'decimal' : 'text'}
                   onClick={(e) => e.stopPropagation()}
                   aria-invalid={showError}
@@ -620,7 +587,9 @@ function ActiveRule({
           {ruleErrors.map((p) => (
             <span key={p} className="text-destructive text-xs">
               {p === 'map'
-                ? 'Complete every source and destination value mapping'
+                ? rule.type === 'value_map'
+                  ? 'Add a mapping and fill every source value'
+                  : 'Complete every source and destination value mapping'
                 : paramErrorMessage(rule, p)}
             </span>
           ))}
@@ -880,57 +849,13 @@ export default function RuleBuilderModal({
     setRules(reordered);
 
     if (saveAttempted) {
-      const nextErrors: Record<number, string[]> = {};
-      reordered.forEach((rule, index) => {
-        const missing = validateRule(rule);
-        if (missing.length > 0) nextErrors[index] = missing;
-      });
-      setValidationErrors(nextErrors);
+      setValidationErrors(validateRules(reordered));
     }
   };
 
-  function validateRule(rule: Rule): string[] {
-    const required = REQUIRED_PARAMS[rule.type] || [];
-    if (rule.enabled === false) return [];
-    return required.filter((p) => {
-      // `map` is a lookup table: "provided" means at least one complete pair,
-      // not a non-blank string.
-      if (p === 'map') {
-        const entries = Object.entries(
-          (rule.map ?? {}) as Record<string, string>,
-        );
-        return (
-          entries.length === 0 ||
-          entries.some(([from, to]) => from.trim() === '' || to.trim() === '')
-        );
-      }
-      if (
-        (rule.type === 'min_length' || rule.type === 'max_length') &&
-        p === 'value'
-      ) {
-        const threshold = Number(rule.value);
-        return (
-          !Number.isInteger(threshold) ||
-          threshold < 0 ||
-          String(rule.value ?? '').trim() === ''
-        );
-      }
-      return !rule[p] || String(rule[p]).trim() === '';
-    });
-  }
-
-  function validateAll(): Record<number, string[]> {
-    const errs: Record<number, string[]> = {};
-    rules.forEach((rule, i) => {
-      const missing = validateRule(rule);
-      if (missing.length > 0) errs[i] = missing;
-    });
-    return errs;
-  }
-
   const handleSave = () => {
     setSaveAttempted(true);
-    const errs = validateAll();
+    const errs = validateRules(rules);
     if (Object.keys(errs).length > 0) {
       setValidationErrors(errs);
       return;

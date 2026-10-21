@@ -90,4 +90,59 @@ describe('FieldSettingsDrawer', () => {
       }),
     );
   });
+
+  it('keeps the drawer open and highlights a missing Replace Text input', () => {
+    const onSave = vi.fn();
+    const onOpenChange = vi.fn();
+    render(
+      <FieldSettingsDrawer
+        open={true}
+        onOpenChange={onOpenChange}
+        mapping={{ ...mockMapping, destRules: { Phone: [{ type: 'replace', find: '', replacement: 'new' }] } }}
+        destKey="Phone"
+        onSave={onSave}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /save all settings/i }));
+    expect(onSave).not.toHaveBeenCalled();
+    expect(onOpenChange).not.toHaveBeenCalledWith(false);
+    expect(screen.getByText(/Fill the highlighted required fields/)).toBeInTheDocument();
+    expect(screen.getAllByPlaceholderText('Required')[0]).toHaveAttribute('aria-invalid', 'true');
+    fireEvent.change(screen.getAllByPlaceholderText('Required')[0], { target: { value: 'old' } });
+    fireEvent.click(screen.getByRole('button', { name: /save all settings/i }));
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+      rules: [{ type: 'replace', find: 'old', replacement: 'new' }],
+    }));
+  });
+
+  it('requires Map Values fallback and source, but accepts an empty destination', () => {
+    const onSave = vi.fn();
+    const { rerender } = render(
+      <FieldSettingsDrawer
+        open={true}
+        onOpenChange={vi.fn()}
+        mapping={{ ...mockMapping, destRules: { Phone: [{ type: 'value_map', map: { '': '' }, fallback: '' }] } }}
+        destKey="Phone"
+        onSave={onSave}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /save all settings/i }));
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByPlaceholderText('Source value')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByPlaceholderText('Required')).toHaveAttribute('aria-invalid', 'true');
+
+    rerender(
+      <FieldSettingsDrawer
+        open={true}
+        onOpenChange={vi.fn()}
+        mapping={{ ...mockMapping, destRules: { Phone: [{ type: 'value_map', map: { pending: '' }, fallback: 'other' }] } }}
+        destKey="Phone"
+        onSave={onSave}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /save all settings/i }));
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+      rules: [{ type: 'value_map', map: { pending: '' }, fallback: 'other' }],
+    }));
+  });
 });

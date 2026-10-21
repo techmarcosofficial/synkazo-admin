@@ -247,7 +247,7 @@ describe('RuleBuilderModal guidance', () => {
     ).toHaveAttribute('aria-invalid', 'true');
   });
 
-  it('blocks an incomplete row even when another value mapping is complete', () => {
+  it('blocks a blank Map Values source even when another row is complete', () => {
     const onSave = vi.fn();
     render(
       createElement(
@@ -256,7 +256,11 @@ describe('RuleBuilderModal guidance', () => {
         createElement(RuleBuilderModal, {
           ...baseProps,
           initialRules: [
-            { type: 'value_map', map: { ready: 'open', pending: '' } },
+            {
+              type: 'value_map',
+              map: { ready: 'open', '': '' },
+              fallback: 'other',
+            },
           ],
           onSave,
         }),
@@ -264,10 +268,30 @@ describe('RuleBuilderModal guidance', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Apply rules' }));
     expect(onSave).not.toHaveBeenCalled();
-    expect(
-      screen
-        .getByDisplayValue('pending')
-        .parentElement?.querySelector('[aria-invalid="true"]'),
-    ).toBeTruthy();
+    expect(screen.getAllByPlaceholderText('Source value')[1]).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    );
+  });
+
+  it('allows an empty Map Values destination when source and fallback are filled', () => {
+    const onSave = vi.fn();
+    render(
+      createElement(
+        TooltipProvider,
+        null,
+        createElement(RuleBuilderModal, {
+          ...baseProps,
+          initialRules: [
+            { type: 'value_map', map: { pending: '' }, fallback: 'other' },
+          ],
+          onSave,
+        }),
+      ),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Apply rules' }));
+    expect(onSave).toHaveBeenCalledWith([
+      { type: 'value_map', map: { pending: '' }, fallback: 'other' },
+    ]);
   });
 });
