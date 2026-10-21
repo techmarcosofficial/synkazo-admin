@@ -36,6 +36,9 @@ import PageNotFound from './lib/PageNotFound';
 import { homeForUser } from '@/lib/workspace';
 
 const OverviewPage = lazy(() => import('@/pages/superadmin/OverviewPage'));
+const QueueBoardRedirect = lazy(
+  () => import('@/pages/superadmin/QueueBoardRedirect'),
+);
 const SyncOperationsPage = lazy(
   () => import('@/pages/superadmin/SyncOperationsPage'),
 );
@@ -338,6 +341,7 @@ function App() {
               {/* Platform administration has an exact-role route boundary and uses
                 the shared shell with platform navigation and data scope. */}
               <Route element={<ExactRoleGuard role="super_admin" />}>
+                <Route path="/admin/queues" element={<QueueBoardRedirect />} />
                 <Route path="/super-admin" element={<SuperAdminLayout />}>
                   <Route
                     index

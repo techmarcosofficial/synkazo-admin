@@ -1,4 +1,5 @@
 import { Activity, Layers, ShieldCheck } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import {
   Area,
   AreaChart,
@@ -216,6 +217,14 @@ export function OverviewQueue({
         title="Queue health"
         icon={Layers}
         description="Current background work across the platform."
+        action={
+          <Link
+            to="/admin/queues"
+            className="text-primary text-sm font-medium underline-offset-4 hover:underline"
+          >
+            Open queue dashboard
+          </Link>
+        }
         loading={loading}
         error={error}
       >
