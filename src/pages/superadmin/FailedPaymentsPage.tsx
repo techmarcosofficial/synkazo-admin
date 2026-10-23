@@ -11,7 +11,7 @@ import ErrorState from '@/components/shared/ErrorState';
 import PageHeader from '@/components/shared/PageHeader';
 import PaginationBar from '@/components/shared/PaginationBar';
 import SkeletonList from '@/components/shared/skeletons/SkeletonList';
-import { Badge } from '@/components/ui/badge';
+import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import {
   InputGroup,
@@ -36,7 +36,6 @@ import {
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useSuperAdminFailedPaymentsQuery } from '@/queries/useSuperAdmin';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import type { SubscriptionStatus } from '@/types';
 
 type StatusFilter = 'all' | 'past_due' | 'unpaid' | 'incomplete';
 
@@ -46,22 +45,6 @@ const STATUS_LABELS: Record<StatusFilter, string> = {
   unpaid: 'Unpaid',
   incomplete: 'Incomplete',
 };
-
-function toneForStatus(
-  status: SubscriptionStatus,
-): 'warning' | 'destructive' | 'muted' {
-  if (status === 'past_due') return 'warning';
-  if (status === 'unpaid') return 'destructive';
-  return 'muted';
-}
-
-function toneClass(
-  tone: 'warning' | 'destructive' | 'muted',
-): string {
-  if (tone === 'destructive') return 'bg-red-100 text-red-900';
-  if (tone === 'warning') return 'bg-amber-100 text-amber-900';
-  return 'bg-muted text-muted-foreground';
-}
 
 function formatCurrency(amount: number, currency: string | null): string {
   const c = (currency ?? 'USD').toUpperCase();
@@ -301,13 +284,9 @@ export default function FailedPaymentsPage() {
                     )}
                   </TableCell>
                   <TableCell>
-                    <Badge
-                      className={toneClass(toneForStatus(row.subscriptionStatus))}
-                    >
-                      {STATUS_LABELS[
+                    <StatusBadge status={row.subscriptionStatus} label={STATUS_LABELS[
                         row.subscriptionStatus as StatusFilter
-                      ] ?? row.subscriptionStatus}
-                    </Badge>
+                      ] ?? row.subscriptionStatus} />
                   </TableCell>
                   <TableCell className="text-right font-mono text-sm">
                     {formatCurrency(row.amountDue, row.currency)}

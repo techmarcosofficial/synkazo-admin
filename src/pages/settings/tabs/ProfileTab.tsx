@@ -15,6 +15,7 @@ import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { showToast } from '@/lib/toast';
+import { usersApi } from '@/api/users';
 import { useUpdateMeMutation } from '@/queries/useUsers';
 
 const errorMessage = (err: unknown, fallback: string) =>
@@ -40,6 +41,8 @@ export default function ProfileTab({
   });
   const [editingEmail, setEditingEmail] = useState(false);
   const [newEmail, setNewEmail] = useState('');
+  const [emailVerificationCode, setEmailVerificationCode] = useState('');
+  const [emailVerificationPending, setEmailVerificationPending] = useState(false);
   const [emailSaving, setEmailSaving] = useState(false);
 
   useEffect(() => {
@@ -64,7 +67,7 @@ export default function ProfileTab({
     }
   };
 
-  const handleSaveEmail = async () => {
+  const handleSendEmailVerificationCode = async () => {
     const normalized = newEmail.trim().toLowerCase();
     if (!normalized) {
       showToast.error('Enter a new email address');
@@ -80,14 +83,35 @@ export default function ProfileTab({
     }
     setEmailSaving(true);
     try {
-      await updateMeMutation.mutateAsync({ email: normalized });
+      await usersApi.requestEmailChange(normalized);
+      setNewEmail(normalized);
+      setEmailVerificationPending(true);
+      setEmailVerificationCode('');
+      showToast.success('Verification code sent.');
+    } catch (err) {
+      showToast.error(errorMessage(err, 'Failed to send verification code'));
+    } finally {
+      setEmailSaving(false);
+    }
+  };
+
+  const handleVerifyEmailChange = async () => {
+    if (!/^\d{6}$/.test(emailVerificationCode)) {
+      showToast.error('Enter the 6-digit verification code');
+      return;
+    }
+    setEmailSaving(true);
+    try {
+      await usersApi.confirmEmailChange(emailVerificationCode);
       await refreshUser();
-      setProfile((p) => ({ ...p, email: normalized }));
+      setProfile((p) => ({ ...p, email: newEmail }));
       setEditingEmail(false);
+      setEmailVerificationPending(false);
+      setEmailVerificationCode('');
       setNewEmail('');
       showToast.success('Email updated.');
     } catch (err) {
-      showToast.error(errorMessage(err, 'Failed to update email'));
+      showToast.error(errorMessage(err, 'Failed to verify email'));
     } finally {
       setEmailSaving(false);
     }
@@ -131,6 +155,8 @@ export default function ProfileTab({
                     onClick={() => {
                       setEditingEmail(true);
                       setNewEmail('');
+                      setEmailVerificationPending(false);
+                      setEmailVerificationCode('');
                     }}
                   >
                     Change
@@ -145,19 +171,45 @@ export default function ProfileTab({
                   </div>
                   <Input
                     value={newEmail}
-                    onChange={(e) => setNewEmail(e.target.value)}
+                    onChange={(e) => {
+                      setNewEmail(e.target.value);
+                      setEmailVerificationPending(false);
+                      setEmailVerificationCode('');
+                    }}
                     type="email"
                     autoFocus
                     placeholder="New email address"
-                    onKeyDown={(e) => e.key === 'Enter' && handleSaveEmail()}
+                    readOnly={emailVerificationPending}
+                    onKeyDown={(e) =>
+                      e.key === 'Enter' && handleSendEmailVerificationCode()
+                    }
                   />
+                  {emailVerificationPending && (
+                    <Input
+                      aria-label="Verification code"
+                      value={emailVerificationCode}
+                      onChange={(e) =>
+                        setEmailVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))
+                      }
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      placeholder="6-digit verification code"
+                      onKeyDown={(e) =>
+                        e.key === 'Enter' && handleVerifyEmailChange()
+                      }
+                    />
+                  )}
                   <div className="flex gap-2">
                     <Button
                       size="sm"
-                      onClick={handleSaveEmail}
+                      onClick={
+                        emailVerificationPending
+                          ? handleVerifyEmailChange
+                          : handleSendEmailVerificationCode
+                      }
                       loading={emailSaving}
                     >
-                      Confirm Change
+                      {emailVerificationPending ? 'Verify and change email' : 'Send verification code'}
                     </Button>
                     <Button
                       size="sm"
@@ -165,6 +217,8 @@ export default function ProfileTab({
                       onClick={() => {
                         setEditingEmail(false);
                         setNewEmail('');
+                        setEmailVerificationPending(false);
+                        setEmailVerificationCode('');
                       }}
                       disabled={emailSaving}
                     >

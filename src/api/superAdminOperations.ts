@@ -22,6 +22,8 @@ import type {
   SuperAdminProjectConnection,
   SuperAdminProjectDetail,
   SuperAdminProjectListItem,
+  SuperAdminProjectStatus,
+  SuperAdminUpdateProjectDto,
   SuperAdminRunJobDto,
   SuperAdminRunStatus,
 } from '@/types';
@@ -54,7 +56,7 @@ export interface ListProjectsParams {
   page?: number;
   limit?: number;
   search?: string;
-  status?: 'active' | 'archived' | 'setup';
+  status?: SuperAdminProjectStatus;
   sortBy?: 'name' | 'status' | 'createdAt' | 'lastSyncedAt';
   sortOrder?: 'asc' | 'desc';
 }
@@ -99,7 +101,7 @@ export const superAdminOperationsApi = {
   updateProject: (
     organisationId: string,
     projectId: string,
-    dto: { name?: string; description?: string },
+    dto: SuperAdminUpdateProjectDto,
   ): Promise<SuperAdminProjectDetail> =>
     apiClient
       .patch<{ data: SuperAdminProjectDetail }>(

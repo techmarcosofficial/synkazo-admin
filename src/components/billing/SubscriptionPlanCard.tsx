@@ -2,7 +2,8 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { ArrowRightLeft, CreditCard, Sparkles } from 'lucide-react';
 import React from 'react';
 
-import { Badge } from '@/components/ui/badge';
+import { Badge, useBadgeAppearance } from '@/components/ui/badge';
+import { getStatusTone } from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -240,6 +241,7 @@ export default function SubscriptionPlanCard({
   changePlanLabel,
   className,
 }: SubscriptionPlanCardProps) {
+  const tinted = useBadgeAppearance() === 'tinted';
   const variantKey = getPlanVariant(planName);
   const config = VARIANT_CONFIGS[variantKey];
 
@@ -285,6 +287,9 @@ export default function SubscriptionPlanCard({
     <div
       className={cn(
         'relative overflow-hidden rounded-4xl border border-white/10 p-5 text-white shadow-xl transition-all',
+        // This card uses a dark gradient in both themes; neutral badge text
+        // follows that surface rather than becoming dark text on a dark card.
+        tinted && 'dark',
         config.cardBg,
         className,
       )}
@@ -324,6 +329,8 @@ export default function SubscriptionPlanCard({
           ) : null}
           <Badge
             variant="secondary"
+            tone={getStatusTone(status ?? 'none')}
+            indicator={tinted}
             className={cn(
               'flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize backdrop-blur-md border-0',
               status === 'active' && 'bg-success/25 text-success',
@@ -333,7 +340,9 @@ export default function SubscriptionPlanCard({
                 'bg-white/10 text-white/80',
             )}
           >
-            <span
+            {!tinted && <span
+              data-slot="badge-dot"
+              aria-hidden="true"
               className={cn(
                 'size-1.5 rounded-full',
                 status === 'active'
@@ -342,7 +351,7 @@ export default function SubscriptionPlanCard({
                     ? 'bg-amber-400'
                     : 'bg-white/60',
               )}
-            />
+            />}
             {status}
           </Badge>
         </div>

@@ -338,7 +338,7 @@ export default function FieldPipelineEffectRail({
                           Disabled
                         </Badge>
                       ) : step.skipped ? (
-                        <Badge className="border-0 bg-destructive/15 text-destructive text-[9px] px-1.5 py-0 font-medium">
+                  <Badge tone="danger" className="border-0 bg-destructive/15 text-destructive text-[9px] px-1.5 py-0 font-medium">
                           Triggered Skip
                         </Badge>
                       ) : step.bypassed ? (
@@ -378,6 +378,7 @@ export default function FieldPipelineEffectRail({
                 Empty Value Fallback:
               </span>
               <Badge
+                tone={onEmpty === 'default' ? 'success' : onEmpty === 'skip_record' ? 'danger' : 'muted'}
                 className={cn(
                   'border-0 text-[10px] font-medium',
                   onEmpty === 'default'
@@ -431,6 +432,7 @@ export default function FieldPipelineEffectRail({
                   <Filter className="size-3 text-info" /> Skip Condition:
                 </span>
                 <Badge
+                  tone={recordSkippedByFilter ? 'danger' : 'success'}
                   className={cn(
                     'border-0 text-[10px] font-medium',
                     recordSkippedByFilter
@@ -464,11 +466,11 @@ export default function FieldPipelineEffectRail({
                 Final Result
               </span>
               {recordWillBeSkipped ? (
-                <Badge className="border-0 bg-destructive/20 text-destructive text-[10px] font-semibold">
+                  <Badge tone="danger" className="border-0 bg-destructive/20 text-destructive text-[10px] font-semibold">
                   Record Discarded
                 </Badge>
               ) : (
-                <Badge className="border-0 bg-success/20 text-success text-[10px] font-semibold">
+                  <Badge tone="success" className="border-0 bg-success/20 text-success text-[10px] font-semibold">
                   Ready to Sync
                 </Badge>
               )}

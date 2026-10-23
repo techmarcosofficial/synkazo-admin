@@ -110,12 +110,20 @@ export interface SuperAdminCreateProjectDto {
   syncMode: 'one_way' | 'two_way';
 }
 
+export type SuperAdminProjectStatus = 'draft' | 'active' | 'paused' | 'error';
+
+export interface SuperAdminUpdateProjectDto {
+  name?: string;
+  description?: string;
+  status?: SuperAdminProjectStatus;
+}
+
 export interface SuperAdminProjectListItem {
   id: string;
   organisationId: string;
   name: string;
   description: string | null;
-  status: 'active' | 'archived' | 'setup';
+  status: SuperAdminProjectStatus;
   sourcePlatformId: string;
   destPlatformId: string;
   syncMode: string;

@@ -3212,9 +3212,13 @@ export default function FieldMappingCanvas({
                                   <Badge
                                     variant="secondary"
                                     size="xs"
+                                    tone={n.blocking ? 'danger' : 'warning'}
+                                    indicator={false}
                                     className="shrink-0 gap-1"
                                   >
                                     <span
+                                      data-slot="badge-dot"
+                                      aria-hidden="true"
                                       className={cn(
                                         'size-1.5 shrink-0 rounded-full',
                                         n.blocking
@@ -3689,6 +3693,7 @@ export default function FieldMappingCanvas({
                                     <Badge
                                       variant="secondary"
                                       size="xs"
+                                            tone="warning"
                                       className="bg-warning/15 text-warning-foreground hover:bg-warning/25 shrink-0 cursor-pointer gap-1 border-0 font-normal"
                                       onClick={() =>
                                         openSettingsDrawer(

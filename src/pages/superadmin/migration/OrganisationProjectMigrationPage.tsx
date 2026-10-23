@@ -9,7 +9,7 @@ import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
 import SkeletonList from '@/components/shared/skeletons/SkeletonList';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
+import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -97,18 +97,7 @@ function DiffSection({
                     {item.objectType ?? '—'}
                   </TableCell>
                   <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={
-                        item.status === 'missing'
-                          ? 'border-amber-500 text-amber-700'
-                          : item.status === 'conflict'
-                            ? 'border-red-500 text-red-700'
-                            : 'text-muted-foreground'
-                      }
-                    >
-                      {item.status}
-                    </Badge>
+                    <StatusBadge status={item.status} label={item.status} />
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs">
                     {item.conflictReason ?? '—'}
@@ -288,7 +277,7 @@ export function OrganisationProjectMigrationPanel({
                       <strong className="text-sm capitalize">
                         {environment}
                       </strong>
-                      {active && <Badge variant="secondary">Active</Badge>}
+                    {active && <StatusBadge status="active" />}
                     </div>
                     <p className="text-muted-foreground text-xs">
                       {connections.length
@@ -494,20 +483,7 @@ export function OrganisationProjectMigrationPanel({
                           {run.fromEnvironment} → {run.toEnvironment}
                         </TableCell>
                         <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={
-                              run.status === 'completed'
-                                ? 'border-emerald-500 text-emerald-700'
-                                : run.status === 'partial'
-                                  ? 'border-amber-500 text-amber-700'
-                                  : run.status === 'failed'
-                                    ? 'border-red-500 text-red-700'
-                                    : ''
-                            }
-                          >
-                            {run.status}
-                          </Badge>
+                          <StatusBadge status={run.status} label={run.status} />
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
                           {run.succeeded}✓ · {run.skipped}↷ · {run.failed}✗ /{' '}
@@ -550,18 +526,7 @@ export function OrganisationProjectMigrationPanel({
                                     key={item.id}
                                     className="flex items-center gap-2 text-xs"
                                   >
-                                    <Badge
-                                      variant="outline"
-                                      className={
-                                        item.status === 'succeeded'
-                                          ? 'border-emerald-500 text-emerald-700'
-                                          : item.status === 'skipped'
-                                            ? 'text-muted-foreground'
-                                            : 'border-red-500 text-red-700'
-                                      }
-                                    >
-                                      {item.status}
-                                    </Badge>
+                                    <StatusBadge status={item.status} label={item.status} />
                                     <span className="font-medium">
                                       {item.displayName}
                                     </span>

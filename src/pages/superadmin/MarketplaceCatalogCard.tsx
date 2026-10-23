@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, Eye, EyeOff, Plus, Store } from 'lucide-react';
+import { AlertTriangle, Plus, Store } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -345,15 +346,11 @@ export default function MarketplaceCatalogCard() {
                       {entry.slug}
                     </button>
                     {entry.visible ? (
-                      <Badge className="bg-emerald-100 text-emerald-900">
-                        <Eye className="size-3" /> Visible
-                      </Badge>
+                      <StatusBadge status="enabled" label="Visible" />
                     ) : (
-                      <Badge variant="outline">
-                        <EyeOff className="size-3" /> Hidden
-                      </Badge>
+                      <StatusBadge status="disabled" label="Hidden" />
                     )}
-                    <Badge variant="outline" className="font-mono">
+                    <Badge variant="secondary" className="font-mono">
                       sort {entry.sortOrder}
                     </Badge>
                   </div>

@@ -85,7 +85,7 @@ export default function OrganisationNotesCard({
         <CardTitle className="flex items-center gap-2">
           <StickyNote className="text-muted-foreground size-4" aria-hidden />
           {title}
-          <Badge variant="outline">{notesQuery.data?.length ?? 0}</Badge>
+          <Badge variant="secondary">{notesQuery.data?.length ?? 0}</Badge>
         </CardTitle>
         <CardDescription>
           Shared with platform administrators working on this organisation.

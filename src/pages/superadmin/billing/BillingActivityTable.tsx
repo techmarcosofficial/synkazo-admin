@@ -2,7 +2,7 @@ import { format } from 'date-fns';
 import React from 'react';
 
 import EmptyState from '@/components/shared/EmptyState';
-import { Badge } from '@/components/ui/badge';
+import StatusBadge from '@/components/shared/StatusBadge';
 import { Card } from '@/components/ui/card';
 import {
   Table,
@@ -12,7 +12,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { STATUS_DOT } from '@/pages/organisation/billing/tabs/InvoicesTab';
 import type { HistoryItem } from '@/types/billing';
 
 function formatCurrency(
@@ -90,7 +89,6 @@ export default function BillingActivityTable({
         <TableBody>
           {displayItems.map((item, idx) => {
             const statusKey = item.orderStatus ?? (item.eventType.includes('fail') ? 'failed' : 'paid');
-            const dotClass = STATUS_DOT[statusKey as keyof typeof STATUS_DOT] ?? 'bg-muted-foreground';
             const eventName = EVENT_DISPLAY_NAMES[item.eventType] ?? item.eventType;
 
             return (
@@ -102,13 +100,7 @@ export default function BillingActivityTable({
                   {eventName}
                 </TableCell>
                 <TableCell className="py-3">
-                  <Badge
-                    variant="secondary"
-                    className="gap-1.5 text-[11px] font-medium capitalize py-0.5 px-2"
-                  >
-                    <span className={`size-1.5 rounded-full ${dotClass}`} />
-                    {item.newStatus ?? statusKey}
-                  </Badge>
+                  <StatusBadge status={item.newStatus ?? statusKey} label={item.newStatus ?? statusKey} className="capitalize" />
                 </TableCell>
                 <TableCell className="font-mono text-xs font-semibold py-3">
                   {formatCurrency(item.amount, item.currency)}

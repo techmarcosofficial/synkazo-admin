@@ -400,6 +400,7 @@ export default function FieldSettingsDrawer({
             {destFieldDef?.required && (
               <Badge
                 size="xs"
+                    tone="danger"
                 className="border-0 bg-destructive/15 text-destructive font-medium"
               >
                 Required
@@ -408,6 +409,7 @@ export default function FieldSettingsDrawer({
             {rules.length > 0 && (
               <Badge
                 size="xs"
+                    tone="warning"
                 className="border-0 bg-warning/15 text-warning font-medium gap-1"
               >
                 <Zap className="size-3 text-warning shrink-0" />
@@ -543,7 +545,7 @@ export default function FieldSettingsDrawer({
               badge={
                 <div className="flex items-center gap-1.5 flex-wrap justify-end">
                   {rules.length > 0 ? (
-                    <Badge className="border-0 bg-warning/15 text-warning text-[10px] gap-1 font-semibold">
+                            <Badge tone="warning" className="border-0 bg-warning/15 text-warning text-[10px] gap-1 font-semibold">
                       <Zap className="size-2.5 shrink-0" />
                       <span>{rules.length} Rule{rules.length !== 1 ? 's' : ''}</span>
                     </Badge>
@@ -676,11 +678,11 @@ export default function FieldSettingsDrawer({
               badge={
                 <div className="flex items-center gap-1.5 flex-wrap justify-end">
                   {onEmpty === 'default' ? (
-                    <Badge className="border-0 bg-success/15 text-success text-[10px] font-semibold max-w-[140px] truncate">
+                      <Badge tone="success" className="border-0 bg-success/15 text-success text-[10px] font-semibold max-w-[140px] truncate">
                       Default: {defaultValue ? `"${defaultValue}"` : 'Fallback'}
                     </Badge>
                   ) : onEmpty === 'skip_record' ? (
-                    <Badge className="border-0 bg-destructive/15 text-destructive text-[10px] font-semibold">
+                      <Badge tone="danger" className="border-0 bg-destructive/15 text-destructive text-[10px] font-semibold">
                       Skip If Empty
                     </Badge>
                   ) : (

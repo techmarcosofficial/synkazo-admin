@@ -9,6 +9,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
+import { Badge } from '@/components/ui/badge';
 import SkeletonList from '@/components/shared/skeletons/SkeletonList';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -603,9 +604,7 @@ export default function OrganisationBillingPage() {
                     Payment Method on File
                   </h4>
                   {subscription.paymentMethod.isDefault && (
-                    <span className="rounded-full bg-secondary text-secondary-foreground text-[10px] px-2 py-0.5 font-medium">
-                      Default
-                    </span>
+                    <Badge variant="secondary" size="xs">Default</Badge>
                   )}
                 </div>
                 <div className="flex items-center justify-between pt-0.5">

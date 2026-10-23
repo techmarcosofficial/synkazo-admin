@@ -254,6 +254,7 @@ export function RecordReason({
                 <h3 className="text-sm font-semibold">{summary}</h3>
                 <Badge
                   variant="outline"
+                  tone={rec.action === 'failed' ? 'danger' : 'muted'}
                   className={cn(
                     'border-transparent text-[10px]',
                     rec.action === 'failed'

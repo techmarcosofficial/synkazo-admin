@@ -19,7 +19,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import StatusBadge from '@/components/shared/StatusBadge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -57,37 +57,7 @@ function formatDateSafe(
 }
 
 function InvoiceStatusBadge({ status }: { status: string }) {
-  const s = status.toLowerCase();
-  if (s === 'paid') {
-    return (
-      <Badge variant="secondary" className="gap-1.5 border-0 bg-success/20 text-success capitalize font-semibold">
-        <span className="size-1.5 rounded-full bg-success inline-block" />
-        {status}
-      </Badge>
-    );
-  }
-  if (s === 'failed' || s === 'uncollectible') {
-    return (
-      <Badge variant="destructive" className="gap-1.5 border-0 capitalize font-semibold">
-        <span className="size-1.5 rounded-full bg-destructive inline-block" />
-        {status}
-      </Badge>
-    );
-  }
-  if (s === 'open' || s === 'pending') {
-    return (
-      <Badge variant="secondary" className="gap-1.5 border-0 bg-sky-500/20 text-sky-600 dark:text-sky-400 capitalize font-semibold">
-        <span className="size-1.5 rounded-full bg-sky-500 inline-block" />
-        {status}
-      </Badge>
-    );
-  }
-
-  return (
-    <Badge variant="secondary" className="border-0 capitalize font-semibold">
-      {status}
-    </Badge>
-  );
+  return <StatusBadge status={status} label={status} className="capitalize" />;
 }
 
 interface InvoiceDetailDrawerProps {

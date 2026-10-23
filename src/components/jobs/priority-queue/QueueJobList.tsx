@@ -4,6 +4,7 @@ import { ArrowRight, GripVertical, Pencil, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { Badge } from '@/components/ui/badge';
+import { getStatusTone } from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
@@ -34,6 +35,8 @@ function StatusBadge({ queueJob }: { queueJob: PriorityQueueJobDisplay }) {
     : 'Enabled';
   return (
     <Badge
+      tone={getStatusTone(queueJob.lastExecutionStatus ?? 'enabled')}
+      indicator={Boolean(queueJob.lastExecutionStatus)}
       className={cn(
         'gap-1.5 capitalize',
         queueJob.lastExecutionStatus
@@ -42,7 +45,7 @@ function StatusBadge({ queueJob }: { queueJob: PriorityQueueJobDisplay }) {
       )}
     >
       {!queueJob.lastExecutionStatus && (
-        <span className="bg-success size-1.5 rounded-full" />
+        <span data-slot="badge-dot" aria-hidden="true" className="bg-success size-1.5 rounded-full" />
       )}
       {label}
     </Badge>

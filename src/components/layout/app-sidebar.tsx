@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import * as React from 'react';
 import { Link } from 'react-router-dom';
+import { Badge } from '@/components/ui/badge';
 
 import { SynkazoMark } from '@/components/branding/SynkazoMark';
 import { NavMain, type NavGroup } from '@/components/layout/nav-main';
@@ -97,9 +98,9 @@ export function AppSidebar({
                   synkazo
                 </span>
                 {platform && (
-                  <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold tracking-wider text-amber-600 uppercase group-data-[collapsible=icon]:hidden dark:text-amber-400">
+                  <Badge variant="secondary" tone="warning" size="xs" className="text-[10px] font-semibold tracking-wider uppercase group-data-[collapsible=icon]:hidden">
                     Admin
-                  </span>
+                  </Badge>
                 )}
               </Link>
             </SidebarMenuButton>

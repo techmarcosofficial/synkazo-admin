@@ -276,7 +276,7 @@ export default function CombineFieldsDialog({
                             </span>
                             <div className="flex items-center gap-1">
                               {field.required && (
-                                <Badge className="border-0 bg-destructive/15 text-destructive text-[9px] px-1 py-0">
+                              <Badge tone="danger" className="border-0 bg-destructive/15 text-destructive text-[9px] px-1 py-0">
                                   Req
                                 </Badge>
                               )}
@@ -644,6 +644,7 @@ export default function CombineFieldsDialog({
                           <ArrowRight className="size-3.5 text-muted-foreground shrink-0" />
                           <Badge
                             variant="secondary"
+                          tone="success"
                             className="border-0 bg-success/15 text-success text-xs font-semibold px-2 py-0.5 rounded-lg"
                           >
                             <span>
@@ -690,7 +691,7 @@ export default function CombineFieldsDialog({
                   </div>
                   {previewResult && (
                     <div className="flex items-center gap-1 shrink-0">
-                      <Badge className="border-0 bg-success/15 text-success text-[10px] font-medium">
+                      <Badge tone="success" className="border-0 bg-success/15 text-success text-[10px] font-medium">
                         Live Output
                       </Badge>
                       <Button

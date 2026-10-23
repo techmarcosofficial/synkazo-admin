@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import WorkspaceShell from '@/components/layout/workspace-shell';
 import GlobalLoader from '@/components/shared/GlobalLoader';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
+import { BadgeAppearanceProvider } from '@/components/ui/badge';
 
 /** Route-specific gate and configuration; shell markup is shared with tenants. */
 export default function SuperAdminLayout() {
@@ -13,5 +14,9 @@ export default function SuperAdminLayout() {
   if (currentUser.role !== 'super_admin')
     return <Navigate to="/dashboard" replace />;
 
-  return <WorkspaceShell kind="platform" />;
+  return (
+    <BadgeAppearanceProvider>
+      <WorkspaceShell kind="platform" />
+    </BadgeAppearanceProvider>
+  );
 }
