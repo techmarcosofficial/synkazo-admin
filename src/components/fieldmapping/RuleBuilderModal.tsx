@@ -69,6 +69,9 @@ import {
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import {
   executeRulePipeline,
+  isValidationRule,
+  passesRuleValidation,
+  previewSourceValue,
   RULE_CATEGORIES,
   RULE_DEFINITIONS,
   type Rule,
@@ -79,37 +82,12 @@ import {
   type RuleSuggestion,
 } from '@/lib/ruleSuggestions';
 import { cn } from '@/lib/utils';
+import {
+  REQUIRED_RULE_PARAMS,
+  validateRule,
+  validateRules,
+} from '@/lib/ruleValidation';
 import type { FieldMapping } from '@/types';
-
-const REQUIRED_PARAMS: Record<string, string[]> = {
-  replace: ['find'],
-  remove_text: ['find'],
-  prefix: ['value'],
-  suffix: ['value'],
-  regex_replace: ['pattern'],
-  char_limit: ['value'],
-  word_limit: ['value'],
-  min_length: ['value'],
-  max_length: ['value'],
-  replace_if_contains: ['find'],
-  if_starts_with: ['value'],
-  if_ends_with: ['value'],
-  if_matches_regex: ['pattern'],
-  round: ['decimals'],
-  decimal_format: ['decimals'],
-  currency_format: ['currency'],
-  math_add: ['value'],
-  math_subtract: ['value'],
-  math_multiply: ['value'],
-  math_divide: ['value'],
-  date_format: ['format'],
-  date_add: ['days'],
-  date_subtract: ['days'],
-  split_by_space: ['index'],
-  split_by_delimiter: ['delimiter'],
-  value_map: ['map'],
-  value_mapping: ['map'],
-};
 
 const NUMERIC_VALUE_RULES = new Set([
   'char_limit',
@@ -155,6 +133,17 @@ const PARAM_LABELS: Record<string, string> = {
   defaultValue: 'Default value',
 };
 
+function paramErrorMessage(rule: Rule, param: string): string {
+  if (
+    (rule.type === 'min_length' || rule.type === 'max_length') &&
+    param === 'value' &&
+    String(rule.value ?? '').trim() !== ''
+  ) {
+    return '"Value" must be a non-negative whole number';
+  }
+  return `"${PARAM_LABELS[param] || param}" is required`;
+}
+
 const CATEGORY_ICONS: Record<
   string,
   ComponentType<{ className?: string; style?: React.CSSProperties }>
@@ -186,10 +175,12 @@ function ValueMapEditor({
   rule,
   destOptions,
   onUpdate,
+  showErrors,
 }: {
   rule: Rule;
   destOptions?: { value: string; label: string }[];
   onUpdate: (rule: Rule) => void;
+  showErrors: boolean;
 }) {
   const map = (rule.map ?? {}) as Record<string, string>;
   const entries = Object.entries(map);
@@ -215,6 +206,10 @@ function ValueMapEditor({
 
   return (
     <div className="flex flex-col gap-2 px-14 pt-1 pb-3">
+      <p className="text-muted-foreground text-xs">
+        Source value <span className="text-destructive">*</span> → Destination
+        value (optional)
+      </p>
       {entries.length === 0 && (
         <p className="text-muted-foreground text-xs">
           No values mapped yet — add one for each source value this field can
@@ -228,6 +223,7 @@ function ValueMapEditor({
             onChange={(e) => renameKey(i, e.target.value)}
             placeholder="Source value"
             className="flex-1 font-mono"
+            aria-invalid={showErrors && !from.trim()}
           />
           <ArrowRight className="text-muted-foreground size-3 shrink-0" />
           {destOptions?.length ? (
@@ -290,10 +286,12 @@ function ValueMappingEditor({
   rule,
   destOptions,
   onUpdate,
+  showErrors,
 }: {
   rule: Rule;
   destOptions?: { value: string; label: string }[];
   onUpdate: (rule: Rule) => void;
+  showErrors: boolean;
 }) {
   const map = (rule.map ?? {}) as Record<string, string>;
   const entries = Object.entries(map);
@@ -363,11 +361,16 @@ function ValueMappingEditor({
             onChange={(e) => renameKey(i, e.target.value)}
             placeholder="Source value"
             className="flex-1 font-mono"
+            aria-invalid={showErrors && !from.trim()}
           />
           <ArrowRight className="text-muted-foreground size-3 shrink-0" />
           {destOptions?.length ? (
             <Select value={to} onValueChange={(v) => setValue(i, v)}>
-              <SelectTrigger size="sm" className="flex-1">
+              <SelectTrigger
+                size="sm"
+                className="flex-1"
+                aria-invalid={showErrors && !to.trim()}
+              >
                 <SelectValue placeholder="Destination value" />
               </SelectTrigger>
               <SelectContent>
@@ -384,6 +387,7 @@ function ValueMappingEditor({
               onChange={(e) => setValue(i, e.target.value)}
               placeholder="Destination value"
               className="flex-1 font-mono"
+              aria-invalid={showErrors && !to.trim()}
             />
           )}
           <Button
@@ -504,9 +508,7 @@ function ActiveRule({
                 <AlertCircle className="text-destructive mr-1 size-4" />
               </TooltipTrigger>
               <TooltipContent side="top">
-                {ruleErrors
-                  .map((p) => `"${PARAM_LABELS[p] || p}" is required`)
-                  .join(', ')}
+                {ruleErrors.map((p) => paramErrorMessage(rule, p)).join(', ')}
               </TooltipContent>
             </Tooltip>
           )}
@@ -535,26 +537,21 @@ function ActiveRule({
       {hasParams && isEnabled && (
         <div className="grid gap-2 px-12 pb-2.5 sm:grid-cols-2">
           {(isValueMap ? ['fallback'] : inlineParams).map((p) => {
-            const isRequired = (REQUIRED_PARAMS[rule.type] || []).includes(p);
+            const isRequired = (REQUIRED_RULE_PARAMS[rule.type] || []).includes(
+              p,
+            );
             const isNum = isParamNumeric(rule.type, p);
-            const val = rule[p];
-            const isEmpty = !val || String(val).trim() === '';
-            const showError = isRequired && isEmpty && ruleErrors.includes(p);
+            const showError = isRequired && ruleErrors.includes(p);
             return (
               <label key={p} className="min-w-0 space-y-1">
                 <span className="text-muted-foreground text-xs font-medium">
-                  {PARAM_LABELS[p] || p}
+                  {PARAM_LABELS[p] || p}{' '}
+                  {isRequired && <span className="text-destructive">*</span>}
                 </span>
                 <Input
                   value={(rule[p] as string) || ''}
                   onChange={(e) => handleParamChange(p, e.target.value)}
-                  placeholder={
-                    p === 'fallback'
-                      ? 'Pass through'
-                      : isRequired
-                        ? 'Required'
-                        : 'Optional'
-                  }
+                  placeholder={isRequired ? 'Required' : 'Optional'}
                   inputMode={isNum ? 'decimal' : 'text'}
                   onClick={(e) => e.stopPropagation()}
                   aria-invalid={showError}
@@ -572,6 +569,7 @@ function ActiveRule({
           rule={rule}
           destOptions={destOptions}
           onUpdate={(next) => onUpdate(index, next)}
+          showErrors={ruleErrors.includes('map')}
         />
       )}
 
@@ -580,6 +578,7 @@ function ActiveRule({
           rule={rule}
           destOptions={destOptions}
           onUpdate={(next) => onUpdate(index, next)}
+          showErrors={ruleErrors.includes('map')}
         />
       )}
 
@@ -588,8 +587,10 @@ function ActiveRule({
           {ruleErrors.map((p) => (
             <span key={p} className="text-destructive text-xs">
               {p === 'map'
-                ? 'Add at least one value mapping'
-                : `"${PARAM_LABELS[p] || p}" is required`}
+                ? rule.type === 'value_map'
+                  ? 'Add a mapping and fill every source value'
+                  : 'Complete every source and destination value mapping'
+                : paramErrorMessage(rule, p)}
             </span>
           ))}
         </div>
@@ -628,20 +629,35 @@ export interface RulePreviewStep {
   label: string;
   output: string;
   enabled: boolean;
+  validation?: boolean;
+  stopped?: boolean;
+  bypassed?: boolean;
 }
 
 export function buildRulePreviewSteps(
   input: string,
   rules: Rule[],
+  sourceType = 'string',
 ): RulePreviewStep[] {
   let current = input;
+  let typedCurrent = previewSourceValue(input, sourceType);
   let failed = false;
+  let stopped = false;
 
   return rules.map((rule, index) => {
     const enabled = rule.enabled !== false;
-    if (enabled && !failed) {
+    let validation: boolean | undefined;
+    const bypassed = stopped;
+    if (enabled && !failed && !stopped) {
       try {
-        current = String(executeRulePipeline(current, [rule]));
+        if (isValidationRule(rule.type)) {
+          validation = passesRuleValidation(typedCurrent, rule);
+          if (!validation) stopped = true;
+        } else {
+          current = String(executeRulePipeline(current, [rule]));
+          typedCurrent = current;
+          if (current.startsWith('__SKIPPED__:')) stopped = true;
+        }
       } catch {
         current = '(error)';
         failed = true;
@@ -654,6 +670,9 @@ export function buildRulePreviewSteps(
           ?.label || rule.type,
       output: current,
       enabled,
+      ...(validation !== undefined ? { validation } : {}),
+      ...(stopped && !bypassed ? { stopped: true } : {}),
+      ...(bypassed ? { bypassed: true } : {}),
     };
   });
 }
@@ -830,45 +849,13 @@ export default function RuleBuilderModal({
     setRules(reordered);
 
     if (saveAttempted) {
-      const nextErrors: Record<number, string[]> = {};
-      reordered.forEach((rule, index) => {
-        const missing = validateRule(rule);
-        if (missing.length > 0) nextErrors[index] = missing;
-      });
-      setValidationErrors(nextErrors);
+      setValidationErrors(validateRules(reordered));
     }
   };
 
-  function validateRule(rule: Rule): string[] {
-    const required = REQUIRED_PARAMS[rule.type] || [];
-    if (rule.enabled === false) return [];
-    return required.filter((p) => {
-      // `map` is a lookup table: "provided" means at least one complete pair,
-      // not a non-blank string.
-      if (p === 'map') {
-        const entries = Object.entries(
-          (rule.map ?? {}) as Record<string, string>,
-        );
-        return !entries.some(
-          ([from, to]) => from.trim() !== '' && to.trim() !== '',
-        );
-      }
-      return !rule[p] || String(rule[p]).trim() === '';
-    });
-  }
-
-  function validateAll(): Record<number, string[]> {
-    const errs: Record<number, string[]> = {};
-    rules.forEach((rule, i) => {
-      const missing = validateRule(rule);
-      if (missing.length > 0) errs[i] = missing;
-    });
-    return errs;
-  }
-
   const handleSave = () => {
     setSaveAttempted(true);
-    const errs = validateAll();
+    const errs = validateRules(rules);
     if (Object.keys(errs).length > 0) {
       setValidationErrors(errs);
       return;
@@ -877,17 +864,18 @@ export default function RuleBuilderModal({
     onClose();
   };
 
-  const previewOutput = useMemo(() => {
-    try {
-      return String(executeRulePipeline(testInput, rules));
-    } catch {
-      return '(error)';
-    }
-  }, [testInput, rules]);
   const previewSteps = useMemo(
-    () => buildRulePreviewSteps(testInput, rules),
-    [testInput, rules],
+    () => buildRulePreviewSteps(testInput, rules, sourceType),
+    [testInput, rules, sourceType],
   );
+  const previewStopped = previewSteps.some((step) => step.stopped);
+  const previewOutput = previewStopped
+    ? previewSteps.some((step) => step.validation === false)
+      ? '(field skipped)'
+      : '(record skipped)'
+    : previewSteps.length > 0
+      ? previewSteps[previewSteps.length - 1].output
+      : testInput;
 
   const destLabel = destField?.label || destKey;
 
@@ -1381,6 +1369,23 @@ export default function RuleBuilderModal({
                       {!step.enabled && (
                         <Badge variant="outline" className="text-[10px]">
                           Disabled
+                        </Badge>
+                      )}
+                      {step.validation !== undefined && (
+                        <Badge
+                          variant={
+                            step.validation ? 'secondary' : 'destructive'
+                          }
+                          className="text-[10px]"
+                        >
+                          {step.validation
+                            ? 'True · continue'
+                            : 'False · stop and skip field'}
+                        </Badge>
+                      )}
+                      {step.bypassed && (
+                        <Badge variant="outline" className="text-[10px]">
+                          Not run
                         </Badge>
                       )}
                     </div>

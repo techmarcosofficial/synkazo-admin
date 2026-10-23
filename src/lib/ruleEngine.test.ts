@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { executeRulePipeline, RULE_DEFINITIONS, type Rule } from '@/lib/ruleEngine';
+import {
+  executeRulePipeline,
+  RULE_DEFINITIONS,
+  type Rule,
+} from '@/lib/ruleEngine';
 
 describe('ruleEngine — value_map (existing rule, unaffected)', () => {
   it('maps an exact match and falls back otherwise', () => {
@@ -39,9 +43,7 @@ describe('ruleEngine — value_mapping (normalized)', () => {
   });
 
   it('matches an exact value', () => {
-    expect(executeRulePipeline('canceled', [paymentStatusRule])).toBe(
-      'voided',
-    );
+    expect(executeRulePipeline('canceled', [paymentStatusRule])).toBe('voided');
   });
 
   it('resolves "Balance Due", " balance_due ", and "BALANCE-DUE" identically', () => {
@@ -63,9 +65,7 @@ describe('ruleEngine — value_mapping (normalized)', () => {
   });
 
   it('maps multiple source values to the same destination', () => {
-    expect(executeRulePipeline('canceled', [paymentStatusRule])).toBe(
-      'voided',
-    );
+    expect(executeRulePipeline('canceled', [paymentStatusRule])).toBe('voided');
     expect(executeRulePipeline('charges waived', [paymentStatusRule])).toBe(
       'voided',
     );
@@ -81,5 +81,43 @@ describe('ruleEngine — value_mapping (normalized)', () => {
     ).toBe('open');
     expect(executeRulePipeline('', [paymentStatusRule])).toBe('open');
     expect(executeRulePipeline('   ', [paymentStatusRule])).toBe('open');
+  });
+});
+
+describe('ruleEngine — validation', () => {
+  it('stops the pipeline when length validation fails', () => {
+    expect(
+      executeRulePipeline('abc', [
+        { type: 'min_length', value: '4' },
+        { type: 'uppercase' },
+      ]),
+    ).toBe('__SKIPPED__:validation:min_length');
+    expect(
+      executeRulePipeline('abcdef', [
+        { type: 'max_length', value: '5' },
+        { type: 'uppercase' },
+      ]),
+    ).toBe('__SKIPPED__:validation:max_length');
+    expect(
+      executeRulePipeline('abc', [
+        { type: 'max_length', value: '5' },
+        { type: 'uppercase' },
+      ]),
+    ).toBe('ABC');
+  });
+
+  it('checks email format and does not run later transformations on failure', () => {
+    expect(
+      executeRulePipeline('wrong', [
+        { type: 'is_email' },
+        { type: 'prefix', value: 'saved:' },
+      ]),
+    ).toBe('__SKIPPED__:validation:is_email');
+    expect(
+      executeRulePipeline('a@example.com', [
+        { type: 'is_email' },
+        { type: 'prefix', value: 'saved:' },
+      ]),
+    ).toBe('saved:a@example.com');
   });
 });

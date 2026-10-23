@@ -17,12 +17,19 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { associationsApi } from '@/api/associations';
 import {
   executeRulePipeline,
+  isValidationRule,
+  passesRuleValidation,
+  previewSourceValue,
   RULE_DEFINITIONS,
   type Rule,
 } from '@/lib/ruleEngine';
 import { cn } from '@/lib/utils';
 import type { ConditionOperator, ExcludeCondition } from '@/types/conditions';
-import type { FieldDef, MappingUpdatePolicy, OnEmptyPolicy } from './FieldMappingCanvas';
+import type {
+  FieldDef,
+  MappingUpdatePolicy,
+  OnEmptyPolicy,
+} from './FieldMappingCanvas';
 
 export interface FieldPipelineEffectRailProps {
   sourceKey: string;
@@ -45,6 +52,7 @@ export interface FieldPipelineEffectRailProps {
 export function buildStepTrace(
   input: string,
   rules: Rule[],
+  sourceType = 'string',
 ): Array<{
   index: number;
   label: string;
@@ -54,8 +62,10 @@ export function buildStepTrace(
   skipped?: boolean;
   skipReason?: string;
   bypassed?: boolean;
+  validation?: boolean;
 }> {
   let current = input;
+  let typedCurrent = previewSourceValue(input, sourceType);
   let failed = false;
   let pipelineSkipped = false;
 
@@ -63,14 +73,25 @@ export function buildStepTrace(
     const enabled = rule.enabled !== false;
     let stepSkipped = false;
     let stepSkipReason = '';
+    let validation: boolean | undefined;
 
     if (enabled && !failed && !pipelineSkipped) {
       try {
-        current = String(executeRulePipeline(current, [rule]));
-        if (current.startsWith('__SKIPPED__:')) {
-          pipelineSkipped = true;
-          stepSkipped = true;
-          stepSkipReason = current.replace('__SKIPPED__:', '');
+        if (isValidationRule(rule.type)) {
+          validation = passesRuleValidation(typedCurrent, rule);
+          if (!validation) {
+            pipelineSkipped = true;
+            stepSkipped = true;
+            stepSkipReason = 'validation';
+          }
+        } else {
+          current = String(executeRulePipeline(current, [rule]));
+          typedCurrent = current;
+          if (current.startsWith('__SKIPPED__:')) {
+            pipelineSkipped = true;
+            stepSkipped = true;
+            stepSkipReason = current.replace('__SKIPPED__:', '');
+          }
         }
       } catch {
         current = '(error)';
@@ -87,6 +108,7 @@ export function buildStepTrace(
       skipped: stepSkipped,
       skipReason: stepSkipReason,
       bypassed: pipelineSkipped && !stepSkipped,
+      validation,
     };
   });
 }
@@ -172,8 +194,8 @@ export default function FieldPipelineEffectRail({
 
   // Step 1 -> Transforms pipeline
   const traceSteps = useMemo(
-    () => buildStepTrace(testInput, rules),
-    [testInput, rules],
+    () => buildStepTrace(testInput, rules, sourceFieldDef?.type),
+    [testInput, rules, sourceFieldDef?.type],
   );
 
   const postTransformValue = useMemo(() => {
@@ -188,11 +210,15 @@ export default function FieldPipelineEffectRail({
     [traceSteps],
   );
 
-  const recordSkippedByPipeline = Boolean(pipelineSkipStep);
+  const fieldSkippedByValidation = pipelineSkipStep?.validation === false;
+  const recordSkippedByPipeline = Boolean(
+    pipelineSkipStep && !fieldSkippedByValidation,
+  );
 
   // Step 2 -> Empty & Fallback evaluation
   const isPostEmpty =
     !recordSkippedByPipeline &&
+    !fieldSkippedByValidation &&
     (postTransformValue === null ||
       postTransformValue === undefined ||
       String(postTransformValue).trim() === '');
@@ -225,39 +251,39 @@ export default function FieldPipelineEffectRail({
   return (
     <aside
       className={cn(
-        'bg-background flex flex-col border-l border-border/80 min-h-0',
+        'bg-background border-border/80 flex min-h-0 flex-col border-l',
         className,
       )}
       aria-label="Live pipeline effect preview"
     >
-      <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/60 bg-muted/20 shrink-0">
+      <div className="border-border/60 bg-muted/20 flex shrink-0 items-center justify-between border-b px-5 py-3.5">
         <div className="flex items-center gap-2.5">
-          <div className="size-7 rounded-lg flex items-center justify-center shrink-0 border-0 bg-primary/10 text-primary shadow-2xs">
+          <div className="bg-primary/10 text-primary flex size-7 shrink-0 items-center justify-center rounded-lg border-0 shadow-2xs">
             <Sparkles className="size-4" />
           </div>
           <div>
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground">
+            <h4 className="text-foreground text-xs font-semibold tracking-wider uppercase">
               Live Pipeline Effect
             </h4>
           </div>
         </div>
-        <Badge className="border-0 bg-muted text-muted-foreground text-[10px] font-mono font-medium">
+        <Badge className="bg-muted text-muted-foreground border-0 font-mono text-[10px] font-medium">
           Read-Only Trace
         </Badge>
       </div>
 
-      <ScrollArea className="flex-1 min-h-0 p-4 sm:p-5">
+      <ScrollArea className="min-h-0 flex-1 p-4 sm:p-5">
         <div className="space-y-4 text-xs">
           {/* 1. Test Input Box */}
-          <div className="bg-card rounded-xl border border-border/70 p-3.5 space-y-2 shadow-2xs">
+          <div className="bg-card border-border/70 space-y-2 rounded-xl border p-3.5 shadow-2xs">
             <div className="flex items-center justify-between">
               <label
                 htmlFor="rail-test-input"
-                className="text-[11px] font-semibold text-foreground flex items-center gap-1.5"
+                className="text-foreground flex items-center gap-1.5 text-[11px] font-semibold"
               >
                 <span>Sample Source Value</span>
                 {sourceSample && (
-                  <Badge className="border-0 bg-primary/15 text-primary text-[9px] px-1.5 py-0 font-medium">
+                  <Badge className="bg-primary/15 text-primary border-0 px-1.5 py-0 text-[9px] font-medium">
                     Live
                   </Badge>
                 )}
@@ -267,7 +293,7 @@ export default function FieldPipelineEffectRail({
                   type="button"
                   variant="ghost"
                   size="icon-xs"
-                  className="size-5 text-muted-foreground hover:text-foreground cursor-pointer"
+                  className="text-muted-foreground hover:text-foreground size-5 cursor-pointer"
                   onClick={() => setTestInput(sourceSample)}
                   title="Reset to live sample record value"
                 >
@@ -280,9 +306,9 @@ export default function FieldPipelineEffectRail({
               value={testInput}
               onChange={(e) => setTestInput(e.target.value)}
               placeholder="Type test value..."
-              className="h-8 text-xs font-mono bg-background"
+              className="bg-background h-8 font-mono text-xs"
             />
-            <p className="text-[10px] text-muted-foreground leading-tight">
+            <p className="text-muted-foreground text-[10px] leading-tight">
               Test how this sample transforms and behaves under your settings.
             </p>
           </div>
@@ -290,17 +316,17 @@ export default function FieldPipelineEffectRail({
           {/* 2. Sequential Pipeline Trace */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-medium text-muted-foreground">
+              <span className="text-muted-foreground text-[11px] font-medium">
                 Sequential Transformation Steps:
               </span>
-              <Badge className="border-0 bg-secondary text-secondary-foreground text-[10px] font-mono font-normal">
+              <Badge className="bg-secondary text-secondary-foreground border-0 font-mono text-[10px] font-normal">
                 {traceSteps.filter((s) => s.enabled).length} active rule
                 {traceSteps.filter((s) => s.enabled).length !== 1 ? 's' : ''}
               </Badge>
             </div>
 
             {traceSteps.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border/70 p-3.5 text-center text-muted-foreground text-[11px] bg-card/40">
+              <div className="border-border/70 text-muted-foreground bg-card/40 rounded-xl border border-dashed p-3.5 text-center text-[11px]">
                 No transformation rules added. Value passes directly.
               </div>
             ) : (
@@ -318,7 +344,7 @@ export default function FieldPipelineEffectRail({
                     )}
                   >
                     <div className="flex items-center justify-between gap-1">
-                      <div className="flex items-center gap-2 min-w-0">
+                      <div className="flex min-w-0 items-center gap-2">
                         <span
                           className={cn(
                             'flex size-4.5 shrink-0 items-center justify-center rounded-full text-[9px] font-bold',
@@ -329,37 +355,60 @@ export default function FieldPipelineEffectRail({
                         >
                           {step.index + 1}
                         </span>
-                        <span className="truncate font-semibold text-[11px] text-foreground">
+                        <span className="text-foreground truncate text-[11px] font-semibold">
                           {step.label}
                         </span>
                       </div>
                       {!step.enabled ? (
-                        <Badge className="border-0 bg-muted text-muted-foreground text-[9px] px-1.5 py-0 font-normal">
+                        <Badge className="bg-muted text-muted-foreground border-0 px-1.5 py-0 text-[9px] font-normal">
                           Disabled
                         </Badge>
+                      ) : step.validation !== undefined ? (
+                        <Badge
+                          className={cn(
+                            'border-0 px-1.5 py-0 text-[9px] font-medium',
+                            step.validation
+                              ? 'bg-success/15 text-success'
+                              : 'bg-destructive/15 text-destructive',
+                          )}
+                        >
+                          {step.validation ? 'True · Continue' : 'False · Stop'}
+                        </Badge>
                       ) : step.skipped ? (
-                  <Badge tone="danger" className="border-0 bg-destructive/15 text-destructive text-[9px] px-1.5 py-0 font-medium">
+                        <Badge
+                          tone="danger"
+                          className="bg-destructive/15 text-destructive border-0 px-1.5 py-0 text-[9px] font-medium"
+                        >
                           Triggered Skip
                         </Badge>
                       ) : step.bypassed ? (
-                        <Badge className="border-0 bg-muted/60 text-muted-foreground text-[9px] px-1.5 py-0 font-normal">
+                        <Badge className="bg-muted/60 text-muted-foreground border-0 px-1.5 py-0 text-[9px] font-normal">
                           Bypassed
                         </Badge>
                       ) : null}
                     </div>
                     {step.enabled && (
-                      <div className="mt-1 flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
-                        <ArrowRight className="size-3 shrink-0 text-muted-foreground/60" />
-                        {step.skipped ? (
-                          <span className="text-destructive font-semibold text-[11px] truncate">
-                            🛑 Skip Record (Condition met: {step.skipReason || 'empty'})
+                      <div className="text-muted-foreground mt-1 flex items-center gap-1.5 font-mono text-[11px]">
+                        <ArrowRight className="text-muted-foreground/60 size-3 shrink-0" />
+                        {step.validation === false ? (
+                          <span className="text-destructive text-[11px] font-semibold">
+                            Field omitted; remaining rules stopped
+                          </span>
+                        ) : step.validation === true ? (
+                          <span className="text-success text-[11px] font-semibold">
+                            True; continue with "{step.output}"
+                          </span>
+                        ) : step.skipped ? (
+                          <span className="text-destructive truncate text-[11px] font-semibold">
+                            🛑 Skip Record (Condition met:{' '}
+                            {step.skipReason || 'empty'})
                           </span>
                         ) : step.bypassed ? (
-                          <span className="text-muted-foreground italic text-[10px]">
-                            (Bypassed — record already skipped)
+                          <span className="text-muted-foreground text-[10px] italic">
+                            (Not run — pipeline already stopped)
                           </span>
                         ) : (
-                          <span className="truncate font-semibold text-foreground">
+                          <span className="text-foreground truncate font-semibold">
                             "{step.output}"
                           </span>
                         )}
@@ -372,9 +421,9 @@ export default function FieldPipelineEffectRail({
           </div>
 
           {/* 3. Empty Fallback Verification */}
-          <div className="rounded-xl border border-border/70 bg-card p-3 space-y-1.5 shadow-2xs">
+          <div className="border-border/70 bg-card space-y-1.5 rounded-xl border p-3 shadow-2xs">
             <div className="flex items-center justify-between text-[11px]">
-              <span className="font-semibold text-foreground">
+              <span className="text-foreground font-semibold">
                 Empty Value Fallback:
               </span>
               <Badge
@@ -395,23 +444,28 @@ export default function FieldPipelineEffectRail({
                     : 'Pass Blank'}
               </Badge>
             </div>
-            {isPostEmpty ? (
+            {fieldSkippedByValidation ? (
+              <p className="text-destructive text-[11px] font-medium">
+                Validation failed. This field will be omitted.
+              </p>
+            ) : isPostEmpty ? (
               fallbackApplied ? (
-                <p className="text-[11px] text-success font-medium">
-                  Value is blank. Fallback applied: <strong>"{defaultValue}"</strong>
+                <p className="text-success text-[11px] font-medium">
+                  Value is blank. Fallback applied:{' '}
+                  <strong>"{defaultValue}"</strong>
                 </p>
               ) : emptySkipped ? (
-                <p className="text-[11px] text-destructive font-medium flex items-center gap-1">
+                <p className="text-destructive flex items-center gap-1 text-[11px] font-medium">
                   <AlertTriangle className="size-3 shrink-0" />
                   Source is blank: Record will be skipped!
                 </p>
               ) : (
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-muted-foreground text-[11px]">
                   Source is blank: Writing null/empty to destination.
                 </p>
               )
             ) : (
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-muted-foreground text-[11px]">
                 Value is present ("{postTransformValue}"). Fallback bypassed.
               </p>
             )}
@@ -421,15 +475,15 @@ export default function FieldPipelineEffectRail({
           {hasSkipRule && (
             <div
               className={cn(
-                'rounded-xl border p-3 space-y-1.5 shadow-2xs',
+                'space-y-1.5 rounded-xl border p-3 shadow-2xs',
                 recordSkippedByFilter
                   ? 'border-destructive/30 bg-destructive/5'
                   : 'border-success/30 bg-success/5',
               )}
             >
               <div className="flex items-center justify-between text-[11px]">
-                <span className="font-semibold flex items-center gap-1 text-foreground">
-                  <Filter className="size-3 text-info" /> Skip Condition:
+                <span className="text-foreground flex items-center gap-1 font-semibold">
+                  <Filter className="text-info size-3" /> Skip Condition:
                 </span>
                 <Badge
                   tone={recordSkippedByFilter ? 'danger' : 'success'}
@@ -443,9 +497,10 @@ export default function FieldPipelineEffectRail({
                   {recordSkippedByFilter ? 'Triggered (Skip)' : 'Passes Filter'}
                 </Badge>
               </div>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-muted-foreground text-[11px]">
                 Condition: {sourceName} {skipOperator}{' '}
-                {skipOperator && ['is_empty', 'is_not_empty'].includes(skipOperator)
+                {skipOperator &&
+                ['is_empty', 'is_not_empty'].includes(skipOperator)
                   ? ''
                   : `"${skipValue}"`}
               </p>
@@ -455,34 +510,52 @@ export default function FieldPipelineEffectRail({
           {/* 5. Final Outcome Card */}
           <div
             className={cn(
-              'rounded-xl border p-3.5 space-y-2 shadow-2xs',
-              recordWillBeSkipped
+              'space-y-2 rounded-xl border p-3.5 shadow-2xs',
+              recordWillBeSkipped || fieldSkippedByValidation
                 ? 'border-destructive/30 bg-destructive/10'
                 : 'border-success/30 bg-success/5',
             )}
           >
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-foreground uppercase tracking-wide">
+              <span className="text-foreground text-[11px] font-semibold tracking-wide uppercase">
                 Final Result
               </span>
-              {recordWillBeSkipped ? (
-                  <Badge tone="danger" className="border-0 bg-destructive/20 text-destructive text-[10px] font-semibold">
+              {fieldSkippedByValidation && !recordWillBeSkipped ? (
+                <Badge
+                  tone="danger"
+                  className="bg-destructive/20 text-destructive border-0 text-[10px] font-semibold"
+                >
+                  Field Omitted
+                </Badge>
+              ) : recordWillBeSkipped ? (
+                <Badge
+                  tone="danger"
+                  className="bg-destructive/20 text-destructive border-0 text-[10px] font-semibold"
+                >
                   Record Discarded
                 </Badge>
               ) : (
-                  <Badge tone="success" className="border-0 bg-success/20 text-success text-[10px] font-semibold">
+                <Badge
+                  tone="success"
+                  className="bg-success/20 text-success border-0 text-[10px] font-semibold"
+                >
                   Ready to Sync
                 </Badge>
               )}
             </div>
 
-            {recordWillBeSkipped ? (
-              <div className="space-y-1 text-[11px] text-destructive">
-                <p className="font-medium flex items-center gap-1.5">
+            {fieldSkippedByValidation && !recordWillBeSkipped ? (
+              <p className="text-destructive text-[11px]">
+                The validation failed for {destName}. Other fields can still
+                sync.
+              </p>
+            ) : recordWillBeSkipped ? (
+              <div className="text-destructive space-y-1 text-[11px]">
+                <p className="flex items-center gap-1.5 font-medium">
                   <AlertTriangle className="size-3.5 shrink-0" />
                   This record will not sync.
                 </p>
-                <p className="text-[10px] text-muted-foreground">
+                <p className="text-muted-foreground text-[10px]">
                   {recordSkippedByPipeline
                     ? `Reason: Rule "${pipelineSkipStep?.label || 'Skip rule'}" triggered a record skip.`
                     : emptySkipped
@@ -492,14 +565,20 @@ export default function FieldPipelineEffectRail({
               </div>
             ) : (
               <div className="space-y-1.5 text-[11px]">
-                <div className="flex items-center justify-between text-muted-foreground">
-                  <span>Destination: <strong>{destName}</strong></span>
+                <div className="text-muted-foreground flex items-center justify-between">
+                  <span>
+                    Destination: <strong>{destName}</strong>
+                  </span>
                   <span className="text-[10px]">
-                    {updatePolicy === 'create_only' ? 'Create-Only' : 'Always Overwrite'}
+                    {updatePolicy === 'create_only'
+                      ? 'Create-Only'
+                      : 'Always Overwrite'}
                   </span>
                 </div>
-                <div className="bg-card rounded-xl border border-border/80 px-2.5 py-1.5 font-mono text-xs font-semibold text-foreground break-all shadow-2xs">
-                  {finalPayloadValue || <span className="text-muted-foreground">(empty)</span>}
+                <div className="bg-card border-border/80 text-foreground rounded-xl border px-2.5 py-1.5 font-mono text-xs font-semibold break-all shadow-2xs">
+                  {finalPayloadValue || (
+                    <span className="text-muted-foreground">(empty)</span>
+                  )}
                 </div>
               </div>
             )}

@@ -32,12 +32,46 @@ describe('FieldPipelineEffectRail', () => {
     expect(trace[1].output).toBe('hello world');
   });
 
+  it('marks failed validation and bypasses later rules', () => {
+    const trace = buildStepTrace('abc', [
+      { type: 'min_length', value: '4' },
+      { type: 'uppercase' },
+    ]);
+    expect(trace[0]).toMatchObject({
+      validation: false,
+      skipped: true,
+      output: 'abc',
+    });
+    expect(trace[1]).toMatchObject({ bypassed: true, output: 'abc' });
+  });
+
+  it('shows field omitted while allowing the record to continue', () => {
+    render(
+      <FieldPipelineEffectRail
+        sourceKey="name"
+        destKey="name"
+        rules={[{ type: 'min_length', value: '20' }]}
+        onEmpty="none"
+        defaultValue=""
+        updatePolicy="always"
+        isMatch={false}
+      />,
+    );
+    expect(screen.getByText('False · Stop')).toBeInTheDocument();
+    expect(screen.getByText('Field Omitted')).toBeInTheDocument();
+    expect(screen.queryByText('Record Discarded')).not.toBeInTheDocument();
+  });
+
   it('renders live pipeline preview and outcome', () => {
     render(
       <FieldPipelineEffectRail
         sourceKey="first_name"
         destKey="firstName"
-        sourceFieldDef={{ key: 'first_name', label: 'First Name', type: 'string' }}
+        sourceFieldDef={{
+          key: 'first_name',
+          label: 'First Name',
+          type: 'string',
+        }}
         destFieldDef={{ key: 'firstName', label: 'First Name', type: 'string' }}
         rules={[{ type: 'trim', enabled: true }]}
         onEmpty="default"
@@ -51,7 +85,9 @@ describe('FieldPipelineEffectRail', () => {
     );
 
     expect(screen.getByText(/Live Pipeline Effect/i)).toBeInTheDocument();
-    expect(screen.getByText(/Sequential Transformation Steps/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Sequential Transformation Steps/i),
+    ).toBeInTheDocument();
     expect(screen.getByText(/Trim Spaces/i)).toBeInTheDocument();
     expect(screen.getByText(/Ready to Sync/i)).toBeInTheDocument();
   });
@@ -76,7 +112,9 @@ describe('FieldPipelineEffectRail', () => {
     expect(screen.getByText(/Passes Filter/i)).toBeInTheDocument();
 
     // Change test input to "Inactive"
-    const input = document.getElementById('rail-test-input') as HTMLInputElement;
+    const input = document.getElementById(
+      'rail-test-input',
+    ) as HTMLInputElement;
     fireEvent.change(input, { target: { value: 'Inactive' } });
 
     // Should now report Triggered and Record Discarded
