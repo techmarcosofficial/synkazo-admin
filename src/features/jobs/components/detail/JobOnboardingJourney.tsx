@@ -22,7 +22,6 @@ export default function JobOnboardingJourney() {
     isProductionReady,
     activeTab,
     handleTabChange,
-    setManualDialogOpen,
     handleToggle,
     toggling,
   } = useJobDetailContext();
@@ -45,11 +44,18 @@ export default function JobOnboardingJourney() {
 
   const isJobActive = Boolean(job.isEnabled);
 
-  const handleOpenTestSync = () => {
-    if (activeTab !== 'overview') {
-      handleTabChange('overview');
+  const highlightSyncRunButton = () => {
+    const syncBtn = document.querySelector<HTMLButtonElement>(
+      '[data-flow-next-action="true"], #sync-now-button',
+    );
+    if (syncBtn) {
+      syncBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      syncBtn.focus();
+      syncBtn.classList.add('ring-4', 'ring-primary/40');
+      setTimeout(() => {
+        syncBtn.classList.remove('ring-4', 'ring-primary/40');
+      }, 2000);
     }
-    setManualDialogOpen(true);
   };
 
   const stepStatus = (
@@ -93,17 +99,16 @@ export default function JobOnboardingJourney() {
         : 'Run a limited sync and review the result before automating it.',
       status: stepStatus(state.testComplete, 'test'),
       isCurrentTab: activeTab === 'overview',
+      guidesFlowAction: state.stage === 'test',
       hoverHint:
         activeTab !== 'overview'
           ? 'Go to Overview tab'
-          : isSandbox
-            ? "Click 'Run Test Sync' to verify records"
-            : "Click 'Run Sync' to verify records",
+          : "Click 'Sync now' below to test records",
       onSelect: () => {
         if (activeTab !== 'overview') {
           handleTabChange('overview');
         } else {
-          handleOpenTestSync();
+          highlightSyncRunButton();
         }
       },
     },
@@ -219,9 +224,6 @@ export default function JobOnboardingJourney() {
     if (activeTab !== 'overview') {
       actionLabel = 'Go to Overview';
       onContinue = () => handleTabChange('overview');
-    } else {
-      actionLabel = isSandbox ? 'Run Test Sync' : 'Run Limited Sync';
-      onContinue = handleOpenTestSync;
     }
   } else if (state.stage === 'field_mapping') {
     if (activeTab !== 'field-mapping') {

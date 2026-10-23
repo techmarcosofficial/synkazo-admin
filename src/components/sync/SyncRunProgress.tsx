@@ -28,7 +28,6 @@ import {
 } from '@/components/ui/collapsible';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
-import { Separator } from '../ui/separator';
 
 export interface SyncRunProgressProps {
   runId?: string | null;
@@ -319,9 +318,9 @@ function SyncStats({
   return (
     <div
       className={cn(
-        'border-border/60 grid border-b',
+        'grid gap-2 p-3',
         compact
-          ? 'grid-cols-2 sm:grid-cols-3'
+          ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5'
           : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5',
       )}
       aria-label="Record statistics"
@@ -331,22 +330,17 @@ function SyncStats({
           <div
             key={label}
             className={cn(
-              'flex min-w-0 items-center gap-3 transition-colors',
-              compact ? 'px-3 py-2' : 'px-3.5 py-2.5 sm:px-4 sm:py-3',
-              // Separator borders matching SyncJobCard pattern
-              index % 2 === 1 && 'border-l sm:border-l-0',
-              index >= 2 && 'border-t sm:border-t-0',
-              index > 0 && 'border-border/60 sm:border-l',
+              'bg-card/75 border-border/70 flex min-w-0 items-center gap-3 rounded-2xl border p-2 transition-colors shadow-2xs',
             )}
           >
             <span
               className={cn(
-                'bg-card text-card-foreground border-border/40 flex shrink-0 items-center justify-center rounded-xl border shadow-2xs',
-                compact ? 'size-7 rounded-lg' : 'size-8.5 rounded-xl',
+                'bg-muted/70 text-muted-foreground border-border/50 flex shrink-0 items-center justify-center rounded-xl border shadow-2xs',
+                compact ? 'size-7.5 rounded-lg' : 'size-8.5 rounded-xl',
               )}
             >
               <Icon
-                className={cn(compact ? 'size-3' : 'size-3.5', iconColor)}
+                className={cn(compact ? 'size-3.5' : 'size-4', iconColor)}
                 aria-hidden="true"
               />
             </span>
@@ -364,7 +358,7 @@ function SyncStats({
               <span className="text-muted-foreground mt-0.5 block truncate text-xs font-medium">
                 {label}
               </span>
-              <span className="text-muted-foreground mt-0.5 block truncate text-[11px]">
+              <span className="text-muted-foreground/80 mt-0.5 block truncate text-[11px]">
                 {description}
               </span>
             </div>
@@ -427,44 +421,27 @@ function SyncRunMeta({
           : null;
 
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2">
+    <div className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-2.5">
       <MetaItem label="Started at">{formatDateTime(startedAt)}</MetaItem>
       {state !== 'running' && state !== 'waiting' && (
-        <>
-          <Separator orientation="vertical" />
-          <MetaItem label="Ended at">{formatDateTime(finishedAt)}</MetaItem>
-        </>
+        <MetaItem label="Ended at">{formatDateTime(finishedAt)}</MetaItem>
       )}
 
-      <Separator orientation="vertical" />
       <MetaItem label="Duration">
         {elapsed == null ? '—' : formatDuration(elapsed)}
       </MetaItem>
 
-      {trigger && (
-        <>
-          <Separator orientation="vertical" />
-          <MetaItem label="Sync type">{trigger}</MetaItem>
-        </>
-      )}
+      {trigger && <MetaItem label="Sync type">{trigger}</MetaItem>}
 
       {state === 'running' &&
         etaSeconds != null &&
         Number.isFinite(etaSeconds) &&
         etaSeconds > 0 && (
-          <>
-            <Separator orientation="vertical" />
-            <MetaItem label="Estimated time left">
-              {formatDuration(etaSeconds * 1000)}
-            </MetaItem>
-          </>
+          <MetaItem label="Estimated time left">
+            {formatDuration(etaSeconds * 1000)}
+          </MetaItem>
         )}
-      {issue && (
-        <>
-          <Separator orientation="vertical" />
-          <MetaItem label="Issue">{issue}</MetaItem>
-        </>
-      )}
+      {issue && <MetaItem label="Issue">{issue}</MetaItem>}
     </div>
   );
 }
@@ -675,11 +652,13 @@ export default function SyncRunProgress({
           data-slot="sync-summary-header"
           onClick={handleHeaderClick}
           className={cn(
-            'group/header bg-card hover:bg-muted/20 flex cursor-pointer flex-col gap-3 transition-colors',
+            'group/header flex cursor-pointer flex-col gap-3 transition-colors px-3 pt-3',
             isCompact
-              ? 'gap-2.5 p-3'
-              : 'p-3.5 px-4 py-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4',
-            embedded && 'bg-transparent p-0 hover:bg-transparent',
+              ? 'gap-2.5'
+              : 'p-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4',
+            embedded
+              ? 'bg-transparent hover:bg-transparent'
+              : 'bg-card hover:bg-muted/20',
           )}
         >
           {isCompact ? (
@@ -859,8 +838,8 @@ export default function SyncRunProgress({
               </div>
 
               {/* Row 3: Metric Chips */}
-              <div className="flex items-center gap-1.5">
-                <div className="bg-muted/40 border-border/60 flex shrink-0 items-center gap-1.5 rounded-lg border px-2 py-0.5 text-[11px]">
+              <div className="flex items-center gap-2 pt-0.5">
+                <div className="bg-muted/50 border-border/60 flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px]">
                   <span className="text-muted-foreground text-[10px]">
                     Completion
                   </span>
@@ -868,7 +847,7 @@ export default function SyncRunProgress({
                     {percent != null ? `${percent}%` : '—'}
                   </strong>
                 </div>
-                <div className="bg-muted/40 border-border/60 flex shrink-0 items-center gap-1.5 rounded-lg border px-2 py-0.5 text-[11px]">
+                <div className="bg-muted/50 border-border/60 flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px]">
                   <span className="text-muted-foreground text-[10px]">
                     Batches
                   </span>
@@ -1084,8 +1063,10 @@ export default function SyncRunProgress({
           <div
             data-slot="sync-summary-collapsed-bar"
             className={cn(
-              'bg-muted/40 border-border/60 flex items-center justify-between gap-3 border-t text-xs transition-colors',
-              isCompact ? 'px-3 py-1.5' : 'px-4 py-2',
+              'border-border/60 flex items-center justify-between gap-3 border-t text-xs transition-colors',
+              isCompact
+                ? 'mt-2.5 rounded-b-xl bg-muted/40 px-3.5 py-2.5'
+                : 'bg-muted/40 px-4 py-2.5',
             )}
           >
             <div className="text-muted-foreground flex min-w-0 items-center gap-2">
@@ -1136,13 +1117,7 @@ export default function SyncRunProgress({
 
         {/* Collapsible Content Area */}
         <CollapsibleContent>
-          <div
-            className={cn(
-              'border-border/70 border-t',
-              embedded ? 'mt-3 bg-transparent' : 'bg-muted/40',
-            )}
-          >
-            {/* 1. Separator-based Stat Metrics Grid */}
+            {/* 1. Stat Metrics Grid */}
             <SyncStats
               values={[processed, created, updated, skipped, failed]}
               compact={isCompact}
@@ -1151,9 +1126,9 @@ export default function SyncRunProgress({
             {/* 2. Metadata and Action Guidance Footer */}
             <footer
               className={cn(
-                'bg-muted/60 space-y-2.5',
-                isCompact ? 'p-2.5 sm:p-3' : 'px-4 py-3 sm:px-5',
-                embedded && 'bg-transparent px-0 sm:px-0',
+                'border-border/60 border-t space-y-3',
+                isCompact ? 'p-3 sm:p-3.5' : 'px-4 py-3 sm:px-5',
+                embedded ? 'bg-muted/30' : 'bg-muted/50',
               )}
             >
               {/* Metadata items row */}
@@ -1221,7 +1196,6 @@ export default function SyncRunProgress({
                 </div>
               )}
             </footer>
-          </div>
         </CollapsibleContent>
       </Collapsible>
     </Container>
