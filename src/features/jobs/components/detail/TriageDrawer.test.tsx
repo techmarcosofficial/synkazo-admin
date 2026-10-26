@@ -6,8 +6,10 @@ import type { ExtSyncRun } from '@/features/jobs/hooks';
 import type { SyncLogRecord } from '@/types';
 
 const mockNavigate = vi.fn();
+let mockParams: Record<string, string | undefined> = {};
 vi.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
+  useParams: () => mockParams,
 }));
 
 const mockListRecords = vi.fn();
@@ -58,6 +60,7 @@ describe('TriageDrawer', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockParams = {};
     mockListRecords.mockResolvedValue({ data: mockRecords });
   });
 
@@ -150,6 +153,39 @@ describe('TriageDrawer', () => {
     fireEvent.click(reconnectBtn);
     expect(mockNavigate).toHaveBeenCalledWith(
       '/projects/proj-1?tab=connections',
+    );
+  });
+
+  it('navigates to super-admin route when in super admin context', async () => {
+    mockParams = { organisationId: 'org-123' };
+    mockListRecords.mockResolvedValue({
+      data: [
+        {
+          id: 'rec-auth',
+          action: 'failed',
+          sourceRecordId: 'SRC-AUTH-1',
+          failReason: 'auth_failed',
+          failReasonDetail: '401 Unauthorized token expired',
+        },
+      ],
+    });
+
+    render(
+      <TriageDrawer
+        open={true}
+        onOpenChange={vi.fn()}
+        projectId="proj-1"
+        jobId="job-1"
+        run={baseRun}
+      />,
+    );
+
+    const reconnectBtn = await screen.findByRole('button', {
+      name: /reconnect in connections/i,
+    });
+    fireEvent.click(reconnectBtn);
+    expect(mockNavigate).toHaveBeenCalledWith(
+      '/super-admin/organisations/org-123/projects/proj-1?tab=connections',
     );
   });
 });

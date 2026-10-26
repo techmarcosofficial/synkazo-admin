@@ -38,6 +38,7 @@ import JobRetryCard from '@/features/jobs/components/detail/settings/JobRetryCar
 import JobSkipUpdateCard from '@/features/jobs/components/detail/settings/JobSkipUpdateCard';
 import SyncDirectionFields from '@/features/jobs/components/SyncDirectionFields';
 import JobScheduleModal from '@/features/jobs/components/schedule/JobScheduleModal';
+import RunHistoryTab from '@/features/jobs/components/detail/tabs/RunHistoryTab';
 import SetupJourneyCard, {
   type SetupJourneyStep,
 } from '@/features/onboarding/components/SetupJourneyCard';
@@ -676,7 +677,6 @@ export default function OrganisationJobDetailPage() {
   const [runOpen, setRunOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [bullJobId, setBullJobId] = useState<string | null>(null);
-  const [historyPage, setHistoryPage] = useState(1);
   const tab: JobTab =
     searchParams.get('tab') === 'field-mapping'
       ? 'field-mapping'
@@ -722,7 +722,7 @@ export default function OrganisationJobDetailPage() {
     organisationId,
     projectId,
     jobId,
-    historyPage,
+    1,
   );
 
   useEffect(() => {
@@ -927,81 +927,14 @@ export default function OrganisationJobDetailPage() {
           </TabsContent>
         )}
         <TabsContent value="run-history">
-          <Card className="gap-0 py-0">
-            <CardHeader className="px-4 py-3">
-              <CardTitle>Sync History</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 px-4 pb-4">
-              {historyQuery.isLoading ? (
-                <SkeletonList count={3} />
-              ) : historyQuery.isError ? (
-                <ErrorState
-                  title="Could not load sync history"
-                  onRetry={() => historyQuery.refetch()}
-                />
-              ) : !historyQuery.data?.data.length ? (
-                <EmptyState
-                  icon={History}
-                  title="No runs yet"
-                  description="This Sync Flow has no recorded runs."
-                />
-              ) : (
-                <>
-                  <ul className="divide-y rounded-3xl border">
-                    {historyQuery.data.data.map((run) => (
-                      <li
-                        key={run.id}
-                        className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm"
-                      >
-                        <div>
-                          <p className="font-medium">
-                            {dateLabel(run.startedAt)}
-                          </p>
-                          <p className="text-muted-foreground text-xs">
-                            {run.triggeredBy} · {run.id}
-                          </p>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-3">
-                          <span className="text-muted-foreground">
-                            {run.createdCount} created · {run.updatedCount}{' '}
-                            updated · {run.skippedCount} skipped ·{' '}
-                            {run.failedCount} failed
-                          </span>
-                          <StatusBadge status={run.executionStatus || run.status} label={run.executionStatus || run.status} tone={run.failedCount ? 'danger' : undefined} />
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      Page {historyPage} · {historyQuery.data.total} runs
-                    </span>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={historyPage === 1}
-                        onClick={() => setHistoryPage((page) => page - 1)}
-                      >
-                        Previous
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={
-                          historyPage * historyQuery.data.limit >=
-                          historyQuery.data.total
-                        }
-                        onClick={() => setHistoryPage((page) => page + 1)}
-                      >
-                        Next
-                      </Button>
-                    </div>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
+          <RunHistoryTab
+            projectId={project.id}
+            jobId={job.id}
+            refetch={() => {
+              void jobQuery.refetch();
+              void historyQuery.refetch();
+            }}
+          />
         </TabsContent>
         <TabsContent value="settings">
           <JobSettings

@@ -11,7 +11,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { jobsApi } from '@/api/jobs';
@@ -56,6 +56,7 @@ export function TriageDrawer({
   onRefreshHistory,
 }: TriageDrawerProps) {
   const navigate = useNavigate();
+  const { organisationId } = useParams<{ organisationId?: string }>();
   const [filter, setFilter] = useState<'all' | 'failed' | 'skipped'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [records, setRecords] = useState<SyncLogRecord[]>([]);
@@ -108,10 +109,16 @@ export function TriageDrawer({
       q.set('tab', 'field-mapping');
       if (action.deepLink?.field) q.set('field', action.deepLink.field);
       if (action.deepLink?.action) q.set('action', action.deepLink.action);
-      navigate(`/projects/${projectId}/jobs/${jobId}?${q.toString()}`);
+      const target = organisationId
+        ? `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs/${jobId}?${q.toString()}`
+        : `/projects/${projectId}/jobs/${jobId}?${q.toString()}`;
+      navigate(target);
     } else if (action.destination === 'connections') {
       onOpenChange(false);
-      navigate(`/projects/${projectId}?tab=connections`);
+      const target = organisationId
+        ? `/super-admin/organisations/${organisationId}/projects/${projectId}?tab=connections`
+        : `/projects/${projectId}?tab=connections`;
+      navigate(target);
     } else if (action.destination === 'retry') {
       await handleRetryRun();
     }

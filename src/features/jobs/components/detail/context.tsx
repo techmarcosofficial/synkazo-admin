@@ -91,3 +91,7 @@ export function useJobDetailContext(): JobDetailContextValue {
     );
   return ctx;
 }
+
+export function useSafeJobDetailContext(): JobDetailContextValue | null {
+  return useContext(JobDetailContext);
+}

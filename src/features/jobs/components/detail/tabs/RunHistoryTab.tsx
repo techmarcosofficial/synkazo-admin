@@ -23,7 +23,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
-import { useJobDetailContext } from '../context';
+import { useSafeJobDetailContext } from '../context';
 import { TriageDrawer } from '../TriageDrawer';
 import { RecordReason } from './RecordReason';
 
@@ -1032,10 +1032,19 @@ function RunLogRow({
   );
 }
 
-export default function RunHistoryTab() {
-  const { projectId, job, activeRunLog, hasConnection, refetch } =
-    useJobDetailContext();
-  const jobId = job.id;
+export interface RunHistoryTabProps {
+  projectId?: string;
+  jobId?: string;
+  activeRunLog?: Partial<ExtSyncRun> | null;
+  refetch?: () => Promise<void> | void;
+}
+
+export default function RunHistoryTab(props: RunHistoryTabProps = {}) {
+  const context = useSafeJobDetailContext();
+  const projectId = props.projectId ?? context?.projectId ?? '';
+  const jobId = props.jobId ?? context?.job?.id ?? '';
+  const activeRunLog = props.activeRunLog ?? context?.activeRunLog;
+  const refetch = props.refetch ?? context?.refetch ?? (() => {});
 
   const [searchParams] = useSearchParams();
   const targetRunId = searchParams.get('runId');
