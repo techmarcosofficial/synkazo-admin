@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
+import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -370,11 +370,9 @@ export default function FeatureFlagsCard() {
                       {flag.key}
                     </button>
                     {flag.enabled ? (
-                      <Badge className="bg-emerald-100 text-emerald-900">
-                        On
-                      </Badge>
+                    <StatusBadge status="on" label="On" />
                     ) : (
-                      <Badge variant="outline">Off</Badge>
+                    <StatusBadge status="off" label="Off" />
                     )}
                   </div>
                   {flag.description ? (

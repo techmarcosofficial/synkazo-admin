@@ -124,7 +124,8 @@ describe('OverviewTab sync prerequisite guidance', () => {
     mockContext = buildContext();
   });
 
-  it('explains the overview instead of showing stats before the first run', () => {
+  it('explains the overview instead of showing stats before field setup is complete', () => {
+    mockContext = buildContext({ jobFieldMappings: [] });
     renderOverview();
 
     expect(
@@ -141,6 +142,21 @@ describe('OverviewTab sync prerequisite guidance', () => {
       screen.queryByRole('button', { name: /activate job/i }),
     ).not.toBeInTheDocument();
     expect(mockContext.setManualDialogOpen).not.toHaveBeenCalled();
+  });
+
+  it('shows full sync overview content once field setup is complete even before first run', () => {
+    mockContext = buildContext({
+      jobFieldMappings: [configuredMapping],
+      pipelineConfigured: true,
+      runLogs: [],
+    });
+    renderOverview();
+
+    expect(screen.getByText('Sync overview')).toBeInTheDocument();
+    expect(screen.getByText('Total records synced')).toBeInTheDocument();
+    const syncBtn = screen.getByRole('button', { name: /sync now/i });
+    expect(syncBtn).toBeInTheDocument();
+    expect(syncBtn).toHaveAttribute('data-flow-next-action', 'true');
   });
 
   it('does not render duplicate inactive alert inside OverviewTab (single source of truth)', () => {
@@ -219,7 +235,7 @@ describe('OverviewTab sync prerequisite guidance', () => {
     });
     renderOverview();
 
-    expect(screen.getByText('Your first run is queued')).toBeInTheDocument();
+    expect(screen.getByText('Run queued')).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Cancel queue' }),
     ).toBeInTheDocument();

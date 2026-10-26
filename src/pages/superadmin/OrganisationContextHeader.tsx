@@ -13,11 +13,12 @@ import {
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 
-import { Badge } from '@/components/ui/badge';
+import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { PlatformIcon } from '@/components/platform';
 import JobStatusDropdown from '@/features/jobs/components/detail/JobStatusDropdown';
 import { KNOWN_PIPELINE_OBJECTS } from '@/features/jobs/types';
+import ProjectStatusDropdown from '@/features/projects/components/detail/ProjectStatusDropdown';
 import { cn } from '@/lib/utils';
 import {
   useSetSuperAdminJobEnabledMutation,
@@ -25,10 +26,12 @@ import {
   useSuperAdminOrganisationQuery,
   useSuperAdminProjectConnectionsQuery,
   useSuperAdminProjectQuery,
+  useUpdateSuperAdminProjectMutation,
 } from '@/queries/useSuperAdmin';
 import type {
   SuperAdminJobDetail,
   SuperAdminProjectDetail,
+  SuperAdminProjectStatus,
 } from '@/types/superAdmin';
 
 const ORGANISATION_SECTIONS = [
@@ -44,6 +47,48 @@ interface SectionLink {
   label: string;
   to: string;
   active: boolean;
+}
+
+const PROJECT_STATUSES: readonly SuperAdminProjectStatus[] = [
+  'draft',
+  'active',
+  'paused',
+  'error',
+];
+
+function ProjectHeaderStatusControl({
+  organisationId,
+  projectId,
+  project,
+}: {
+  organisationId: string;
+  projectId: string;
+  project: SuperAdminProjectDetail;
+}) {
+  const update = useUpdateSuperAdminProjectMutation(organisationId, projectId);
+
+  const changeStatus = async (status: SuperAdminProjectStatus) => {
+    if (status === project.status || update.isPending) return;
+    try {
+      await update.mutateAsync({ status });
+      toast.success(`Project status set to ${status}.`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Could not update project status. Please try again.',
+      );
+    }
+  };
+
+  return (
+    <ProjectStatusDropdown
+      current={project.status}
+      options={PROJECT_STATUSES}
+      onSelect={(status) => void changeStatus(status)}
+      disabled={update.isPending}
+    />
+  );
 }
 
 function JobHeaderStatusControl({
@@ -389,14 +434,14 @@ export default function OrganisationContextHeader() {
                 {title}
               </h1>
               {level === 'organisation' && org && (
-                <Badge variant="secondary" className="capitalize">
-                  {org.status}
-                </Badge>
+                <StatusBadge status={org.status} label={org.status} tone={org.status === 'pending' ? 'info' : undefined} className="capitalize" />
               )}
-              {level === 'project' && project && (
-                <Badge variant="secondary" className="capitalize">
-                  {project.status}
-                </Badge>
+              {level === 'project' && project && projectId && (
+                <ProjectHeaderStatusControl
+                  organisationId={organisationId}
+                  projectId={projectId}
+                  project={project}
+                />
               )}
               {level === 'job' && job && project && projectId && (
                 <JobHeaderStatusControl

@@ -3,7 +3,7 @@ import { ExternalLink, Eye, RefreshCw } from 'lucide-react';
 import React from 'react';
 
 import EmptyState from '@/components/shared/EmptyState';
-import { Badge } from '@/components/ui/badge';
+import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
@@ -14,7 +14,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { STATUS_DOT } from '@/pages/organisation/billing/tabs/InvoicesTab';
 import type { SuperAdminInvoiceListItem } from '@/types';
 
 function formatCurrency(
@@ -73,8 +72,6 @@ export default function BillingInvoicesTable({
         <TableBody>
           {displayItems.map((invoice) => {
             const num = invoice.invoiceNumber ?? invoice.id.slice(0, 8);
-            const statusKey = invoice.status.toLowerCase();
-            const dotClass = STATUS_DOT[statusKey as keyof typeof STATUS_DOT] ?? 'bg-muted-foreground';
 
             return (
               <TableRow key={invoice.id} className="hover:bg-muted/40">
@@ -88,13 +85,7 @@ export default function BillingInvoicesTable({
                   </button>
                 </TableCell>
                 <TableCell className="py-3">
-                  <Badge
-                    variant="secondary"
-                    className="gap-1.5 text-[11px] font-medium capitalize py-0.5 px-2"
-                  >
-                    <span className={`size-1.5 rounded-full ${dotClass}`} />
-                    {invoice.status}
-                  </Badge>
+                  <StatusBadge status={invoice.status} label={invoice.status} className="capitalize" />
                 </TableCell>
                 <TableCell className="font-mono text-xs py-3">
                   {formatCurrency(

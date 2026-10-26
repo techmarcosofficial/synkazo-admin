@@ -2,6 +2,7 @@ import { Check, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 
 import StatusBadge from '@/components/shared/StatusBadge';
+import { badgeToneClasses, useBadgeAppearance } from '@/components/ui/badge';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,6 +48,7 @@ export default function JobStatusDropdown({
   canDeactivate?: boolean;
 }) {
   const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false);
+  const tinted = useBadgeAppearance() === 'tinted';
 
   const disabledReason = !hasConnection
     ? 'Connect both platforms first'
@@ -61,11 +63,14 @@ export default function JobStatusDropdown({
           <DropdownMenuTrigger asChild disabled={toggling}>
             <Button
               id="job-status-dropdown"
-              variant="outline"
+              variant={tinted ? 'ghost' : 'outline'}
               size="sm"
               shape="pill"
+              data-badge-control={tinted ? 'tinted' : undefined}
               className={cn(
                 'group transition-all duration-300',
+                tinted && 'border-0 shadow-none',
+                tinted && badgeToneClasses[isActive ? 'success' : 'muted'],
                 highlighted &&
                   'ring-primary ring-offset-background animate-alert-shake ring-2 ring-offset-2',
               )}

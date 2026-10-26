@@ -9,6 +9,7 @@ import {
 } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import userEvent from '@testing-library/user-event';
 
 import OrganisationProjectsPage from './OrganisationProjectsPage';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -45,6 +46,20 @@ const catalog = [
   },
 ];
 let rows = [project];
+
+// Radix Select uses browser APIs that jsdom does not implement.
+const selectBrowserMethods = {
+  hasPointerCapture: () => false,
+  setPointerCapture: () => {},
+  releasePointerCapture: () => {},
+  scrollIntoView: () => {},
+};
+const originalBrowserMethods = new Map(
+  Object.keys(selectBrowserMethods).map((name) => [
+    name,
+    Object.getOwnPropertyDescriptor(HTMLElement.prototype, name),
+  ]),
+);
 
 function Location() {
   const location = useLocation();
@@ -106,6 +121,12 @@ async function fillProject(dialog: HTMLElement) {
 }
 
 beforeEach(() => {
+  for (const [name, value] of Object.entries(selectBrowserMethods)) {
+    Object.defineProperty(HTMLElement.prototype, name, {
+      configurable: true,
+      value,
+    });
+  }
   rows = [project];
   vi.clearAllMocks();
   vi.stubGlobal(
@@ -133,9 +154,80 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  for (const [name, descriptor] of originalBrowserMethods) {
+    if (descriptor)
+      Object.defineProperty(HTMLElement.prototype, name, descriptor);
+    else Reflect.deleteProperty(HTMLElement.prototype, name);
+  }
 });
 
 describe('Organisation project directory', () => {
+  it.each([
+    ['Draft', 'draft'],
+    ['Active', 'active'],
+    ['Paused', 'paused'],
+    ['Error', 'error'],
+  ])(
+    'filters by %s using the supported scoped API status',
+    async (label, status) => {
+      const user = userEvent.setup();
+      renderDirectory();
+      await screen.findAllByText('Customer sync');
+      await user.click(
+        screen.getByRole('combobox', { name: 'Filter projects by status' }),
+      );
+      const options = screen.getAllByRole('option');
+      expect(options.map((option) => option.textContent)).toEqual([
+        'All statuses',
+        'Draft',
+        'Active',
+        'Paused',
+        'Error',
+      ]);
+      await user.click(
+        screen.getByRole('option', { name: label }),
+      );
+      await waitFor(() =>
+        expect(api.get).toHaveBeenCalledWith(
+          '/super-admin/organisations/org-1/projects',
+          { params: expect.objectContaining({ status, page: 1 }) },
+        ),
+      );
+      await user.click(
+        screen.getByRole('combobox', { name: 'Filter projects by status' }),
+      );
+      await user.click(screen.getByRole('option', { name: 'All statuses' }));
+      await waitFor(() =>
+        expect(api.get).toHaveBeenLastCalledWith(
+          '/super-admin/organisations/org-1/projects',
+          { params: expect.objectContaining({ status: undefined }) },
+        ),
+      );
+    },
+  );
+
+  it('distinguishes status sorting from the status filter', async () => {
+    const user = userEvent.setup();
+    renderDirectory();
+    await screen.findAllByText('Customer sync');
+    await user.click(screen.getByRole('combobox', { name: 'Sort projects' }));
+    expect(
+      screen.queryByRole('option', { name: 'Status' }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole('option', { name: 'Status: A–Z' }));
+    await waitFor(() =>
+      expect(api.get).toHaveBeenCalledWith(
+        '/super-admin/organisations/org-1/projects',
+        {
+          params: expect.objectContaining({
+            sortBy: 'status',
+            sortOrder: 'asc',
+          }),
+        },
+      ),
+    );
+  });
+
   it('uses the shared directory header with results outside it and lazily loads creation options', async () => {
     renderDirectory();
     expect(

@@ -10,10 +10,38 @@ import {
 } from '@/components/ui/form-control-styles';
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from 'lucide-react';
 
+type SelectSize = 'sm' | 'default';
+
+const SelectContext = React.createContext<{
+  size: SelectSize;
+  setSize: React.Dispatch<React.SetStateAction<SelectSize>>;
+}>({
+  size: 'default',
+  setSize: () => {},
+});
+
 function Select({
+  size: controlledSize,
+  children,
   ...props
-}: React.ComponentProps<typeof SelectPrimitive.Root>) {
-  return <SelectPrimitive.Root data-slot="select" {...props} />;
+}: React.ComponentProps<typeof SelectPrimitive.Root> & {
+  size?: SelectSize;
+}) {
+  const [size, setSize] = React.useState<SelectSize>(controlledSize ?? 'default');
+
+  React.useEffect(() => {
+    if (controlledSize && controlledSize !== size) {
+      setSize(controlledSize);
+    }
+  }, [controlledSize, size]);
+
+  return (
+    <SelectContext.Provider value={{ size, setSize }}>
+      <SelectPrimitive.Root data-slot="select" {...props}>
+        {children}
+      </SelectPrimitive.Root>
+    </SelectContext.Provider>
+  );
 }
 
 function SelectGroup({
@@ -23,7 +51,7 @@ function SelectGroup({
   return (
     <SelectPrimitive.Group
       data-slot="select-group"
-      className={cn('scroll-my-1.5 p-1.5', className)}
+      className={cn('scroll-my-1 p-1', className)}
       {...props}
     />
   );
@@ -43,10 +71,17 @@ function SelectTrigger({
 }: React.ComponentProps<typeof SelectPrimitive.Trigger> & {
   size?: 'sm' | 'default';
 }) {
+  const { size: contextSize, setSize } = React.useContext(SelectContext);
   const isSmall =
     size === 'sm' ||
     (!size && className && /\b(h-[678](\.5)?|text-xs)\b/.test(className));
-  const resolvedSize = size ?? (isSmall ? 'sm' : 'default');
+  const resolvedSize = size ?? (isSmall ? 'sm' : contextSize);
+
+  React.useEffect(() => {
+    if (resolvedSize !== contextSize) {
+      setSize(resolvedSize);
+    }
+  }, [resolvedSize, contextSize, setSize]);
 
   return (
     <SelectPrimitive.Trigger
@@ -113,7 +148,7 @@ function SelectLabel({
   return (
     <SelectPrimitive.Label
       data-slot="select-label"
-      className={cn('text-muted-foreground px-3 py-2.5 text-xs', className)}
+      className={cn('text-muted-foreground px-3 py-1.5 text-xs font-medium', className)}
       {...props}
     />
   );
@@ -121,21 +156,36 @@ function SelectLabel({
 
 function SelectItem({
   className,
+  size,
   children,
   ...props
-}: React.ComponentProps<typeof SelectPrimitive.Item>) {
+}: React.ComponentProps<typeof SelectPrimitive.Item> & {
+  size?: SelectSize;
+}) {
+  const { size: contextSize } = React.useContext(SelectContext);
+  const resolvedSize = size ?? contextSize;
+
   return (
     <SelectPrimitive.Item
       data-slot="select-item"
+      data-size={resolvedSize}
       className={cn(
-        "focus:bg-accent focus:text-accent-foreground data-highlighted:bg-accent data-highlighted:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-highlighted:**:text-accent-foreground relative flex w-full cursor-default items-center gap-2.5 rounded-lg py-2 pr-8 pl-3 text-sm font-medium outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+        "focus:bg-accent/40 focus:text-foreground hover:bg-accent/40 hover:text-foreground data-highlighted:bg-accent/40 data-highlighted:text-foreground dark:focus:bg-white/12 dark:focus:text-white dark:hover:bg-white/12 dark:hover:text-white dark:data-highlighted:bg-white/12 dark:data-highlighted:text-white not-data-[variant=destructive]:focus:**:text-foreground data-highlighted:**:text-foreground dark:data-highlighted:**:text-white relative flex w-full cursor-default items-center rounded-lg font-medium outline-hidden select-none transition-colors data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+        resolvedSize === 'sm'
+          ? "py-1.5 pl-2.5 pr-7 text-xs gap-2 min-h-7.5 [&_svg:not([class*='size-'])]:size-3.5"
+          : "py-1.5 pl-3 pr-8 text-sm gap-2.5 min-h-8.5 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       {...props}
     >
-      <span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center">
+      <span
+        className={cn(
+          "pointer-events-none absolute flex items-center justify-center",
+          resolvedSize === 'sm' ? "right-1.5 size-3.5" : "right-2 size-4",
+        )}
+      >
         <SelectPrimitive.ItemIndicator>
-          <CheckIcon className="pointer-events-none" />
+          <CheckIcon className={cn("pointer-events-none", resolvedSize === 'sm' ? "size-3.5" : "size-4")} />
         </SelectPrimitive.ItemIndicator>
       </span>
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
@@ -151,7 +201,7 @@ function SelectSeparator({
     <SelectPrimitive.Separator
       data-slot="select-separator"
       className={cn(
-        'bg-border pointer-events-none -mx-1.5 my-1.5 h-px',
+        'bg-border pointer-events-none -mx-1 my-1 h-px',
         className,
       )}
       {...props}

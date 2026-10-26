@@ -9,7 +9,7 @@ import ManagementToolbar from '@/components/shared/ManagementToolbar';
 import PageHeader from '@/components/shared/PageHeader';
 import PaginationBar from '@/components/shared/PaginationBar';
 import SkeletonTable from '@/components/shared/skeletons/SkeletonTable';
-import { Badge } from '@/components/ui/badge';
+import SharedStatusBadge, { type Tone } from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import {
@@ -62,21 +62,19 @@ const STATUS_LABELS: Record<LeadStatus, string> = {
   spam: 'Spam',
 };
 
-const STATUS_CLASSES: Record<LeadStatus, string> = {
-  new: 'bg-info/10 text-info',
-  contacted: 'bg-warning/10 text-warning',
-  qualified: 'bg-success/10 text-success',
-  closed: 'bg-muted text-muted-foreground',
-  spam: 'bg-destructive/10 text-destructive',
+const STATUS_TONES: Record<LeadStatus, Tone> = {
+  new: 'info',
+  contacted: 'warning',
+  qualified: 'success',
+  closed: 'muted',
+  spam: 'danger',
 };
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function StatusBadge({ status }: { status: LeadStatus }) {
   return (
-    <Badge size="sm" className={STATUS_CLASSES[status]}>
-      {STATUS_LABELS[status]}
-    </Badge>
+    <SharedStatusBadge status={status} label={STATUS_LABELS[status]} tone={STATUS_TONES[status]} />
   );
 }
 

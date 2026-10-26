@@ -95,6 +95,9 @@ export default function MemberDetailDrawer({
 
   // Form states
   const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
   const [department, setDepartment] = useState('');
   const [role, setRole] = useState<UserRole>('editor');
   const [editPerms, setEditPerms] = useState<Permission[]>([]);
@@ -120,6 +123,13 @@ export default function MemberDetailDrawer({
 
   const isSuperAdminActor = currentUser?.role === 'super_admin' || isSuperAdmin;
   const isOrgAdminActor = currentUser?.role === 'org_admin';
+  const canEditEmail =
+    !isCurrent &&
+    (currentUser?.role === 'super_admin' ||
+      (isOrgAdminActor &&
+        !!currentUser?.organisationId &&
+        member?.organisationId === currentUser.organisationId &&
+        member?.role !== 'super_admin'));
   const isRoleDisabled =
     isCurrent || member?.isOwner || member?.role === 'super_admin';
   const canResetPassword =
@@ -138,6 +148,9 @@ export default function MemberDetailDrawer({
   useEffect(() => {
     if (!member) {
       setFullName('');
+      setEmail('');
+      setEmailError('');
+      setIsEditingEmail(false);
       setDepartment('');
       setRole('editor');
       setEditPerms([]);
@@ -153,6 +166,9 @@ export default function MemberDetailDrawer({
     }
 
     setFullName(member.fullName || '');
+    setEmail(member.email);
+    setEmailError('');
+    setIsEditingEmail(false);
     setDepartment(member.department || '');
     setRole((member.role as UserRole) || 'editor');
     setIsActive(member.isActive !== false);
@@ -186,7 +202,22 @@ export default function MemberDetailDrawer({
   };
 
   const handleSave = async (requestClose: () => void) => {
-    if (!member) return;
+    if (!member || updateUserMutation.isPending) return;
+    const normalizedEmail = email.trim().toLowerCase();
+    const emailChanged =
+      canEditEmail &&
+      isEditingEmail &&
+      normalizedEmail !== member.email.trim().toLowerCase();
+    if (
+      canEditEmail &&
+      (normalizedEmail.length > 255 ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail))
+    ) {
+      setEmailError('Enter a valid email address.');
+      setActiveTab('details');
+      return;
+    }
+    setEmailError('');
 
     const projectAccess: ProjectAccessGrant[] | undefined = isEditor
       ? projectIds.map((projectId) => ({
@@ -200,6 +231,7 @@ export default function MemberDetailDrawer({
         id: member.id,
         data: {
           fullName: fullName.trim() || undefined,
+          ...(emailChanged ? { email: normalizedEmail } : {}),
           department: department.trim() || undefined,
           role,
           permissions: hasFullAccess ? ALL_PERMISSIONS : editPerms,
@@ -211,7 +243,12 @@ export default function MemberDetailDrawer({
       requestClose();
     } catch (err) {
       const e = err as { response?: { data?: { message?: string } } };
-      toast.error(e?.response?.data?.message ?? 'Failed to update member');
+      const message = e?.response?.data?.message ?? 'Failed to update member';
+      if (emailChanged && /email/i.test(message)) {
+        setEmailError(message);
+        setActiveTab('details');
+      }
+      toast.error(message);
     }
   };
 
@@ -444,6 +481,71 @@ export default function MemberDetailDrawer({
                     placeholder="e.g. Sarah Connor"
                     className="h-8 text-xs"
                   />
+                </FieldContent>
+              </Field>
+
+              <Field>
+                <div className="flex items-center justify-between gap-3">
+                  <FieldLabel htmlFor="member-email-address" className="text-xs">
+                    Email address
+                  </FieldLabel>
+                  {canEditEmail && (
+                    <Button
+                      type="button"
+                      variant="link"
+                      size="xs"
+                      aria-label={isEditingEmail ? 'Cancel email edit' : 'Change email'}
+                      onClick={() => {
+                        if (isEditingEmail) {
+                          setEmail(member.email || '');
+                          setEmailError('');
+                        }
+                        setIsEditingEmail((editing) => !editing);
+                      }}
+                      disabled={updateUserMutation.isPending}
+                    >
+                      {isEditingEmail ? 'Cancel' : 'Change email'}
+                    </Button>
+                  )}
+                </div>
+                <FieldContent>
+                  <Input
+                    id="member-email-address"
+                    type="email"
+                    autoComplete="email"
+                    maxLength={255}
+                    value={email}
+                    onChange={(event) => {
+                      setEmail(event.target.value);
+                      setEmailError('');
+                    }}
+                    readOnly={!isEditingEmail}
+                    disabled={updateUserMutation.isPending}
+                    aria-invalid={!!emailError}
+                    aria-describedby={
+                      emailError ? 'member-email-error' : 'member-email-help'
+                    }
+                    className="h-8 text-xs"
+                  />
+                  {emailError ? (
+                    <p
+                      id="member-email-error"
+                      role="alert"
+                      className="text-xs text-destructive"
+                    >
+                      {emailError}
+                    </p>
+                  ) : (
+                    <p id="member-email-help" className="text-[11px] text-muted-foreground">
+                      {isCurrent
+                        ? 'Change your own email from Profile, where it is verified.'
+                        : canEditEmail
+                          ? isEditingEmail
+                            ? 'The member will use this email address to sign in after saving.'
+                            : 'Select Change email to edit this member’s sign-in email.'
+                          : 'Only an administrator can change this email address.'}
+                    </p>
+                  )}
                 </FieldContent>
               </Field>
 

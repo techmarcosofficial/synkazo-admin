@@ -289,6 +289,7 @@ export function TriageDrawer({
 
                       <Badge
                         variant="secondary"
+                      tone={isFailed ? 'danger' : 'warning'}
                         className={cn(
                           'shrink-0 px-2 py-0 text-[10px] font-semibold capitalize',
                           isFailed

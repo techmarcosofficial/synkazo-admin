@@ -72,7 +72,7 @@ function ManualSyncContent({
     runType === 'limited' && limitSyncStep !== 'config';
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 p-3">
       {!job?.isEnabled && !isLimitRunningOrDone && (
         <Alert className="border-primary/30 bg-primary/5 text-foreground px-3 py-2">
           <Info className="text-primary size-4 shrink-0" />
@@ -246,7 +246,7 @@ export default function StartSyncModal(props: StartSyncModalProps) {
           </Button>
         </DialogHeader>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-3.5">
+        <div className="min-h-0 flex-1 overflow-y-auto">
           <ManualSyncContent {...props} onFooterChange={setFooterContent} />
         </div>
 

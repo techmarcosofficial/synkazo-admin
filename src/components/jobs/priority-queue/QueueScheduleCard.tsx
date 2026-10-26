@@ -52,15 +52,15 @@ export default function QueueScheduleCard({
     onChange({ ...value, ...change });
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2.5">
       <div>
         <h3 className="text-sm font-semibold">Cycle start</h3>
         <p className="text-muted-foreground text-xs">
           When a new queue cycle begins
         </p>
       </div>
-      <div className="grid gap-3 sm:grid-cols-[minmax(10rem,14rem)_minmax(0,1fr)] sm:items-end">
-        <div className="space-y-1.5">
+      <div className="grid gap-2.5 sm:grid-cols-[minmax(10rem,13rem)_minmax(0,1fr)] sm:items-end">
+        <div className="space-y-1">
           <label className="text-xs font-medium">Schedule type</label>
           <Select
             value={mode}
@@ -81,7 +81,7 @@ export default function QueueScheduleCard({
         </div>
         {mode === 'interval' && (
           <div className="flex items-end gap-2">
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <label className="text-xs font-medium">Every</label>
               <Input
                 type="number"

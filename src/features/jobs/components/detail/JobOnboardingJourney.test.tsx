@@ -405,7 +405,7 @@ describe('JobOnboardingJourney - Step Gating & Activation Flow', () => {
     expect(screen.getByText('Automate (optional)')).toBeInTheDocument();
   });
 
-  it('opens test sync dialog directly in 1 click even when job is inactive (Option 1 auto-activation flow)', () => {
+  it('guides user to sync run button when on overview tab without opening the dialog directly', () => {
     const setManualDialogOpen = vi.fn();
     const handleTabChange = vi.fn();
 
@@ -435,21 +435,22 @@ describe('JobOnboardingJourney - Step Gating & Activation Flow', () => {
       screen.getByRole('heading', { name: 'Run your first test sync' }),
     ).toBeInTheDocument();
 
-    // Verify hover hint on Test & Review step
+    // Verify hover hint and flow guide on Test & Review step
     const testStep = screen.getByRole('button', { name: /test & review/i });
     expect(testStep).toHaveAttribute(
       'data-step-hint',
-      "Click 'Run Test Sync' to verify records",
+      "Click 'Sync now' below to test records",
     );
+    expect(testStep).toHaveAttribute('data-step-guides-action', 'true');
     expect(testStep).not.toHaveAttribute('title');
 
-    // 1-Click Action: Clicking step card directly opens test sync dialog without double-clicking
+    // Clicking step card highlights the sync button without opening the modal
     fireEvent.click(testStep);
-    expect(setManualDialogOpen).toHaveBeenCalledWith(true);
+    expect(setManualDialogOpen).not.toHaveBeenCalled();
     expect(handleTabChange).not.toHaveBeenCalled();
   });
 
-  it('displays active state and opens test sync dialog when job is active on overview tab', () => {
+  it('displays active state and guides to sync button without opening dialog directly when job is active on overview tab', () => {
     const setManualDialogOpen = vi.fn();
     const handleTabChange = vi.fn();
 
@@ -486,18 +487,14 @@ describe('JobOnboardingJourney - Step Gating & Activation Flow', () => {
     const testStep = screen.getByRole('button', { name: /test & review/i });
     expect(testStep).toHaveAttribute(
       'data-step-hint',
-      "Click 'Run Test Sync' to verify records",
+      "Click 'Sync now' below to test records",
     );
+    expect(testStep).toHaveAttribute('data-step-guides-action', 'true');
     expect(testStep).not.toHaveAttribute('title');
 
-    // Redundant trailing button is removed; clicking active step card triggers test sync directly (One Click, One Action)
-    expect(
-      screen.queryByRole('button', { name: /^run test sync/i }),
-    ).not.toBeInTheDocument();
+    // Clicking step card does not open dialog directly
     fireEvent.click(testStep);
-
-    // Opens test sync dialog directly
-    expect(setManualDialogOpen).toHaveBeenCalledWith(true);
+    expect(setManualDialogOpen).not.toHaveBeenCalled();
   });
 
   it('guides step navigation with hover hints and one-click tab switching when on a different tab', () => {
@@ -541,13 +538,16 @@ describe('JobOnboardingJourney - Step Gating & Activation Flow', () => {
     fireEvent.click(step2);
     expect(handleTabChange).toHaveBeenCalledWith('overview');
 
-    // Step 3: Automate (different tab -> Go to Schedule tab)
+    // Step 3: Automate (different tab -> Go to Overview tab to view schedule options)
     const step3 = screen.getByRole('button', { name: /automate/i });
-    expect(step3).toHaveAttribute('data-step-hint', 'Go to Schedule tab');
+    expect(step3).toHaveAttribute(
+      'data-step-hint',
+      'Go to Overview tab to view schedule options',
+    );
     expect(step3).not.toHaveAttribute('title');
   });
 
-  it('selects the Schedule tab when clicking the Automate step pill', () => {
+  it('selects the Overview tab when clicking the Automate step pill', () => {
     const handleTabChange = vi.fn();
 
     vi.mocked(useJobDetailContext).mockReturnValue({
@@ -578,7 +578,7 @@ describe('JobOnboardingJourney - Step Gating & Activation Flow', () => {
 
     fireEvent.click(automateBtn);
 
-    expect(handleTabChange).toHaveBeenCalledWith('schedule');
+    expect(handleTabChange).toHaveBeenCalledWith('overview');
   });
 
   it('keeps setup steps visible on Overview before the first run', () => {

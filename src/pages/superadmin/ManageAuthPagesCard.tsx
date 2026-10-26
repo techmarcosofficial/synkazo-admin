@@ -1,9 +1,9 @@
-import { Lock, LockOpen } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import ErrorState from '@/components/shared/ErrorState';
 import SkeletonList from '@/components/shared/skeletons/SkeletonList';
-import { Badge } from '@/components/ui/badge';
+import StatusBadge from '@/components/shared/StatusBadge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Spinner } from '@/components/ui/spinner';
@@ -110,23 +110,7 @@ export default function ManageAuthPagesCard() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <h3 className="font-medium text-sm">{page.label}</h3>
-                      <Badge
-                        className={
-                          isEnabled
-                            ? 'bg-success/10 text-success gap-1.5'
-                            : 'bg-warning/10 text-warning gap-1.5'
-                        }
-                      >
-                        {isEnabled ? (
-                          <>
-                            <LockOpen className="size-3" /> Enabled
-                          </>
-                        ) : (
-                          <>
-                            <Lock className="size-3" /> Disabled
-                          </>
-                        )}
-                      </Badge>
+                      <StatusBadge status={isEnabled ? 'enabled' : 'disabled'} label={isEnabled ? 'Enabled' : 'Disabled'} tone={isEnabled ? 'success' : 'warning'} />
                     </div>
                     <p className="text-muted-foreground text-xs mt-1">
                       {page.description}

@@ -359,4 +359,32 @@ describe('SyncRunProgress', () => {
     fireEvent.click(viewRunButtons[viewRunButtons.length - 1]);
     expect(onViewRun).toHaveBeenCalledWith('run-456');
   });
+
+  it('renders 3 columns max in compact/drawer mode to avoid squishing stat cards', () => {
+    render(
+      <SyncRunProgress
+        status="completed"
+        variant="compact"
+        statsColumns={3}
+        defaultOpen={true}
+      />,
+    );
+
+    const statsGrid = screen.getByLabelText('Record statistics');
+    expect(statsGrid.className).toContain('sm:grid-cols-3');
+    expect(statsGrid.className).not.toContain('lg:grid-cols-5');
+  });
+
+  it('renders 5 columns on desktop in default full-overview mode', () => {
+    render(
+      <SyncRunProgress
+        status="completed"
+        variant="default"
+        defaultOpen={true}
+      />,
+    );
+
+    const statsGrid = screen.getByLabelText('Record statistics');
+    expect(statsGrid.className).toContain('lg:grid-cols-5');
+  });
 });

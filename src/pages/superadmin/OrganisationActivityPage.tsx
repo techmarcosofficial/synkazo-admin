@@ -9,7 +9,7 @@ import HeadingPair from '@/components/shared/HeadingPair';
 import ManagementToolbar from '@/components/shared/ManagementToolbar';
 import PaginationBar from '@/components/shared/PaginationBar';
 import SkeletonList from '@/components/shared/skeletons/SkeletonList';
-import { Badge } from '@/components/ui/badge';
+import StatusBadge from '@/components/shared/StatusBadge';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Select,
@@ -130,15 +130,7 @@ export default function OrganisationActivityPage() {
                         {entry.actor?.email ?? 'System'}
                       </TableCell>
                       <TableCell>
-                        <Badge
-                          variant={
-                            entry.severity === 'ERROR'
-                              ? 'destructive'
-                              : 'secondary'
-                          }
-                        >
-                          {entry.severity}
-                        </Badge>
+                      <StatusBadge status={entry.severity} label={entry.severity} />
                       </TableCell>
                       <TableCell
                         className="text-muted-foreground text-sm"

@@ -11,6 +11,7 @@ import {
 import React, { useState } from 'react';
 
 import { showToast } from '@/lib/toast';
+import StatusBadge from '@/components/shared/StatusBadge';
 import { cn } from '@/lib/utils';
 import type { SuperAdminBillingOverview } from '@/types';
 
@@ -70,13 +71,6 @@ export default function BillingOverviewHeader({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const statusColor =
-    plan.subscriptionStatus === 'active'
-      ? 'bg-success'
-      : plan.subscriptionStatus === 'past_due'
-        ? 'bg-amber-500'
-        : 'bg-slate-400';
-
   return (
     <div className={cn('space-y-4', className)}>
       <div>
@@ -105,14 +99,11 @@ export default function BillingOverviewHeader({
         {/* Card 2: Status */}
         <div className="rounded-2xl border bg-card p-3">
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <span
-              className={cn('size-2 rounded-full inline-block', statusColor)}
-              aria-hidden="true"
-            />
+            <CreditCard className="size-3.5" aria-hidden="true" />
             <span>Status</span>
           </div>
           <div className="mt-1.5 font-semibold text-sm capitalize truncate">
-            {plan.subscriptionStatus}
+            <StatusBadge status={plan.subscriptionStatus} label={plan.subscriptionStatus} />
           </div>
         </div>
 

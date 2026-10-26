@@ -375,7 +375,10 @@ export default function FieldPipelineEffectRail({
                           {step.validation ? 'True · Continue' : 'False · Stop'}
                         </Badge>
                       ) : step.skipped ? (
-                        <Badge className="bg-destructive/15 text-destructive border-0 px-1.5 py-0 text-[9px] font-medium">
+                        <Badge
+                          tone="danger"
+                          className="bg-destructive/15 text-destructive border-0 px-1.5 py-0 text-[9px] font-medium"
+                        >
                           Triggered Skip
                         </Badge>
                       ) : step.bypassed ? (
@@ -424,6 +427,7 @@ export default function FieldPipelineEffectRail({
                 Empty Value Fallback:
               </span>
               <Badge
+                tone={onEmpty === 'default' ? 'success' : onEmpty === 'skip_record' ? 'danger' : 'muted'}
                 className={cn(
                   'border-0 text-[10px] font-medium',
                   onEmpty === 'default'
@@ -482,6 +486,7 @@ export default function FieldPipelineEffectRail({
                   <Filter className="text-info size-3" /> Skip Condition:
                 </span>
                 <Badge
+                  tone={recordSkippedByFilter ? 'danger' : 'success'}
                   className={cn(
                     'border-0 text-[10px] font-medium',
                     recordSkippedByFilter
@@ -516,15 +521,24 @@ export default function FieldPipelineEffectRail({
                 Final Result
               </span>
               {fieldSkippedByValidation && !recordWillBeSkipped ? (
-                <Badge className="bg-destructive/20 text-destructive border-0 text-[10px] font-semibold">
+                <Badge
+                  tone="danger"
+                  className="bg-destructive/20 text-destructive border-0 text-[10px] font-semibold"
+                >
                   Field Omitted
                 </Badge>
               ) : recordWillBeSkipped ? (
-                <Badge className="bg-destructive/20 text-destructive border-0 text-[10px] font-semibold">
+                <Badge
+                  tone="danger"
+                  className="bg-destructive/20 text-destructive border-0 text-[10px] font-semibold"
+                >
                   Record Discarded
                 </Badge>
               ) : (
-                <Badge className="bg-success/20 text-success border-0 text-[10px] font-semibold">
+                <Badge
+                  tone="success"
+                  className="bg-success/20 text-success border-0 text-[10px] font-semibold"
+                >
                   Ready to Sync
                 </Badge>
               )}

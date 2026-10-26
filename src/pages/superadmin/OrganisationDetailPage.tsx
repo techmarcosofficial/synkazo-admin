@@ -16,7 +16,7 @@ import { getPlatform } from '@/components/platform';
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
+import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -466,7 +466,7 @@ export default function OrganisationDetailPage() {
                     <li key={project.id}>
                       <Link
                         to={basePath + '/projects/' + project.id}
-                        className="group border-border/70 hover:border-foreground/25 hover:bg-muted/20 focus-visible:ring-ring flex min-w-0 items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                        className="group border-border/70 hover:border-foreground/25 hover:bg-muted/20 focus-visible:ring-ring flex min-w-0 items-center gap-3 rounded-2xl border px-3 py-2.5 transition-colors focus-visible:ring-2 focus-visible:outline-none"
                       >
                         <div className="shrink-0" aria-hidden="true">
                           <ProjectPlatformPair
@@ -585,9 +585,7 @@ export default function OrganisationDetailPage() {
                     Subscription
                   </dt>
                   <dd className="mt-0.5">
-                    <Badge variant="outline" className="capitalize">
-                      {org.plan.subscriptionStatus.replace(/_/g, ' ')}
-                    </Badge>
+                    <StatusBadge status={org.plan.subscriptionStatus} label={org.plan.subscriptionStatus.replace(/_/g, ' ')} className="capitalize" />
                   </dd>
                 </div>
                 <div>
@@ -679,20 +677,7 @@ export default function OrganisationDetailPage() {
                           {formatEventLabel(entry.action)}
                         </span>
                         {entry.severity !== 'INFO' && (
-                          <span
-                            className={
-                              'inline-flex shrink-0 items-center gap-1.5 text-xs font-medium ' +
-                              (entry.severity === 'ERROR'
-                                ? 'text-destructive'
-                                : 'text-muted-foreground')
-                            }
-                          >
-                            <span
-                              className="size-1.5 rounded-full bg-current"
-                              aria-hidden="true"
-                            />
-                            {entry.severity === 'ERROR' ? 'Error' : 'Warning'}
-                          </span>
+                          <StatusBadge status={entry.severity} label={entry.severity === 'ERROR' ? 'Error' : 'Warning'} />
                         )}
                       </div>
                       <div className="text-muted-foreground mt-1 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs">

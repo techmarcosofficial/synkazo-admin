@@ -401,6 +401,7 @@ export function RuleRecordsList({
 
               <div className="flex items-center justify-start md:justify-end">
                 <Badge
+                  tone={record.status === 'completed' ? 'success' : record.status === 'pending' ? 'warning' : 'danger'}
                   className={cn(
                     record.status === 'completed'
                       ? 'bg-success/10 text-success'

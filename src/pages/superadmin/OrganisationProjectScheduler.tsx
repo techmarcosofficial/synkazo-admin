@@ -33,7 +33,7 @@ import QueueScheduleCard, {
   queueScheduleDraft,
   queueScheduleValid,
 } from '@/components/jobs/priority-queue/QueueScheduleCard';
-import { Badge } from '@/components/ui/badge';
+import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
@@ -432,13 +432,13 @@ export default function OrganisationProjectScheduler({
           />
         }
         status={
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="text-sm font-semibold">Current cycle</h3>
-              <Badge variant="secondary">{queue.displayStatus}</Badge>
+                <StatusBadge status={queue.displayStatus} label={queue.displayStatus} />
             </div>
             {execution ? (
-              <div className="space-y-2 text-xs">
+              <div className="space-y-1.5 text-xs">
                 <div className="flex justify-between gap-2">
                   <span className="truncate">
                     {queue.currentQueueJob?.job?.name ?? 'Running job'}
@@ -448,7 +448,7 @@ export default function OrganisationProjectScheduler({
                     {Math.round(execution.executionWindowSec / 60)} min
                   </span>
                 </div>
-                <Progress value={progress} />
+                <Progress value={progress} className="h-1.5" />
                 <p className="text-muted-foreground">
                   {execution.recordsProcessed.toLocaleString()} records
                   processed
@@ -476,11 +476,12 @@ export default function OrganisationProjectScheduler({
                   )}
               </div>
             )}
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid grid-cols-2 gap-2">
               {queue.queue?.status === 'paused' ? (
                 <Button
                   size="sm"
                   variant="outline"
+                  className="w-full h-8 text-xs"
                   disabled={pending}
                   onClick={() =>
                     ask(
@@ -495,12 +496,13 @@ export default function OrganisationProjectScheduler({
                     )
                   }
                 >
-                  <Play /> Resume
+                  <Play className="size-3.5" /> Resume
                 </Button>
               ) : (
                 <Button
                   size="sm"
                   variant="outline"
+                  className="w-full h-8 text-xs"
                   disabled={pending}
                   onClick={() =>
                     ask(
@@ -515,12 +517,13 @@ export default function OrganisationProjectScheduler({
                     )
                   }
                 >
-                  <Pause /> Pause
+                  <Pause className="size-3.5" /> Pause
                 </Button>
               )}
               <Button
                 size="sm"
                 variant="outline"
+                className="w-full h-8 text-xs"
                 disabled={pending}
                 onClick={() =>
                   ask(
@@ -536,7 +539,7 @@ export default function OrganisationProjectScheduler({
                   )
                 }
               >
-                <RotateCcw /> Clear & restart
+                <RotateCcw className="size-3.5" /> Clear & restart
               </Button>
             </div>
           </div>

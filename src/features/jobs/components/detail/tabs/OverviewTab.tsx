@@ -208,6 +208,7 @@ export default function OverviewTab() {
     lastSyncedAt: job.lastSyncedAt,
   });
   const hasRunHistory = onboarding.testComplete;
+  const showFullOverview = hasRunHistory || onboarding.configurationReady;
   const canStartSync =
     canActivate &&
     onboarding.configurationReady &&
@@ -340,7 +341,7 @@ export default function OverviewTab() {
 
   return (
     <div className="space-y-5">
-      {hasRunHistory ? (
+      {showFullOverview ? (
         <Card size="sm" className="min-w-0 rounded-4xl">
           <CardHeader visualLevel="section">
             <div className="space-y-0.5">
@@ -380,7 +381,9 @@ export default function OverviewTab() {
                 <CalendarClock /> Schedule
               </Button>
               <Button
+                id="sync-now-button"
                 size="sm"
+                data-flow-next-action={!hasRunHistory && canStartSync ? 'true' : undefined}
                 onClick={() => setManualDialogOpen(true)}
                 disabled={syncBlocked}
               >

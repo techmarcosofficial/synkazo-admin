@@ -941,7 +941,7 @@ export default function RuleBuilderModal({
                   </Badge>
                 )}
                 {totalErrors > 0 && (
-                  <Badge className="bg-destructive/10 text-destructive hover:bg-destructive/10 gap-1">
+                    <Badge tone="danger" className="bg-destructive/10 text-destructive hover:bg-destructive/10 gap-1">
                     <AlertCircle className="size-2.5" /> {totalErrors} need
                     values
                   </Badge>

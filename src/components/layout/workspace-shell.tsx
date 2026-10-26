@@ -81,7 +81,7 @@ export default function WorkspaceShell({
               </div>
             </div>
           )} */}
-          <main className="container mx-auto flex w-full max-w-full min-w-0 flex-1 flex-col gap-4 px-5 py-4 sm:px-7 sm:py-6 lg:px-8 xl:px-10">
+          <main className="container mx-auto flex w-full max-w-full min-w-0 flex-1 flex-col gap-4 px-5 py-4 sm:px-7 sm:py-8 lg:px-10 xl:px-18">
             <WorkspacePageBoundary
               key={location.pathname}
               home={

@@ -22,7 +22,7 @@ import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
 import HeadingPair from '@/components/shared/HeadingPair';
 import SkeletonList from '@/components/shared/skeletons/SkeletonList';
-import { Badge } from '@/components/ui/badge';
+import StatusBadge from '@/components/shared/StatusBadge';
 import {
   Accordion,
   AccordionContent,
@@ -211,7 +211,7 @@ function JobOverview({
                       {failure.failedCount} failed · {failure.totalFetched}{' '}
                       fetched
                     </span>
-                    <Badge variant="destructive">{failure.status}</Badge>
+                <StatusBadge status={failure.status} label={failure.status} tone="danger" />
                   </div>
                 </li>
               ))}
@@ -967,13 +967,7 @@ export default function OrganisationJobDetailPage() {
                             updated · {run.skippedCount} skipped ·{' '}
                             {run.failedCount} failed
                           </span>
-                          <Badge
-                            variant={
-                              run.failedCount ? 'destructive' : 'secondary'
-                            }
-                          >
-                            {run.executionStatus || run.status}
-                          </Badge>
+                          <StatusBadge status={run.executionStatus || run.status} label={run.executionStatus || run.status} tone={run.failedCount ? 'danger' : undefined} />
                         </div>
                       </li>
                     ))}

@@ -22,7 +22,7 @@ import PageHeader from '@/components/shared/PageHeader';
 import PaginationBar from '@/components/shared/PaginationBar';
 import SkeletonTable from '@/components/shared/skeletons/SkeletonTable';
 import StatCardGrid from '@/components/shared/StatCardGrid';
-import { Badge } from '@/components/ui/badge';
+import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -70,10 +70,7 @@ const SEVERITY_CONFIG: Record<
 function SeverityBadge({ severity }: { severity: string }) {
   const cfg = SEVERITY_CONFIG[severity] ?? SEVERITY_CONFIG.info;
   return (
-    <Badge className="bg-muted text-muted-foreground gap-1 font-semibold">
-      <cfg.Icon className={cn('size-2.5', cfg.iconClassName)} />
-      {cfg.label}
-    </Badge>
+    <StatusBadge status={severity} label={cfg.label} />
   );
 }
 

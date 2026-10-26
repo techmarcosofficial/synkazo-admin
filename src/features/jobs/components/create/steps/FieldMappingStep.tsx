@@ -196,6 +196,7 @@ export default function FieldMappingStep({
                       {hasMatchField ? (
                         <Badge
                           variant="secondary"
+                  tone="success"
                           className="border-success/20 bg-success/10 text-success text-[10px]"
                         >
                           Identifier Configured
@@ -203,6 +204,7 @@ export default function FieldMappingStep({
                       ) : (
                         <Badge
                           variant="secondary"
+                  tone="warning"
                           className="border-warning/20 bg-warning/10 text-warning text-[10px]"
                         >
                           Required Before Next Step

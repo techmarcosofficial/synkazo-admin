@@ -535,6 +535,7 @@ export default function QuickFieldMapper({
                                       <Badge
                                         variant="secondary"
                                         size="xs"
+                          tone="danger"
                                         className="bg-destructive/10 text-destructive text-[10px]"
                                       >
                                         Required

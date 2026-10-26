@@ -51,6 +51,7 @@ import type {
   SuperAdminRunMigrationDto,
   SuperAdminUpdateAssociationRuleDto,
   SuperAdminUpdateOrganisationDto,
+  SuperAdminUpdateProjectDto,
   TransitionOrganisationStatusDto,
   UpsertFeatureFlagDto,
   UpsertMarketplaceCatalogEntryDto,
@@ -478,17 +479,11 @@ export function useUpdateSuperAdminProjectMutation(
 ) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (dto: { name?: string; description?: string }) =>
+    mutationFn: (dto: SuperAdminUpdateProjectDto) =>
       superAdminOperationsApi.updateProject(organisationId, projectId, dto),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.superAdmin.operations.project(
-          organisationId,
-          projectId,
-        ),
-      });
-      queryClient.invalidateQueries({
-        queryKey: ['superAdmin', organisationId, 'projects'],
+        queryKey: ['superAdmin', organisationId],
       });
     },
   });

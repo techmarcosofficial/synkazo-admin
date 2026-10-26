@@ -95,53 +95,54 @@ function renderSettings(initialEntry: string) {
 afterEach(cleanup);
 
 describe('OrganisationProjectSettings', () => {
-  it('renders separate full-width cards that collapse independently and keeps open sections in the URL', async () => {
+  it('renders settings navigation and switches active section while keeping section in the URL', async () => {
     renderSettings(
       '/super-admin/organisations/org-1/projects/project-1?tab=settings',
     );
-    expect(screen.getByRole('button', { name: /General/ })).toHaveAttribute(
-      'aria-expanded',
-      'true',
+    expect(screen.getByRole('link', { name: /General/ })).toHaveAttribute(
+      'aria-current',
+      'page',
     );
     expect(screen.getByText('Project information')).toBeInTheDocument();
-    const general = screen.getByRole('button', { name: /General/ });
-    const scheduler = screen.getByRole('button', { name: /Bulk Scheduler/ });
-    const associations = screen.getByRole('button', { name: /Associations/ });
-    const environments = screen.getByRole('button', {
-      name: /Environments/,
-    });
-    const cards = [general, scheduler, associations, environments].map(
-      (trigger) => trigger.closest('[data-slot="card"]'),
-    );
-    expect(new Set(cards).size).toBe(4);
-    cards.forEach((card) =>
-      expect(card).toHaveAttribute('data-layout-surface', 'outer'),
-    );
-    expect(scheduler).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByText('Support operations')).toBeInTheDocument();
+    expect(screen.getByText('Archive project')).toBeInTheDocument();
+
+    const general = screen.getByRole('link', { name: /General/ });
+    const scheduler = screen.getByRole('link', { name: /Bulk Scheduler/ });
+    const associations = screen.getByRole('link', { name: /Associations/ });
+    const environments = screen.getByRole('link', { name: /Environments/ });
+
+    expect(general).toBeInTheDocument();
+    expect(scheduler).toBeInTheDocument();
+    expect(associations).toBeInTheDocument();
+    expect(environments).toBeInTheDocument();
 
     fireEvent.click(associations);
     expect(
       await screen.findByText('Scoped associations panel'),
     ).toBeInTheDocument();
-    expect(general).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByText('Project information')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Associations/ })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(screen.queryByText('Project information')).not.toBeInTheDocument();
     await waitFor(() =>
       expect(screen.getByTestId('location')).toHaveTextContent(
-        'section=general%2Cassociations',
+        'section=associations',
       ),
     );
 
     fireEvent.click(general);
-    expect(general).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByText('Project information')).not.toBeInTheDocument();
-    expect(associations).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByTestId('location')).toHaveTextContent(
-      'section=associations',
+    expect(screen.getByText('Project information')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /General/ })).toHaveAttribute(
+      'aria-current',
+      'page',
     );
-
-    fireEvent.click(associations);
-    expect(associations).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.getByTestId('location')).toHaveTextContent('section=closed');
+    await waitFor(() =>
+      expect(screen.getByTestId('location')).toHaveTextContent(
+        'section=general',
+      ),
+    );
   });
 
   it('opens a deep-linked environment section', async () => {
@@ -151,23 +152,25 @@ describe('OrganisationProjectSettings', () => {
     expect(
       await screen.findByText('Scoped environments panel'),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: /Environments/ }),
-    ).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('link', { name: /Environments/ })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
   });
 
-  it('preserves unsaved scheduler state when its card is collapsed', async () => {
+  it('preserves unsaved scheduler state when switching between sections', async () => {
     renderSettings(
       '/super-admin/organisations/org-1/projects/project-1?tab=settings',
     );
-    const trigger = screen.getByRole('button', { name: /Bulk Scheduler/ });
+    const trigger = screen.getByRole('link', { name: /Bulk Scheduler/ });
     fireEvent.click(trigger);
     const draft = await screen.findByRole('textbox', {
       name: 'Scheduler draft',
     });
     fireEvent.change(draft, { target: { value: 'unsaved schedule' } });
-    fireEvent.click(trigger);
-    fireEvent.click(trigger);
+    fireEvent.click(screen.getByRole('link', { name: /General/ }));
+    expect(screen.getByText('Project information')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('link', { name: /Bulk Scheduler/ }));
     expect(
       screen.getByRole('textbox', { name: 'Scheduler draft' }),
     ).toHaveValue('unsaved schedule');

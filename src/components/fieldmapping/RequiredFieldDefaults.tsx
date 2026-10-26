@@ -480,6 +480,7 @@ export default function RequiredFieldDefaults({
           {requiredItems.length > 0 && (
             <Badge
               variant="secondary"
+              tone={fullyResolved ? 'success' : 'muted'}
               className={cn(
                 'gap-1.5',
                 fullyResolved && 'bg-success/10 text-success',
