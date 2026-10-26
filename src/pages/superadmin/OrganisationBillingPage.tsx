@@ -381,7 +381,6 @@ export default function OrganisationBillingPage() {
               if (!o) setSubAction(null);
             }}
             title="Resume subscription"
-            description="Reverse scheduled cancellation and continue normal renewal."
             description="Clear the scheduled cancellation. The subscription will renew normally."
             actionLabel="Resume subscription"
             tone="warning"
@@ -649,6 +648,7 @@ export default function OrganisationBillingPage() {
                     planName={overview.plan.planName}
                     overLimit={overview.plan.overLimit}
                     usage={overview.usage}
+                    highlightedKey={activeHighlight}
                   />
                 )}
               </div>
@@ -952,7 +952,6 @@ export default function OrganisationBillingPage() {
             <BillingHistorySection
               organisationId={organisationId}
               onOpenDetail={openInvoiceDetail}
-              highlightedKey={activeHighlight}
             />
 
             {/* Enhanced Billing Notes Card for internal staff notes */}
