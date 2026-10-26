@@ -4,7 +4,7 @@ import {
   Receipt,
   ShieldAlert,
 } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 
 import EmptyState from '@/components/shared/EmptyState';
@@ -149,6 +149,24 @@ export default function OrganisationBillingPage() {
   const paymentHoldActive = organisation?.paymentHoldActive ?? false;
   const isPastDue = overview?.plan.subscriptionStatus === 'past_due';
 
+  const highlightParam = searchParams.get('highlight');
+  const [activeHighlight, setActiveHighlight] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!overview || !highlightParam) return;
+    setActiveHighlight(highlightParam);
+    const target =
+      document.getElementById('entitlement-resource-' + highlightParam) ||
+      document.getElementById('entitlements-usage');
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    const timer = setTimeout(() => {
+      setActiveHighlight(null);
+    }, 2800);
+    return () => clearTimeout(timer);
+  }, [overview, highlightParam]);
+
   return (
     <div className="flex flex-col gap-6">
       {/* Drawer: Detailed Invoice Breakdown & Provider Retry */}
@@ -191,8 +209,8 @@ export default function OrganisationBillingPage() {
               if (!o) setHoldAction(null);
             }}
             title="Impose payment hold"
-            description="Stop the sync scheduler and pause queued jobs for this organisation independent of billing state. Tenant reads remain available."
-            bodyWarning="Use for compliance / support holds only. Scheduled runs are held until explicitly lifted."
+            description="Stop sync scheduling and hold queued jobs for this organisation."
+            bodyWarning="Scheduled runs will be held until explicitly lifted."
             actionLabel="Impose hold"
             tone="danger"
             organisationName={organisation.name}
@@ -222,7 +240,7 @@ export default function OrganisationBillingPage() {
               if (!o) setHoldAction(null);
             }}
             title="Clear payment hold"
-            description="Lift the manual payment hold. The scheduler resumes for this organisation on the next tick."
+            description="Lift the manual payment hold on this organisation."
             actionLabel="Clear hold"
             tone="warning"
             organisationName={organisation.name}
@@ -254,7 +272,7 @@ export default function OrganisationBillingPage() {
               if (!o) setSubAction(null);
             }}
             title="Cancel subscription at period end"
-            description="The customer retains access until the end of the current billing period, then automatically drops to Free."
+            description="The subscription will cancel at the end of the current billing period."
             actionLabel="Schedule cancellation"
             tone="warning"
             organisationName={organisation.name}
@@ -288,7 +306,7 @@ export default function OrganisationBillingPage() {
               if (!o) setSubAction(null);
             }}
             title="Resume subscription"
-            description="Clear the scheduled cancellation. The subscription continues on its regular renewal schedule."
+            description="Reverse scheduled cancellation and continue normal renewal."
             actionLabel="Resume subscription"
             tone="warning"
             organisationName={organisation.name}
@@ -320,8 +338,8 @@ export default function OrganisationBillingPage() {
               if (!o) setSubAction(null);
             }}
             title="Cancel subscription immediately"
-            description="Immediately drop the organisation to Free, bypass the period-end wait, and pause over-limit jobs."
-            bodyWarning="High-impact action. The customer loses paid plan access immediately."
+            description="Cancel subscription immediately and switch organisation to Free."
+            bodyWarning="The organisation loses paid plan access immediately."
             actionLabel="Cancel immediately"
             tone="danger"
             organisationName={organisation.name}
@@ -634,6 +652,7 @@ export default function OrganisationBillingPage() {
               planName={overview.plan.planName}
               overLimit={overview.plan.overLimit}
               usage={overview.usage}
+              highlightedKey={activeHighlight}
             />
           )}
 

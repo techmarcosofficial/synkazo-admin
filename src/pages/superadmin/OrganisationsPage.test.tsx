@@ -50,6 +50,16 @@ vi.mock('@/api/superAdminOrganisations', () => ({
   },
 }));
 
+vi.mock('@/queries/useBilling', () => ({
+  useAdminPlansQuery: () => ({
+    data: [
+      { id: 'plan-starter', name: 'Starter' },
+      { id: 'plan-pro', name: 'Pro' },
+    ],
+    isLoading: false,
+  }),
+}));
+
 function renderAt(path: string) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -150,6 +160,58 @@ describe('OrganisationsPage', () => {
     expect(
       (mocks.lastParams as { subscriptionStatus?: string })?.subscriptionStatus,
     ).toBe('past_due');
+  });
+
+  it('forwards planId URL params to the query', async () => {
+    renderAt('/super-admin/organisations?planId=plan-pro');
+    await screen.findByText('Northwind HVAC');
+    expect((mocks.lastParams as { planId?: string })?.planId).toBe('plan-pro');
+  });
+
+  it('forwards planId=unassigned to the query', async () => {
+    renderAt('/super-admin/organisations?planId=unassigned');
+    await screen.findByText('Northwind HVAC');
+    expect((mocks.lastParams as { planId?: string })?.planId).toBe('unassigned');
+  });
+
+  it('renders filter controls and clear filters button next to filters when active', async () => {
+    renderAt('/super-admin/organisations?planId=plan-pro');
+    await screen.findByText('Northwind HVAC');
+
+    const statusFilter = screen.getByRole('combobox', {
+      name: 'Filter organisations by status',
+    });
+    const billingFilter = screen.getByRole('combobox', {
+      name: 'Filter organisations by billing status',
+    });
+    const planFilter = screen.getByRole('combobox', {
+      name: 'Filter organisations by plan',
+    });
+    const sortSelect = screen.getByRole('combobox', {
+      name: 'Sort organisations',
+    });
+
+    expect(statusFilter).toBeInTheDocument();
+    expect(billingFilter).toBeInTheDocument();
+    expect(planFilter).toBeInTheDocument();
+    expect(sortSelect).toBeInTheDocument();
+
+    const clearButton = screen.getByRole('button', { name: 'Clear filters' });
+    expect(clearButton).toBeInTheDocument();
+
+    // Verify sort dropdown comes before clear filters button in DOM order
+    expect(
+      Boolean(
+        sortSelect.compareDocumentPosition(clearButton) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ),
+    ).toBe(true);
+
+    fireEvent.click(clearButton);
+    expect((mocks.lastParams as { planId?: string })?.planId).toBeUndefined();
+    expect(
+      screen.queryByRole('button', { name: 'Clear filters' }),
+    ).not.toBeInTheDocument();
   });
 
   it('renders an error state with a retry action when the list call fails', async () => {

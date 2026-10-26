@@ -223,6 +223,21 @@ describe('OrganisationDetailPage', () => {
     expect(await screen.findByText('CRM sync')).toBeInTheDocument();
     expect(screen.getByText('Sync flows: 2 enabled of 3')).toBeInTheDocument();
     expect(screen.getByText('Nov 1, 2026')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: /view limits/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /^Sync flows:/i }),
+    ).toHaveAttribute(
+      'href',
+      '/super-admin/organisations/org-1/billing?highlight=jobs#entitlements-usage',
+    );
+    expect(
+      screen.getByRole('link', { name: /^Records this period:/i }),
+    ).toHaveAttribute(
+      'href',
+      '/super-admin/organisations/org-1/billing?highlight=records#entitlements-usage',
+    );
   });
 
   it('shows a suspension banner when the organisation status is suspended', async () => {

@@ -156,14 +156,19 @@ vi.mock('@/api/superAdminBilling', () => ({
   },
 }));
 
-function renderPage(orgId = 'org-1', initialTab = 'overview') {
+function renderPage(
+  orgId = 'org-1',
+  initialTab = 'overview',
+  query = '',
+) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  const queryString = query ? `&${query}` : '';
   return render(
     <MemoryRouter
       initialEntries={[
-        `/super-admin/organisations/${orgId}/billing?tab=${initialTab}`,
+        `/super-admin/organisations/${orgId}/billing?tab=${initialTab}${queryString}`,
       ]}
     >
       <QueryClientProvider client={queryClient}>
@@ -275,5 +280,45 @@ describe('OrganisationBillingPage', () => {
     expect(
       await screen.findByText(/Subscription Past Due \(Grace Period Active\)/i),
     ).toBeInTheDocument();
+  });
+
+  it('highlights the jobs stat and scrolls into view when highlight=jobs is provided', async () => {
+    const scrollMock = vi.fn();
+    window.HTMLElement.prototype.scrollIntoView = scrollMock;
+
+    const { container } = renderPage('org-1', 'overview', 'highlight=jobs');
+    expect(await screen.findByText('Entitlements & Usage')).toBeInTheDocument();
+
+    const jobsResource = container.querySelector('#entitlement-resource-jobs');
+    expect(jobsResource).toBeInTheDocument();
+    expect(jobsResource).toHaveAttribute('data-highlighted', 'true');
+    expect(scrollMock).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' });
+  });
+
+  it('highlights the records stat when highlight=records is provided', async () => {
+    const { container } = renderPage('org-1', 'overview', 'highlight=records');
+    expect(await screen.findByText('Entitlements & Usage')).toBeInTheDocument();
+
+    const recordsResource = container.querySelector(
+      '#entitlement-resource-records',
+    );
+    expect(recordsResource).toBeInTheDocument();
+    expect(recordsResource).toHaveAttribute('data-highlighted', 'true');
+  });
+
+  it('smoothly removes the highlight styling after 2800ms', async () => {
+    const { container } = renderPage('org-1', 'overview', 'highlight=jobs');
+    expect(await screen.findByText('Entitlements & Usage')).toBeInTheDocument();
+
+    const jobsResource = container.querySelector('#entitlement-resource-jobs');
+    expect(jobsResource).toBeInTheDocument();
+    expect(jobsResource).toHaveAttribute('data-highlighted', 'true');
+
+    await vi.waitFor(
+      () => {
+        expect(jobsResource).not.toHaveAttribute('data-highlighted');
+      },
+      { timeout: 4000 },
+    );
   });
 });

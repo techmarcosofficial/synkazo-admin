@@ -36,6 +36,7 @@ export interface ListSuperAdminOrganisationsParams {
   status?: string;
   subscriptionStatus?: string;
   plan?: string;
+  planId?: string;
   sortBy?: 'name' | 'createdAt' | 'updatedAt';
   sortOrder?: 'asc' | 'desc';
 }
@@ -43,13 +44,21 @@ export interface ListSuperAdminOrganisationsParams {
 export const superAdminOrganisationsApi = {
   list: (
     params: ListSuperAdminOrganisationsParams = {},
-  ): Promise<SuperAdminPage<SuperAdminOrganisationListItem>> =>
-    apiClient
+  ): Promise<SuperAdminPage<SuperAdminOrganisationListItem>> => {
+    const { plan, planId, ...rest } = params;
+    const resolvedPlanId = planId ?? plan;
+    return apiClient
       .get<PaginatedEnvelope<SuperAdminOrganisationListItem>>(
         '/super-admin/organisations',
-        { params },
+        {
+          params: {
+            ...rest,
+            ...(resolvedPlanId ? { planId: resolvedPlanId } : {}),
+          },
+        },
       )
-      .then(paginated<SuperAdminOrganisationListItem>),
+      .then(paginated<SuperAdminOrganisationListItem>);
+  },
 
   get: (organisationId: string): Promise<SuperAdminOrganisationDetail> =>
     apiClient

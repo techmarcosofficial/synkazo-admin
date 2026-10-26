@@ -1,5 +1,8 @@
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, Shield, ShieldAlert } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 
 import LifecycleConfirmDialog from './lifecycle/LifecycleConfirmDialog';
 import PeopleDirectory, {
@@ -25,6 +28,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Field,
+  FieldContent,
+  FieldError,
+  FieldLabel,
+} from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -73,119 +82,185 @@ interface CreateDialogProps {
   }) => void;
 }
 
-function CreateSuperAdminDialog({
+export const createSuperAdminSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(1, 'Email is required')
+    .email('Please enter a valid email address')
+    .max(255),
+  fullName: z
+    .string()
+    .trim()
+    .min(1, 'Full name is required')
+    .max(255),
+  password: z
+    .string()
+    .min(MIN_PASSWORD, `Password must be at least ${MIN_PASSWORD} characters`),
+  reason: z
+    .string()
+    .trim()
+    .min(MIN_REASON, `Audit reason must be at least ${MIN_REASON} characters`),
+});
+
+export type CreateSuperAdminFormValues = z.infer<typeof createSuperAdminSchema>;
+
+export function CreateSuperAdminDialog({
   open,
   onOpenChange,
   isSubmitting,
   errorMessage,
   onSubmit,
 }: CreateDialogProps) {
-  const [email, setEmail] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [password, setPassword] = useState('');
-  const [reason, setReason] = useState('');
+  const form = useForm<CreateSuperAdminFormValues>({
+    resolver: zodResolver(createSuperAdminSchema),
+    mode: 'onChange',
+    defaultValues: {
+      email: '',
+      fullName: '',
+      password: '',
+      reason: '',
+    },
+  });
 
-  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
-  const nameOk = fullName.trim().length > 0;
-  const pwOk = password.length >= MIN_PASSWORD;
-  const reasonOk = reason.trim().length >= MIN_REASON;
-  const canSubmit = emailOk && nameOk && pwOk && reasonOk && !isSubmitting;
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        email: '',
+        fullName: '',
+        password: '',
+        reason: '',
+      });
+    }
+  }, [open, form]);
+
+  useEffect(() => {
+    if (errorMessage) {
+      if (/email|user|already exists|registered/i.test(errorMessage)) {
+        form.setError('email', { type: 'server', message: errorMessage });
+      } else if (/password/i.test(errorMessage)) {
+        form.setError('password', { type: 'server', message: errorMessage });
+      }
+    }
+  }, [errorMessage, form]);
+
+  const handleFormSubmit = form.handleSubmit((values) => {
+    onSubmit({
+      email: values.email.trim().toLowerCase(),
+      fullName: values.fullName.trim(),
+      initialPassword: values.password,
+      reason: values.reason.trim(),
+    });
+  });
+
+  const reasonValue = form.watch('reason') ?? '';
+  const isFieldServerError =
+    Boolean(errorMessage) &&
+    /email|user|already exists|registered|password/i.test(errorMessage ?? '');
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(o) => {
-        if (!o) {
-          setEmail('');
-          setFullName('');
-          setPassword('');
-          setReason('');
-        }
-        onOpenChange(o);
-      }}
-    >
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Create super admin</DialogTitle>
-          <DialogDescription>
-            The invitee signs in with this email + password immediately. Share
-            the password through a secure channel; it is not stored in plaintext
-            server-side.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="sa-email">Email</Label>
-            <Input
-              id="sa-email"
-              type="email"
-              autoComplete="off"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
+        <form onSubmit={handleFormSubmit} className="flex flex-col gap-4">
+          <DialogHeader>
+            <DialogTitle>Create super admin</DialogTitle>
+            <DialogDescription>
+              Create a new super admin account.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-4">
+            <Field>
+              <FieldLabel htmlFor="sa-email">
+                Email <span className="text-destructive ml-0.5">*</span>
+              </FieldLabel>
+              <FieldContent>
+                <Input
+                  id="sa-email"
+                  type="email"
+                  autoComplete="off"
+                  disabled={isSubmitting}
+                  aria-invalid={!!form.formState.errors.email}
+                  {...form.register('email')}
+                />
+              </FieldContent>
+              <FieldError>{form.formState.errors.email?.message}</FieldError>
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="sa-name">
+                Full name <span className="text-destructive ml-0.5">*</span>
+              </FieldLabel>
+              <FieldContent>
+                <Input
+                  id="sa-name"
+                  autoComplete="off"
+                  disabled={isSubmitting}
+                  aria-invalid={!!form.formState.errors.fullName}
+                  {...form.register('fullName')}
+                />
+              </FieldContent>
+              <FieldError>{form.formState.errors.fullName?.message}</FieldError>
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="sa-password">
+                Initial password <span className="text-destructive ml-0.5">*</span>
+              </FieldLabel>
+              <FieldContent>
+                <Input
+                  id="sa-password"
+                  type="password"
+                  autoComplete="new-password"
+                  disabled={isSubmitting}
+                  aria-invalid={!!form.formState.errors.password}
+                  {...form.register('password')}
+                />
+              </FieldContent>
+              <div className="text-muted-foreground text-xs">
+                Min {MIN_PASSWORD} characters.
+              </div>
+              <FieldError>{form.formState.errors.password?.message}</FieldError>
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="sa-reason">
+                Reason <span className="text-destructive ml-0.5">*</span>
+              </FieldLabel>
+              <FieldContent>
+                <Textarea
+                  id="sa-reason"
+                  rows={2}
+                  disabled={isSubmitting}
+                  aria-invalid={!!form.formState.errors.reason}
+                  {...form.register('reason')}
+                />
+              </FieldContent>
+              <div className="text-muted-foreground text-xs">
+                {reasonValue.trim().length}/{MIN_REASON} characters
+              </div>
+              <FieldError>{form.formState.errors.reason?.message}</FieldError>
+            </Field>
+
+            {errorMessage && !isFieldServerError ? (
+              <Alert variant="destructive">
+                <AlertDescription>{errorMessage}</AlertDescription>
+              </Alert>
+            ) : null}
           </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="sa-name">Full name</Label>
-            <Input
-              id="sa-name"
-              autoComplete="off"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="sa-password">Initial password</Label>
-            <Input
-              id="sa-password"
-              type="password"
-              autoComplete="new-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            <div className="text-muted-foreground text-xs">
-              Min {MIN_PASSWORD} characters.
-            </div>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="sa-reason">Reason</Label>
-            <Textarea
-              id="sa-reason"
-              rows={2}
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-            />
-            <div className="text-muted-foreground text-xs">
-              {reason.trim().length}/{MIN_REASON} characters
-            </div>
-          </div>
-          {errorMessage ? (
-            <Alert variant="destructive">
-              <AlertDescription>{errorMessage}</AlertDescription>
-            </Alert>
-          ) : null}
-        </div>
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button
-            disabled={!canSubmit}
-            onClick={() =>
-              onSubmit({
-                email: email.trim().toLowerCase(),
-                fullName: fullName.trim(),
-                initialPassword: password,
-                reason: reason.trim(),
-              })
-            }
-          >
-            {isSubmitting ? 'Creating…' : 'Create super admin'}
-          </Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Creating…' : 'Create super admin'}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
@@ -380,7 +455,7 @@ export default function SuperAdminsPage() {
         title="Deactivate super admin"
         description={
           deactivateTarget
-            ? `Deactivates ${deactivateTarget.email}. The last active super admin is blocked server-side.`
+            ? `Deactivate ${deactivateTarget.email}.`
             : 'Deactivate super admin'
         }
         actionLabel="Deactivate"
@@ -419,7 +494,7 @@ export default function SuperAdminsPage() {
         title="Reactivate super admin"
         description={
           reactivateTarget
-            ? `Restores super-admin access for ${reactivateTarget.email}.`
+            ? `Restore super-admin access for ${reactivateTarget.email}.`
             : 'Reactivate super admin'
         }
         actionLabel="Reactivate"

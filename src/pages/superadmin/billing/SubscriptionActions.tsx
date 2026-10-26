@@ -104,7 +104,7 @@ export default function SubscriptionActions({
           o ? setOpenAction('cancel-scheduled') : close()
         }
         title="Cancel subscription at period end"
-        description="The subscription stays active until the end of the current billing period, then cancels. Access continues through that date; no refunds are issued for the current period."
+        description="The subscription will cancel at the end of the current billing period."
         bodyWarning={
           organisation.plan.subscriptionStatus === 'trialing'
             ? 'This organisation is still trialing. Cancelling at period end ends the trial at its normal expiry.'
@@ -144,7 +144,7 @@ export default function SubscriptionActions({
         open={openAction === 'resume'}
         onOpenChange={(o) => (o ? setOpenAction('resume') : close())}
         title="Resume subscription"
-        description="Reverse the scheduled cancellation so the subscription renews at the end of the current period as normal."
+        description="Reverse scheduled cancellation and resume subscription renewal."
         actionLabel="Resume subscription"
         tone="warning"
         organisationName={organisation.name}
@@ -174,8 +174,8 @@ export default function SubscriptionActions({
           o ? setOpenAction('cancel-immediate') : close()
         }
         title="Cancel subscription immediately"
-        description="Access ends now — mid-period cancellation with no refund. The organisation flips to the Free plan and the subscription status becomes cancelled."
-        bodyWarning="This bypasses the standard cancel-at-period-end flow. Use for chargebacks, compliance holds, or explicit customer requests — not for routine churn."
+        description="Drops the organisation to Free immediately without waiting for period end."
+        bodyWarning="Immediate cancellation terminates paid access."
         actionLabel="Cancel now"
         tone="danger"
         organisationName={organisation.name}

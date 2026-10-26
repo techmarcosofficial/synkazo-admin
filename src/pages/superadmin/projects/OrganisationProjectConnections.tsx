@@ -107,11 +107,11 @@ export default function OrganisationProjectConnections({
           if (!open && !pending) setDisconnect(null);
         }}
         title="Disconnect platform connection?"
-        description={`${organisationName} · ${project.name} · ${disconnect?.conn.environment ?? ''}. Stored credentials will be removed. Jobs, mappings and schedules remain configured and may fail until reconnected.`}
+        description={`${organisationName} · ${project.name} · ${disconnect?.conn.environment ?? ''}. Stored credentials will be removed.`}
         bodyWarning={
           jobs
-            ? `${jobs.filter((job) => job.isEnabled).length} enabled sync flows; ${jobs.filter((job) => job.isRunning).length} currently running. Active syncs must finish before disconnecting.`
-            : 'The sync-flow impact summary is unavailable. Active syncs must finish before disconnecting; the server checks this before removal.'
+            ? `${jobs.filter((job) => job.isEnabled).length} enabled sync flows; ${jobs.filter((job) => job.isRunning).length} currently running.`
+            : undefined
         }
         actionLabel="Disconnect"
         tone="danger"

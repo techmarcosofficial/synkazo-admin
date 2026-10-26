@@ -1,4 +1,7 @@
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -10,11 +13,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Field,
+  FieldContent,
+  FieldError,
+  FieldLabel,
+} from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 function slugify(name: string): string {
@@ -25,11 +32,44 @@ function slugify(name: string): string {
     .substring(0, 100);
 }
 
+export const provisionOrganisationSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, 'Organisation name is required')
+    .max(255, 'Organisation name must not exceed 255 characters'),
+  slug: z
+    .string()
+    .trim()
+    .max(100)
+    .refine((val) => !val || SLUG_PATTERN.test(val), {
+      message:
+        'Slug must contain only lowercase letters, digits, and single hyphens',
+    })
+    .optional(),
+  description: z.string().trim().max(1000).optional(),
+  ownerEmail: z
+    .string()
+    .trim()
+    .min(1, 'Owner email is required')
+    .email('Please enter a valid email address')
+    .max(255),
+  invitationMessage: z.string().trim().max(2000).optional(),
+  reason: z
+    .string()
+    .trim()
+    .min(10, 'Audit reason must be at least 10 characters'),
+});
+
+export type ProvisionOrganisationFormValues = z.infer<
+  typeof provisionOrganisationSchema
+>;
+
 export interface ProvisionOrganisationValues {
   name: string;
   slug?: string;
   description?: string;
-  ownerEmail?: string;
+  ownerEmail: string;
   invitationMessage?: string;
   reason: string;
 }
@@ -42,10 +82,6 @@ interface ProvisionOrganisationDialogProps {
   onSubmit: (values: ProvisionOrganisationValues) => void;
 }
 
-// SA-401..404 — provisioning form. Fields mirror the backend
-// ProvisionOrganisationDto exactly so validation is easy to reason
-// about; the server re-validates every field so the client just
-// guards the submit button.
 export default function ProvisionOrganisationDialog({
   open,
   onOpenChange,
@@ -53,197 +89,226 @@ export default function ProvisionOrganisationDialog({
   errorMessage,
   onSubmit,
 }: ProvisionOrganisationDialogProps) {
-  const [name, setName] = useState('');
-  const [slug, setSlug] = useState('');
   const [slugEdited, setSlugEdited] = useState(false);
-  const [description, setDescription] = useState('');
-  const [ownerEmail, setOwnerEmail] = useState('');
-  const [invitationMessage, setInvitationMessage] = useState('');
-  const [reason, setReason] = useState('');
 
+  const form = useForm<ProvisionOrganisationFormValues>({
+    resolver: zodResolver(provisionOrganisationSchema),
+    mode: 'onChange',
+    defaultValues: {
+      name: '',
+      slug: '',
+      description: '',
+      ownerEmail: '',
+      invitationMessage: '',
+      reason: '',
+    },
+  });
+
+  // Reset form when dialog closes
   useEffect(() => {
     if (!open) {
-      setName('');
-      setSlug('');
+      form.reset();
       setSlugEdited(false);
-      setDescription('');
-      setOwnerEmail('');
-      setInvitationMessage('');
-      setReason('');
     }
-  }, [open]);
+  }, [open, form]);
 
-  // Auto-generate slug from name until the operator edits it directly.
-  // Once they touch it, we stop overwriting — respects their choice.
+  // Auto-generate slug from name until the operator manually edits it
+  const nameValue = form.watch('name');
   useEffect(() => {
-    if (!slugEdited) setSlug(slugify(name));
-  }, [name, slugEdited]);
+    if (!slugEdited) {
+      form.setValue('slug', slugify(nameValue ?? ''), {
+        shouldValidate: form.formState.isSubmitted,
+      });
+    }
+  }, [nameValue, slugEdited, form]);
 
-  const nameValid = name.trim().length > 0 && name.trim().length <= 255;
-  const slugValid = !slug || SLUG_PATTERN.test(slug);
-  const emailValid = !ownerEmail || EMAIL_PATTERN.test(ownerEmail.trim());
-  const reasonValid = reason.trim().length >= 10;
-  const canSubmit =
-    nameValid && slugValid && emailValid && reasonValid && !isSubmitting;
+  // Bind server errors to the appropriate field or alert.
+  // When an email conflict error arrives, setting it on 'ownerEmail' means that
+  // as soon as the user modifies the input with mode: 'onChange', react-hook-form
+  // automatically clears the error!
+  useEffect(() => {
+    if (errorMessage) {
+      if (/assigned|owner email|email/i.test(errorMessage)) {
+        form.setError('ownerEmail', {
+          type: 'server',
+          message: errorMessage,
+        });
+      }
+    }
+  }, [errorMessage, form]);
 
-  const submit = () => {
-    if (!canSubmit) return;
+  const generalError =
+    errorMessage && !/assigned|owner email|email/i.test(errorMessage)
+      ? errorMessage
+      : null;
+
+  const handleFormSubmit = form.handleSubmit((values) => {
     onSubmit({
-      name: name.trim(),
-      slug: slug || undefined,
-      description: description.trim() || undefined,
-      ownerEmail: ownerEmail.trim().toLowerCase() || undefined,
-      invitationMessage: invitationMessage.trim() || undefined,
-      reason: reason.trim(),
+      name: values.name.trim(),
+      slug: values.slug?.trim() || undefined,
+      description: values.description?.trim() || undefined,
+      ownerEmail: values.ownerEmail.trim().toLowerCase(),
+      invitationMessage: values.invitationMessage?.trim() || undefined,
+      reason: values.reason.trim(),
     });
-  };
+  });
+
+  const reasonValue = form.watch('reason') ?? '';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Provision a new organisation</DialogTitle>
-          <DialogDescription>
-            Creates a fresh customer organisation on the platform. If you
-            supply an owner email, an org-admin invitation is sent —
-            otherwise the org starts ownerless and stays that way until
-            you invite a member from its Members page.
-          </DialogDescription>
-        </DialogHeader>
+        <form onSubmit={handleFormSubmit} className="flex flex-col gap-4">
+          <DialogHeader>
+            <DialogTitle>Provision a new organisation</DialogTitle>
+            <DialogDescription>
+              Create a new customer organisation.
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="provision-name">Organisation name</Label>
-            <Input
-              id="provision-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Acme Corp"
-              autoComplete="off"
-            />
-          </div>
+          <div className="flex flex-col gap-4">
+            <Field>
+              <FieldLabel htmlFor="provision-name">
+                Organisation name <span className="text-destructive ml-0.5">*</span>
+              </FieldLabel>
+              <FieldContent>
+                <Input
+                  id="provision-name"
+                  placeholder="Acme Corp"
+                  autoComplete="off"
+                  disabled={isSubmitting}
+                  aria-invalid={!!form.formState.errors.name}
+                  {...form.register('name')}
+                />
+              </FieldContent>
+              <FieldError>{form.formState.errors.name?.message}</FieldError>
+            </Field>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="provision-slug">
-              Slug
-              <span className="text-muted-foreground ml-1 text-xs">
-                (auto-generated — edit if needed)
-              </span>
-            </Label>
-            <Input
-              id="provision-slug"
-              value={slug}
-              onChange={(e) => {
-                setSlugEdited(true);
-                setSlug(e.target.value.toLowerCase());
-              }}
-              placeholder="acme-corp"
-              autoComplete="off"
-              spellCheck={false}
-              aria-invalid={slug.length > 0 && !slugValid}
-            />
-            <span className="text-muted-foreground text-xs">
-              Lowercase letters, digits, single hyphens. Idempotency key —
-              a repeat submission with the same slug returns the existing
-              org.
-            </span>
-          </div>
+            <Field>
+              <FieldLabel htmlFor="provision-slug">
+                Slug
+                <span className="text-muted-foreground ml-1 text-xs">
+                  (auto-generated)
+                </span>
+              </FieldLabel>
+              <FieldContent>
+                <Input
+                  id="provision-slug"
+                  placeholder="acme-corp"
+                  autoComplete="off"
+                  spellCheck={false}
+                  disabled={isSubmitting}
+                  aria-invalid={!!form.formState.errors.slug}
+                  {...form.register('slug', {
+                    onChange: () => setSlugEdited(true),
+                  })}
+                />
+              </FieldContent>
+              <FieldError>{form.formState.errors.slug?.message}</FieldError>
+            </Field>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="provision-description">
-              Description
-              <span className="text-muted-foreground ml-1 text-xs">
-                (optional)
-              </span>
-            </Label>
-            <Textarea
-              id="provision-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={2}
-              placeholder="Short label so operators can distinguish this org later"
-            />
-          </div>
+            <Field>
+              <FieldLabel htmlFor="provision-description">
+                Description
+                <span className="text-muted-foreground ml-1 text-xs">
+                  (optional)
+                </span>
+              </FieldLabel>
+              <FieldContent>
+                <Textarea
+                  id="provision-description"
+                  rows={2}
+                  placeholder="Organisation description"
+                  disabled={isSubmitting}
+                  {...form.register('description')}
+                />
+              </FieldContent>
+              <FieldError>{form.formState.errors.description?.message}</FieldError>
+            </Field>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="provision-owner-email">
-              Owner email
-              <span className="text-muted-foreground ml-1 text-xs">
-                (optional)
-              </span>
-            </Label>
-            <Input
-              id="provision-owner-email"
-              type="email"
-              value={ownerEmail}
-              onChange={(e) => setOwnerEmail(e.target.value)}
-              placeholder="owner@acme.example"
-              autoComplete="off"
-              aria-invalid={ownerEmail.length > 0 && !emailValid}
-            />
-            <span className="text-muted-foreground text-xs">
-              Leave blank to create an ownerless org — you can invite the
-              owner from the Members page later.
-            </span>
-          </div>
+            <Field>
+              <FieldLabel htmlFor="provision-owner-email">
+                Owner email <span className="text-destructive ml-0.5">*</span>
+              </FieldLabel>
+              <FieldContent>
+                <Input
+                  id="provision-owner-email"
+                  type="email"
+                  placeholder="owner@acme.example"
+                  autoComplete="off"
+                  disabled={isSubmitting}
+                  aria-invalid={!!form.formState.errors.ownerEmail}
+                  {...form.register('ownerEmail')}
+                />
+              </FieldContent>
+              <FieldError>{form.formState.errors.ownerEmail?.message}</FieldError>
+            </Field>
 
-          {ownerEmail ? (
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="provision-invitation-message">
+            <Field>
+              <FieldLabel htmlFor="provision-invitation-message">
                 Invitation message
                 <span className="text-muted-foreground ml-1 text-xs">
                   (optional)
                 </span>
-              </Label>
-              <Textarea
-                id="provision-invitation-message"
-                value={invitationMessage}
-                onChange={(e) => setInvitationMessage(e.target.value)}
-                rows={2}
-                placeholder="Note attached to the invite email"
-              />
-            </div>
-          ) : null}
+              </FieldLabel>
+              <FieldContent>
+                <Textarea
+                  id="provision-invitation-message"
+                  rows={2}
+                  placeholder="Note attached to the invite email"
+                  disabled={isSubmitting}
+                  {...form.register('invitationMessage')}
+                />
+              </FieldContent>
+              <FieldError>
+                {form.formState.errors.invitationMessage?.message}
+              </FieldError>
+            </Field>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="provision-reason">
-              Reason
-              <span className="text-muted-foreground ml-1 text-xs">
-                (audit — min 10 characters)
-              </span>
-            </Label>
-            <Textarea
-              id="provision-reason"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              rows={2}
-              placeholder="Why is this organisation being provisioned?"
-              aria-invalid={reason.length > 0 && !reasonValid}
-            />
-            <div className="text-muted-foreground text-xs">
-              {reason.trim().length}/10 characters
-            </div>
+            <Field>
+              <FieldLabel htmlFor="provision-reason">
+                Reason <span className="text-destructive ml-0.5">*</span>
+                <span className="text-muted-foreground ml-1 text-xs">
+                  (audit — min 10 characters)
+                </span>
+              </FieldLabel>
+              <FieldContent>
+                <Textarea
+                  id="provision-reason"
+                  rows={2}
+                  placeholder="Why is this organisation being provisioned?"
+                  disabled={isSubmitting}
+                  aria-invalid={!!form.formState.errors.reason}
+                  {...form.register('reason')}
+                />
+              </FieldContent>
+              <div className="text-muted-foreground text-xs">
+                {reasonValue.trim().length}/10 characters
+              </div>
+              <FieldError>{form.formState.errors.reason?.message}</FieldError>
+            </Field>
+
+            {generalError ? (
+              <Alert variant="destructive">
+                <AlertDescription>{generalError}</AlertDescription>
+              </Alert>
+            ) : null}
           </div>
 
-          {errorMessage ? (
-            <Alert variant="destructive">
-              <AlertDescription>{errorMessage}</AlertDescription>
-            </Alert>
-          ) : null}
-        </div>
-
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button onClick={submit} disabled={!canSubmit}>
-            {isSubmitting ? 'Provisioning…' : 'Provision'}
-          </Button>
-        </DialogFooter>
+          <DialogFooter className="mt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Provisioning…' : 'Provision'}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

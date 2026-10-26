@@ -1,4 +1,7 @@
-import { useEffect, useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -10,8 +13,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Field,
+  FieldContent,
+  FieldError,
+  FieldLabel,
+} from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -21,10 +29,26 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_REASON = 10;
 
 export type InviteMemberRole = 'editor' | 'org_admin';
+
+export const inviteMemberSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(1, 'Email is required')
+    .email('Please enter a valid email address')
+    .max(255),
+  role: z.enum(['editor', 'org_admin'] as const),
+  message: z.string().trim().max(2000).optional(),
+  reason: z
+    .string()
+    .trim()
+    .min(MIN_REASON, `Audit reason must be at least ${MIN_REASON} characters`),
+});
+
+export type InviteMemberFormValues = z.infer<typeof inviteMemberSchema>;
 
 interface InviteMemberDialogProps {
   open: boolean;
@@ -50,132 +74,166 @@ export default function InviteMemberDialog({
   errorMessage,
   onSubmit,
 }: InviteMemberDialogProps) {
-  const [email, setEmail] = useState('');
-  const [role, setRole] = useState<InviteMemberRole>('editor');
-  const [message, setMessage] = useState('');
-  const [reason, setReason] = useState('');
+  const form = useForm<InviteMemberFormValues>({
+    resolver: zodResolver(inviteMemberSchema),
+    mode: 'onChange',
+    defaultValues: {
+      email: '',
+      role: 'editor',
+      message: '',
+      reason: '',
+    },
+  });
 
   useEffect(() => {
-    if (!open) {
-      setEmail('');
-      setRole('editor');
-      setMessage('');
-      setReason('');
+    if (open) {
+      form.reset({
+        email: '',
+        role: 'editor',
+        message: '',
+        reason: '',
+      });
     }
-  }, [open]);
+  }, [open, form]);
 
-  const emailValid = EMAIL_PATTERN.test(email.trim());
-  const reasonOk = reason.trim().length >= MIN_REASON;
-  const canSubmit = emailValid && reasonOk && !isSubmitting;
+  useEffect(() => {
+    if (errorMessage) {
+      if (/email|member|invited|assigned|exists/i.test(errorMessage)) {
+        form.setError('email', { type: 'server', message: errorMessage });
+      }
+    }
+  }, [errorMessage, form]);
 
-  const submit = () => {
-    if (!canSubmit) return;
+  const handleFormSubmit = form.handleSubmit((values) => {
     onSubmit({
-      email: email.trim().toLowerCase(),
-      role,
-      message: message.trim() || undefined,
-      reason: reason.trim(),
+      email: values.email.trim().toLowerCase(),
+      role: values.role,
+      message: values.message?.trim() || undefined,
+      reason: values.reason.trim(),
     });
-  };
+  });
+
+  const reasonValue = form.watch('reason') ?? '';
+  const isEmailServerError =
+    Boolean(errorMessage) &&
+    /email|member|invited|assigned|exists/i.test(errorMessage ?? '');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Invite a member</DialogTitle>
-          <DialogDescription>
-            The invitee gets an email with a signed link. Tokens are never
-            shown here — revoking removes access even if the email was
-            forwarded.
-          </DialogDescription>
-        </DialogHeader>
+        <form onSubmit={handleFormSubmit} className="flex flex-col gap-4">
+          <DialogHeader>
+            <DialogTitle>Invite a member</DialogTitle>
+            <DialogDescription>
+              Invite a new member to this organisation.
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="invite-email">Email</Label>
-            <Input
-              id="invite-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@example.com"
-              autoComplete="off"
-              spellCheck={false}
-              aria-invalid={email.length > 0 && !emailValid}
-            />
+          <div className="flex flex-col gap-4">
+            <Field>
+              <FieldLabel htmlFor="invite-email">
+                Email <span className="text-destructive ml-0.5">*</span>
+              </FieldLabel>
+              <FieldContent>
+                <Input
+                  id="invite-email"
+                  type="email"
+                  placeholder="name@example.com"
+                  autoComplete="off"
+                  spellCheck={false}
+                  disabled={isSubmitting}
+                  aria-invalid={!!form.formState.errors.email}
+                  {...form.register('email')}
+                />
+              </FieldContent>
+              <FieldError>{form.formState.errors.email?.message}</FieldError>
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="invite-role">Role</FieldLabel>
+              <FieldContent>
+                <Select
+                  value={form.watch('role')}
+                  onValueChange={(v) =>
+                    form.setValue('role', v as InviteMemberRole, {
+                      shouldValidate: true,
+                    })
+                  }
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger id="invite-role">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="editor">Editor</SelectItem>
+                    <SelectItem value="org_admin">Org admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FieldContent>
+              <FieldError>{form.formState.errors.role?.message}</FieldError>
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="invite-message">
+                Message
+                <span className="text-muted-foreground ml-1 text-xs">
+                  (optional)
+                </span>
+              </FieldLabel>
+              <FieldContent>
+                <Textarea
+                  id="invite-message"
+                  rows={3}
+                  placeholder="Optional invitation note"
+                  disabled={isSubmitting}
+                  aria-invalid={!!form.formState.errors.message}
+                  {...form.register('message')}
+                />
+              </FieldContent>
+              <FieldError>{form.formState.errors.message?.message}</FieldError>
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="invite-reason">
+                Reason <span className="text-destructive ml-0.5">*</span>
+              </FieldLabel>
+              <FieldContent>
+                <Textarea
+                  id="invite-reason"
+                  rows={2}
+                  placeholder="Reason for invitation"
+                  disabled={isSubmitting}
+                  aria-invalid={!!form.formState.errors.reason}
+                  {...form.register('reason')}
+                />
+              </FieldContent>
+              <div className="text-muted-foreground text-xs">
+                {reasonValue.trim().length}/{MIN_REASON} characters
+              </div>
+              <FieldError>{form.formState.errors.reason?.message}</FieldError>
+            </Field>
+
+            {errorMessage && !isEmailServerError ? (
+              <Alert variant="destructive">
+                <AlertDescription>{errorMessage}</AlertDescription>
+              </Alert>
+            ) : null}
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="invite-role">Role</Label>
-            <Select
-              value={role}
-              onValueChange={(v) => setRole(v as InviteMemberRole)}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
             >
-              <SelectTrigger id="invite-role">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="editor">Editor</SelectItem>
-                <SelectItem value="org_admin">Org admin</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="invite-message">
-              Message
-              <span className="text-muted-foreground ml-1 text-xs">
-                (optional, shown in the invite email)
-              </span>
-            </Label>
-            <Textarea
-              id="invite-message"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              rows={3}
-              placeholder="Add any context the invitee should see"
-            />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="invite-reason">
-              Reason
-              <span className="text-muted-foreground ml-1 text-xs">
-                (min {MIN_REASON} characters; recorded on the audit row)
-              </span>
-            </Label>
-            <Textarea
-              id="invite-reason"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              rows={2}
-              placeholder="Why is this invitation being sent by the operator?"
-              aria-invalid={reason.length > 0 && !reasonOk}
-            />
-            <div className="text-muted-foreground text-xs">
-              {reason.trim().length}/{MIN_REASON} characters
-            </div>
-          </div>
-
-          {errorMessage ? (
-            <Alert variant="destructive">
-              <AlertDescription>{errorMessage}</AlertDescription>
-            </Alert>
-          ) : null}
-        </div>
-
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button onClick={submit} disabled={!canSubmit}>
-            {isSubmitting ? 'Sending…' : 'Send invite'}
-          </Button>
-        </DialogFooter>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Sending…' : 'Send invite'}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

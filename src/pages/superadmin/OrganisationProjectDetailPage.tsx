@@ -309,8 +309,8 @@ export default function OrganisationProjectDetailPage() {
         description={`${organisationName} · ${project.name}`}
         bodyWarning={
           holdKind === 'hold'
-            ? 'Future scheduled runs for active jobs on this project will stop. Runs already queued or running are not cancelled.'
-            : 'Only jobs held by a platform operator will resume. Customer-paused jobs remain paused.'
+            ? 'Future scheduled runs for active jobs on this project will stop.'
+            : 'Only jobs held by a platform operator will resume.'
         }
         actionLabel={holdKind === 'hold' ? 'Hold jobs' : 'Resume jobs'}
         tone="warning"

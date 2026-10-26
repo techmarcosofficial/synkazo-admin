@@ -418,7 +418,7 @@ export interface ProvisionOrganisationDto {
   name: string;
   slug?: string;
   description?: string;
-  ownerEmail?: string;
+  ownerEmail: string;
   invitationMessage?: string;
   reason: string;
 }

@@ -36,6 +36,17 @@ export const SUBSCRIPTION_LABELS: Record<SubscriptionStatus | 'all', string> = {
   pending_cancel: 'Cancelling',
 };
 
+/** Active billing filter options — excludes obsolete/unused internal statuses (incomplete, unpaid, paused). */
+export const BILLING_FILTER_OPTIONS: Array<SubscriptionStatus | 'all'> = [
+  'all',
+  'active',
+  'past_due',
+  'pending_cancel',
+  'canceled',
+  'none',
+  'trialing',
+];
+
 export function OrganisationStatusBadge({ status }: { status: OrgStatus }) {
   return (
     <Badge

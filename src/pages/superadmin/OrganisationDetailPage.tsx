@@ -9,7 +9,7 @@ import {
   Users,
   Workflow,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import { getPlatform } from '@/components/platform';
@@ -23,7 +23,9 @@ import { Progress } from '@/components/ui/progress';
 import { Spinner } from '@/components/ui/spinner';
 import { ProjectPlatformPair } from '@/features/projects/components/cards';
 import { showToast } from '@/lib/toast';
-import EditOrganisationMetadataDialog from '@/pages/superadmin/organisations/EditOrganisationMetadataDialog';
+import EditOrganisationMetadataDialog, {
+  type EditOrganisationMetadataInitial,
+} from '@/pages/superadmin/organisations/EditOrganisationMetadataDialog';
 import OrganisationLifecycleActions from '@/pages/superadmin/lifecycle/OrganisationLifecycleActions';
 import {
   useSuperAdminActivityQuery,
@@ -163,6 +165,24 @@ export default function OrganisationDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
+  const initialMetadata = useMemo<EditOrganisationMetadataInitial>(() => {
+    const org = orgQuery.data;
+    return {
+      name: org?.name ?? '',
+      description: org?.description ?? null,
+      logoUrl: org?.logoUrl ?? null,
+      defaultCurrency:
+        typeof org?.settings?.defaultCurrency === 'string'
+          ? org.settings.defaultCurrency
+          : null,
+    };
+  }, [
+    orgQuery.data?.name,
+    orgQuery.data?.description,
+    orgQuery.data?.logoUrl,
+    orgQuery.data?.settings?.defaultCurrency,
+  ]);
+
   if (!organisationId) {
     return (
       <EmptyState
@@ -280,15 +300,7 @@ export default function OrganisationDetailPage() {
         onOpenChange={setEditOpen}
         isSubmitting={updateMutation.isPending}
         errorMessage={editError}
-        initial={{
-          name: org.name,
-          description: org.description ?? null,
-          logoUrl: org.logoUrl ?? null,
-          defaultCurrency:
-            typeof org.settings?.defaultCurrency === 'string'
-              ? org.settings.defaultCurrency
-              : null,
-        }}
+        initial={initialMetadata}
         onSubmit={async (dto) => {
           setEditError(null);
           if (Object.keys(dto).length === 0) {
@@ -348,13 +360,6 @@ export default function OrganisationDetailPage() {
             <CardContent>
               <div className="flex items-center justify-between gap-3">
                 <h2 className="font-semibold">Workspace usage</h2>
-                <Link
-                  to={basePath + '/billing'}
-                  className="text-primary focus-visible:ring-ring inline-flex shrink-0 items-center gap-1 rounded-sm text-xs font-medium hover:underline focus-visible:ring-2 focus-visible:outline-none"
-                >
-                  View limits{' '}
-                  <ArrowUpRight className="size-3.5" aria-hidden="true" />
-                </Link>
               </div>
               <div className="mt-2 grid grid-cols-2 gap-1 xl:grid-cols-4">
                 <UsageMetric
@@ -394,7 +399,7 @@ export default function OrganisationDetailPage() {
                       ? 'Unlimited plan'
                       : 'of ' + formatNumber(org.usage.jobs.limit) + ' allowed'
                   }
-                  to={basePath + '/projects'}
+                  to={basePath + '/billing?highlight=jobs#entitlements-usage'}
                   over={org.usage.jobs.over}
                 />
                 <UsageMetric
@@ -407,7 +412,7 @@ export default function OrganisationDetailPage() {
                       ? 'Unlimited plan'
                       : formatNumber(org.usage.records.remaining) + ' remaining'
                   }
-                  to={basePath + '/billing'}
+                  to={basePath + '/billing?highlight=records#entitlements-usage'}
                   over={
                     org.usage.records.limit !== null &&
                     org.usage.records.used > org.usage.records.limit

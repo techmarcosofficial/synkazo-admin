@@ -1,10 +1,11 @@
 import { formatDistanceToNow } from 'date-fns';
-import { ArrowRight, Building2, Plus } from 'lucide-react';
+import { ArrowRight, Building2, Plus, X } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 import ProvisionOrganisationDialog from './organisations/ProvisionOrganisationDialog';
 import OrganisationDirectoryCard, {
+  BILLING_FILTER_OPTIONS,
   ORG_STATUS_LABELS,
   OrganisationStatusBadge,
   SUBSCRIPTION_LABELS,
@@ -39,6 +40,7 @@ import {
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useViewMode } from '@/hooks/useViewMode';
 import { showToast } from '@/lib/toast';
+import { useAdminPlansQuery } from '@/queries/useBilling';
 import {
   useProvisionSuperAdminOrganisationMutation,
   useSuperAdminOrganisationsQuery,
@@ -78,6 +80,8 @@ export default function OrganisationsPage() {
   const [pageSize, setPageSize] = useState(10);
   const [provisionOpen, setProvisionOpen] = useState(false);
   const provisionMutation = useProvisionSuperAdminOrganisationMutation();
+  const plansQuery = useAdminPlansQuery();
+  const plans = plansQuery.data ?? [];
 
   const rawStatus = searchParams.get('status') ?? 'all';
   const status: OrgStatus | 'all' = Object.prototype.hasOwnProperty.call(
@@ -91,6 +95,15 @@ export default function OrganisationsPage() {
     Object.prototype.hasOwnProperty.call(SUBSCRIPTION_LABELS, rawSubscription)
       ? (rawSubscription as SubscriptionStatus | 'all')
       : 'all';
+  const planId = searchParams.get('planId') ?? 'all';
+  const selectedPlan = plans.find((p) => p.id === planId);
+  const selectedPlanLabel =
+    planId === 'all'
+      ? 'All plans'
+      : planId === 'unassigned'
+        ? 'Unassigned'
+        : selectedPlan?.name ?? 'Plan';
+
   const search = searchParams.get('search') ?? '';
   const debouncedSearch = useDebouncedValue(search, 250);
   const rawPage = Number(searchParams.get('page'));
@@ -107,6 +120,7 @@ export default function OrganisationsPage() {
     status: status === 'all' ? undefined : status,
     subscriptionStatus:
       subscriptionStatus === 'all' ? undefined : subscriptionStatus,
+    planId: planId === 'all' ? undefined : planId,
     sortBy,
     sortOrder,
   });
@@ -114,7 +128,10 @@ export default function OrganisationsPage() {
   const total = query.data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const hasActiveFilters =
-    search.length > 0 || status !== 'all' || subscriptionStatus !== 'all';
+    search.length > 0 ||
+    status !== 'all' ||
+    subscriptionStatus !== 'all' ||
+    planId !== 'all';
 
   const setParam = (key: string, value: string, replace = false) => {
     setSearchParams(
@@ -132,7 +149,13 @@ export default function OrganisationsPage() {
   const clearFilters = () => {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
-      for (const key of ['search', 'status', 'subscriptionStatus', 'page']) {
+      for (const key of [
+        'search',
+        'status',
+        'subscriptionStatus',
+        'planId',
+        'page',
+      ]) {
         next.delete(key);
       }
       return next;
@@ -188,7 +211,7 @@ export default function OrganisationsPage() {
         >
           <ManagementToolbar
             directoryLayout
-            filterCount={2}
+            filterCount={3}
             searchValue={search}
             onSearchChange={(value) => setParam('search', value, true)}
             searchPlaceholder="Search organisations…"
@@ -255,15 +278,40 @@ export default function OrganisationsPage() {
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {(
-                      Object.keys(SUBSCRIPTION_LABELS) as Array<
-                        keyof typeof SUBSCRIPTION_LABELS
-                      >
-                    ).map((key) => (
+                    {BILLING_FILTER_OPTIONS.map((key) => (
                       <SelectItem key={key} value={key}>
                         {SUBSCRIPTION_LABELS[key]}
                       </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+
+                <Select
+                  value={planId}
+                  onValueChange={(value: string) => setParam('planId', value)}
+                >
+                  <SelectTrigger
+                    size="sm"
+                    className="border-border/80 bg-card hover:border-foreground/25 dark:bg-card w-full min-w-0 gap-1 px-1.5 sm:px-2.5 [&_[data-slot=select-value]]:truncate"
+                    aria-label="Filter organisations by plan"
+                  >
+                    <SelectValue>
+                      <span className="sm:hidden">
+                        {planId === 'all' ? 'Plan' : selectedPlanLabel}
+                      </span>
+                      <span className="hidden sm:inline">
+                        {selectedPlanLabel}
+                      </span>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All plans</SelectItem>
+                    {plans.map((plan) => (
+                      <SelectItem key={plan.id} value={plan.id}>
+                        {plan.name}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
                   </SelectContent>
                 </Select>
               </>
@@ -296,14 +344,21 @@ export default function OrganisationsPage() {
                 </Select>
               ) : undefined
             }
+            clearFilters={
+              hasActiveFilters ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="h-8 shrink-0 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  <X className="size-3.5" aria-hidden />
+                  Clear filters
+                </Button>
+              ) : undefined
+            }
           />
         </ManagementCardHeader>
-
-        {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={clearFilters}>
-            Clear filters
-          </Button>
-        )}
 
         {query.isLoading ? (
           viewMode === 'table' ? (

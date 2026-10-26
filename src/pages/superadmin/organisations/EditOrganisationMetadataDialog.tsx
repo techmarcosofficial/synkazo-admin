@@ -1,4 +1,7 @@
-import { useEffect, useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useEffect, useRef } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -10,8 +13,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Field,
+  FieldContent,
+  FieldError,
+  FieldLabel,
+} from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 
 import type { SuperAdminUpdateOrganisationDto } from '@/types';
@@ -38,12 +46,41 @@ interface EditOrganisationMetadataDialogProps {
   onSubmit: (dto: SuperAdminUpdateOrganisationDto) => void;
 }
 
-const URL_PATTERN =
-  /^https?:\/\/[^\s]+$/i;
+const URL_PATTERN = /^https?:\/\/[^\s]+$/i;
 
 function normaliseCurrency(value: string): string {
   return value.trim().toUpperCase();
 }
+
+export const editOrganisationMetadataSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, 'Organisation name is required')
+    .max(255, 'Organisation name must not exceed 255 characters'),
+  description: z
+    .string()
+    .max(2000, 'Description must not exceed 2000 characters')
+    .optional(),
+  logoUrl: z
+    .string()
+    .trim()
+    .refine((val) => !val || URL_PATTERN.test(val), {
+      message: 'Must start with https:// (or http:// for local testing)',
+    })
+    .optional(),
+  defaultCurrency: z
+    .string()
+    .trim()
+    .refine((val) => !val || /^[A-Za-z]{3}$/.test(val), {
+      message: 'Must be a 3-letter currency code (e.g. USD, EUR)',
+    })
+    .optional(),
+});
+
+export type EditOrganisationMetadataFormValues = z.infer<
+  typeof editOrganisationMetadataSchema
+>;
 
 export default function EditOrganisationMetadataDialog({
   open,
@@ -53,154 +90,166 @@ export default function EditOrganisationMetadataDialog({
   errorMessage,
   onSubmit,
 }: EditOrganisationMetadataDialogProps) {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [logoUrl, setLogoUrl] = useState('');
-  const [defaultCurrency, setDefaultCurrency] = useState('');
+  const form = useForm<EditOrganisationMetadataFormValues>({
+    resolver: zodResolver(editOrganisationMetadataSchema),
+    mode: 'onChange',
+    defaultValues: {
+      name: initial.name,
+      description: initial.description ?? '',
+      logoUrl: initial.logoUrl ?? '',
+      defaultCurrency: initial.defaultCurrency ?? '',
+    },
+  });
+
+  const prevOpenRef = useRef(false);
 
   useEffect(() => {
-    if (open) {
-      setName(initial.name);
-      setDescription(initial.description ?? '');
-      setLogoUrl(initial.logoUrl ?? '');
-      setDefaultCurrency(initial.defaultCurrency ?? '');
+    if (open && !prevOpenRef.current) {
+      form.reset({
+        name: initial.name,
+        description: initial.description ?? '',
+        logoUrl: initial.logoUrl ?? '',
+        defaultCurrency: initial.defaultCurrency ?? '',
+      });
     }
-  }, [open, initial]);
+    prevOpenRef.current = open;
+  }, [open, initial, form]);
 
-  const nameValid = name.trim().length > 0 && name.trim().length <= 255;
-  const descriptionValid = description.length <= 2000;
-  const logoUrlValid =
-    logoUrl.trim().length === 0 || URL_PATTERN.test(logoUrl.trim());
-  const currencyValid =
-    defaultCurrency.trim().length === 0 ||
-    /^[A-Za-z]{3}$/.test(defaultCurrency.trim());
-  const canSubmit =
-    nameValid &&
-    descriptionValid &&
-    logoUrlValid &&
-    currencyValid &&
-    !isSubmitting;
-
-  const submit = () => {
-    if (!canSubmit) return;
+  const handleFormSubmit = form.handleSubmit((values) => {
     // Build a delta DTO — only the fields that changed. Sending
     // `undefined` keeps the server side no-op-safe (its updateMetadata
     // ignores absent fields).
     const dto: SuperAdminUpdateOrganisationDto = {};
-    if (name.trim() !== initial.name) dto.name = name.trim();
-    if (description !== (initial.description ?? '')) {
-      dto.description = description;
+    if (values.name.trim() !== initial.name) dto.name = values.name.trim();
+    if ((values.description ?? '') !== (initial.description ?? '')) {
+      dto.description = values.description ?? '';
     }
-    if (logoUrl.trim() !== (initial.logoUrl ?? '')) {
-      dto.logoUrl = logoUrl.trim();
+    if ((values.logoUrl?.trim() ?? '') !== (initial.logoUrl ?? '')) {
+      dto.logoUrl = values.logoUrl?.trim() ?? '';
     }
-    const normalisedCurrency = normaliseCurrency(defaultCurrency);
+    const normalisedCurrency = normaliseCurrency(values.defaultCurrency ?? '');
     if (normalisedCurrency !== (initial.defaultCurrency ?? '')) {
       // Merge into settings so we never clobber other keys.
       dto.settings = { defaultCurrency: normalisedCurrency || null };
     }
     onSubmit(dto);
-  };
+  });
+
+  const descriptionValue = form.watch('description') ?? '';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Edit organisation</DialogTitle>
-          <DialogDescription>
-            Update safe organisation metadata. Status changes, plan
-            assignment, and payment holds live under separate actions on
-            this page.
-          </DialogDescription>
-        </DialogHeader>
+        <form onSubmit={handleFormSubmit} className="flex flex-col gap-4">
+          <DialogHeader>
+            <DialogTitle>Edit organisation</DialogTitle>
+            <DialogDescription>
+              Update organisation metadata.
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="edit-org-name">Name</Label>
-            <Input
-              id="edit-org-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              maxLength={255}
-              aria-invalid={name.length > 0 && !nameValid}
-            />
+          <div className="flex flex-col gap-4">
+            <Field>
+              <FieldLabel htmlFor="edit-org-name">
+                Name <span className="text-destructive ml-0.5">*</span>
+              </FieldLabel>
+              <FieldContent>
+                <Input
+                  id="edit-org-name"
+                  maxLength={255}
+                  disabled={isSubmitting}
+                  aria-invalid={!!form.formState.errors.name}
+                  {...form.register('name')}
+                />
+              </FieldContent>
+              <FieldError>{form.formState.errors.name?.message}</FieldError>
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="edit-org-description">
+                Description
+                <span className="text-muted-foreground ml-1 text-xs">
+                  (optional)
+                </span>
+              </FieldLabel>
+              <FieldContent>
+                <Textarea
+                  id="edit-org-description"
+                  rows={3}
+                  maxLength={2000}
+                  disabled={isSubmitting}
+                  aria-invalid={!!form.formState.errors.description}
+                  {...form.register('description')}
+                />
+              </FieldContent>
+              <div className="text-muted-foreground text-xs">
+                {descriptionValue.length}/2000
+              </div>
+              <FieldError>{form.formState.errors.description?.message}</FieldError>
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="edit-org-logo">
+                Logo URL
+                <span className="text-muted-foreground ml-1 text-xs">
+                  (optional)
+                </span>
+              </FieldLabel>
+              <FieldContent>
+                <Input
+                  id="edit-org-logo"
+                  placeholder="https://cdn.example.com/logo.png"
+                  disabled={isSubmitting}
+                  aria-invalid={!!form.formState.errors.logoUrl}
+                  {...form.register('logoUrl')}
+                />
+              </FieldContent>
+              <FieldError>{form.formState.errors.logoUrl?.message}</FieldError>
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="edit-org-currency">
+                Default currency
+                <span className="text-muted-foreground ml-1 text-xs">
+                  (ISO 4217, e.g. USD, GBP)
+                </span>
+              </FieldLabel>
+              <FieldContent>
+                <Input
+                  id="edit-org-currency"
+                  maxLength={3}
+                  placeholder="USD"
+                  disabled={isSubmitting}
+                  aria-invalid={!!form.formState.errors.defaultCurrency}
+                  {...form.register('defaultCurrency')}
+                />
+              </FieldContent>
+              <FieldError>
+                {form.formState.errors.defaultCurrency?.message}
+              </FieldError>
+            </Field>
+
+            {errorMessage ? (
+              <Alert variant="destructive">
+                <AlertDescription>{errorMessage}</AlertDescription>
+              </Alert>
+            ) : null}
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="edit-org-description">
-              Description
-              <span className="text-muted-foreground ml-1 text-xs">
-                (optional)
-              </span>
-            </Label>
-            <Textarea
-              id="edit-org-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              maxLength={2000}
-              aria-invalid={description.length > 0 && !descriptionValid}
-            />
-            <div className="text-muted-foreground text-xs">
-              {description.length}/2000
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="edit-org-logo">
-              Logo URL
-              <span className="text-muted-foreground ml-1 text-xs">
-                (optional)
-              </span>
-            </Label>
-            <Input
-              id="edit-org-logo"
-              value={logoUrl}
-              onChange={(e) => setLogoUrl(e.target.value)}
-              placeholder="https://cdn.example.com/logo.png"
-              aria-invalid={logoUrl.length > 0 && !logoUrlValid}
-            />
-            <span className="text-muted-foreground text-xs">
-              Must start with https:// (or http:// for local testing).
-            </span>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="edit-org-currency">
-              Default currency
-              <span className="text-muted-foreground ml-1 text-xs">
-                (ISO 4217, e.g. USD, GBP)
-              </span>
-            </Label>
-            <Input
-              id="edit-org-currency"
-              value={defaultCurrency}
-              onChange={(e) => setDefaultCurrency(e.target.value)}
-              maxLength={3}
-              placeholder="USD"
-              aria-invalid={defaultCurrency.length > 0 && !currencyValid}
-            />
-          </div>
-
-          {errorMessage ? (
-            <Alert variant="destructive">
-              <AlertDescription>{errorMessage}</AlertDescription>
-            </Alert>
-          ) : null}
-        </div>
-
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button onClick={submit} disabled={!canSubmit}>
-            {isSubmitting ? 'Saving…' : 'Save changes'}
-          </Button>
-        </DialogFooter>
+          <DialogFooter className="mt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Saving…' : 'Save changes'}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

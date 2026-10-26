@@ -1,5 +1,8 @@
-import { useMemo, useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertTriangle, Eye, EyeOff, Plus, Store } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +15,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Field,
+  FieldContent,
+  FieldError,
+  FieldLabel,
+} from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
@@ -53,7 +62,49 @@ interface UpsertDialogProps {
   }) => void;
 }
 
-function CatalogEntryDialog({
+export const createMarketplaceCatalogSchema = (isEditing: boolean) =>
+  z.object({
+    slug: isEditing
+      ? z.string()
+      : z
+          .string()
+          .trim()
+          .min(1, 'Slug is required')
+          .max(64, 'Slug must not exceed 64 characters')
+          .regex(
+            SLUG_PATTERN,
+            'Slug must contain only lowercase letters, digits, and hyphens',
+          ),
+    displayName: z
+      .string()
+      .max(255, 'Display name must not exceed 255 characters')
+      .optional(),
+    shortDescription: z
+      .string()
+      .max(500, 'Short description must not exceed 500 characters')
+      .optional(),
+    visible: z.boolean(),
+    sortOrder: z
+      .number({ message: 'Sort order must be an integer between 0 and 10000' })
+      .int('Sort order must be an integer')
+      .min(0, 'Sort order must be at least 0')
+      .max(10_000, 'Sort order must not exceed 10000'),
+    reason: z
+      .string()
+      .trim()
+      .min(10, 'Audit reason must be at least 10 characters'),
+  });
+
+export type CatalogEntryFormValues = {
+  slug: string;
+  displayName?: string;
+  shortDescription?: string;
+  visible: boolean;
+  sortOrder: number;
+  reason: string;
+};
+
+export function CatalogEntryDialog({
   open,
   onOpenChange,
   existing,
@@ -62,189 +113,225 @@ function CatalogEntryDialog({
   onSubmit,
 }: UpsertDialogProps) {
   const editing = existing !== null;
-  const [slug, setSlug] = useState('');
-  const [displayName, setDisplayName] = useState('');
-  const [shortDescription, setShortDescription] = useState('');
-  const [visible, setVisible] = useState(true);
-  const [sortOrder, setSortOrder] = useState('100');
-  const [reason, setReason] = useState('');
+  const schema = useMemo(
+    () => createMarketplaceCatalogSchema(editing),
+    [editing],
+  );
 
-  useMemo(() => {
+  const form = useForm<CatalogEntryFormValues>({
+    resolver: zodResolver(schema),
+    mode: 'onChange',
+    defaultValues: {
+      slug: existing?.slug ?? '',
+      displayName: existing?.displayName ?? '',
+      shortDescription: existing?.shortDescription ?? '',
+      visible: existing?.visible ?? true,
+      sortOrder: existing?.sortOrder ?? 100,
+      reason: '',
+    },
+  });
+
+  useEffect(() => {
     if (open) {
-      setSlug(existing?.slug ?? '');
-      setDisplayName(existing?.displayName ?? '');
-      setShortDescription(existing?.shortDescription ?? '');
-      setVisible(existing?.visible ?? true);
-      setSortOrder(String(existing?.sortOrder ?? 100));
-      setReason('');
+      form.reset({
+        slug: existing?.slug ?? '',
+        displayName: existing?.displayName ?? '',
+        shortDescription: existing?.shortDescription ?? '',
+        visible: existing?.visible ?? true,
+        sortOrder: existing?.sortOrder ?? 100,
+        reason: '',
+      });
     }
-  }, [open, existing]);
+  }, [open, existing, form]);
 
-  const slugValid = editing ? true : SLUG_PATTERN.test(slug) && slug.length <= 64;
-  const sortOrderNumber = Number(sortOrder);
-  const sortOrderValid =
-    Number.isInteger(sortOrderNumber) &&
-    sortOrderNumber >= 0 &&
-    sortOrderNumber <= 10_000;
-  const reasonValid = reason.trim().length >= 10;
-  const canSubmit =
-    slugValid && sortOrderValid && reasonValid && !isSubmitting;
+  useEffect(() => {
+    if (errorMessage) {
+      if (/slug|connector/i.test(errorMessage) && !editing) {
+        form.setError('slug', { type: 'server', message: errorMessage });
+      } else if (/reason/i.test(errorMessage)) {
+        form.setError('reason', { type: 'server', message: errorMessage });
+      }
+    }
+  }, [errorMessage, editing, form]);
+
+  const handleFormSubmit = form.handleSubmit((values) => {
+    onSubmit({
+      slug: (existing?.slug ?? values.slug ?? '').trim().toLowerCase(),
+      displayName: values.displayName ?? '',
+      shortDescription: values.shortDescription ?? '',
+      visible: values.visible,
+      sortOrder: values.sortOrder,
+      reason: values.reason.trim(),
+    });
+  });
+
+  const reasonValue = form.watch('reason') ?? '';
+  const visibleValue = form.watch('visible');
+
+  const isFieldServerError =
+    Boolean(errorMessage) &&
+    ((!editing && /slug|connector/i.test(errorMessage ?? '')) ||
+      /reason/i.test(errorMessage ?? ''));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>
-            {editing
-              ? `Edit connector: ${existing?.slug}`
-              : 'New catalog overlay'}
-          </DialogTitle>
-          <DialogDescription>
-            Presentation-only overlay for a marketplace connector.
-            Implementation is owned in code; this only changes how it
-            appears in the customer marketplace.
-          </DialogDescription>
-        </DialogHeader>
+        <form onSubmit={handleFormSubmit} className="flex flex-col gap-4">
+          <DialogHeader>
+            <DialogTitle>
+              {editing
+                ? `Edit connector: ${existing?.slug}`
+                : 'New catalog overlay'}
+            </DialogTitle>
+            <DialogDescription>
+              {editing
+                ? 'Update marketplace connector overlay.'
+                : 'Configure marketplace connector overlay.'}
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="flex flex-col gap-4">
-          {editing ? null : (
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="mc-slug">Slug</Label>
-              <Input
-                id="mc-slug"
-                value={slug}
-                onChange={(e) => setSlug(e.target.value.toLowerCase())}
-                placeholder="hubspot"
-                autoComplete="off"
-                spellCheck={false}
-                aria-invalid={slug.length > 0 && !slugValid}
-              />
+          <div className="flex flex-col gap-4">
+            {editing ? null : (
+              <Field>
+                <FieldLabel htmlFor="mc-slug">
+                  Slug <span className="text-destructive ml-0.5">*</span>
+                </FieldLabel>
+                <FieldContent>
+                  <Input
+                    id="mc-slug"
+                    placeholder="hubspot"
+                    autoComplete="off"
+                    spellCheck={false}
+                    disabled={isSubmitting}
+                    aria-invalid={!!form.formState.errors.slug}
+                    {...form.register('slug')}
+                  />
+                </FieldContent>
+                <FieldError>{form.formState.errors.slug?.message}</FieldError>
+              </Field>
+            )}
+
+            <Field>
+              <FieldLabel htmlFor="mc-name">
+                Display name
+                <span className="text-muted-foreground ml-1 text-xs">
+                  (optional)
+                </span>
+              </FieldLabel>
+              <FieldContent>
+                <Input
+                  id="mc-name"
+                  maxLength={255}
+                  disabled={isSubmitting}
+                  aria-invalid={!!form.formState.errors.displayName}
+                  {...form.register('displayName')}
+                />
+              </FieldContent>
+              <FieldError>{form.formState.errors.displayName?.message}</FieldError>
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="mc-desc">
+                Short description
+                <span className="text-muted-foreground ml-1 text-xs">
+                  (optional)
+                </span>
+              </FieldLabel>
+              <FieldContent>
+                <Textarea
+                  id="mc-desc"
+                  rows={2}
+                  maxLength={500}
+                  disabled={isSubmitting}
+                  aria-invalid={!!form.formState.errors.shortDescription}
+                  {...form.register('shortDescription')}
+                />
+              </FieldContent>
+              <FieldError>
+                {form.formState.errors.shortDescription?.message}
+              </FieldError>
+            </Field>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center justify-between gap-3 rounded-md border p-3">
+                <Label htmlFor="mc-visible" className="font-medium cursor-pointer">
+                  Visible
+                </Label>
+                <Switch
+                  id="mc-visible"
+                  checked={visibleValue}
+                  onCheckedChange={(val) =>
+                    form.setValue('visible', val, { shouldValidate: true })
+                  }
+                  disabled={isSubmitting}
+                  aria-label="Toggle visibility"
+                />
+              </div>
+
+              <Field>
+                <FieldLabel htmlFor="mc-sort">Sort order</FieldLabel>
+                <FieldContent>
+                  <Input
+                    id="mc-sort"
+                    type="number"
+                    min={0}
+                    max={10_000}
+                    disabled={isSubmitting}
+                    aria-invalid={!!form.formState.errors.sortOrder}
+                    {...form.register('sortOrder', { valueAsNumber: true })}
+                  />
+                </FieldContent>
+                <FieldError>{form.formState.errors.sortOrder?.message}</FieldError>
+              </Field>
+            </div>
+
+            <Field>
+              <FieldLabel htmlFor="mc-reason">
+                Reason <span className="text-destructive ml-0.5">*</span>
+                <span className="text-muted-foreground ml-1 text-xs">
+                  (audit — min 10 characters)
+                </span>
+              </FieldLabel>
+              <FieldContent>
+                <Textarea
+                  id="mc-reason"
+                  rows={2}
+                  disabled={isSubmitting}
+                  aria-invalid={!!form.formState.errors.reason}
+                  {...form.register('reason')}
+                />
+              </FieldContent>
               <div className="text-muted-foreground text-xs">
-                Must match the connector id in code. Lowercase alphanumeric +
-                `-`. ≤ 64 chars.
+                {reasonValue.trim().length}/10 characters
               </div>
-            </div>
-          )}
+              <FieldError>{form.formState.errors.reason?.message}</FieldError>
+            </Field>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="mc-name">
-              Display name
-              <span className="text-muted-foreground ml-1 text-xs">
-                (optional — overrides code default)
-              </span>
-            </Label>
-            <Input
-              id="mc-name"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              maxLength={255}
-            />
+            {errorMessage && !isFieldServerError ? (
+              <Alert variant="destructive">
+                <AlertDescription>{errorMessage}</AlertDescription>
+              </Alert>
+            ) : null}
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="mc-desc">
-              Short description
-              <span className="text-muted-foreground ml-1 text-xs">
-                (optional — one-line marketing tagline)
-              </span>
-            </Label>
-            <Textarea
-              id="mc-desc"
-              value={shortDescription}
-              onChange={(e) => setShortDescription(e.target.value)}
-              rows={2}
-              maxLength={500}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-start justify-between gap-3 rounded-md border p-3">
-              <div>
-                <Label className="font-medium">Visible</Label>
-                <div className="text-muted-foreground text-xs">
-                  {visible
-                    ? 'Rendered on the customer marketplace.'
-                    : 'Hidden from the customer marketplace.'}
-                </div>
-              </div>
-              <Switch
-                checked={visible}
-                onCheckedChange={setVisible}
-                aria-label="Toggle visibility"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="mc-sort">Sort order</Label>
-              <Input
-                id="mc-sort"
-                type="number"
-                min={0}
-                max={10_000}
-                value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value)}
-                aria-invalid={sortOrder.length > 0 && !sortOrderValid}
-              />
-              <div className="text-muted-foreground text-xs">
-                Lower = earlier. Default 100.
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="mc-reason">
-              Reason
-              <span className="text-muted-foreground ml-1 text-xs">
-                (audit — min 10 characters)
-              </span>
-            </Label>
-            <Textarea
-              id="mc-reason"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              rows={2}
-              aria-invalid={reason.length > 0 && !reasonValid}
-            />
-            <div className="text-muted-foreground text-xs">
-              {reason.trim().length}/10 characters
-            </div>
-          </div>
-
-          {errorMessage ? (
-            <Alert variant="destructive">
-              <AlertDescription>{errorMessage}</AlertDescription>
-            </Alert>
-          ) : null}
-        </div>
-
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={() => {
-              if (!canSubmit) return;
-              onSubmit({
-                slug: (existing?.slug ?? slug).trim(),
-                displayName,
-                shortDescription,
-                visible,
-                sortOrder: sortOrderNumber,
-                reason: reason.trim(),
-              });
-            }}
-            disabled={!canSubmit}
-          >
-            {isSubmitting
-              ? 'Saving…'
-              : editing
-                ? 'Save changes'
-                : 'Create overlay'}
-          </Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting
+                ? 'Saving…'
+                : editing
+                  ? 'Save changes'
+                  : 'Create entry'}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

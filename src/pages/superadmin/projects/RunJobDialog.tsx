@@ -91,9 +91,7 @@ export default function RunJobDialog({
         <DialogHeader>
           <DialogTitle>Run {jobName}</DialogTitle>
           <DialogDescription>
-            The Super Admin operation context bypasses this
-            organisation&rsquo;s plan limits for this run only. Scheduled runs
-            keep enforcing the customer&rsquo;s real plan.
+            Trigger a manual run for this job.
           </DialogDescription>
         </DialogHeader>
 
@@ -106,10 +104,6 @@ export default function RunJobDialog({
             />
             <div className="flex flex-col">
               <Label htmlFor="run-full-sync">Full re-sync</Label>
-              <span className="text-muted-foreground text-xs">
-                Ignore the last-synced cursor and process every record from the
-                source.
-              </span>
             </div>
           </div>
 
@@ -123,10 +117,6 @@ export default function RunJobDialog({
               onChange={(e) => setMaxRecords(e.target.value)}
               placeholder="Unbounded"
             />
-            <span className="text-muted-foreground text-xs">
-              Cap the number of records this run will read. Leave empty for no
-              cap.
-            </span>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

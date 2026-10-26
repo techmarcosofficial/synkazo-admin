@@ -25,7 +25,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import {
   Field,
-  FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
@@ -92,28 +91,12 @@ function SettingsForm({ settings }: { settings: BillingRecoverySettings }) {
         <div className="grid gap-4 sm:grid-cols-2">
           {(
             [
-              [
-                'gracePeriodDays',
-                'Renewal failure grace (days)',
-                '0 removes paid access immediately after verification. Initial failed payments never receive grace.',
-              ],
-              [
-                'batchSize',
-                'Organisations per check',
-                'Checks rotate through all Stripe customers, including accounts that currently show paid access.',
-              ],
-              [
-                'cronExpression',
-                'Check schedule',
-                'Default: 0 0 * * * * (every hour, on the hour). Uses standard cron syntax.',
-              ],
-              [
-                'timezone',
-                'Schedule timezone',
-                'An IANA timezone, such as UTC or Asia/Kolkata.',
-              ],
+              ['gracePeriodDays', 'Renewal failure grace (days)'],
+              ['batchSize', 'Organisations per check'],
+              ['cronExpression', 'Check schedule'],
+              ['timezone', 'Schedule timezone'],
             ] as const
-          ).map(([name, label, help]) => {
+          ).map(([name, label]) => {
             const numeric = name === 'gracePeriodDays' || name === 'batchSize';
             return (
               <Field key={name}>
@@ -124,7 +107,6 @@ function SettingsForm({ settings }: { settings: BillingRecoverySettings }) {
                   {...form.register(name, { valueAsNumber: numeric })}
                   aria-invalid={!!form.formState.errors[name]}
                 />
-                <FieldDescription>{help}</FieldDescription>
                 <FieldError errors={[form.formState.errors[name]]} />
               </Field>
             );
@@ -139,17 +121,9 @@ function SettingsForm({ settings }: { settings: BillingRecoverySettings }) {
             {...form.register('reason')}
             aria-invalid={!!form.formState.errors.reason}
           />
-          <FieldDescription>
-            Recorded in the audit trail for policy changes and manual checks.
-          </FieldDescription>
           <FieldError errors={[form.formState.errors.reason]} />
         </Field>
       </FieldGroup>
-      <p className="text-muted-foreground text-sm">
-        Unresolved payments move Stripe-backed access to Free and pause sync
-        execution. Successful recovery restores paid access. Manual plan
-        assignments and operator holds remain under Super Admin control.
-      </p>
       {(save.isError || run.isError) && (
         <p role="alert" className="text-destructive text-sm">
           The action failed. Check the values or wait for the current check to

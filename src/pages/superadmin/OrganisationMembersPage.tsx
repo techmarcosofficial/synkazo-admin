@@ -651,7 +651,7 @@ export default function OrganisationMembersPage() {
         title="Revoke invitation"
         description={
           revokeTarget
-            ? `The signed link for ${revokeTarget.email} stops working immediately. Type the email + a reason to confirm.`
+            ? `Revoke the invitation for ${revokeTarget.email}.`
             : 'Revoke invitation'
         }
         actionLabel="Revoke invite"
@@ -689,7 +689,7 @@ export default function OrganisationMembersPage() {
         title="Deactivate member"
         description={
           deactivateMember
-            ? `Blocks ${deactivateMember.email} from signing in. Owner + last-active-admin are protected server-side.`
+            ? `Deactivate member ${deactivateMember.email}.`
             : ''
         }
         actionLabel="Deactivate"
@@ -728,7 +728,7 @@ export default function OrganisationMembersPage() {
         title="Reactivate member"
         description={
           reactivateMember
-            ? `Restores sign-in for ${reactivateMember.email}.`
+            ? `Restore sign-in for ${reactivateMember.email}.`
             : ''
         }
         actionLabel="Reactivate"
@@ -771,11 +771,11 @@ export default function OrganisationMembersPage() {
         }
         description={
           roleTarget
-            ? `${roleTarget.member.email} will become ${
+            ? `Change role for ${roleTarget.member.email} to ${
                 roleTarget.nextRole === 'org_admin'
-                  ? 'an org admin'
-                  : 'an editor'
-              }. Owner demotion and last-admin demotion are blocked server-side.`
+                  ? 'org admin'
+                  : 'editor'
+              }.`
             : ''
         }
         actionLabel={
@@ -816,7 +816,7 @@ export default function OrganisationMembersPage() {
         title="Transfer organisation ownership"
         description={
           ownershipTarget && orgQuery.data
-            ? `Moves ownership of ${orgQuery.data.name} to ${ownershipTarget.email}. The target is promoted to org_admin if needed.`
+            ? `Transfer ownership of ${orgQuery.data.name} to ${ownershipTarget.email}.`
             : ''
         }
         actionLabel="Transfer"

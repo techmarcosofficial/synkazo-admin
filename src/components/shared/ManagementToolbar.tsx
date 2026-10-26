@@ -19,6 +19,7 @@ interface ManagementToolbarProps {
   searchLabel?: string;
   /** Module-specific Select filters (e.g. role, status) rendered between search and view toggle. */
   filters?: ReactNode;
+  clearFilters?: ReactNode;
   /** Omit both to hide the table/card toggle for pages that only support one view. */
   viewMode?: ManagementViewMode;
   onViewModeChange?: (mode: ManagementViewMode) => void;
@@ -26,7 +27,7 @@ interface ManagementToolbarProps {
   action?: ReactNode;
   /** Group directory controls beside the page identity. */
   directoryLayout?: boolean;
-  filterCount?: 1 | 2;
+  filterCount?: 1 | 2 | 3;
   sort?: ReactNode;
 }
 
@@ -36,6 +37,7 @@ export default function ManagementToolbar({
   searchPlaceholder = 'Search…',
   searchLabel,
   filters,
+  clearFilters,
   viewMode,
   onViewModeChange,
   action,
@@ -80,15 +82,21 @@ export default function ManagementToolbar({
       <div
         className={cn(
           'grid min-w-0 items-center gap-2 xl:flex xl:gap-2.5',
-          filterCount === 2
-            ? 'grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]'
-            : 'grid-cols-[minmax(0,1fr)_auto]',
+          filterCount === 3
+            ? 'grid-cols-[minmax(0,1fr)_auto]'
+            : filterCount === 2
+              ? 'grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]'
+              : 'grid-cols-[minmax(0,1fr)_auto]',
         )}
       >
         <div
           className={cn(
             'row-start-1 max-w-64 min-w-0 xl:row-auto xl:w-[13.5rem] xl:shrink-0',
-            filterCount === 2 ? 'col-span-2 xl:col-auto' : 'col-start-1',
+            filterCount === 3
+              ? 'col-start-1 xl:col-auto'
+              : filterCount === 2
+                ? 'col-span-2 xl:col-auto'
+                : 'col-start-1',
           )}
         >
           {searchControl}
@@ -96,11 +104,13 @@ export default function ManagementToolbar({
         <div
           className={cn(
             'row-start-2 grid min-w-0 gap-2 xl:col-auto xl:row-auto xl:shrink-0',
-            filterCount === 2
-              ? !viewMode && !action
-                ? 'col-span-full grid-cols-2 xl:w-60'
-                : 'col-span-2 grid-cols-2 xl:w-60'
-              : 'col-start-1 grid-cols-1 xl:w-32',
+            filterCount === 3
+              ? 'col-span-full grid-cols-3 xl:w-[25.5rem]'
+              : filterCount === 2
+                ? !viewMode && !action
+                  ? 'col-span-full grid-cols-2 xl:w-60'
+                  : 'col-span-2 grid-cols-2 xl:w-60'
+                : 'col-start-1 grid-cols-1 xl:w-32',
           )}
         >
           {filters}
@@ -109,21 +119,37 @@ export default function ManagementToolbar({
           <div
             className={cn(
               'min-w-0 xl:col-auto xl:row-auto xl:w-28 xl:shrink-0',
-              filterCount === 2
-                ? 'col-start-3 row-start-1'
-                : 'col-start-2 row-start-2',
+              filterCount === 3
+                ? 'col-auto row-start-3 xl:row-auto'
+                : filterCount === 2
+                  ? 'col-start-3 row-start-1'
+                  : 'col-start-2 row-start-2',
             )}
           >
             {sort}
+          </div>
+        )}
+        {clearFilters && (
+          <div
+            className={cn(
+              'min-w-0 shrink-0 xl:col-auto xl:row-auto',
+              filterCount === 3
+                ? 'col-auto row-start-3 xl:row-auto'
+                : 'col-auto row-start-2 xl:row-auto',
+            )}
+          >
+            {clearFilters}
           </div>
         )}
         {viewMode && onViewModeChange && (
           <div
             className={cn(
               'justify-self-end xl:col-auto xl:row-auto xl:shrink-0',
-              filterCount === 2
-                ? 'col-start-3 row-start-2'
-                : 'col-start-2 row-start-1',
+              filterCount === 3
+                ? 'col-start-2 row-start-1'
+                : filterCount === 2
+                  ? 'col-start-3 row-start-2'
+                  : 'col-start-2 row-start-1',
             )}
           >
             <ViewToggle
@@ -138,7 +164,7 @@ export default function ManagementToolbar({
           <div
             className={cn(
               'justify-self-end xl:col-auto xl:row-auto xl:shrink-0',
-              filterCount === 2
+              filterCount === 3 || filterCount === 2
                 ? 'col-span-full justify-self-end'
                 : viewMode
                   ? 'col-start-2 row-start-2'
@@ -157,6 +183,10 @@ export default function ManagementToolbar({
       {searchControl}
 
       {filters}
+
+      {sort}
+
+      {clearFilters}
 
       {viewMode && onViewModeChange && (
         <div>

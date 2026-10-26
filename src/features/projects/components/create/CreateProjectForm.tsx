@@ -118,7 +118,7 @@ const CreateProjectForm = forwardRef<
           <FieldContent>
             <Input
               id="name"
-              placeholder="This name is shown throughout synkazo."
+              placeholder="Project name"
               {...form.register('name')}
             />
           </FieldContent>
@@ -132,7 +132,7 @@ const CreateProjectForm = forwardRef<
           <FieldContent>
             <Input
               id="description"
-              placeholder="Optional notes about this integration."
+              placeholder="Optional notes"
               {...form.register('description')}
             />
           </FieldContent>

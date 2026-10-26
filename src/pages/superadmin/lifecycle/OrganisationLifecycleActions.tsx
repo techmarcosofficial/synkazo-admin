@@ -187,8 +187,8 @@ export default function OrganisationLifecycleActions({
         open={openAction === 'suspend'}
         onOpenChange={(o) => (o ? setOpenAction('suspend') : closeDialog())}
         title="Suspend organisation"
-        description="Reject every tenant token, cancel queued Bull runs, pause every scheduled job. Reactivating later does not automatically re-queue lost runs."
-        bodyWarning="Active runs finish their current batch and stop with checkpoint preserved. Tenant users cannot sign in until the organisation is reactivated."
+        description="Suspend this organisation and pause all scheduled jobs."
+        bodyWarning="Tenant users will not be able to sign in until reactivated."
         actionLabel="Suspend"
         tone="warning"
         organisationName={organisation.name}
@@ -208,8 +208,8 @@ export default function OrganisationLifecycleActions({
         open={openAction === 'reactivate'}
         onOpenChange={(o) => (o ? setOpenAction('reactivate') : closeDialog())}
         title="Reactivate organisation"
-        description="Restore tenant sign-in and let the operator team re-enable scheduled work manually. Reactivation does not re-queue runs skipped while suspended."
-        bodyWarning="Jobs stay paused (is_enabled=false). Members re-enable each job manually after reactivation."
+        description="Restore tenant sign-in for this organisation."
+        bodyWarning="Jobs stay paused. Re-enable jobs manually after reactivation."
         actionLabel="Reactivate"
         tone="warning"
         organisationName={organisation.name}
@@ -229,8 +229,8 @@ export default function OrganisationLifecycleActions({
         open={openAction === 'archive'}
         onOpenChange={(o) => (o ? setOpenAction('archive') : closeDialog())}
         title="Archive organisation"
-        description="Soft-delete this organisation. Retained for the recovery window then hard-deleted by the reaper. This action can only run from the suspended state."
-        bodyWarning="Reactivation from archive requires stepping through suspended first. Beyond the retention window, the record is permanently deleted with no restore path."
+        description="Soft-delete this organisation within the recovery retention window."
+        bodyWarning="Reactivation from archive requires stepping through suspended first."
         actionLabel="Archive"
         tone="danger"
         organisationName={organisation.name}
@@ -250,8 +250,8 @@ export default function OrganisationLifecycleActions({
         open={openAction === 'restore'}
         onOpenChange={(o) => (o ? setOpenAction('restore') : closeDialog())}
         title="Restore from archive"
-        description="Moves the organisation back to suspended within the retention window. From suspended you can then Reactivate."
-        bodyWarning="Direct archive→active is not permitted. This step restores the row to suspended; a separate reactivate action brings it back online."
+        description="Restore this organisation to suspended state."
+        bodyWarning="A separate reactivate action brings it back online."
         actionLabel="Restore"
         tone="warning"
         organisationName={organisation.name}
@@ -271,7 +271,7 @@ export default function OrganisationLifecycleActions({
         open={openAction === 'hold'}
         onOpenChange={(o) => (o ? setOpenAction('hold') : closeDialog())}
         title="Hold work for this organisation"
-        description="Pause future scheduling without cancelling running or queued work. Active runs finish; the next tick does not enqueue new work until you resume."
+        description="Pause scheduled work for this organisation."
         actionLabel="Hold work"
         tone="warning"
         organisationName={organisation.name}
@@ -301,7 +301,7 @@ export default function OrganisationLifecycleActions({
         open={openAction === 'resume'}
         onOpenChange={(o) => (o ? setOpenAction('resume') : closeDialog())}
         title="Resume held work"
-        description="Return every operator-held job to the active schedule. Does not touch tenant-paused jobs."
+        description="Resume operator-held jobs for this organisation."
         actionLabel="Resume held work"
         tone="warning"
         organisationName={organisation.name}
@@ -332,8 +332,8 @@ export default function OrganisationLifecycleActions({
           o ? setOpenAction('impose-payment-hold') : closeDialog()
         }
         title="Impose payment hold"
-        description="Stop the scheduler for this organisation independent of billing state. Tenant reads still work; scheduled and queued runs are held."
-        bodyWarning="Use for compliance / security holds only. Billing-driven holds arrive automatically from the Stripe webhook — not this button."
+        description="Impose a manual payment hold on this organisation."
+        bodyWarning="Holds all scheduled runs for this organisation."
         actionLabel="Impose hold"
         tone="danger"
         organisationName={organisation.name}
@@ -365,7 +365,7 @@ export default function OrganisationLifecycleActions({
           o ? setOpenAction('clear-payment-hold') : closeDialog()
         }
         title="Clear payment hold"
-        description="Lift the current manual/payment hold. Scheduler resumes for this organisation on the next tick."
+        description="Lift the manual payment hold on this organisation."
         actionLabel="Clear hold"
         tone="warning"
         organisationName={organisation.name}

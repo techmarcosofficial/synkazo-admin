@@ -1,4 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useEffect, useMemo } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 import { AlertTriangle } from 'lucide-react';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -11,6 +14,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Field,
+  FieldContent,
+  FieldError,
+  FieldLabel,
+} from '@/components/ui/field';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -50,6 +59,28 @@ interface AssignPlanDialogProps {
   errorMessage?: string | null;
   onSubmit: (planId: string, reason: string) => void;
 }
+
+const MIN_REASON = 10;
+
+export const createAssignPlanSchema = (currentPlanId: string | null) =>
+  z.object({
+    planId: z
+      .string()
+      .trim()
+      .min(1, 'Please select a plan to assign')
+      .refine((id) => !currentPlanId || id !== currentPlanId, {
+        message: 'Selected plan is already the current plan',
+      }),
+    reason: z
+      .string()
+      .trim()
+      .min(MIN_REASON, `Audit reason must be at least ${MIN_REASON} characters`),
+  });
+
+export type AssignPlanFormValues = {
+  planId: string;
+  reason: string;
+};
 
 // Whitelist of feature keys we render with human-friendly labels.
 // Anything else in the features map is rendered under its raw key.
@@ -125,15 +156,41 @@ export default function AssignPlanDialog({
   errorMessage,
   onSubmit,
 }: AssignPlanDialogProps) {
-  const [selectedPlanId, setSelectedPlanId] = useState<string>('');
-  const [reason, setReason] = useState('');
+  const schema = useMemo(
+    () => createAssignPlanSchema(currentPlanId),
+    [currentPlanId],
+  );
+
+  const form = useForm<AssignPlanFormValues>({
+    resolver: zodResolver(schema),
+    mode: 'onChange',
+    defaultValues: {
+      planId: '',
+      reason: '',
+    },
+  });
 
   useEffect(() => {
     if (open) {
-      setSelectedPlanId('');
-      setReason('');
+      form.reset({
+        planId: '',
+        reason: '',
+      });
     }
-  }, [open]);
+  }, [open, form]);
+
+  useEffect(() => {
+    if (errorMessage) {
+      if (/plan/i.test(errorMessage)) {
+        form.setError('planId', { type: 'server', message: errorMessage });
+      } else if (/reason/i.test(errorMessage)) {
+        form.setError('reason', { type: 'server', message: errorMessage });
+      }
+    }
+  }, [errorMessage, form]);
+
+  const selectedPlanId = form.watch('planId');
+  const reasonValue = form.watch('reason') ?? '';
 
   const currentPlan = useMemo(
     () => plans.find((p) => p.id === currentPlanId) ?? null,
@@ -152,158 +209,172 @@ export default function AssignPlanDialog({
     [currentPlan, selectedPlan],
   );
 
-  const reasonValid = reason.trim().length >= 10;
-  const planSelectedAndDifferent =
-    selectedPlanId.length > 0 && selectedPlanId !== currentPlanId;
-  const canSubmit = planSelectedAndDifferent && reasonValid && !isSubmitting;
+  const handleFormSubmit = form.handleSubmit((values) => {
+    onSubmit(values.planId, values.reason.trim());
+  });
+
+  const isFieldServerError =
+    Boolean(errorMessage) && /plan|reason/i.test(errorMessage ?? '');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Assign plan</DialogTitle>
-          <DialogDescription>
-            Move the organisation to a different plan. The change takes effect
-            immediately for entitlement checks; provider-side proration depends
-            on the plan's Stripe subscription state.
-          </DialogDescription>
-        </DialogHeader>
+        <form onSubmit={handleFormSubmit} className="flex flex-col gap-4">
+          <DialogHeader>
+            <DialogTitle>Assign plan</DialogTitle>
+            <DialogDescription>
+              Assign a plan to this organisation.
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <Label>Current plan</Label>
-            <div className="text-sm">
-              {currentPlanName ?? '—'}
-              {currentPlanId ? (
-                <span className="text-muted-foreground ml-2 font-mono text-xs">
-                  {currentPlanId.slice(0, 8)}
-                </span>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="assign-plan-select">New plan</Label>
-            <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
-              <SelectTrigger id="assign-plan-select">
-                <SelectValue placeholder="Choose a plan…" />
-              </SelectTrigger>
-              <SelectContent>
-                {plans
-                  .filter((p) => p.isActive)
-                  .map((plan) => (
-                    <SelectItem
-                      key={plan.id}
-                      value={plan.id}
-                      disabled={plan.id === currentPlanId}
-                    >
-                      {plan.name}
-                      {plan.id === currentPlanId ? ' (current)' : ''}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {selectedPlan && diff.length > 0 ? (
-            <div className="rounded-xl border overflow-hidden">
-              <div className="border-b px-3 py-2 text-sm font-medium">
-                Limits comparison
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Label>Current plan</Label>
+              <div className="text-sm">
+                {currentPlanName ?? '—'}
+                {currentPlanId ? (
+                  <span className="text-muted-foreground ml-2 font-mono text-xs">
+                    {currentPlanId.slice(0, 8)}
+                  </span>
+                ) : null}
               </div>
-              <div className="max-h-56 overflow-y-auto">
-                <Table className="w-full text-sm">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="py-2">Feature</TableHead>
-                      <TableHead className="py-2">Current</TableHead>
-                      <TableHead className="py-2">New</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {diff.map((row) => (
-                      <TableRow
-                        key={row.key}
-                        className={
-                          row.changed
-                            ? 'bg-warning/10 hover:bg-warning/15'
-                            : undefined
-                        }
-                      >
-                        <TableCell className="py-1.5 font-medium whitespace-normal">
-                          {row.label}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground py-1.5 whitespace-normal">
-                          {row.currentValue}
-                        </TableCell>
-                        <TableCell className="py-1.5 whitespace-normal">
-                          {row.changed ? (
-                            <span className="font-medium">{row.newValue}</span>
-                          ) : (
-                            <span className="text-muted-foreground">
-                              {row.newValue}
-                            </span>
-                          )}
-                        </TableCell>
+            </div>
+
+            <Field>
+              <FieldLabel htmlFor="assign-plan-select">
+                New plan <span className="text-destructive ml-0.5">*</span>
+              </FieldLabel>
+              <FieldContent>
+                <Select
+                  value={selectedPlanId}
+                  onValueChange={(val) =>
+                    form.setValue('planId', val, { shouldValidate: true })
+                  }
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger
+                    id="assign-plan-select"
+                    aria-invalid={!!form.formState.errors.planId}
+                  >
+                    <SelectValue placeholder="Choose a plan…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {plans
+                      .filter((p) => p.isActive)
+                      .map((plan) => (
+                        <SelectItem
+                          key={plan.id}
+                          value={plan.id}
+                          disabled={plan.id === currentPlanId}
+                        >
+                          {plan.name}
+                          {plan.id === currentPlanId ? ' (current)' : ''}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </FieldContent>
+              <FieldError>{form.formState.errors.planId?.message}</FieldError>
+            </Field>
+
+            {selectedPlan && diff.length > 0 ? (
+              <div className="rounded-xl border overflow-hidden">
+                <div className="border-b px-3 py-2 text-sm font-medium">
+                  Limits comparison
+                </div>
+                <div className="max-h-56 overflow-y-auto">
+                  <Table className="w-full text-sm">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="py-2">Feature</TableHead>
+                        <TableHead className="py-2">Current</TableHead>
+                        <TableHead className="py-2">New</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {diff.map((row) => (
+                        <TableRow
+                          key={row.key}
+                          className={
+                            row.changed
+                              ? 'bg-warning/10 hover:bg-warning/15'
+                              : undefined
+                          }
+                        >
+                          <TableCell className="py-1.5 font-medium whitespace-normal">
+                            {row.label}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground py-1.5 whitespace-normal">
+                            {row.currentValue}
+                          </TableCell>
+                          <TableCell className="py-1.5 whitespace-normal">
+                            {row.changed ? (
+                              <span className="font-medium">{row.newValue}</span>
+                            ) : (
+                              <span className="text-muted-foreground">
+                               {row.newValue}
+                              </span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                <div className="border-t bg-amber-50 px-3 py-1.5 text-xs text-amber-900">
+                  <AlertTriangle
+                    className="mr-1 inline size-3.5 -translate-y-0.5"
+                    aria-hidden
+                  />
+                  Highlighted rows change with this assignment.
+                </div>
               </div>
-              <div className="border-t bg-amber-50 px-3 py-1.5 text-xs text-amber-900">
-                <AlertTriangle
-                  className="mr-1 inline size-3.5 -translate-y-0.5"
-                  aria-hidden
-                />
-                Highlighted rows change with this assignment.
-              </div>
-            </div>
-          ) : null}
+            ) : null}
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="assign-plan-reason">
-              Reason
-              <span className="text-muted-foreground ml-1 text-xs">
-                (audit — min 10 characters)
-              </span>
-            </Label>
-            <Textarea
-              id="assign-plan-reason"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              rows={2}
-              placeholder="Why is this plan being assigned?"
-              aria-invalid={reason.length > 0 && !reasonValid}
-            />
-            <div className="text-muted-foreground text-xs">
-              {reason.trim().length}/10 characters
-            </div>
+            <Field>
+              <FieldLabel htmlFor="assign-plan-reason">
+                Reason <span className="text-destructive ml-0.5">*</span>
+                <span className="text-muted-foreground ml-1 text-xs">
+                  (audit — min {MIN_REASON} characters)
+                </span>
+              </FieldLabel>
+              <FieldContent>
+                <Textarea
+                  id="assign-plan-reason"
+                  rows={2}
+                  placeholder="Why is this plan being assigned?"
+                  disabled={isSubmitting}
+                  aria-invalid={!!form.formState.errors.reason}
+                  {...form.register('reason')}
+                />
+              </FieldContent>
+              <div className="text-muted-foreground text-xs">
+                {reasonValue.trim().length}/{MIN_REASON} characters
+              </div>
+              <FieldError>{form.formState.errors.reason?.message}</FieldError>
+            </Field>
+
+            {errorMessage && !isFieldServerError ? (
+              <Alert variant="destructive">
+                <AlertDescription>{errorMessage}</AlertDescription>
+              </Alert>
+            ) : null}
           </div>
 
-          {errorMessage ? (
-            <Alert variant="destructive">
-              <AlertDescription>{errorMessage}</AlertDescription>
-            </Alert>
-          ) : null}
-        </div>
-
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={() => {
-              if (!canSubmit) return;
-              onSubmit(selectedPlanId, reason.trim());
-            }}
-            disabled={!canSubmit}
-          >
-            {isSubmitting ? 'Assigning…' : 'Assign plan'}
-          </Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Assigning…' : 'Assign plan'}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

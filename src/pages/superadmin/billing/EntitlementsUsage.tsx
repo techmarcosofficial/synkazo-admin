@@ -29,6 +29,7 @@ interface EntitlementsUsageProps {
   usage?: UsageSummary | null;
   onViewUsageDetails?: () => void;
   className?: string;
+  highlightedKey?: string | null;
 }
 
 export default function EntitlementsUsage({
@@ -38,6 +39,7 @@ export default function EntitlementsUsage({
   usage,
   onViewUsageDetails,
   className,
+  highlightedKey,
 }: EntitlementsUsageProps) {
   const projectsLimit = overLimit?.projects.limit ?? null;
   const projectsCount = overLimit?.projects.count ?? 0;
@@ -113,7 +115,7 @@ export default function EntitlementsUsage({
   };
 
   return (
-    <div className={cn('space-y-4', className)}>
+    <div id="entitlements-usage" className={cn('space-y-4', className)}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold tracking-tight">
@@ -144,9 +146,20 @@ export default function EntitlementsUsage({
             const Icon = res.icon;
             const pct = calculateWidth(res.count, res.limit);
             const isUnlimited = res.limit === null;
+            const isHighlighted = highlightedKey === res.key;
 
             return (
-              <div key={res.key} className="space-y-1.5">
+              <div
+                key={res.key}
+                id={`entitlement-resource-${res.key}`}
+                data-highlighted={isHighlighted ? 'true' : undefined}
+                className={cn(
+                  'space-y-1.5 rounded-xl p-2.5 -mx-2.5 transition-all duration-200 ease-out',
+                  isHighlighted
+                    ? 'bg-primary/10 ring-2 ring-primary/60 ring-offset-2 ring-offset-background'
+                    : 'bg-transparent ring-0 ring-offset-0',
+                )}
+              >
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2 font-medium">
                     <Icon className="size-3.5 text-muted-foreground" aria-hidden="true" />

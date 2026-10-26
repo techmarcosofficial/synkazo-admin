@@ -136,7 +136,7 @@ export default function CreateOrganisationProjectDialog({
                   <FieldContent>
                     <Input
                       id="sa-project-name"
-                      placeholder="This name is shown throughout Synkazo."
+                      placeholder="Project name"
                       {...form.register('name')}
                       aria-invalid={!!form.formState.errors.name}
                     />
@@ -224,9 +224,6 @@ export default function CreateOrganisationProjectDialog({
                   </RadioGroup>
                 </FieldContent>
                 <FieldDescription>
-                  {mode === 'two_way'
-                    ? 'Changes can sync in both directions. HubSpot must use OAuth for real-time updates.'
-                    : 'Records flow from the source platform into HubSpot.'}{' '}
                   Sync direction cannot be changed after creation.
                 </FieldDescription>
                 <FieldError>

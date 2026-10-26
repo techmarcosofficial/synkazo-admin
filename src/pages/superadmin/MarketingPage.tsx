@@ -271,8 +271,7 @@ function LeadNotificationSettingsDialog({
         <DialogHeader>
           <DialogTitle>Lead notification emails</DialogTitle>
           <DialogDescription>
-            Active Super Admins receive new leads only when no additional
-            recipients are configured below.
+            Configure email recipients for inbound leads.
           </DialogDescription>
         </DialogHeader>
 

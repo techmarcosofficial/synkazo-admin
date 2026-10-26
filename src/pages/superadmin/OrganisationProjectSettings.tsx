@@ -364,8 +364,8 @@ function GeneralSettings({
           if (!archivePending) setArchiveOpen(open);
         }}
         title={`Archive ${project.name}`}
-        description="This project will disappear from the active workspace. Its configuration and run history remain stored."
-        bodyWarning="Jobs, schedules, and inbound webhooks will be disabled. Restore is not currently available."
+        description="Archive this project and disable all sync flows and webhooks."
+        bodyWarning="Configuration and history remain stored. Restore is not currently available."
         actionLabel="Archive project"
         tone="danger"
         organisationName={project.name}

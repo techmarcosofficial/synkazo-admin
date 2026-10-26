@@ -66,14 +66,16 @@ export default function CustomerPortfolio({
                   </span>
                 </>
               );
+              const targetPlanId = plan.planId ?? 'unassigned';
               return (
-                <div
-                  key={plan.planId ?? 'unassigned'}
-                  className="flex items-center gap-3 rounded-2xl p-1"
-                  aria-label={`${plan.name}: ${plan.count} organisations`}
+                <Link
+                  key={targetPlanId}
+                  to={`/super-admin/organisations?planId=${targetPlanId}`}
+                  className="group hover:bg-accent/50 focus-visible:ring-ring focus-visible:outline-hidden flex items-center gap-3 rounded-xl p-1.5 transition-colors focus-visible:ring-2"
+                  aria-label={`Filter by ${plan.name} plan: ${plan.count} organisations`}
                 >
                   {contents}
-                </div>
+                </Link>
               );
             })}
           </div>

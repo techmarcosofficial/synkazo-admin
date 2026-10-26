@@ -196,7 +196,35 @@ describe('Platform overview', () => {
     expect(
       screen.getByRole('link', { name: /Active paid organisations/ }),
     ).toHaveAttribute('href', '/super-admin/overview#overview-customers');
-    expect(screen.getByText('Unassigned').closest('a')).toBeNull();
+    expect(screen.getByText('Unassigned').closest('a')).toHaveAttribute(
+      'href',
+      '/super-admin/organisations?planId=unassigned',
+    );
+  });
+
+  it('renders clickable links for customer portfolio plan bars with relevant planId filter', async () => {
+    mocks.analytics!.sections.customers!.byPlan = [
+      { planId: 'plan-enterprise', name: 'Enterprise', count: 5 },
+      { planId: null, name: 'Unassigned', count: 6 },
+    ];
+    renderPage('/super-admin/overview');
+    await screen.findByText('Enterprise');
+
+    const enterpriseLink = screen.getByRole('link', {
+      name: /Filter by Enterprise plan: 5 organisations/,
+    });
+    expect(enterpriseLink).toHaveAttribute(
+      'href',
+      '/super-admin/organisations?planId=plan-enterprise',
+    );
+
+    const unassignedLink = screen.getByRole('link', {
+      name: /Filter by Unassigned plan: 6 organisations/,
+    });
+    expect(unassignedLink).toHaveAttribute(
+      'href',
+      '/super-admin/organisations?planId=unassigned',
+    );
   });
 
   it('keeps live operational data available when historical analytics sources fail', async () => {
