@@ -730,3 +730,10 @@ body > iframe[style*="bottom"][style*="right"],
   pointer-events: auto !important;
 }
 
+/* Prevent Radix / react-remove-scroll from breaking CSS sticky positioning & shifting layouts */
+html[data-scroll-locked],
+body[data-scroll-locked] {
+  overflow: visible !important;
+  margin-right: 0 !important;
+}
+

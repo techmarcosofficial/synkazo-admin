@@ -46,19 +46,31 @@ export default function StickyDetailHeader({
     );
     if (!root || !backRow || !headerRow) return;
 
-    let stickyTop = 0;
+    let stickyActivationTop = 0;
+
+    const getInitialDocTop = () => {
+      let offsetTop = 0;
+      let el: HTMLElement | null = root;
+      while (el) {
+        offsetTop += el.offsetTop;
+        el = el.offsetParent as HTMLElement | null;
+      }
+      if (offsetTop > 0) return offsetTop;
+      return Math.max(0, root.getBoundingClientRect().top + (window.scrollY || 0));
+    };
 
     const updateStuckState = () => {
       const isStuck =
         window.scrollY > 0 &&
-        root.getBoundingClientRect().top <= stickyTop + 0.5;
+        root.getBoundingClientRect().top <= stickyActivationTop + 0.5;
       backRow.dataset.stuck = String(isStuck);
       headerRow.dataset.stuck = String(isStuck);
     };
 
-    const measureNaturalTop = () => {
-      stickyTop = root.getBoundingClientRect().top + window.scrollY;
-      root.style.setProperty('--detail-sticky-top', `${stickyTop}px`);
+    const updateDimensions = () => {
+      const docTop = getInitialDocTop();
+      stickyActivationTop = docTop;
+      root.style.setProperty('--detail-sticky-top', `${docTop}px`);
       // Published so content inside `children` can stick *below* the header
       // rather than sliding under it — the header's height varies with its own
       // content, so it cannot be a fixed offset.
@@ -69,21 +81,26 @@ export default function StickyDetailHeader({
       updateStuckState();
     };
 
-    measureNaturalTop();
+    updateDimensions();
     window.addEventListener('scroll', updateStuckState, { passive: true });
-    window.addEventListener('resize', measureNaturalTop);
+    window.addEventListener('resize', updateDimensions);
 
+    // Only observe the header itself for height adjustments, never the page content
     const resizeObserver =
       typeof ResizeObserver === 'undefined'
         ? null
-        : new ResizeObserver(measureNaturalTop);
-    const pageContent = root.closest('main');
-    if (pageContent) resizeObserver?.observe(pageContent);
+        : new ResizeObserver(() => {
+            root.style.setProperty(
+              '--detail-header-height',
+              `${headerRow.offsetHeight}px`,
+            );
+            updateStuckState();
+          });
     resizeObserver?.observe(headerRow);
 
     return () => {
       window.removeEventListener('scroll', updateStuckState);
-      window.removeEventListener('resize', measureNaturalTop);
+      window.removeEventListener('resize', updateDimensions);
       resizeObserver?.disconnect();
     };
   }, []);

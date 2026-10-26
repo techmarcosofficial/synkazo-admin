@@ -59,6 +59,8 @@ export interface SyncRunProgressProps {
   onViewRun?: (runId?: string | null) => void;
   stopping?: boolean;
   variant?: 'default' | 'compact';
+  /** Enforces max columns in stats card grid (3 for drawers/modals, 5 for full overview). */
+  statsColumns?: 3 | 5;
   /** Render directly inside an existing dialog, drawer or card surface. */
   embedded?: boolean;
   /** Completed standalone summaries can be dismissed for this run. */
@@ -267,10 +269,14 @@ function SyncStatusIcon({
 function SyncStats({
   values,
   compact = false,
+  columns,
 }: {
   values: [number, number, number, number, number];
   compact?: boolean;
+  columns?: 3 | 5;
 }) {
+  const isThreeCols = columns === 3 || (columns === undefined && compact);
+
   const stats: {
     label: string;
     description: string;
@@ -318,9 +324,9 @@ function SyncStats({
   return (
     <div
       className={cn(
-        'grid gap-2 p-3',
-        compact
-          ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5'
+        'grid gap-2 p-3 sm:gap-2.5 sm:p-3.5',
+        isThreeCols
+          ? 'grid-cols-2 sm:grid-cols-3'
           : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5',
       )}
       aria-label="Record statistics"
@@ -476,6 +482,7 @@ export default function SyncRunProgress({
   onViewRun,
   stopping = false,
   variant = 'default',
+  statsColumns,
   embedded = false,
   dismissible = !embedded,
   defaultOpen = false,
@@ -1121,6 +1128,7 @@ export default function SyncRunProgress({
             <SyncStats
               values={[processed, created, updated, skipped, failed]}
               compact={isCompact}
+              columns={statsColumns}
             />
 
             {/* 2. Metadata and Action Guidance Footer */}

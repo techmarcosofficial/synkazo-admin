@@ -285,15 +285,19 @@ function App() {
                     />
                     <Route
                       path="payment-methods"
-                      element={<Navigate to="/organization/billing" replace />}
+                      element={<Navigate to="/organization/billing?section=cards" replace />}
                     />
                     <Route
                       path="invoices"
-                      element={<Navigate to="/organization/billing" replace />}
+                      element={<Navigate to="/organization/billing?section=invoices" replace />}
                     />
                     <Route
                       path="payment-history"
-                      element={<Navigate to="/organization/billing" replace />}
+                      element={<Navigate to="/organization/billing?section=invoices" replace />}
+                    />
+                    <Route
+                      path="activity"
+                      element={<Navigate to="/organization/billing?section=activity" replace />}
                     />
                   </Route>
 

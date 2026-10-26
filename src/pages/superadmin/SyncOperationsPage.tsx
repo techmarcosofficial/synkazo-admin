@@ -465,6 +465,7 @@ function RunDrawer({
                   key={run.id}
                   runId={run.syncRunLogId ?? run.id}
                   variant="compact"
+                  statsColumns={3}
                   status={run.status}
                   totalRecords={p.total}
                   processedRecords={p.attempted}
