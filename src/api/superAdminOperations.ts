@@ -257,9 +257,11 @@ export const superAdminOperationsApi = {
   discoverStatuses: (
     organisationId: string,
     projectId: string,
-  ): Promise<Array<{ id: string; label: string }>> =>
+  ): Promise<Array<string | { id?: string; label?: string; name?: string }>> =>
     apiClient
-      .get<{ data: Array<{ id: string; label: string }> }>(
+      .get<{
+        data: Array<string | { id?: string; label?: string; name?: string }>;
+      }>(
         `/super-admin/organisations/${organisationId}/projects/${projectId}/discovery/servicetitan/project-statuses`,
       )
       .then(d),

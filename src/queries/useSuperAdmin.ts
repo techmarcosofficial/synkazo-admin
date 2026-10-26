@@ -30,6 +30,7 @@ import {
 } from '@/api/superAdminSettings';
 import { superAdminAssociationsApi } from '@/api/superAdminAssociations';
 import { superAdminMigrationApi } from '@/api/superAdminMigration';
+import { jobsApi } from '@/api/jobs';
 import type {
   CancelAtPeriodEndDto,
   CancelSubscriptionImmediateDto,
@@ -649,6 +650,19 @@ export function useSuperAdminStatusesQuery(
     enabled: !!organisationId && !!projectId && enabled,
   });
 }
+
+export function useSuperAdminJobSourceStatusesQuery(
+  projectId: string,
+  jobId: string,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: ['projects', projectId, 'jobs', jobId, 'source-statuses'],
+    queryFn: () => jobsApi.getSourceStatuses(projectId, jobId),
+    enabled: !!projectId && !!jobId && enabled,
+  });
+}
+
 
 export function useCreateSuperAdminJobMutation(
   organisationId: string,
