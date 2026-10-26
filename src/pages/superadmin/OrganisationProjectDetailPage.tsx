@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 import LifecycleConfirmDialog from './lifecycle/LifecycleConfirmDialog';
 import OrganisationCreateJobDialog from './OrganisationCreateJobDialog';
 import OrganisationProjectSettings from './OrganisationProjectSettings';
+import OrganisationProjectActivityTab from './projects/OrganisationProjectActivityTab';
 import OrganisationProjectConnections from './projects/OrganisationProjectConnections';
 
 import EmptyState from '@/components/shared/EmptyState';
@@ -39,7 +40,7 @@ import {
 } from '@/queries/useSuperAdmin';
 import type { SuperAdminJobListItem } from '@/types/superAdmin';
 
-type ProjectTab = 'sync-rules' | 'settings' | 'connections';
+type ProjectTab = 'sync-rules' | 'settings' | 'connections' | 'activity';
 
 function errorMessage(error: unknown): string {
   const response = error as { response?: { data?: { message?: string } } };
@@ -156,7 +157,9 @@ export default function OrganisationProjectDetailPage() {
       ? 'settings'
       : searchParams.get('tab') === 'connections'
         ? 'connections'
-        : 'sync-rules';
+        : searchParams.get('tab') === 'activity'
+          ? 'activity'
+          : 'sync-rules';
 
   const orgQuery = useSuperAdminOrganisationQuery(organisationId);
   const projectQuery = useSuperAdminProjectQuery(orgId, projectId);
@@ -265,6 +268,13 @@ export default function OrganisationProjectDetailPage() {
             project={project}
             jobs={jobsQuery.data}
             onContinue={() => setCreateOpen(true)}
+          />
+        ) : tab === 'activity' ? (
+          <OrganisationProjectActivityTab
+            organisationId={orgId}
+            projectId={id}
+            project={project}
+            jobs={jobsQuery.data ?? []}
           />
         ) : (
           <OrganisationProjectSettings
