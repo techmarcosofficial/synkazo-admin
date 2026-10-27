@@ -12,6 +12,7 @@ import type {
 } from '@/features/projects/hooks/useProjectDetail';
 import { useConfirmDialogStore } from '@/stores/useConfirmDialogStore';
 import { connectionsApi } from '@/api/connections';
+import { EnvironmentHeaderActionContext } from './EnvironmentHeaderActionContext';
 
 const authState = vi.hoisted(() => ({ canManage: true }));
 
@@ -95,6 +96,7 @@ function renderCards(
   overrides: Partial<
     React.ComponentProps<typeof EnvironmentOverviewCards>
   > = {},
+  headerHost: HTMLElement | null = null,
 ) {
   const props: React.ComponentProps<typeof EnvironmentOverviewCards> = {
     project,
@@ -107,7 +109,11 @@ function renderCards(
     onGoToConnections: vi.fn(),
     ...overrides,
   };
-  render(<EnvironmentOverviewCards {...props} />);
+  render(
+    <EnvironmentHeaderActionContext.Provider value={headerHost}>
+      <EnvironmentOverviewCards {...props} />
+    </EnvironmentHeaderActionContext.Provider>,
+  );
   return props;
 }
 
@@ -127,6 +133,52 @@ describe('environmentReadiness', () => {
 });
 
 describe('EnvironmentOverviewCards', () => {
+  it('keeps one switch action in the settings header when the target is incomplete', () => {
+    const headerHost = document.createElement('div');
+    document.body.appendChild(headerHost);
+    try {
+      renderCards({
+        connections: [
+          ...sandboxPair,
+          connection('production-source', 'production', 'source'),
+        ],
+      }, headerHost);
+
+      expect(headerHost.querySelector('button')?.textContent).toContain('Switch to Production');
+      expect(screen.getAllByRole('button', { name: 'Switch to Production' })).toHaveLength(1);
+      expect(screen.getByRole('button', { name: 'Configure Production' })).toBeInTheDocument();
+    } finally {
+      headerHost.remove();
+    }
+  });
+
+  it('offers the reverse switch in the settings header', () => {
+    const headerHost = document.createElement('div');
+    document.body.appendChild(headerHost);
+    try {
+      renderCards({ activeEnvironment: 'production' }, headerHost);
+      expect(headerHost.querySelector('button')?.textContent).toContain('Switch to Sandbox');
+      expect(screen.getAllByRole('button', { name: 'Switch to Sandbox' })).toHaveLength(1);
+    } finally {
+      headerHost.remove();
+    }
+  });
+
+  it('runs the existing switch preview from the settings header', async () => {
+    const headerHost = document.createElement('div');
+    document.body.appendChild(headerHost);
+    try {
+      renderCards({}, headerHost);
+      await userEvent.click(screen.getByRole('button', { name: 'Switch to Production' }));
+      await waitFor(() => expect(connectionsApi.previewEnvironmentSwitch)
+        .toHaveBeenCalledWith('project-1', 'production'));
+      await waitFor(() => expect(useConfirmDialogStore.getState().title)
+        .toBe('Switch to Production?'));
+    } finally {
+      headerHost.remove();
+    }
+  });
+
   it('requires an explicit confirmation for a verified shared live source', async () => {
     vi.mocked(connectionsApi.getSharedSourceAcknowledgement).mockResolvedValueOnce({
       shared: true, verificationRequired: false, acknowledged: false,

@@ -1,9 +1,10 @@
 import { CalendarClock, Layers3, Link2, Lock, Settings2 } from 'lucide-react';
-import { lazy, Suspense, type ComponentType } from 'react';
+import { lazy, Suspense, useState, type ComponentType } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { useProjectDetailContext } from '../context';
 import ProjectSettingsNavigation from '../ProjectSettingsNavigation';
+import { EnvironmentHeaderActionContext } from '../settings/EnvironmentHeaderActionContext';
 import {
   DangerZoneCard,
   GeneralSettingsCard,
@@ -113,6 +114,8 @@ function LockedSection({ section }: { section: ProjectSettingsSectionView }) {
 
 export default function SettingsTab() {
   const { hasBothConnections, hasJobs } = useProjectDetailContext();
+  const [environmentActionHost, setEnvironmentActionHost] =
+    useState<HTMLDivElement | null>(null);
   const { activeSection, sections, handleSectionChange, sectionHref } =
     useProjectSettingsSections({ hasBothConnections, hasJobs });
 
@@ -163,10 +166,15 @@ export default function SettingsTab() {
               title={activeSection.label}
               subtitle={activeSection.description}
             />
+            {activeSection.id === 'environments' && (
+              <div ref={setEnvironmentActionHost} className="shrink-0" />
+            )}
           </CardHeader>
 
           <CardContent className="px-3.5 pt-2.5 pb-3.5 sm:px-4 sm:pb-4">
-            {sectionBody}
+            <EnvironmentHeaderActionContext.Provider value={environmentActionHost}>
+              {sectionBody}
+            </EnvironmentHeaderActionContext.Provider>
           </CardContent>
         </Card>
       )}

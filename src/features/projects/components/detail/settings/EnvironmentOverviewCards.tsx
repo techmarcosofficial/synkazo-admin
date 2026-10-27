@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   AlertCircle,
   ArrowRight,
@@ -23,6 +24,7 @@ import type {
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import type { ProjectEnvironment } from '@/types';
 import { toast } from 'sonner';
+import { EnvironmentHeaderActionContext } from './EnvironmentHeaderActionContext';
 
 function environmentConnection(
   connections: ConnectionExt[],
@@ -118,6 +120,7 @@ export default function EnvironmentOverviewCards({
   onGoToConnections: () => void;
 }) {
   const { confirm } = useConfirmDialog();
+  const headerActionHost = useContext(EnvironmentHeaderActionContext);
   const { hasRole } = useSynkazoAuth();
   const canActivate = hasRole('org_admin');
 
@@ -223,6 +226,10 @@ export default function EnvironmentOverviewCards({
     }
     setPreviewing(false);
     if (!preview.canSwitch) {
+      if (!preview.targetReady) {
+        setPreviewError('Connect and verify both target platform connections before switching.');
+        return;
+      }
       const { runningJobs, runningRuns, priorityCycles, associationRuns } = preview.blockers;
       setPreviewError(
         `Switch blocked: ${runningJobs} running jobs, ${runningRuns} running runs, ` +
@@ -278,8 +285,29 @@ export default function EnvironmentOverviewCards({
     });
   };
 
+  const targetEnvironment = activeEnvironment === 'production' ? 'sandbox' : 'production';
+  const headerSwitchAction = (
+    <Button
+      size="sm"
+      variant="outline"
+      className="gap-1.5"
+      disabled={!canActivate || activating || previewing}
+      title={!canActivate ? 'Organization admin access required' : undefined}
+      onClick={() => void requestActivation(targetEnvironment)}
+    >
+      {activating || previewing ? (
+        <RefreshCw className="size-3.5 animate-spin" />
+      ) : (
+        <ArrowRight className="size-3.5" />
+      )}
+      {previewing ? 'Reviewing switch…' : activating ? 'Switching…' :
+        `${activeEnvironment ? 'Switch to' : 'Activate'} ${targetEnvironment === 'sandbox' ? 'Sandbox' : 'Production'}`}
+    </Button>
+  );
+
   return (
     <div className="space-y-4">
+      {headerActionHost && createPortal(headerSwitchAction, headerActionHost)}
       {sharedSource && !sharedSourceStatus?.shared && (
         <Alert>
           <AlertCircle className="size-4" />
@@ -438,20 +466,24 @@ export default function EnvironmentOverviewCards({
                   </div>
                 ) : readiness.sandbox.ready ? (
                   canActivate ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => void requestActivation('sandbox')}
-                      disabled={activating || previewing}
-                      className="h-7 gap-1 text-xs"
-                    >
-                      {activating || previewing ? (
-                        <RefreshCw className="size-3 animate-spin" />
-                      ) : (
-                        <ArrowRight className="size-3" />
-                      )}
-                      {previewing ? 'Reviewing…' : activating ? 'Activating…' : 'Switch to Sandbox'}
-                    </Button>
+                    headerActionHost ? (
+                      <span className="text-muted-foreground text-xs">Ready to switch</span>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => void requestActivation('sandbox')}
+                        disabled={activating || previewing}
+                        className="h-7 gap-1 text-xs"
+                      >
+                        {activating || previewing ? (
+                          <RefreshCw className="size-3 animate-spin" />
+                        ) : (
+                          <ArrowRight className="size-3" />
+                        )}
+                        {previewing ? 'Reviewing…' : activating ? 'Activating…' : 'Switch to Sandbox'}
+                      </Button>
+                    )
                   ) : (
                     <Badge variant="secondary" size="xs">
                       Admin access required
@@ -525,19 +557,23 @@ export default function EnvironmentOverviewCards({
                     <ExternalLink className="size-3" />
                   </Button>
                 ) : canActivate ? (
-                  <Button
-                    size="sm"
-                    onClick={() => void requestActivation('production')}
-                    disabled={activating || previewing}
-                    className="h-7 gap-1.5 text-xs"
-                  >
-                    {activating || previewing ? (
-                      <RefreshCw className="size-3 animate-spin" />
-                    ) : (
-                      <ArrowRight className="size-3" />
-                    )}
-                    {previewing ? 'Reviewing…' : activating ? 'Activating…' : 'Switch to Production'}
-                  </Button>
+                  headerActionHost ? (
+                    <span className="text-muted-foreground text-xs">Ready to switch</span>
+                  ) : (
+                    <Button
+                      size="sm"
+                      onClick={() => void requestActivation('production')}
+                      disabled={activating || previewing}
+                      className="h-7 gap-1.5 text-xs"
+                    >
+                      {activating || previewing ? (
+                        <RefreshCw className="size-3 animate-spin" />
+                      ) : (
+                        <ArrowRight className="size-3" />
+                      )}
+                      {previewing ? 'Reviewing…' : activating ? 'Activating…' : 'Switch to Production'}
+                    </Button>
+                  )
                 ) : (
                   <Badge variant="secondary" size="xs">
                     Admin access required
