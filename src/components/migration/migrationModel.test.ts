@@ -28,7 +28,15 @@ const diff: MigrationDiff = {
       identityKey: 'property:b',
       kind: 'property',
       displayName: 'B',
+      objectType: 'contacts',
       status: 'in_sync',
+    },
+    {
+      identityKey: 'property:custom',
+      kind: 'property',
+      displayName: 'Custom object field',
+      objectType: '2-123',
+      status: 'missing',
     },
   ],
   associations: [
@@ -57,7 +65,7 @@ describe('migrationModel', () => {
     });
   });
 
-  it('does not expose custom schemas or associations in the transfer list', () => {
+  it('does not expose custom schemas, their fields or associations in the transfer list', () => {
     const items = migrationGroups(diff).flatMap((group) => group.items);
     expect(filterMigrationItems(items, 'conflict', new Set())).toHaveLength(0);
     expect(

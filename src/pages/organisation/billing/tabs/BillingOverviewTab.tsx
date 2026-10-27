@@ -145,7 +145,7 @@ export default function BillingOverviewTab() {
   const usageOver =
     !!usage &&
     usage.maxRecordsPerMonth != null &&
-    usage.recordsSynced >= usage.maxRecordsPerMonth;
+    (usage.remaining === 0 || usage.recordsSynced >= usage.maxRecordsPerMonth);
 
   const cataloguePlan = plansQuery.data?.find(
     (candidate) => candidate.id === plan.planId,
@@ -235,7 +235,7 @@ export default function BillingOverviewTab() {
                     <AlertCircle className="size-4" />
                     <AlertTitle className="text-xs font-semibold">Monthly record limit reached</AlertTitle>
                     <AlertDescription className="text-xs">
-                      New syncs are blocked until the next billing cycle or until your plan is upgraded.
+                      Production and Sandbox share this monthly limit. New syncs are blocked until the next UTC month or until your plan is upgraded.
                     </AlertDescription>
                   </Alert>
                 )}
@@ -263,6 +263,11 @@ export default function BillingOverviewTab() {
                           : '0 records used'}
                       </span>
                     </div>
+                    <p className="text-muted-foreground text-[11px]">
+                      One shared monthly limit for Production and Sandbox.
+                      {(usage?.recordsReserved ?? 0) > 0 &&
+                        ` ${usage!.recordsReserved!.toLocaleString()} records are reserved by active syncs.`}
+                    </p>
                     <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
                       <div
                         className={cn(

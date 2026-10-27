@@ -188,6 +188,7 @@ describe('BillingOverviewTab', () => {
     // Limits & Features
     expect(screen.getByText('Plan limits & features')).toBeInTheDocument();
     expect(screen.getByText('1,203 of 1,000 records used')).toBeInTheDocument();
+    expect(screen.getByText('One shared monthly limit for Production and Sandbox.')).toBeInTheDocument();
     expect(
       screen.getByText('Monthly record limit reached'),
     ).toBeInTheDocument();

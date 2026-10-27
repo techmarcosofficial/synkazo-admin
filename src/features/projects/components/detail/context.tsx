@@ -41,7 +41,7 @@ export interface ProjectDetailContextValue {
   clearEnvironmentActivationError: () => void;
   envFullyConnected: (env: string) => boolean;
   envHasAnyConnected: (env: string) => boolean;
-  onActivateEnv: (env: ProjectEnvironment) => Promise<void>;
+  onActivateEnv: (env: ProjectEnvironment, expectedGeneration?: string) => Promise<void>;
   connReloadKey: number;
 }
 

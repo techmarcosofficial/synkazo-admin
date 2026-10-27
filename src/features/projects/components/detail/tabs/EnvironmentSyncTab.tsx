@@ -5,7 +5,6 @@ import EnvironmentOverviewCards, {
   environmentReadiness,
 } from '../settings/EnvironmentOverviewCards';
 import WorkspaceInventory from '../settings/WorkspaceInventory';
-import WorkspaceJobCopy from '../settings/WorkspaceJobCopy';
 
 import MigrationPanel from '@/components/migration/MigrationPanel';
 import HeadingPair from '@/components/shared/HeadingPair';
@@ -17,7 +16,9 @@ export default function EnvironmentSyncTab() {
   const {
     projectId,
     project,
+    jobs,
     connections,
+    refetch,
     handleTabChange,
     projectActiveEnv,
     envActivating,
@@ -44,9 +45,12 @@ export default function EnvironmentSyncTab() {
         onGoToConnections={() => handleTabChange('connections')}
       />
 
-      <WorkspaceInventory projectId={projectId} />
+      <WorkspaceInventory projectId={projectId} jobs={jobs} onRefresh={refetch} />
 
-      <WorkspaceJobCopy projectId={projectId} />
+      <p className="text-muted-foreground text-sm">
+        Create jobs, mappings, association rules, and priority settings manually
+        in each workspace. Switching environments does not transfer them.
+      </p>
 
       <section className="space-y-4 border-t pt-6">
         <HeadingPair

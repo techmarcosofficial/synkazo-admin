@@ -45,6 +45,17 @@ export interface CrossObjectPropertyOption {
   lookupModes: Array<'id' | 'name'>;
 }
 
+export interface LegacyJobSummary {
+  id: string;
+  name: string;
+  sourceObject: string;
+  destObject: string;
+  legacyArchivedAt: string | null;
+  isEnabled: boolean;
+  syncEnabled: boolean;
+  recordsSynced: number;
+}
+
 export interface CrossObjectProperty {
   id: string;
   relatedObject: string;
@@ -63,6 +74,8 @@ export const jobsApi = {
 
   listJobs: (projectId: string): Promise<Job[]> =>
     apiClient.get(p(projectId)).then(d),
+  listLegacyJobs: (projectId: string): Promise<LegacyJobSummary[]> =>
+    apiClient.get(`${p(projectId)}/legacy`).then(d),
   getJob: (projectId: string, jobId: string): Promise<Job> =>
     apiClient.get(`${p(projectId)}/${jobId}`).then(d),
   createJob: (projectId: string, data: Partial<Job>): Promise<Job> =>
@@ -74,6 +87,12 @@ export const jobsApi = {
   ): Promise<Job> => apiClient.patch(`${p(projectId)}/${jobId}`, data).then(d),
   toggleJob: (projectId: string, jobId: string): Promise<Job> =>
     apiClient.patch(`${p(projectId)}/${jobId}/toggle`).then(d),
+  resumeWorkspaceJob: (
+    projectId: string,
+    jobId: string,
+    expectedGeneration: string,
+  ): Promise<Job> =>
+    apiClient.post(`${p(projectId)}/${jobId}/resume`, { expectedGeneration }).then(d),
   deleteJob: (projectId: string, jobId: string): Promise<void> =>
     apiClient.delete(`${p(projectId)}/${jobId}`).then(d),
 

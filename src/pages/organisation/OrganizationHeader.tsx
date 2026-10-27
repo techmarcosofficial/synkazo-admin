@@ -99,7 +99,7 @@ export default function OrganizationHeader() {
               )}
             >
               <AlertCircle className="size-3.5" />
-              {used.toLocaleString()} / {limit!.toLocaleString()} records used
+              {used.toLocaleString()} / {limit!.toLocaleString()} shared records used
             </span>
           )}
         </div>

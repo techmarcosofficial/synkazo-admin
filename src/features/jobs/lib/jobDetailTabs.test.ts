@@ -11,8 +11,8 @@ describe('job detail tabs', () => {
     });
   });
 
-  it('includes schedule as a top-level tab', () => {
-    expect(TAB_DEFS.map((tab) => String(tab.id))).toContain('schedule');
+  it('keeps schedule controls in Overview rather than a separate tab', () => {
+    expect(TAB_DEFS.map((tab) => String(tab.id))).not.toContain('schedule');
   });
 
   it('labels run-history as Sync History', () => {
@@ -26,7 +26,6 @@ describe('job detail tabs', () => {
       'overview',
       'field-mapping',
       'pipeline',
-      'schedule',
       'run-history',
       'conflicts',
       'webhook-events',

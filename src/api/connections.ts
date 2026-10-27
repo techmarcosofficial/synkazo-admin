@@ -24,6 +24,39 @@ export type ConnectionWrite = Partial<Connection> & {
   credentials?: Record<string, string>;
 };
 
+export interface SharedSourceAcknowledgement {
+  shared: boolean;
+  verificationRequired: boolean;
+  acknowledged: boolean;
+  accountName: string | null;
+  accountIdentity: string | null;
+  platformId: string | null;
+  fingerprint: string | null;
+  sandboxConnectionId: string | null;
+  productionConnectionId: string | null;
+}
+
+export interface EnvironmentSwitchPreview {
+  currentEnvironment: HubSpotEnvironment;
+  targetEnvironment: HubSpotEnvironment;
+  targetWorkspaceId: string;
+  expectedGeneration: string;
+  targetReady: boolean;
+  canSwitch: boolean;
+  blockers: {
+    runningJobs: number;
+    runningRuns: number;
+    priorityCycles: number;
+    associationRuns: number;
+  };
+  pendingWebhookEvents: number;
+  jobsToPause: number;
+  targetCounts: { jobs: number; runs: number; runLogs: number } | null;
+  targetSource: { accountName: string | null; accountIdentity: string | null; status: string } | null;
+  targetDestination: { accountName: string | null; accountIdentity: string | null; status: string } | null;
+  sandboxDestinationWriteSafety: { allowed: boolean; reason: string | null } | null;
+}
+
 export const connectionsApi = {
   listAllConnections: (): Promise<Connection[]> =>
     apiClient.get('/connections').then(d),
@@ -99,12 +132,34 @@ export const connectionsApi = {
   activateEnvironment: (
     projectId: string,
     environment: HubSpotEnvironment,
+    expectedGeneration: string,
   ): Promise<unknown> =>
     apiClient
       .post(`/projects/${projectId}/connections/activate-environment`, {
         environment,
+        expectedGeneration,
       })
       .then(d),
+
+  previewEnvironmentSwitch: (
+    projectId: string,
+    environment: HubSpotEnvironment,
+  ): Promise<EnvironmentSwitchPreview> =>
+    apiClient.get(`/projects/${projectId}/connections/environment-switch/preview`, {
+      params: { environment },
+    }).then(d),
+
+  getSharedSourceAcknowledgement: (
+    projectId: string,
+  ): Promise<SharedSourceAcknowledgement> =>
+    apiClient.get(`${p(projectId)}/shared-source/acknowledgement`).then(d),
+  acknowledgeSharedSource: (
+    projectId: string,
+    expectedFingerprint: string,
+  ): Promise<void> =>
+    apiClient.post(`${p(projectId)}/shared-source/acknowledgement`, {
+      expectedFingerprint,
+    }).then(d),
 
   getHubSpotOAuthUrl: (
     projectId: string,

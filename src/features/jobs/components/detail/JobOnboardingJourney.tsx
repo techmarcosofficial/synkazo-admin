@@ -133,7 +133,7 @@ export default function JobOnboardingJourney() {
           <SetupJourneyCard
             eyebrow="Sandbox test complete"
             title="Ready to go live? Connect your Production platforms"
-            description={`“${job.name}” verified cleanly in Sandbox without errors. To begin syncing live customer data, connect your live production platforms. Your field mappings and configurations will carry over seamlessly.`}
+            description={`“${job.name}” ran successfully in Sandbox. Connect your Production platforms, then create and review Production jobs separately before enabling sync.`}
             steps={steps}
             actionLabel="Connect Production Platforms"
             onContinue={() =>
@@ -150,10 +150,10 @@ export default function JobOnboardingJourney() {
       return (
         <SetupJourneyCard
           eyebrow="Sandbox test complete"
-          title="Ready to activate live Production sync?"
-          description={`“${job.name}” verified cleanly in Sandbox and your live Production connections are connected. Switch to Production in Environment Settings to begin syncing live data without re-mapping from scratch.`}
+          title="Review your Production workspace"
+          description={`“${job.name}” ran successfully in Sandbox. Production connections are connected; review Production jobs and account identities in Environment Settings before switching or enabling sync.`}
           steps={steps}
-          actionLabel="Promote to Production"
+          actionLabel="Review Production Workspace"
           onContinue={() =>
             navigate(`/projects/${projectId}?tab=settings&section=environments`)
           }

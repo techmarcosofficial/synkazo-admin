@@ -86,6 +86,7 @@ export interface PlanStatus {
 
 export interface UsageSummary {
   recordsSynced: number;
+  recordsReserved?: number;
   maxRecordsPerMonth: number | null; // null = unlimited
   periodStart: string;
   remaining: number | null; // null = unlimited

@@ -70,7 +70,7 @@ export default function WorkspaceShell({
         <AppSidebar kind={kind} />
         <SidebarInset className="max-w-full min-w-0 overflow-x-clip [--app-shell-header-height:--spacing(16)]">
           <SiteHeader kind={kind} />
-          {/* {kind === 'platform' && (
+          {kind === 'platform' && (
             <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 sm:px-6">
               <div className="container mx-auto flex items-center gap-2 text-xs text-amber-900">
                 <Shield className="size-3.5 shrink-0" aria-hidden />
@@ -80,7 +80,7 @@ export default function WorkspaceShell({
                 </span>
               </div>
             </div>
-          )} */}
+          )}
           <main className="container mx-auto flex w-full max-w-full min-w-0 flex-1 flex-col gap-4 px-5 py-4 sm:px-7 sm:py-6 lg:px-8 xl:px-10">
             <WorkspacePageBoundary
               key={location.pathname}

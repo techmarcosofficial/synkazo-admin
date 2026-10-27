@@ -127,7 +127,7 @@ describe('JobOnboardingJourney - Environment Awareness & Production Graduation',
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/verified cleanly in Sandbox without errors/i),
+      screen.getByText(/create and review Production jobs separately/i),
     ).toBeInTheDocument();
 
     // Primary CTA: Connect Production Platforms
@@ -151,7 +151,7 @@ describe('JobOnboardingJourney - Environment Awareness & Production Graduation',
     );
   });
 
-  it('renders "Ready to activate live Production sync?" and "Promote to Production" button when Production is already connected', () => {
+  it('links to Production review when Production is connected', () => {
     // Initial mount in 'test' stage (not complete yet)
     vi.mocked(useJobDetailContext).mockReturnValue({
       projectId: 'proj-123',
@@ -219,13 +219,13 @@ describe('JobOnboardingJourney - Environment Awareness & Production Graduation',
     expect(
       screen.getByRole('heading', {
         level: 2,
-        name: 'Ready to activate live Production sync?',
+        name: 'Review your Production workspace',
       }),
     ).toBeInTheDocument();
 
-    // Primary CTA: Promote to Production
+    // Primary CTA: review Production workspace
     const promoteBtn = screen.getByRole('button', {
-      name: /^promote to production/i,
+      name: /^review production workspace/i,
     });
     expect(promoteBtn).toBeInTheDocument();
     fireEvent.click(promoteBtn);
@@ -541,13 +541,13 @@ describe('JobOnboardingJourney - Step Gating & Activation Flow', () => {
     fireEvent.click(step2);
     expect(handleTabChange).toHaveBeenCalledWith('overview');
 
-    // Step 3: Automate (different tab -> Go to Schedule tab)
+    // Step 3: Automate (schedule options live on Overview)
     const step3 = screen.getByRole('button', { name: /automate/i });
-    expect(step3).toHaveAttribute('data-step-hint', 'Go to Schedule tab');
+    expect(step3).toHaveAttribute('data-step-hint', 'Go to Overview tab to view schedule options');
     expect(step3).not.toHaveAttribute('title');
   });
 
-  it('selects the Schedule tab when clicking the Automate step pill', () => {
+  it('selects Overview when clicking the Automate step pill', () => {
     const handleTabChange = vi.fn();
 
     vi.mocked(useJobDetailContext).mockReturnValue({
@@ -578,7 +578,7 @@ describe('JobOnboardingJourney - Step Gating & Activation Flow', () => {
 
     fireEvent.click(automateBtn);
 
-    expect(handleTabChange).toHaveBeenCalledWith('schedule');
+    expect(handleTabChange).toHaveBeenCalledWith('overview');
   });
 
   it('keeps setup steps visible on Overview before the first run', () => {

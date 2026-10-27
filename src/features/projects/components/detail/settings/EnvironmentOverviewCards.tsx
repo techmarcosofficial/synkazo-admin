@@ -1,11 +1,14 @@
+import { useEffect, useState } from 'react';
 import {
   AlertCircle,
   ArrowRight,
   CheckCircle2,
   ExternalLink,
   RefreshCw,
+  Lock,
 } from 'lucide-react';
 
+import { connectionsApi, type SharedSourceAcknowledgement } from '@/api/connections';
 import { PlatformIcon } from '@/components/platform';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -19,6 +22,7 @@ import type {
 } from '@/features/projects/hooks/useProjectDetail';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import type { ProjectEnvironment } from '@/types';
+import { toast } from 'sonner';
 
 function environmentConnection(
   connections: ConnectionExt[],
@@ -110,7 +114,7 @@ export default function EnvironmentOverviewCards({
   activating: boolean;
   activationError: string | null;
   clearActivationError: () => void;
-  onActivate: (environment: ProjectEnvironment) => Promise<void>;
+  onActivate: (environment: ProjectEnvironment, expectedGeneration?: string) => Promise<void>;
   onGoToConnections: () => void;
 }) {
   const { confirm } = useConfirmDialog();
@@ -121,9 +125,112 @@ export default function EnvironmentOverviewCards({
     sandbox: environmentReadiness(connections, 'sandbox'),
     production: environmentReadiness(connections, 'production'),
   };
+  const sameHubSpotAccount = (
+    sandbox?: ConnectionExt,
+    production?: ConnectionExt,
+  ) => sandbox?.platformId === 'hubspot' &&
+    production?.platformId === 'hubspot' &&
+    sandbox.providerHubId != null &&
+    sandbox.providerHubId === production.providerHubId;
+  const sharedSource = sameHubSpotAccount(
+    readiness.sandbox.source, readiness.production.source,
+  );
+  const sharedDestination = sameHubSpotAccount(
+    readiness.sandbox.destination, readiness.production.destination,
+  );
+  const [sharedSourceStatus, setSharedSourceStatus] = useState<SharedSourceAcknowledgement | null>(null);
+  const [sharedSourceError, setSharedSourceError] = useState<string | null>(null);
+  const [checkingSharedSource, setCheckingSharedSource] = useState(false);
+  const [acknowledgingSource, setAcknowledgingSource] = useState(false);
+  const [sourceCheckVersion, setSourceCheckVersion] = useState(0);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewing, setPreviewing] = useState(false);
+  const sourceCheckKey = [
+    readiness.sandbox.source?.id, readiness.sandbox.source?.status,
+    readiness.sandbox.source?.providerHubId, readiness.sandbox.source?.updatedAt,
+    readiness.production.source?.id, readiness.production.source?.status,
+    readiness.production.source?.providerHubId, readiness.production.source?.updatedAt,
+  ].join(':');
 
-  const requestActivation = (env: ProjectEnvironment) => {
+  useEffect(() => {
+    if (!readiness.sandbox.source || !readiness.production.source) {
+      setSharedSourceStatus(null);
+      setSharedSourceError(null);
+      return;
+    }
+    let cancelled = false;
+    setCheckingSharedSource(true);
+    setSharedSourceError(null);
+    void connectionsApi.getSharedSourceAcknowledgement(project.id)
+      .then((status) => { if (!cancelled) setSharedSourceStatus(status); })
+      .catch(() => {
+        if (!cancelled) {
+          setSharedSourceStatus(null);
+          setSharedSourceError('Could not verify whether Sandbox shares the live source account. Refresh to retry.');
+        }
+      })
+      .finally(() => { if (!cancelled) setCheckingSharedSource(false); });
+    return () => { cancelled = true; };
+    // The key captures account bindings and status without refetching on unrelated renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project.id, sourceCheckKey, sourceCheckVersion]);
+
+  const requestSharedSourceAcknowledgement = () => {
+    if (!sharedSourceStatus?.fingerprint || acknowledgingSource) return;
+    const expectedFingerprint = sharedSourceStatus.fingerprint;
+    confirm({
+      variant: 'warning',
+      title: 'Acknowledge live source account?',
+      description: `${sharedSourceStatus.accountName ?? sharedSourceStatus.platformId ?? 'This source'} (${sharedSourceStatus.accountIdentity ?? 'identity unavailable'}) is connected to both Sandbox and Production.`,
+      body: (
+        <p className="text-sm">
+          Sandbox may read data from this live account. Reverse writes to it remain blocked.
+          Check the account before running a Sandbox job.
+        </p>
+      ),
+      confirmLabel: 'Acknowledge shared source',
+      onConfirm: async () => {
+        setAcknowledgingSource(true);
+        try {
+          await connectionsApi.acknowledgeSharedSource(project.id, expectedFingerprint);
+          setSourceCheckVersion((version) => version + 1);
+          toast.success('Shared source account acknowledged for Sandbox sync.');
+        } catch (error) {
+          const message = (error as { response?: { data?: { message?: string } } })
+            .response?.data?.message ?? 'Account changed or acknowledgement failed. Refresh and review it again.';
+          setSharedSourceError(message);
+          toast.error(message);
+        } finally {
+          setAcknowledgingSource(false);
+        }
+      },
+    });
+  };
+
+  const requestActivation = async (env: ProjectEnvironment) => {
     clearActivationError();
+    setPreviewError(null);
+    setPreviewing(true);
+    let preview;
+    try {
+      preview = await connectionsApi.previewEnvironmentSwitch(project.id, env);
+    } catch (error) {
+      const message = (error as { response?: { data?: { message?: string } } })
+        .response?.data?.message ?? 'Could not preview this switch. Refresh and retry.';
+      setPreviewError(message);
+      setPreviewing(false);
+      return;
+    }
+    setPreviewing(false);
+    if (!preview.canSwitch) {
+      const { runningJobs, runningRuns, priorityCycles, associationRuns } = preview.blockers;
+      setPreviewError(
+        `Switch blocked: ${runningJobs} running jobs, ${runningRuns} running runs, ` +
+        `${priorityCycles} priority cycles and ${associationRuns} association runs. ` +
+        (preview.targetReady ? 'Wait for them to finish.' : 'Verify the target connections.'),
+      );
+      return;
+    }
     const targetLabel = env === 'sandbox' ? 'Sandbox' : 'Production';
     const currentLabel = activeEnvironment
       ? activeEnvironment === 'sandbox'
@@ -138,10 +245,26 @@ export default function EnvironmentOverviewCards({
       body: (
         <div className="space-y-2 text-sm">
           <p>
-            Check that queued and running syncs have finished before switching.
-            Queued work for the previous environment may be rejected after the
-            switch.
+            Wait for running syncs and priority stages to finish. Switching
+            pauses job activation, schedules, priority scheduling, and webhook
+            write-back. Review and resume each action manually on return.
           </p>
+          <p>
+            {preview.jobsToPause} enabled job(s) will pause. Target workspace:
+            {' '}{preview.targetCounts?.jobs ?? 0} saved job(s),
+            {' '}{preview.targetCounts?.runs ?? 0} run(s),
+            {' '}{preview.targetCounts?.runLogs ?? 0} run log(s).
+          </p>
+          <p>
+            Target destination: {preview.targetDestination?.accountName ??
+              preview.targetDestination?.accountIdentity ?? 'unlabelled account'}.
+            {' '}{preview.pendingWebhookEvents} pending webhook event(s) will be checked against workspace ownership.
+          </p>
+          {preview.sandboxDestinationWriteSafety && !preview.sandboxDestinationWriteSafety.allowed && (
+            <p className="text-destructive">
+              {preview.sandboxDestinationWriteSafety.reason}
+            </p>
+          )}
           <p className="text-muted-foreground">
             This does not copy jobs, mappings, objects, or properties between
             environments.
@@ -151,16 +274,96 @@ export default function EnvironmentOverviewCards({
       confirmLabel: activeEnvironment
         ? `Switch to ${targetLabel}`
         : `Activate ${targetLabel}`,
-      onConfirm: () => onActivate(env),
+      onConfirm: () => onActivate(env, preview.expectedGeneration),
     });
   };
 
   return (
     <div className="space-y-4">
+      {sharedSource && !sharedSourceStatus?.shared && (
+        <Alert>
+          <AlertCircle className="size-4" />
+          <AlertDescription>
+            Shared external source account: Sandbox and Production connect to the same
+            HubSpot portal. Sandbox reverse writes to this live source are blocked.
+          </AlertDescription>
+        </Alert>
+      )}
+      {!sharedSource && !sharedSourceStatus?.shared && readiness.sandbox.source && readiness.production.source && (
+        <Alert>
+          <AlertCircle className="size-4" />
+          <AlertDescription>
+            Check the Sandbox source account before syncing. Some platforms can connect
+            the same live account in both workspaces; Sandbox reverse writes to a
+            shared Production source are blocked.
+          </AlertDescription>
+        </Alert>
+      )}
+      {checkingSharedSource && readiness.sandbox.source && readiness.production.source && (
+        <p className="text-muted-foreground text-xs">Checking source account identity…</p>
+      )}
+      {sharedSourceError && (
+        <Alert variant="destructive">
+          <AlertCircle className="size-4" />
+          <AlertDescription className="flex flex-wrap items-center gap-2">
+            {sharedSourceError}
+            <Button size="sm" variant="outline" onClick={() => setSourceCheckVersion((version) => version + 1)}>
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+      {sharedSourceStatus?.verificationRequired && (
+        <Alert variant="destructive">
+          <AlertCircle className="size-4" />
+          <AlertDescription>
+            The source account identity could not be verified. Check both connections before Sandbox sync.
+          </AlertDescription>
+        </Alert>
+      )}
+      {sharedSourceStatus?.shared && (
+        <Alert variant={sharedSourceStatus.acknowledged ? 'default' : 'destructive'}>
+          <AlertCircle className="size-4" />
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
+            <span>
+              Sandbox and Production share {sharedSourceStatus.accountName ?? sharedSourceStatus.platformId ?? 'the same source account'}
+              {sharedSourceStatus.accountIdentity && ` (${sharedSourceStatus.accountIdentity})`}.
+              Sandbox can read this live source only after acknowledgement. Reverse writes remain blocked.
+              {sharedSourceStatus.acknowledged && ' Acknowledged for this account pair.'}
+            </span>
+            {!sharedSourceStatus.acknowledged && (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!canActivate || acknowledgingSource}
+                onClick={requestSharedSourceAcknowledgement}
+              >
+                {!canActivate && <Lock className="size-3" />}
+                {acknowledgingSource ? 'Saving…' : 'Acknowledge source'}
+              </Button>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
+      {sharedDestination && (
+        <Alert variant="destructive">
+          <AlertCircle className="size-4" />
+          <AlertDescription>
+            Sandbox destination writes are blocked because both workspaces use the
+            same live HubSpot portal. Connect a distinct Sandbox destination.
+          </AlertDescription>
+        </Alert>
+      )}
       {activationError && (
         <Alert variant="destructive" className="rounded-2xl">
           <AlertCircle className="size-4" />
           <AlertDescription>{activationError}</AlertDescription>
+        </Alert>
+      )}
+      {previewError && (
+        <Alert variant="destructive" className="rounded-2xl">
+          <AlertCircle className="size-4" />
+          <AlertDescription>{previewError}</AlertDescription>
         </Alert>
       )}
 
@@ -238,16 +441,16 @@ export default function EnvironmentOverviewCards({
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => requestActivation('sandbox')}
-                      disabled={activating}
+                      onClick={() => void requestActivation('sandbox')}
+                      disabled={activating || previewing}
                       className="h-7 gap-1 text-xs"
                     >
-                      {activating ? (
+                      {activating || previewing ? (
                         <RefreshCw className="size-3 animate-spin" />
                       ) : (
                         <ArrowRight className="size-3" />
                       )}
-                      {activating ? 'Activating…' : 'Switch to Sandbox'}
+                      {previewing ? 'Reviewing…' : activating ? 'Activating…' : 'Switch to Sandbox'}
                     </Button>
                   ) : (
                     <Badge variant="secondary" size="xs">
@@ -324,16 +527,16 @@ export default function EnvironmentOverviewCards({
                 ) : canActivate ? (
                   <Button
                     size="sm"
-                    onClick={() => requestActivation('production')}
-                    disabled={activating}
+                    onClick={() => void requestActivation('production')}
+                    disabled={activating || previewing}
                     className="h-7 gap-1.5 text-xs"
                   >
-                    {activating ? (
+                    {activating || previewing ? (
                       <RefreshCw className="size-3 animate-spin" />
                     ) : (
                       <ArrowRight className="size-3" />
                     )}
-                    {activating ? 'Activating…' : 'Switch to Production'}
+                    {previewing ? 'Reviewing…' : activating ? 'Activating…' : 'Switch to Production'}
                   </Button>
                 ) : (
                   <Badge variant="secondary" size="xs">

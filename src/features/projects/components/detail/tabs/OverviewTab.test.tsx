@@ -74,7 +74,7 @@ describe('Project OverviewTab - Environment Awareness & Production Promotion', (
     });
   });
 
-  it('renders "Promote to Production" when graduated in Sandbox and Production is fully connected', () => {
+  it('links to Production review when graduated in Sandbox and Production is connected', () => {
     vi.mocked(useProjectDetailContext).mockReturnValue({
       project: { id: 'proj-1', name: 'HubSpot Sync' } as any,
       jobs: [
@@ -95,16 +95,16 @@ describe('Project OverviewTab - Environment Awareness & Production Promotion', (
 
     render(<OverviewTab />);
 
-    expect(screen.getByText('Production Ready')).toBeInTheDocument();
+    expect(screen.getByText('Production Connected')).toBeInTheDocument();
     expect(
       screen.getByRole('heading', {
         level: 3,
-        name: /ready to activate live production sync\?/i,
+        name: /review your production workspace/i,
       }),
     ).toBeInTheDocument();
 
     const promoteButton = screen.getByRole('button', {
-      name: /^promote to production/i,
+      name: /^review production workspace/i,
     });
     expect(promoteButton).toBeInTheDocument();
 

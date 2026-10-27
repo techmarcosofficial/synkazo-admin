@@ -19,6 +19,7 @@ vi.mock('@/api/connections', async () => {
     connectionsApi: {
       ...actual.connectionsApi,
       activateEnvironment: vi.fn(),
+      previewEnvironmentSwitch: vi.fn(),
     },
   };
 });
@@ -32,6 +33,7 @@ vi.mock('sonner', () => ({
 }));
 
 const activateEnvironment = vi.mocked(connectionsApi.activateEnvironment);
+const previewEnvironmentSwitch = vi.mocked(connectionsApi.previewEnvironmentSwitch);
 
 const project: ProjectExt = {
   id: 'project-1',
@@ -95,6 +97,15 @@ function setupHook(
 beforeEach(() => {
   vi.clearAllMocks();
   activateEnvironment.mockResolvedValue({});
+  previewEnvironmentSwitch.mockResolvedValue({
+    currentEnvironment: 'sandbox', targetEnvironment: 'production',
+    targetWorkspaceId: 'prod-id', expectedGeneration: '4',
+    targetReady: true, canSwitch: true,
+    blockers: { runningJobs: 0, runningRuns: 0, priorityCycles: 0, associationRuns: 0 },
+    pendingWebhookEvents: 0, jobsToPause: 0, targetCounts: null,
+    targetSource: null, targetDestination: null,
+    sandboxDestinationWriteSafety: null,
+  });
 });
 
 describe('useProjectEnvironmentActivation', () => {
@@ -112,7 +123,7 @@ describe('useProjectEnvironmentActivation', () => {
 
     await act(() => result.current.handleActivateEnv('production'));
 
-    expect(activateEnvironment).toHaveBeenCalledWith('project-1', 'production');
+    expect(activateEnvironment).toHaveBeenCalledWith('project-1', 'production', '4');
     expect(result.current.projectActiveEnv).toBe('production');
     expect(patchProject).toHaveBeenCalledWith(
       expect.objectContaining({ activeEnvironment: 'production' }),
@@ -128,6 +139,10 @@ describe('useProjectEnvironmentActivation', () => {
       connections: sandboxPair,
       logs: [{ id: 'sandbox-log' }],
     });
+    const orgLogsKey = ['dashboard', 'syncLogs', 10, 1];
+    queryClient.setQueryData(orgLogsKey, { data: [{ id: 'sandbox-log' }] });
+    const metricsKey = ['dashboard', 'syncMetrics', 'weekly', 'UTC', null, null];
+    queryClient.setQueryData(metricsKey, { summary: { recordsProcessed: 5 } });
 
     await act(() => result.current.handleActivateEnv('production'));
 
@@ -140,6 +155,8 @@ describe('useProjectEnvironmentActivation', () => {
         totalErrorCount: 0,
       },
     });
+    expect(queryClient.getQueryData(orgLogsKey)).toBeUndefined();
+    expect(queryClient.getQueryData(metricsKey)).toBeUndefined();
   });
 
   it('keeps activation API failures visible and retryable', async () => {
@@ -161,7 +178,7 @@ describe('useProjectEnvironmentActivation', () => {
     expect(result.current.activationError).toBeNull();
   });
 
-  it('auto-activates the first complete environment for a new project', async () => {
+  it('waits for an explicit activation on a new project', async () => {
     const unactivatedProject = {
       ...project,
       activeEnvironment: 'production' as const,
@@ -169,11 +186,7 @@ describe('useProjectEnvironmentActivation', () => {
     };
     const { result } = setupHook(unactivatedProject);
 
-    await waitFor(() =>
-      expect(activateEnvironment).toHaveBeenCalledWith('project-1', 'sandbox'),
-    );
-    await waitFor(() =>
-      expect(result.current.projectActiveEnv).toBe('sandbox'),
-    );
+    expect(result.current.projectActiveEnv).toBeNull();
+    expect(activateEnvironment).not.toHaveBeenCalled();
   });
 });

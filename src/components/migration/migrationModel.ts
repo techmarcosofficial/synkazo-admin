@@ -19,7 +19,9 @@ export const migrationGroups = (
     key: 'properties',
     title: 'Standard-object custom fields',
     icon: Tag,
-    items: diff?.properties ?? [],
+    items: (diff?.properties ?? []).filter((item) =>
+      item.kind === 'property' && item.objectType !== undefined &&
+      ['contacts', 'companies', 'deals', 'tickets'].includes(item.objectType)),
   },
 ];
 

@@ -131,10 +131,22 @@ export const superAdminOperationsApi = {
       )
       .then(d),
 
+  previewProjectEnvironmentSwitch: (
+    organisationId: string,
+    projectId: string,
+    environment: 'sandbox' | 'production',
+  ): Promise<import('./connections').EnvironmentSwitchPreview> =>
+    apiClient
+      .get<{ data: import('./connections').EnvironmentSwitchPreview }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}/environment-switch/preview`,
+        { params: { environment } },
+      )
+      .then(d),
+
   activateProjectEnvironment: (
     organisationId: string,
     projectId: string,
-    dto: { environment: 'sandbox' | 'production'; reason: string },
+    dto: { environment: 'sandbox' | 'production'; reason: string; expectedGeneration: string },
   ): Promise<{ environment: 'sandbox' | 'production'; message: string }> =>
     apiClient
       .post<{

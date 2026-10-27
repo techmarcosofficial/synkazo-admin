@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from './queryKeys';
 
 import { projectsApi } from '@/api/projects';
+import { jobsApi } from '@/api/jobs';
 import type { Project } from '@/types';
 
 export function useProjectsQuery(options?: { enabled?: boolean }) {
@@ -26,6 +27,14 @@ export function useProjectEnvironmentsQuery(id: string) {
     queryKey: queryKeys.projects.environments(id),
     queryFn: () => projectsApi.getEnvironments(id),
     enabled: !!id,
+  });
+}
+
+export function useLegacyJobsQuery(projectId: string) {
+  return useQuery({
+    queryKey: ['projects', projectId, 'legacyJobs'],
+    queryFn: () => jobsApi.listLegacyJobs(projectId),
+    enabled: !!projectId,
   });
 }
 

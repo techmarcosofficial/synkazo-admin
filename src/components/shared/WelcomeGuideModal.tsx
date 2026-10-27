@@ -25,7 +25,7 @@ const STEPS = [
   {
     icon: CheckCircle,
     heading: 'Sample Tests & Automation',
-    body: 'Run a 5-record sample test in Sandbox to preview changes safely, then set an automated schedule to sync in real time. Everything is ready in your dashboard.',
+    body: 'A limited Sandbox sync can write to connected accounts. Verify both account identities, run a small sample, review the results, and enable a schedule only when ready.',
   },
 ];
 

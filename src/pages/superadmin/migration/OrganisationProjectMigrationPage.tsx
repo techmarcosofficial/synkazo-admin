@@ -21,6 +21,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { showToast } from '@/lib/toast';
+import { superAdminOperationsApi } from '@/api/superAdminOperations';
+import type { EnvironmentSwitchPreview } from '@/api/connections';
 import {
   useActivateSuperAdminProjectEnvironmentMutation,
   useRunSuperAdminMigrationMutation,
@@ -40,6 +42,11 @@ function extractErrorMessage(err: unknown): string {
   return e?.response?.data?.message ?? 'The request failed. Try again.';
 }
 
+const STANDARD_OBJECTS = new Set(['contacts', 'companies', 'deals', 'tickets']);
+const canMigrateMetadata = (item: SuperAdminMigrationDiffItem) =>
+  item.kind === 'property' && item.status === 'missing' &&
+  !!item.objectType && STANDARD_OBJECTS.has(item.objectType);
+
 function DiffSection({
   title,
   items,
@@ -51,15 +58,14 @@ function DiffSection({
   selected: Set<string>;
   onToggle: (key: string) => void;
 }) {
-  const promotable = items.filter((i) => i.status !== 'in_sync');
+  const promotable = items.filter(canMigrateMetadata);
   if (items.length === 0) return null;
   return (
     <div className="flex flex-col gap-2">
       <h3 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
         {title}
         <span className="ml-2 normal-case">
-          {promotable.length} promotable · {items.length - promotable.length} in
-          sync
+          {promotable.length} eligible · {items.length - promotable.length} manual or in sync
         </span>
       </h3>
       <div className="bg-card overflow-hidden rounded-lg border">
@@ -77,7 +83,7 @@ function DiffSection({
           </TableHeader>
           <TableBody>
             {items.map((item) => {
-              const disabled = item.status === 'in_sync';
+              const disabled = !canMigrateMetadata(item);
               return (
                 <TableRow key={item.identityKey}>
                   <TableCell>
@@ -111,7 +117,8 @@ function DiffSection({
                     </Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs">
-                    {item.conflictReason ?? '—'}
+                    {item.conflictReason ?? (disabled && item.status !== 'in_sync'
+                      ? 'Create manually in the target workspace' : '—')}
                   </TableCell>
                 </TableRow>
               );
@@ -165,6 +172,9 @@ export function OrganisationProjectMigrationPanel({
   );
   const [activationTarget, setActivationTarget] =
     useState<SuperAdminConnectionEnvironment | null>(null);
+  const [activationPreview, setActivationPreview] = useState<EnvironmentSwitchPreview | null>(null);
+  const [activationPreviewing, setActivationPreviewing] = useState(false);
+  const [activationPreviewError, setActivationPreviewError] = useState<string | null>(null);
 
   const [from, setFrom] = useState<SuperAdminConnectionEnvironment>('sandbox');
   const [to, setTo] = useState<SuperAdminConnectionEnvironment>('production');
@@ -198,11 +208,7 @@ export function OrganisationProjectMigrationPanel({
 
   const allPromotable = useMemo(() => {
     if (!diff) return [] as SuperAdminMigrationDiffItem[];
-    return [
-      ...diff.customObjects,
-      ...diff.properties,
-      ...diff.associations,
-    ].filter((i) => i.status !== 'in_sync');
+    return diff.properties.filter(canMigrateMetadata);
   }, [diff]);
 
   const toggle = (key: string) => {
@@ -227,6 +233,32 @@ export function OrganisationProjectMigrationPanel({
     const nextTo = from;
     setFrom(nextFrom);
     setTo(nextTo);
+  };
+
+  const reviewActivation = async (environment: SuperAdminConnectionEnvironment) => {
+    activate.reset();
+    setActivationPreviewError(null);
+    setActivationPreviewing(true);
+    try {
+      const preview = await superAdminOperationsApi.previewProjectEnvironmentSwitch(
+        organisationId, projectId, environment,
+      );
+      if (!preview.canSwitch) {
+        const { runningJobs, runningRuns, priorityCycles, associationRuns } = preview.blockers;
+        setActivationPreviewError(
+          `Switch blocked: ${runningJobs} running jobs, ${runningRuns} running runs, ` +
+          `${priorityCycles} priority cycles and ${associationRuns} association runs. ` +
+          (preview.targetReady ? 'Wait for them to finish.' : 'Verify the target connections.'),
+        );
+        return;
+      }
+      setActivationPreview(preview);
+      setActivationTarget(environment);
+    } catch (error) {
+      setActivationPreviewError(extractErrorMessage(error));
+    } finally {
+      setActivationPreviewing(false);
+    }
   };
 
   const submitRun = ({ reason }: { reason: string }) => {
@@ -273,6 +305,12 @@ export function OrganisationProjectMigrationPanel({
             />
           ) : (
             <div className="grid gap-2 sm:grid-cols-2">
+              {activationPreviewError && (
+                <Alert variant="destructive" className="sm:col-span-2">
+                  <AlertTriangle className="size-4" />
+                  <AlertDescription>{activationPreviewError}</AlertDescription>
+                </Alert>
+              )}
               {(['sandbox', 'production'] as const).map((environment) => {
                 const active =
                   projectQuery.data?.activeEnvironment === environment;
@@ -305,13 +343,10 @@ export function OrganisationProjectMigrationPanel({
                         size="sm"
                         variant="outline"
                         className="mt-auto self-start"
-                        disabled={activate.isPending}
-                        onClick={() => {
-                          activate.reset();
-                          setActivationTarget(environment);
-                        }}
+                        disabled={activate.isPending || activationPreviewing}
+                        onClick={() => void reviewActivation(environment)}
                       >
-                        Activate {environment}
+                        {activationPreviewing ? 'Reviewing…' : `Activate ${environment}`}
                       </Button>
                     )}
                   </div>
@@ -592,11 +627,14 @@ export function OrganisationProjectMigrationPanel({
       <LifecycleConfirmDialog
         open={activationTarget !== null}
         onOpenChange={(open) => {
-          if (!open) setActivationTarget(null);
+          if (!open) {
+            setActivationTarget(null);
+            setActivationPreview(null);
+          }
         }}
         title={`Activate ${activationTarget ?? 'environment'}`}
-        description={`Live-validate the ${activationTarget ?? 'selected'} connections for ${organisationName || 'this organisation'} before newly queued syncs use it.`}
-        bodyWarning="Runs already queued or running keep their captured environment. Activation is blocked if live validation fails."
+        description={`Review the ${activationTarget ?? 'selected'} account and switch impact for ${organisationName || 'this organisation'} before activation.`}
+        bodyWarning={`${activationPreview?.jobsToPause ?? 0} enabled jobs will pause. Target destination: ${activationPreview?.targetDestination?.accountName ?? activationPreview?.targetDestination?.accountIdentity ?? 'unlabelled account'}. Target workspace has ${activationPreview?.targetCounts?.jobs ?? 0} saved jobs and ${activationPreview?.targetCounts?.runs ?? 0} runs. ${activationPreview?.sandboxDestinationWriteSafety?.reason ?? ''} Job, priority and webhook execution need separate manual resume actions.`}
         actionLabel="Validate and activate"
         tone="warning"
         organisationName={organisationName}
@@ -608,10 +646,11 @@ export function OrganisationProjectMigrationPanel({
           activate.isError ? extractErrorMessage(activate.error) : null
         }
         onSubmit={async ({ reason }) => {
-          if (!activationTarget) return;
+          if (!activationTarget || !activationPreview) return;
           try {
             const result = await activate.mutateAsync({
               environment: activationTarget,
+              expectedGeneration: activationPreview.expectedGeneration,
               reason,
             });
             showToast.success(result.message);

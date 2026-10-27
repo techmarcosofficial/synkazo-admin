@@ -31,6 +31,8 @@ export interface Connection {
   connectionType: ConnectionType;
   status: ConnectionStatus;
   accountName?: string;
+  /** Provider-verified HubSpot portal ID when available. */
+  providerHubId?: number | null;
   connectedAt?: string;
   lastChecked?: string;
   environment?: HubSpotEnvironment;

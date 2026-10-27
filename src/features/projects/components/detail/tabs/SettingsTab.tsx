@@ -10,7 +10,6 @@ import {
   ProjectContextCard,
 } from '../settings';
 
-import ConnectionEnvDropdown from '@/components/connections/ConnectionEnvToggle';
 import EmptyState from '@/components/shared/EmptyState';
 import HeadingPair from '@/components/shared/HeadingPair';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,8 +19,6 @@ import {
   type ProjectSettingsSectionView,
 } from '@/features/projects/hooks';
 import type { ProjectSettingsSectionId } from '@/features/projects/lib/projectSettingsSections';
-import { useConfirmDialog } from '@/hooks/useConfirmDialog';
-import type { ProjectEnvironment } from '@/types';
 
 const SchedulerSection = lazy(() => import('./SchedulerTab'));
 const AssociationsSection = lazy(() => import('./AssociationsTab'));
@@ -115,50 +112,9 @@ function LockedSection({ section }: { section: ProjectSettingsSectionView }) {
 }
 
 export default function SettingsTab() {
-  const {
-    hasBothConnections,
-    hasJobs,
-    projectActiveEnv,
-    envHasAnyConnected,
-    envFullyConnected,
-    onActivateEnv,
-  } = useProjectDetailContext();
-  const { confirm } = useConfirmDialog();
+  const { hasBothConnections, hasJobs } = useProjectDetailContext();
   const { activeSection, sections, handleSectionChange, sectionHref } =
     useProjectSettingsSections({ hasBothConnections, hasJobs });
-
-  const handleEnvSwitch = (targetEnv: ProjectEnvironment) => {
-    if (targetEnv === projectActiveEnv) return;
-    const targetLabel = targetEnv === 'sandbox' ? 'Sandbox' : 'Production';
-    const currentLabel = projectActiveEnv
-      ? projectActiveEnv === 'sandbox'
-        ? 'Sandbox'
-        : 'Production'
-      : 'no active environment';
-
-    confirm({
-      variant: 'warning',
-      title: `${projectActiveEnv ? 'Switch to' : 'Activate'} ${targetLabel}?`,
-      description: `This changes the active sync environment from ${currentLabel} to ${targetLabel}.`,
-      body: (
-        <div className="space-y-2 text-sm">
-          <p>
-            Check that queued and running syncs have finished before switching.
-            Queued work for the previous environment may be rejected after the
-            switch.
-          </p>
-          <p className="text-muted-foreground">
-            This does not copy jobs, mappings, objects, or properties between
-            environments.
-          </p>
-        </div>
-      ),
-      confirmLabel: projectActiveEnv
-        ? `Switch to ${targetLabel}`
-        : `Activate ${targetLabel}`,
-      onConfirm: () => onActivateEnv(targetEnv),
-    });
-  };
 
   const sectionBody = activeSection.locked ? (
     <LockedSection section={activeSection} />
@@ -207,18 +163,6 @@ export default function SettingsTab() {
               title={activeSection.label}
               subtitle={activeSection.description}
             />
-            {activeSection.id === 'environments' && (
-              <div className="shrink-0">
-                <ConnectionEnvDropdown
-                  activeEnv={projectActiveEnv ?? 'sandbox'}
-                  onChange={(env) => handleEnvSwitch(env as ProjectEnvironment)}
-                  projectActiveEnv={projectActiveEnv}
-                  envHasAnyConnected={envHasAnyConnected}
-                  envFullyConnected={envFullyConnected}
-                  label="Active environment:"
-                />
-              </div>
-            )}
           </CardHeader>
 
           <CardContent className="px-3.5 pt-2.5 pb-3.5 sm:px-4 sm:pb-4">

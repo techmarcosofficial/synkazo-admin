@@ -55,7 +55,7 @@ export default function OverviewTab() {
                   status={isProductionReady ? 'production' : 'sandbox'}
                   label={
                     isProductionReady
-                      ? 'Production Ready'
+                      ? 'Production Connected'
                       : 'Sandbox Testing Complete'
                   }
                   size="sm"
@@ -66,13 +66,13 @@ export default function OverviewTab() {
                 level="h3"
                 title={
                   isProductionReady
-                    ? 'Ready to activate live Production sync?'
+                    ? 'Review your Production workspace'
                     : 'Ready to go live? Connect your Production platforms'
                 }
                 subtitle={
                   isProductionReady
-                    ? 'Your sync flows are verified in Sandbox and your live Production connections are connected. Open Environment Settings to switch active sync runtime to Production.'
-                    : 'Your sync flows have been verified cleanly in Sandbox. To begin syncing live customer data, connect your live production platforms. Your field mappings and configurations will carry over seamlessly.'
+                    ? 'Production connections are connected. Review Production jobs and account identities in Environment Settings before switching or enabling sync.'
+                    : 'Your Sandbox sync completed. Connect your Production platforms, then create and review Production jobs separately.'
                 }
               />
             </div>
@@ -84,7 +84,7 @@ export default function OverviewTab() {
                     handleTabChange('settings', { section: 'environments' })
                   }
                 >
-                  Promote to Production
+                  Review Production Workspace
                   <ArrowRight data-icon="inline-end" aria-hidden="true" />
                 </Button>
               ) : (

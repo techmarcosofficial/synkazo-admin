@@ -18,6 +18,8 @@ export interface Job {
   schedule?: string;
   syncEnabled?: boolean;
   isEnabled?: boolean;
+  resumeRequired?: boolean;
+  projectEnvironmentId?: string | null;
   isSchedulePaused?: boolean;
   isRunning?: boolean;
   lastSyncedAt?: string | null;

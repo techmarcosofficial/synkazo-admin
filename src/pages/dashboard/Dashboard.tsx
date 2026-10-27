@@ -318,7 +318,7 @@ export default function Dashboard() {
                 <div className="space-y-1">
                   <CardTitle>Sync Metrics</CardTitle>
                   <CardDescription>
-                    Organization-wide throughput and run health · {metricsRangeLabel}
+                    Each project's active workspace · {metricsRangeLabel}
                   </CardDescription>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">

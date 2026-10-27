@@ -232,7 +232,7 @@ export default function LogsPage() {
     <PageHeader
       backTo={{ label: 'Back to Dashboard', to: '/dashboard' }}
       title="Sync History"
-      description="Every transfer across all projects, newest first"
+      description="Sync logs from each project's active workspace, newest first"
       actions={
         <Button
           variant="outline"
@@ -280,7 +280,7 @@ export default function LogsPage() {
             <HeadingPair
               level="h3"
               title="Manage sync history"
-              subtitle="Every transfer across all projects, newest first"
+              subtitle="Sync logs from each project's active workspace, newest first"
             />
             <ManagementToolbar
               searchValue={search}

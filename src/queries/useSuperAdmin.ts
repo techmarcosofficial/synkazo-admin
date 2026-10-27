@@ -503,6 +503,7 @@ export function useActivateSuperAdminProjectEnvironmentMutation(
     mutationFn: (dto: {
       environment: 'sandbox' | 'production';
       reason: string;
+      expectedGeneration: string;
     }) =>
       superAdminOperationsApi.activateProjectEnvironment(
         organisationId,

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -24,16 +24,12 @@ interface UseProjectEnvironmentActivationInput {
 
 const envOf = (c: ConnectionExt) => c.environment ?? 'production';
 
-// Owns the Sandbox/Production activation widget: which env is active, the
-// diff-conflict confirmation modal, and the one-time auto-activate bootstrap
-// for brand-new projects — whichever environment (sandbox or production)
-// finishes connecting both sides first becomes active automatically, with
-// no manual "Syncs run on" step required.
+// Owns the active workspace and the reviewed, explicit activation flow.
+// A new project stays inactive until an administrator chooses a workspace.
 export function useProjectEnvironmentActivation({
   projectId,
   project,
   connections,
-  loading,
   patchProject,
   refetch,
 }: UseProjectEnvironmentActivationInput) {
@@ -72,7 +68,7 @@ export function useProjectEnvironmentActivation({
     return srcOk && dstOk;
   };
 
-  const doActivate = async (env: ProjectEnvironment) => {
+  const doActivate = async (env: ProjectEnvironment, expectedGeneration?: string) => {
     setEnvActivating(true);
     setActivationError(null);
     const envLabel = env === 'sandbox' ? 'Sandbox' : 'Production';
@@ -81,7 +77,9 @@ export function useProjectEnvironmentActivation({
     );
     let activated = false;
     try {
-      await connectionsApi.activateEnvironment(projectId, env);
+      const generation = expectedGeneration ??
+        (await connectionsApi.previewEnvironmentSwitch(projectId, env)).expectedGeneration;
+      await connectionsApi.activateEnvironment(projectId, env, generation);
       activated = true;
       const activatedAt = new Date().toISOString();
       void queryClient.invalidateQueries({
@@ -110,6 +108,9 @@ export function useProjectEnvironmentActivation({
         },
       );
       queryClient.removeQueries({ queryKey: ['activity', projectId] });
+      queryClient.removeQueries({ queryKey: ['dashboard', 'syncLogs'] });
+      queryClient.removeQueries({ queryKey: ['dashboard', 'syncMetrics'] });
+      queryClient.removeQueries({ queryKey: queryKeys.dashboard.activeSyncs });
       queryClient.removeQueries({ queryKey: queryKeys.jobs.byProject(projectId) });
       queryClient.removeQueries({ queryKey: ['jobs', 'runLogs', projectId] });
       void queryClient.invalidateQueries({ queryKey: queryKeys.jobs.all, exact: true });
@@ -138,7 +139,7 @@ export function useProjectEnvironmentActivation({
       const e = err as { response?: { data?: { message?: string } } };
       const message =
         e?.response?.data?.message ??
-        'Activation blocked — credentials did not verify';
+        (err instanceof Error ? err.message : 'Activation blocked — review the workspace and retry');
       setActivationError(message);
       toast.error(message, { id: toastId });
       throw err;
@@ -146,28 +147,6 @@ export function useProjectEnvironmentActivation({
       setEnvActivating(false);
     }
   };
-
-  const autoActivatedRef = useRef(false);
-  useEffect(() => {
-    if (loading) return;
-    if (!project) return;
-    if (project.environmentActivatedAt) return;
-    if (projectActiveEnv) return;
-    if (autoActivatedRef.current) return;
-    // Sandbox wins if both happen to be ready at once (e.g. re-connecting an
-    // existing project) — otherwise whichever env completes first activates.
-    const readyEnv: ProjectEnvironment | null = envFullyConnected('sandbox')
-      ? 'sandbox'
-      : envFullyConnected('production')
-        ? 'production'
-        : null;
-    if (readyEnv) {
-      autoActivatedRef.current = true;
-      void doActivate(readyEnv).catch(() => {
-        autoActivatedRef.current = false;
-      });
-    }
-  }, [connections, loading, projectActiveEnv, project]);
 
   return {
     projectActiveEnv,
