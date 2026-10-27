@@ -34,6 +34,7 @@ interface ListRecordsParams extends PaginationParams {
   failReason?: string;
   search?: string;
   pageNumber?: number;
+  unresolvedOnly?: boolean;
 }
 
 interface OrgSyncLogsParams extends PaginationParams {
@@ -43,6 +44,37 @@ interface OrgSyncLogsParams extends PaginationParams {
 }
 
 export const syncLogsApi = {
+  retryFailed: (
+    projectId: string,
+    jobId: string,
+    runLogId: string,
+  ): Promise<{ bullJobId?: string; failedCount: number }> =>
+    apiClient
+      .post(
+        `/projects/${projectId}/jobs/${jobId}/sync-run-logs/${runLogId}/retry-failed`,
+      )
+      .then(d),
+
+  getRetryFailedStatus: (
+    projectId: string,
+    jobId: string,
+    runLogId: string,
+    bullJobId: string,
+  ): Promise<{
+    state: string;
+    error: string | null;
+    runStatus: string | null;
+    runError: string | null;
+    createdCount: number;
+    updatedCount: number;
+    failedCount: number;
+    remainingFailed: number;
+  }> =>
+    apiClient
+      .get(
+        `/projects/${projectId}/jobs/${jobId}/sync-run-logs/${runLogId}/retry-failed/${bullJobId}`,
+      )
+      .then(d),
   listOrgSyncLogs: ({
     page = 1,
     limit = 20,
@@ -124,8 +156,9 @@ export const syncLogsApi = {
       failReason,
       search,
       pageNumber,
+      unresolvedOnly,
     }: ListRecordsParams = {},
-  ): Promise<PaginatedResponse<SyncLogRecord>> =>
+  ): Promise<PaginatedResponse<SyncLogRecord> & { remainingFailed?: number }> =>
     apiClient
       .get(
         `/projects/${projectId}/jobs/${jobId}/sync-run-logs/${runLogId}/records`,
@@ -138,6 +171,7 @@ export const syncLogsApi = {
             ...(failReason && { failReason }),
             ...(search && { search }),
             ...(pageNumber !== undefined && { pageNumber }),
+            ...(unresolvedOnly && { unresolvedOnly: true }),
           },
         },
       )
