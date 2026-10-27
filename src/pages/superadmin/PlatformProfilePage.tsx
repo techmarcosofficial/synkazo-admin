@@ -9,7 +9,7 @@ export default function PlatformProfilePage() {
         title="Profile"
         description="Manage your platform administrator account."
       />
-      <ProfileTab platform />
+      <ProfileTab />
     </div>
   );
 }

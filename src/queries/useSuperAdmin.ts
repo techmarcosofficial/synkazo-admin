@@ -44,6 +44,7 @@ import type {
   SuperAdminCreateProjectDto,
   SuperAdminFieldMappingInput,
   SuperAdminCreateAssociationRuleDto,
+  SuperAdminAssociationRule,
   SuperAdminDeleteAssociationRuleDto,
   SuperAdminInviteMemberDto,
   SuperAdminRevokeInvitationDto,
@@ -1333,7 +1334,22 @@ export function useUpdateSuperAdminAssociationRuleMutation(
         payload.ruleId,
         payload.dto,
       ),
-    onSuccess: () => {
+    onSuccess: (updatedRule) => {
+      queryClient.setQueryData(
+        queryKeys.superAdmin.associations.rule(
+          organisationId,
+          projectId,
+          updatedRule.id,
+        ),
+        updatedRule,
+      );
+      queryClient.setQueryData<SuperAdminAssociationRule[]>(
+        queryKeys.superAdmin.associations.rules(organisationId, projectId),
+        (rules) =>
+          rules?.map((rule) =>
+            rule.id === updatedRule.id ? updatedRule : rule,
+          ),
+      );
       queryClient.invalidateQueries({
         queryKey: queryKeys.superAdmin.associations.rules(
           organisationId,
