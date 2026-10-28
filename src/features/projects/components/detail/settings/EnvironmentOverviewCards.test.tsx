@@ -32,6 +32,7 @@ vi.mock('@/api/connections', () => ({
 
 const project: ProjectExt = {
   id: 'project-1',
+  workspaceIsolationMode: 'isolated',
   organisationId: 'org-1',
   name: 'Environment project',
   sourcePlatformId: 'servicetitan',
@@ -133,6 +134,21 @@ describe('environmentReadiness', () => {
 });
 
 describe('EnvironmentOverviewCards', () => {
+  it('keeps legacy switch instructions and omits isolated account warnings', async () => {
+    const legacy = { ...project, workspaceIsolationMode: 'legacy' as const };
+    renderCards({ project: legacy, connections: [
+      ...sandboxPair.map((item) => item.connectionType === 'destination'
+        ? { ...item, providerHubId: 123 } : item),
+      ...productionPair.map((item) => item.connectionType === 'destination'
+        ? { ...item, providerHubId: 123 } : item),
+    ] });
+    expect(screen.queryByText(/Sandbox destination writes are blocked because both workspaces/))
+      .not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Switch to Production' }));
+    await waitFor(() => expect(useConfirmDialogStore.getState().open).toBe(true));
+    expect(useConfirmDialogStore.getState().body).toBeTruthy();
+  });
+
   it('keeps one switch action in the settings header when the target is incomplete', () => {
     const headerHost = document.createElement('div');
     document.body.appendChild(headerHost);

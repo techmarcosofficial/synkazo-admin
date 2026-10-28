@@ -123,6 +123,7 @@ export default function EnvironmentOverviewCards({
   const headerActionHost = useContext(EnvironmentHeaderActionContext);
   const { hasRole } = useSynkazoAuth();
   const canActivate = hasRole('org_admin');
+  const isolated = project.workspaceIsolationMode === 'isolated';
 
   const readiness = {
     sandbox: environmentReadiness(connections, 'sandbox'),
@@ -156,6 +157,11 @@ export default function EnvironmentOverviewCards({
   ].join(':');
 
   useEffect(() => {
+    if (!isolated) {
+      setSharedSourceStatus(null);
+      setSharedSourceError(null);
+      return;
+    }
     if (!readiness.sandbox.source || !readiness.production.source) {
       setSharedSourceStatus(null);
       setSharedSourceError(null);
@@ -176,7 +182,7 @@ export default function EnvironmentOverviewCards({
     return () => { cancelled = true; };
     // The key captures account bindings and status without refetching on unrelated renders.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project.id, sourceCheckKey, sourceCheckVersion]);
+  }, [project.id, sourceCheckKey, sourceCheckVersion, isolated]);
 
   const requestSharedSourceAcknowledgement = () => {
     if (!sharedSourceStatus?.fingerprint || acknowledgingSource) return;
@@ -251,31 +257,36 @@ export default function EnvironmentOverviewCards({
       description: `This changes the active sync environment from ${currentLabel} to ${targetLabel}.`,
       body: (
         <div className="space-y-2 text-sm">
-          <p>
-            Wait for running syncs and priority stages to finish. Switching
-            pauses job activation, schedules, priority scheduling, and webhook
-            write-back. Review and resume each action manually on return.
-          </p>
-          <p>
-            {preview.jobsToPause} enabled job(s) will pause. Target workspace:
-            {' '}{preview.targetCounts?.jobs ?? 0} saved job(s),
-            {' '}{preview.targetCounts?.runs ?? 0} run(s),
-            {' '}{preview.targetCounts?.runLogs ?? 0} run log(s).
-          </p>
+          {isolated ? <>
+            <p>
+              Wait for running syncs and priority stages to finish. Switching
+              pauses job activation, schedules, priority scheduling, and webhook
+              write-back. Review and resume each action manually on return.
+            </p>
+            <p>
+              {preview.jobsToPause} enabled job(s) will pause. Target workspace:
+              {' '}{preview.targetCounts?.jobs ?? 0} saved job(s),
+              {' '}{preview.targetCounts?.runs ?? 0} run(s),
+              {' '}{preview.targetCounts?.runLogs ?? 0} run log(s).
+            </p>
+          </> : <p>
+            This existing project keeps its jobs, schedules, associations, and
+            run history. Syncs will use the selected environment's connections.
+          </p>}
           <p>
             Target destination: {preview.targetDestination?.accountName ??
               preview.targetDestination?.accountIdentity ?? 'unlabelled account'}.
-            {' '}{preview.pendingWebhookEvents} pending webhook event(s) will be checked against workspace ownership.
+            {isolated && <> {' '}{preview.pendingWebhookEvents} pending webhook event(s) will be checked against workspace ownership.</>}
           </p>
           {preview.sandboxDestinationWriteSafety && !preview.sandboxDestinationWriteSafety.allowed && (
             <p className="text-destructive">
               {preview.sandboxDestinationWriteSafety.reason}
             </p>
           )}
-          <p className="text-muted-foreground">
+          {isolated && <p className="text-muted-foreground">
             This does not copy jobs, mappings, objects, or properties between
             environments.
-          </p>
+          </p>}
         </div>
       ),
       confirmLabel: activeEnvironment
@@ -308,7 +319,7 @@ export default function EnvironmentOverviewCards({
   return (
     <div className="space-y-4">
       {headerActionHost && createPortal(headerSwitchAction, headerActionHost)}
-      {sharedSource && !sharedSourceStatus?.shared && (
+      {isolated && sharedSource && !sharedSourceStatus?.shared && (
         <Alert>
           <AlertCircle className="size-4" />
           <AlertDescription>
@@ -317,7 +328,7 @@ export default function EnvironmentOverviewCards({
           </AlertDescription>
         </Alert>
       )}
-      {!sharedSource && !sharedSourceStatus?.shared && readiness.sandbox.source && readiness.production.source && (
+      {isolated && !sharedSource && !sharedSourceStatus?.shared && readiness.sandbox.source && readiness.production.source && (
         <Alert>
           <AlertCircle className="size-4" />
           <AlertDescription>
@@ -373,7 +384,7 @@ export default function EnvironmentOverviewCards({
           </AlertDescription>
         </Alert>
       )}
-      {sharedDestination && (
+      {isolated && sharedDestination && (
         <Alert variant="destructive">
           <AlertCircle className="size-4" />
           <AlertDescription>
@@ -408,7 +419,7 @@ export default function EnvironmentOverviewCards({
                   label={
                     activeEnvironment === 'production'
                       ? 'Production (Live)'
-                      : 'Sandbox workspace'
+                      : isolated ? 'Sandbox workspace' : 'Sandbox environment'
                   }
                   size="sm"
                 />

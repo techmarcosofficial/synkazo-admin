@@ -9,6 +9,8 @@ export type SchedulerMode = 'individual' | 'priority';
 
 export interface Project {
   id: string;
+  /** Existing projects remain project-wide; new isolated projects own two workspaces. */
+  workspaceIsolationMode?: 'legacy' | 'isolated';
   name: string;
   description?: string;
   organisationId: string;

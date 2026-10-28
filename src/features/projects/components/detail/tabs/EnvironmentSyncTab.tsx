@@ -31,6 +31,7 @@ export default function EnvironmentSyncTab() {
     connections,
     'production',
   ).ready;
+  const isolated = project?.workspaceIsolationMode === 'isolated';
 
   return (
     <div className="space-y-6">
@@ -45,12 +46,20 @@ export default function EnvironmentSyncTab() {
         onGoToConnections={() => handleTabChange('connections')}
       />
 
-      <WorkspaceInventory projectId={projectId} jobs={jobs} onRefresh={refetch} />
-
-      <p className="text-muted-foreground text-sm">
-        Create jobs, mappings, association rules, and priority settings manually
-        in each workspace. Switching environments does not transfer them.
-      </p>
+      {isolated ? (
+        <>
+          <WorkspaceInventory projectId={projectId} jobs={jobs} onRefresh={refetch} />
+          <p className="text-muted-foreground text-sm">
+            Create jobs, mappings, association rules, and priority settings manually
+            in each workspace. Switching environments does not transfer them.
+          </p>
+        </>
+      ) : (
+        <p className="text-muted-foreground text-sm">
+          This existing project keeps its project-wide jobs, history, associations,
+          and schedules when you switch connection environments.
+        </p>
+      )}
 
       <section className="space-y-4 border-t pt-6">
         <HeadingPair
