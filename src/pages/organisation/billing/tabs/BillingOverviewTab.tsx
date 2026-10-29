@@ -225,10 +225,10 @@ export default function BillingOverviewTab() {
       {activeSection === 'overview' && (
         <div className="grid gap-4 sm:gap-5 lg:grid-cols-12">
           {/* Left Column: Plan Limits & Features (~60-65%) */}
-          <div className="space-y-4 sm:space-y-5 lg:col-span-7 xl:col-span-8">
+          <div className="space-y-4 sm:space-y-5 lg:col-span-7">
             {/* Plan Limits, Resource Quotas & Entitlements Card */}
-            <Card className="gap-0 py-0">
-              <CardHeader visualLevel="section" className="px-4 py-3 sm:px-5 sm:py-3.5 border-b">
+            <Card>
+              <CardHeader visualLevel="section">
                 <CardTitle className="text-base font-bold flex items-center gap-2">
                   <FileText className="text-muted-foreground size-4" />
                   Plan limits &amp; features
@@ -238,7 +238,7 @@ export default function BillingOverviewTab() {
                 </CardDescription>
               </CardHeader>
 
-              <CardContent className="p-4 sm:p-5 space-y-4">
+              <CardContent>
                 {/* Resource Usage & Quotas */}
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between">
@@ -428,7 +428,7 @@ export default function BillingOverviewTab() {
           </div>
 
           {/* Right Column: Subscription ATM Card & Upcoming Billing + Card (~35-40%) */}
-          <div className="space-y-3.5 lg:col-span-5 xl:col-span-4">
+          <div className="space-y-3.5 lg:col-span-5">
             {/* Subscription Plan "ATM" Card */}
             <SubscriptionPlanCard
               planName={plan.planName}
@@ -441,8 +441,23 @@ export default function BillingOverviewTab() {
               className="w-full"
             />
 
-            {/* Consolidated Upcoming Billing & Payment Mode Card */}
+            {/* In-App Plan Upgrade / Change Slider (only visible on click change plan) */}
+            <TenantPlanSlider
+              title="Upgrade Plan"
+              plans={plansQuery.data ?? []}
+              currentPlanId={plan.planId}
+              currentPlanName={plan.planName}
+              currentBillingInterval={plan.billingInterval}
+              isOpen={planSliderOpen}
+              onClose={() => setPlanSliderOpen(false)}
+              onSelectPlan={(targetPlan, targetPrice) => {
+                setUpgradeTarget({ plan: targetPlan, price: targetPrice });
+              }}
+            />
+
+            {/* Upcoming billing card only and which card deduction info with manage card button top corner on it */}
             <UpcomingBillingAndPaymentCard
+              variant="tenant"
               plan={plan}
               renewalDate={renewalDate}
               renewalLabel={renewalLabel}
@@ -489,20 +504,6 @@ export default function BillingOverviewTab() {
       {activeSection === 'activity' && (
         <TenantBillingActivityCard />
       )}
-
-      {/* In-App Plan Upgrade / Change Slider */}
-      <TenantPlanSlider
-        title="Upgrade Plan"
-        plans={plansQuery.data ?? []}
-        currentPlanId={plan.planId}
-        currentPlanName={plan.planName}
-        currentBillingInterval={plan.billingInterval}
-        isOpen={planSliderOpen}
-        onClose={() => setPlanSliderOpen(false)}
-        onSelectPlan={(targetPlan, targetPrice) => {
-          setUpgradeTarget({ plan: targetPlan, price: targetPrice });
-        }}
-      />
 
       {/* In-App Plan Change Confirmation / Upgrade Dialog */}
       <Dialog

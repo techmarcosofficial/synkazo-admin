@@ -89,7 +89,6 @@ function formatCurrency(
 
 export type SuperAdminBillingSection =
   | 'overview'
-  | 'cards'
   | 'invoices'
   | 'activity';
 
@@ -97,16 +96,14 @@ export default function OrganisationBillingPage() {
   const { organisationId } = useParams<{ organisationId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // URL Query Params: supports section=overview|cards|invoices|activity with backwards-compatible tab=
+  // URL Query Params: supports section=overview|invoices|activity with backwards-compatible tab=
   const activeSectionParam = searchParams.get('section') || searchParams.get('tab');
   const activeSection: SuperAdminBillingSection =
-    activeSectionParam === 'cards' || activeSectionParam === 'subscription'
-      ? 'cards'
-      : activeSectionParam === 'activity' || activeSectionParam === 'history'
-        ? 'activity'
-        : activeSectionParam === 'invoices'
-          ? 'invoices'
-          : 'overview';
+    activeSectionParam === 'activity' || activeSectionParam === 'history'
+      ? 'activity'
+      : activeSectionParam === 'invoices'
+        ? 'invoices'
+        : 'overview';
 
   const setActiveSection = (section: SuperAdminBillingSection) => {
     setSearchParams((prev) => {
@@ -211,12 +208,6 @@ export default function OrganisationBillingPage() {
   // Top Tabs Navigation Items (matching Super Admin Dashboard style)
   const navItems: BillingNavItem[] = [
     { id: 'overview', label: 'Overview', icon: Gauge },
-    {
-      id: 'cards',
-      label: 'Payment methods',
-      icon: CreditCard,
-      badge: subscription?.paymentMethod ? 1 : undefined,
-    },
     {
       id: 'invoices',
       label: 'Invoices & Payments',
@@ -523,7 +514,6 @@ export default function OrganisationBillingPage() {
         {/* ── SECTION 1: OVERVIEW ───────────────────────────────────────── */}
         {activeSection === 'overview' && (
           <div className="space-y-6">
-            {/* Compact Billing Overview Header & 6 Mini Stat Cards */}
             {overviewQuery.isLoading ? (
               <SkeletonList count={2} />
             ) : overviewQuery.isError ? (
@@ -533,49 +523,29 @@ export default function OrganisationBillingPage() {
                 onRetry={() => overviewQuery.refetch()}
               />
             ) : overview ? (
-              <BillingOverviewHeader
-                overview={overview}
-                subscriptionId={subscription?.id ?? null}
-              />
-            ) : null}
-
-            {/* Two-Column Grid:
-                Left = Upcoming billing & Payment Method (moved here!)
-                Right = Subscription Card + PlanSlider + Entitlements & Usage (moved here!)
-            */}
-            <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
-              {/* Left: Upcoming Billing & Payment Method (~60-65%) */}
-              <div className="space-y-6 lg:col-span-7 xl:col-span-8">
-                {overview && (
-                  <UpcomingBillingAndPaymentCard
-                    plan={{
-                      planName: overview.plan.planName,
-                      billingInterval: overview.plan.billingInterval,
-                      subscriptionStatus: overview.plan.subscriptionStatus,
-                      trialEndsAt: overview.plan.trialEndsAt,
-                    }}
-                    renewalDate={overview.plan.currentPeriodEnd}
-                    renewalLabel={
-                      overview.plan.cancelAtPeriodEnd
-                        ? 'Subscription ends'
-                        : overview.plan.subscriptionStatus === 'trialing'
-                          ? 'Trial ends'
-                          : 'Renews on'
-                    }
-                    hasSubscription={overview.plan.subscriptionStatus !== 'none'}
-                    pendingCancel={overview.plan.cancelAtPeriodEnd}
-                    defaultCard={subscription?.paymentMethod ?? null}
-                    onManageCards={() => setActiveSection('cards')}
-                    canManageCards={true}
+              <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
+                {/* Left Column: 6 mini stat cards + Entitlements & Usage (~60-65%) */}
+                <div className="space-y-6 lg:col-span-7 xl:col-span-8">
+                  {/* 6 mini stat cards */}
+                  <BillingOverviewHeader
+                    overview={overview}
+                    subscriptionId={subscription?.id ?? null}
                   />
-                )}
-              </div>
 
-              {/* Right: Subscription Card + Inline PlanSlider + Entitlements & Usage (~35-40%) */}
-              <div className="space-y-4 lg:col-span-5 xl:col-span-4">
-                <span className="sr-only">Subscription</span>
+                  {/* Entitlements & Usage */}
+                  <EntitlementsUsage
+                    organisationId={organisationId}
+                    planName={overview.plan.planName}
+                    overLimit={overview.plan.overLimit}
+                    usage={overview.usage}
+                  />
+                </div>
 
-                {overview ? (
+                {/* Right Column: Subscription Card (top right) + Inline PlanSlider + Upcoming Billing & Payment Method (~35-40%) */}
+                <div className="space-y-4 lg:col-span-5 xl:col-span-4">
+                  <span className="sr-only">Subscription</span>
+
+                  {/* Subscription Plan "ATM" Card - always appears on top right! */}
                   <SubscriptionPlanCard
                     planName={overview.plan.planName}
                     status={overview.plan.subscriptionStatus}
@@ -589,74 +559,8 @@ export default function OrganisationBillingPage() {
                     changePlanLabel={overview ? 'Change Plan' : 'Choose Plan'}
                     className="w-full"
                   />
-                ) : (
-                  <Card className="h-44 animate-pulse" />
-                )}
 
-                {/* Inline Plan Change Slider rendered right beneath SubscriptionPlanCard */}
-                <PlanSlider
-                  title="Change Plan"
-                  plans={plansQuery.data ?? []}
-                  currentPlanId={overview?.plan?.planId ?? null}
-                  currentPlanName={overview?.plan?.planName ?? null}
-                  currentBillingInterval={overview?.plan?.billingInterval}
-                  isOpen={planSliderOpen}
-                  onClose={() => {
-                    setPlanSliderOpen(false);
-                    setAssignPlanError(null);
-                  }}
-                  onSavePlanChange={async (planId, reason) => {
-                    try {
-                      setAssignPlanError(null);
-                      await assignPlanMutation.mutateAsync({ planId, reason });
-                      showToast.success('Plan changed successfully.');
-                      setPlanSliderOpen(false);
-                      await overviewQuery.refetch();
-                    } catch (err) {
-                      const msg = extractErrorMessage(err);
-                      setAssignPlanError(msg);
-                      showToast.error(msg);
-                      throw err;
-                    }
-                  }}
-                  isSubmitting={assignPlanMutation.isPending}
-                  errorMessage={assignPlanError}
-                />
-
-                {/* Entitlements & Usage moved here to the right column! */}
-                {overview && (
-                  <EntitlementsUsage
-                    organisationId={organisationId}
-                    planName={overview.plan.planName}
-                    overLimit={overview.plan.overLimit}
-                    usage={overview.usage}
-                  />
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── SECTION 2: PAYMENT METHODS (STRICTLY READ-ONLY) ───────────── */}
-        {activeSection === 'cards' && (
-          <div className="space-y-6">
-            {overview && (
-              <div className="max-w-md">
-                <SubscriptionPlanCard
-                  planName={overview.plan.planName}
-                  status={overview.plan.subscriptionStatus}
-                  billingInterval={overview.plan.billingInterval}
-                  currentPeriodEnd={overview.plan.currentPeriodEnd}
-                  planAccessSource={overview.plan.planAccessSource}
-                  onChangePlan={() => {
-                    setAssignPlanError(null);
-                    setPlanSliderOpen((prev) => !prev);
-                  }}
-                  changePlanLabel="Change Plan"
-                  className="w-full"
-                />
-
-                <div className="pt-2">
+                  {/* Inline Plan Change Slider rendered right beneath SubscriptionPlanCard */}
                   <PlanSlider
                     title="Change Plan"
                     plans={plansQuery.data ?? []}
@@ -685,88 +589,41 @@ export default function OrganisationBillingPage() {
                     isSubmitting={assignPlanMutation.isPending}
                     errorMessage={assignPlanError}
                   />
+
+                  {/* Upcoming Billing & Payment Method: top - Upcoming billing | then - Payment Method on File */}
+                  <UpcomingBillingAndPaymentCard
+                    variant="superadmin"
+                    plan={{
+                      planName: overview.plan.planName,
+                      billingInterval: overview.plan.billingInterval,
+                      subscriptionStatus: overview.plan.subscriptionStatus,
+                      trialEndsAt: overview.plan.trialEndsAt,
+                    }}
+                    renewalDate={overview.plan.currentPeriodEnd}
+                    renewalLabel={
+                      overview.plan.cancelAtPeriodEnd
+                        ? 'Subscription ends'
+                        : overview.plan.subscriptionStatus === 'trialing'
+                          ? 'Trial ends'
+                          : 'Renews on'
+                    }
+                    hasSubscription={overview.plan.subscriptionStatus !== 'none'}
+                    pendingCancel={overview.plan.cancelAtPeriodEnd}
+                    defaultCard={subscription?.paymentMethod ?? null}
+                    canManageCards={false}
+                  />
                 </div>
               </div>
-            )}
-
-            <Card className="gap-0 py-0">
-              <CardHeader visualLevel="section" className="px-4 py-3 sm:px-5 sm:py-3.5 border-b">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-base font-bold flex items-center gap-2">
-                      <CreditCard className="size-4 text-primary" aria-hidden="true" />
-                      <span>Payment methods on file</span>
-                    </CardTitle>
-                    <CardDescription className="text-xs">
-                      Active payment methods registered for this organisation.
-                    </CardDescription>
-                  </div>
-                  <Badge variant="outline" className="text-xs">
-                    Read-only
-                  </Badge>
-                </div>
-              </CardHeader>
-
-              <CardContent className="p-4 sm:p-5 space-y-4">
-                {/* Informative notice for compliance and auditing */}
-                <Alert className="border-info/20 bg-info/5 rounded-xl py-2 px-3">
-                  <AlertTitle className="text-xs font-semibold text-info">
-                    Managed by Tenant
-                  </AlertTitle>
-                  <AlertDescription className="text-xs text-muted-foreground">
-                    Payment methods are managed directly by tenant administrators. Details are presented read-only for support and compliance auditing.
-                  </AlertDescription>
-                </Alert>
-
-                {/* Payment Method on File Display */}
-                {subscription?.paymentMethod ? (
-                  <div className="rounded-2xl border p-4 sm:p-5 bg-muted/20 space-y-3 max-w-lg">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                        <Receipt className="size-3.5 text-muted-foreground" aria-hidden="true" />
-                        Payment Method on File
-                      </span>
-                      {subscription.paymentMethod.isDefault && (
-                        <Badge variant="secondary" size="xs">Default</Badge>
-                      )}
-                    </div>
-
-                    <div className="flex items-center justify-between pt-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-xs tracking-wider uppercase text-foreground">
-                          {subscription.paymentMethod.cardBrand?.toUpperCase() ?? 'CARD'}
-                        </span>
-                        <span className="font-mono text-sm tracking-widest text-muted-foreground">
-                          •••• {subscription.paymentMethod.cardLast4}
-                        </span>
-                      </div>
-
-                      {subscription.paymentMethod.cardExpMonth && (
-                        <span className="text-xs text-muted-foreground font-mono">
-                          Expires {subscription.paymentMethod.cardExpMonth.toString().padStart(2, '0')}/
-                          {subscription.paymentMethod.cardExpYear}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <EmptyState
-                    icon={CreditCard}
-                    title="No payment method on file"
-                    description="This organisation has no active credit card saved in Stripe."
-                  />
-                )}
-              </CardContent>
-            </Card>
+            ) : null}
           </div>
         )}
 
-        {/* ── SECTION 3: INVOICES & PAYMENT HISTORY (DUAL TABLES, NO TIMELINE) ─ */}
+        {/* ── SECTION 2: INVOICES & PAYMENT HISTORY (DUAL TABLES, NO TIMELINE) ─ */}
         {activeSection === 'invoices' && (
           <div className="space-y-6">
             {/* Table 1: Invoices Table Card with dedicated filters and drawer */}
-            <Card className="gap-0 py-0">
-              <CardHeader visualLevel="section" className="px-4 py-3 sm:px-5 sm:py-3.5 border-b">
+            <Card>
+              <CardHeader>
                 <div className="flex flex-wrap items-center justify-between gap-3 w-full">
                   <div className="flex items-center gap-2.5">
                     <span className="bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-xl">
@@ -807,7 +664,7 @@ export default function OrganisationBillingPage() {
                 </div>
               </CardHeader>
 
-              <CardContent className="p-4 sm:p-5">
+              <CardContent>
                 {invoicesQuery.isLoading ? (
                   <SkeletonList count={2} />
                 ) : filteredInvoices.length === 0 ? (
@@ -824,8 +681,8 @@ export default function OrganisationBillingPage() {
             </Card>
 
             {/* Table 2: All Payment History Table (Flat table, NOT timeline tree) */}
-            <Card className="gap-0 py-0">
-              <CardHeader visualLevel="section" className="px-4 py-3 sm:px-5 sm:py-3.5 border-b">
+            <Card>
+              <CardHeader visualLevel="section">
                 <div className="flex items-center gap-2.5">
                   <span className="bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-xl">
                     <CreditCard className="size-4" aria-hidden="true" />
@@ -846,7 +703,7 @@ export default function OrganisationBillingPage() {
                 </div>
               </CardHeader>
 
-              <CardContent className="p-4 sm:p-5">
+              <CardContent>
                 {historyQuery.isLoading ? (
                   <SkeletonTable rows={4} columns={4} />
                 ) : paymentItems.length === 0 ? (
@@ -855,7 +712,7 @@ export default function OrganisationBillingPage() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <div className="overflow-hidden rounded-xl border">
+                    <div className="overflow-hidden rounded-3xl border">
                       <Table>
                         <TableHeader>
                           <TableRow className="hover:bg-transparent">

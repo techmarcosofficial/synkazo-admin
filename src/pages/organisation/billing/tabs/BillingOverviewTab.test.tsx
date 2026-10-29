@@ -213,7 +213,7 @@ describe('BillingOverviewTab', () => {
     expect(screen.getByText('Payment Method on File')).toBeInTheDocument();
     expect(screen.getByText('•••• 4242')).toBeInTheDocument();
     expect(screen.getByText('Expires 12/2028')).toBeInTheDocument();
-    expect(screen.getByText('Upcoming billing')).toBeInTheDocument();
+    expect(screen.getAllByText('Upcoming billing').length).toBeGreaterThanOrEqual(1);
 
     // Limits & Features
     expect(screen.getByText('Plan limits & features')).toBeInTheDocument();

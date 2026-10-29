@@ -245,7 +245,7 @@ describe('OrganisationBillingPage', () => {
     expect(await screen.findByText('Live Subscription')).toBeInTheDocument();
     expect(await screen.findByText('Payment Method on File')).toBeInTheDocument();
     expect(screen.getByText(/4242/)).toBeInTheDocument();
-    expect(screen.getByText('VISA')).toBeInTheDocument();
+    expect(screen.getAllByText('VISA').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Default')).toBeInTheDocument();
   });
 

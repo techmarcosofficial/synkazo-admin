@@ -12,7 +12,13 @@ import React from 'react';
 import CardBrandLogo from '@/components/billing/CardBrandLogo';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { formatDate } from '@/pages/organisation/billing/lib/billingDisplay';
 import type { PaymentMethodView } from '@/types';
 
@@ -35,6 +41,7 @@ function formatPrice(cents: number, currency = 'USD'): string {
 }
 
 export interface UpcomingBillingAndPaymentCardProps {
+  variant?: 'tenant' | 'superadmin';
   plan: {
     planName: string;
     billingInterval?: string | null;
@@ -51,7 +58,7 @@ export interface UpcomingBillingAndPaymentCardProps {
   pendingPlanChangeAt?: string | null;
   creditBalance?: number | null;
   defaultCard?: PaymentMethodView | null;
-  onManageCards: () => void;
+  onManageCards?: () => void;
   onCancelSubscription?: () => void;
   onReactivateSubscription?: () => void;
   onCancelScheduledChange?: () => void;
@@ -62,6 +69,7 @@ export interface UpcomingBillingAndPaymentCardProps {
 }
 
 export default function UpcomingBillingAndPaymentCard({
+  variant = 'tenant',
   plan,
   renewalDate,
   renewalLabel = 'Renews on',
@@ -85,18 +93,23 @@ export default function UpcomingBillingAndPaymentCard({
   const isPastDue = plan.subscriptionStatus === 'past_due';
 
   return (
-    <Card size="sm" className={className}>
-      <div className="p-4 sm:p-5 space-y-4">
-        {/* Header with Title and "Manage cards" Action */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-          <div className="space-y-0.5">
-            <h3 className="text-sm font-semibold tracking-tight text-foreground flex items-center gap-2">
+    <Card className={className}>
+      <CardHeader>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="space-y-1">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
               <CalendarDays className="size-4 text-primary" aria-hidden="true" />
-              <span>Upcoming billing &amp; Payment Method</span>
-            </h3>
-            <p className="text-xs text-muted-foreground">
-              Scheduled renewal date and primary card on file for recurring charges.
-            </p>
+              <span>
+                {variant === 'superadmin'
+                  ? 'Upcoming billing & Payment Method'
+                  : 'Upcoming billing'}
+              </span>
+            </CardTitle>
+            <CardDescription>
+              {variant === 'superadmin'
+                ? 'Scheduled renewal date and primary card on file for recurring charges.'
+                : 'Scheduled renewal date and payment deduction details.'}
+            </CardDescription>
           </div>
 
           <div className="flex items-center gap-2">
@@ -104,20 +117,22 @@ export default function UpcomingBillingAndPaymentCard({
               {billingIntervalLabel(plan.billingInterval)}
             </Badge>
 
-            {canManageCards && (
+            {variant === 'tenant' && canManageCards && onManageCards && (
               <Button
                 variant="outline"
                 size="sm"
-                className="h-7 text-xs rounded-lg px-2.5 text-primary hover:text-primary font-medium"
+                className="h-7 text-xs rounded-lg px-2.5"
                 onClick={onManageCards}
               >
                 <CreditCard className="size-3 mr-1.5" />
-                {defaultCard ? 'Manage cards' : '+ Add card'}
+                Manage cards
               </Button>
             )}
           </div>
         </div>
+      </CardHeader>
 
+      <CardContent className="space-y-4">
         {/* ── Contextual Lifecycle Alerts ─────────────────────────────────── */}
         {pendingCancel && (
           <div className="border-warning/30 bg-warning/10 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3">
@@ -182,7 +197,7 @@ export default function UpcomingBillingAndPaymentCard({
                 Payment failed. Please update your payment method.
               </p>
             </div>
-            {canManageCards && (
+            {canManageCards && onManageCards && (
               <Button
                 size="sm"
                 variant="destructive"
@@ -195,11 +210,11 @@ export default function UpcomingBillingAndPaymentCard({
           </div>
         )}
 
-        {/* ── Two-Box Grid: Left = Upcoming billing | Right = Payment method on file ── */}
-        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
-          {/* Box 1: Upcoming Billing */}
-          <div className="flex flex-col justify-between rounded-xl border bg-muted/20 p-3.5 space-y-2">
-            <div>
+        {/* ── Variant Super Admin: Top = Upcoming billing | Then = Payment method on file ── */}
+        {variant === 'superadmin' ? (
+          <div className="space-y-3">
+            {/* Top: Upcoming Billing */}
+            <div className="flex flex-col justify-between rounded-xl border bg-muted/20 p-3.5 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                   <CalendarDays className="size-3 text-muted-foreground" aria-hidden="true" />
@@ -210,7 +225,7 @@ export default function UpcomingBillingAndPaymentCard({
                 </span>
               </div>
 
-              <div className="pt-1.5">
+              <div className="pt-1">
                 <p className="text-base font-bold">
                   {currentPrice
                     ? `${formatPrice(currentPrice.amount, currentPrice.currency)}`
@@ -233,23 +248,8 @@ export default function UpcomingBillingAndPaymentCard({
               </div>
             </div>
 
-            {hasSubscription && !pendingCancel && onCancelSubscription && (
-              <div className="pt-2 border-t border-border/40 flex justify-end">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 text-[11px] text-destructive hover:text-destructive hover:bg-destructive/10 px-2 rounded-lg"
-                  onClick={onCancelSubscription}
-                >
-                  Cancel subscription
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {/* Box 2: Payment Method on File */}
-          <div className="flex flex-col justify-between rounded-xl border bg-muted/20 p-3.5 space-y-2">
-            <div>
+            {/* Then: Payment Method on File */}
+            <div className="flex flex-col justify-between rounded-xl border bg-muted/20 p-3.5 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                   <CreditCard className="size-3 text-muted-foreground" aria-hidden="true" />
@@ -263,7 +263,7 @@ export default function UpcomingBillingAndPaymentCard({
               </div>
 
               {defaultCard ? (
-                <div className="pt-1.5">
+                <div className="pt-1">
                   <div className="flex items-center gap-2">
                     <CardBrandLogo brand={defaultCard.cardBrand} className="h-5 w-8 shrink-0" />
                     <span className="font-semibold text-xs tracking-wider uppercase text-foreground">
@@ -282,9 +282,87 @@ export default function UpcomingBillingAndPaymentCard({
                   )}
                 </div>
               ) : (
-                <div className="pt-2 text-xs text-muted-foreground flex items-center justify-between">
+                <div className="pt-1 text-xs text-muted-foreground">
+                  No card saved on file.
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          /* ── Variant Tenant: Upcoming billing card only with which card deduction info ── */
+          <div className="space-y-3">
+            {/* Upcoming Billing Renewal Info */}
+            <div className="flex flex-col justify-between rounded-xl border bg-muted/20 p-3.5 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                  <CalendarDays className="size-3 text-muted-foreground" aria-hidden="true" />
+                  Upcoming billing
+                </span>
+                <span className="text-[10px] font-medium text-muted-foreground">
+                  {plan.planName} tier
+                </span>
+              </div>
+
+              <div className="pt-0.5">
+                <p className="text-base font-bold">
+                  {currentPrice
+                    ? `${formatPrice(currentPrice.amount, currentPrice.currency)}`
+                    : 'Free'}
+                  {currentPrice && (
+                    <span className="text-muted-foreground font-normal text-xs ml-1">
+                      / {plan.billingInterval ?? 'month'}
+                    </span>
+                  )}
+                </p>
+                <p className="text-muted-foreground text-xs mt-0.5">
+                  {renewalLabel}:{' '}
+                  <strong className="text-foreground font-medium">
+                    {formatDate(renewalDate)}
+                  </strong>
+                  {trialDays != null && (
+                    <span className="ml-1 text-primary">({trialDays} days left)</span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {/* Which Card Deduction Info */}
+            <div className="flex flex-col justify-between rounded-xl border bg-muted/20 p-3.5 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                  <CreditCard className="size-3 text-muted-foreground" aria-hidden="true" />
+                  Payment Method on File
+                </span>
+                {defaultCard?.isDefault && (
+                  <Badge variant="secondary" className="rounded-full text-[10px] px-1.5 py-0 border-0 bg-primary/10 text-primary">
+                    Default
+                  </Badge>
+                )}
+              </div>
+
+              {defaultCard ? (
+                <div className="pt-0.5">
+                  <div className="flex items-center gap-2">
+                    <CardBrandLogo brand={defaultCard.cardBrand} className="h-5 w-8 shrink-0" />
+                    <span className="font-semibold text-xs tracking-wider uppercase text-foreground">
+                      {defaultCard.cardBrand?.toUpperCase() ?? 'CARD'}
+                    </span>
+                    <span className="font-mono text-xs tracking-widest text-muted-foreground">
+                      •••• {defaultCard.cardLast4}
+                    </span>
+                  </div>
+
+                  {defaultCard.cardExpMonth && defaultCard.cardExpYear && (
+                    <div className="text-xs text-muted-foreground font-mono mt-1">
+                      Expires {defaultCard.cardExpMonth.toString().padStart(2, '0')}/
+                      {defaultCard.cardExpYear}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="pt-1 text-xs text-muted-foreground flex items-center justify-between">
                   <span>No card saved on file.</span>
-                  {canManageCards && (
+                  {canManageCards && onManageCards && (
                     <Button
                       size="sm"
                       variant="outline"
@@ -298,29 +376,29 @@ export default function UpcomingBillingAndPaymentCard({
               )}
             </div>
 
-            {canManageCards && (
-              <div className="pt-2 border-t border-border/40 flex items-center justify-between">
+            {hasSubscription && !pendingCancel && onCancelSubscription && (
+              <div className="pt-1 flex justify-end">
                 <Button
-                  variant="link"
+                  variant="ghost"
                   size="sm"
-                  className="h-auto p-0 text-[11px] text-primary"
-                  onClick={onManageCards}
+                  className="h-6 text-[11px] text-destructive hover:text-destructive hover:bg-destructive/10 px-2 rounded-lg"
+                  onClick={onCancelSubscription}
                 >
-                  {defaultCard ? 'Manage cards & view details →' : '+ Add a payment method →'}
+                  Cancel subscription
                 </Button>
               </div>
             )}
           </div>
-        </div>
+        )}
 
-        <p className="text-muted-foreground text-[10px] leading-relaxed pt-1 border-t border-border/50">
+        <p className="text-muted-foreground text-[10px] leading-relaxed border-border/50">
           {pendingCancel
             ? 'Cancellation is scheduled for the end of this billing period.'
             : plan.subscriptionStatus === 'trialing'
               ? `Billing begins automatically after the trial on ${formatDate(plan.trialEndsAt ?? null)}.`
               : 'Your subscription renews automatically on the date shown above.'}
         </p>
-      </div>
+      </CardContent>
     </Card>
   );
 }

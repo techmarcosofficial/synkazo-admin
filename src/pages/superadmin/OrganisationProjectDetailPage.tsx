@@ -1,5 +1,6 @@
 import { formatDistanceToNow } from 'date-fns';
 import {
+  AlertTriangle,
   ArrowLeftRight,
   ArrowRight,
   CalendarClock,
@@ -24,6 +25,7 @@ import OrganisationProjectConnections from './projects/OrganisationProjectConnec
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
 import SkeletonList from '@/components/shared/skeletons/SkeletonList';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Tabs } from '@/components/ui/tabs';
 import SyncFlowCard from '@/features/projects/components/detail/SyncFlowCard';
@@ -63,12 +65,13 @@ function PlatformSyncFlow({
   detailPath: string;
   backTo: string;
 }) {
+  const isHeld = job.scheduleState?.toLowerCase() === 'held';
   const twoWay = job.syncDirection === 'two_way';
   const scheduleLabel =
     job.scheduleState.toLowerCase() === 'active'
       ? 'Scheduled'
-      : job.scheduleState.toLowerCase() === 'held'
-        ? 'On hold'
+      : isHeld
+        ? 'Held by Admin'
         : job.scheduleState;
   const linkState = {
     jobBackTo: backTo,
@@ -83,6 +86,7 @@ function PlatformSyncFlow({
       status={job.isRunning ? 'running' : job.status}
       defaultOpen={false}
       hasMetrics
+      heldByAdmin={isHeld}
       titleLink={
         <Link
           to={detailPath}
@@ -122,8 +126,10 @@ function PlatformSyncFlow({
             },
             {
               label: 'Schedule',
-              value: scheduleLabel,
-              description: 'Current schedule state',
+              value: isHeld ? 'Held by Admin' : scheduleLabel,
+              description: isHeld
+                ? 'Suspended by platform operator'
+                : 'Current schedule state',
               icon: CalendarClock,
             },
             {
@@ -187,6 +193,11 @@ export default function OrganisationProjectDetailPage() {
 
   const project = projectQuery.data;
   const organisationName = orgQuery.data?.name ?? 'Selected organisation';
+  const jobs = jobsQuery.data ?? [];
+  const heldCount = jobs.filter(
+    (j) => j.scheduleState?.toLowerCase() === 'held',
+  ).length;
+
   const submitHold = async ({ reason }: { reason: string }) => {
     if (!holdKind) return;
     try {
@@ -222,10 +233,39 @@ export default function OrganisationProjectDetailPage() {
       className="gap-0"
     >
       <div className="space-y-4">
+        {/* Prominent Project-Level Alert Banner when any flows are on Hold */}
+        {heldCount > 0 && (
+          <Alert className="border-warning/40 bg-warning/10 text-foreground">
+            <AlertTriangle
+              className="size-4 text-warning shrink-0"
+              aria-hidden="true"
+            />
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+              <div>
+                <AlertTitle className="font-bold text-sm tracking-tight text-warning-foreground">
+                  Sync Scheduler Held
+                </AlertTitle>
+                <AlertDescription className="text-xs text-muted-foreground mt-0.5">
+                  {heldCount} {heldCount === 1 ? 'flow' : 'flows'} in this project {heldCount === 1 ? 'is' : 'are'} currently held by a platform operator. Scheduled sync runs are suspended.
+                </AlertDescription>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs border-warning/40 hover:bg-warning/15 text-warning-foreground shrink-0 self-start sm:self-auto"
+                onClick={() => openHoldDialog('resume')}
+                disabled={hold.isPending || resume.isPending}
+              >
+                Resume held flows
+              </Button>
+            </div>
+          </Alert>
+        )}
+
         {tab === 'sync-rules' ? (
           <div className="space-y-4">
             <SyncFlowPanel
-              hasFlows={(jobsQuery.data?.length ?? 0) > 0}
+              hasFlows={jobs.length > 0}
               action={
                 <Button onClick={() => setCreateOpen(true)}>
                   Create Sync Flow
@@ -240,14 +280,14 @@ export default function OrganisationProjectDetailPage() {
                   description={errorMessage(jobsQuery.error)}
                   onRetry={() => jobsQuery.refetch()}
                 />
-              ) : !jobsQuery.data?.length ? (
+              ) : !jobs.length ? (
                 <EmptyState
                   icon={ArrowLeftRight}
                   title="No sync flows configured yet"
                   description="This project has no sync flows to inspect."
                 />
               ) : (
-                jobsQuery.data.map((job) => (
+                jobs.map((job) => (
                   <PlatformSyncFlow
                     key={job.id}
                     job={job}
@@ -263,7 +303,7 @@ export default function OrganisationProjectDetailPage() {
             organisationId={orgId}
             organisationName={organisationName}
             project={project}
-            jobs={jobsQuery.data}
+            jobs={jobs}
             onContinue={() => setCreateOpen(true)}
           />
         ) : (
@@ -271,6 +311,7 @@ export default function OrganisationProjectDetailPage() {
             organisationId={orgId}
             organisationName={organisationName}
             project={project}
+            jobs={jobs}
             onHold={() => openHoldDialog('hold')}
             onResume={() => openHoldDialog('resume')}
             operationPending={hold.isPending || resume.isPending}

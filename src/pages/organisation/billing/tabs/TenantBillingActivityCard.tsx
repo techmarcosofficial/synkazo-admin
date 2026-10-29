@@ -60,8 +60,8 @@ export default function TenantBillingActivityCard({
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
-    <Card size="sm" className={cn('gap-0 py-0', className)}>
-      <CardHeader className="px-4 py-3 sm:px-4.5 sm:py-3 border-b">
+    <Card size="sm" className={cn(className)}>
+      <CardHeader className="border-b">
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-sm font-bold flex items-center gap-1.5">
@@ -80,7 +80,7 @@ export default function TenantBillingActivityCard({
         </div>
       </CardHeader>
 
-      <CardContent className="p-3.5 sm:p-4">
+      <CardContent>
         {historyQuery.isLoading ? (
           <SkeletonTable rows={4} columns={2} />
         ) : historyQuery.isError ? (

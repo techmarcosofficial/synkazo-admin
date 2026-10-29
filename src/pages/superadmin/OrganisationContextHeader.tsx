@@ -399,72 +399,109 @@ export default function OrganisationContextHeader() {
           </ol>
         </nav>
 
-        <div className="mt-3 flex min-w-0 items-start gap-3 sm:items-center sm:gap-4">
-          {project ? (
-            <div
-              className="flex shrink-0 items-center gap-1.5"
-              aria-hidden="true"
-            >
-              <PlatformIcon
-                platformId={project.sourcePlatformId}
-                variant="avatar"
-                size="3xl"
-                className="size-9 rounded-xl sm:size-11"
-              />
-              {project.syncMode === 'two_way' ? (
-                <ArrowLeftRight className="text-muted-foreground size-4" />
-              ) : (
-                <ArrowRight className="text-muted-foreground size-4" />
-              )}
-              <PlatformIcon
-                platformId={project.destPlatformId}
-                variant="avatar"
-                size="3xl"
-                className="size-9 rounded-xl sm:size-11"
-              />
-            </div>
-          ) : (
-            <div className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-xl sm:size-11">
-              <Building2 className="size-5" aria-hidden="true" />
-            </div>
-          )}
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="min-w-0 text-lg leading-tight font-semibold tracking-tight wrap-break-word sm:text-xl">
-                {title}
-              </h1>
-              {level === 'organisation' && org && (
-                <StatusBadge status={org.status} label={org.status} tone={org.status === 'pending' ? 'info' : undefined} className="capitalize" />
-              )}
-              {level === 'project' && project && projectId && (
-                <ProjectHeaderStatusControl
-                  organisationId={organisationId}
-                  projectId={projectId}
-                  project={project}
+        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-start gap-3 sm:items-center sm:gap-4">
+            {project ? (
+              <div
+                className="flex shrink-0 items-center gap-1.5"
+                aria-hidden="true"
+              >
+                <PlatformIcon
+                  platformId={project.sourcePlatformId}
+                  variant="avatar"
+                  size="3xl"
+                  className="size-9 rounded-xl sm:size-11"
                 />
-              )}
-              {level === 'job' && job && project && projectId && (
-                <JobHeaderStatusControl
-                  organisationId={organisationId}
-                  projectId={projectId}
-                  job={job}
-                  project={project}
+                {(level === 'job' && job ? job.syncDirection === 'two_way' : project.syncMode === 'two_way') ? (
+                  <ArrowLeftRight className="text-muted-foreground size-4" />
+                ) : (
+                  <ArrowRight className="text-muted-foreground size-4" />
+                )}
+                <PlatformIcon
+                  platformId={project.destPlatformId}
+                  variant="avatar"
+                  size="3xl"
+                  className="size-9 rounded-xl sm:size-11"
                 />
-              )}
+              </div>
+            ) : (
+              <div className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-xl sm:size-11">
+                <Building2 className="size-5" aria-hidden="true" />
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <h1 className="min-w-0 text-lg leading-tight font-semibold tracking-tight wrap-break-word sm:text-xl">
+                  {title}
+                </h1>
+                {level === 'organisation' && org && (
+                  <StatusBadge status={org.status} label={org.status} tone={org.status === 'pending' ? 'info' : undefined} className="capitalize" />
+                )}
+                {level === 'project' && project && projectId && (
+                  <ProjectHeaderStatusControl
+                    organisationId={organisationId}
+                    projectId={projectId}
+                    project={project}
+                  />
+                )}
+                {level === 'job' && job && project && projectId && (
+                  <JobHeaderStatusControl
+                    organisationId={organisationId}
+                    projectId={projectId}
+                    job={job}
+                    project={project}
+                  />
+                )}
+              </div>
+              <p className="text-muted-foreground mt-1 text-sm wrap-break-word">
+                {details}
+              </p>
             </div>
-            <p className="text-muted-foreground mt-1 text-sm wrap-break-word">
-              {details}
-            </p>
           </div>
-          {failedQuery && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => void failedQuery.refetch()}
-            >
-              Retry
-            </Button>
-          )}
+
+          <div className="flex shrink-0 flex-wrap items-center gap-2.5 sm:justify-end">
+            {project && (
+              <>
+                {(level === 'job' && job
+                  ? job.syncDirection
+                  : project.syncMode) && (
+                  <StatusBadge
+                    status={
+                      level === 'job' && job
+                        ? job.syncDirection
+                        : project.syncMode
+                    }
+                    size="lg"
+                  />
+                )}
+                {project.activeEnvironment && (
+                  <StatusBadge
+                    status={project.activeEnvironment}
+                    label={
+                      project.activeEnvironment === 'sandbox'
+                        ? 'Sandbox (Test Mode)'
+                        : 'Production (Live)'
+                    }
+                    title={
+                      project.activeEnvironment === 'sandbox'
+                        ? 'Operating in Sandbox — Live customer data is not affected'
+                        : 'Live Production Sync active'
+                    }
+                    size="sm"
+                  />
+                )}
+              </>
+            )}
+            {failedQuery && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => void failedQuery.refetch()}
+              >
+                Retry
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 

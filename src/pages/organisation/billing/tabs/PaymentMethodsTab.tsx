@@ -22,8 +22,8 @@ export default function PaymentMethodsTab({
   const [isAdding, setIsAdding] = useState(defaultAddingCard);
 
   return (
-    <Card className="gap-0 py-0">
-      <CardHeader visualLevel="section" className="px-4 py-3 sm:px-5 sm:py-3.5 border-b">
+    <Card>
+      <CardHeader visualLevel="section">
         <div className="flex flex-wrap items-center justify-between gap-3 w-full">
           <div>
             <CardTitle className="text-base font-bold flex items-center gap-2">
@@ -62,7 +62,7 @@ export default function PaymentMethodsTab({
         </div>
       </CardHeader>
 
-      <CardContent className="p-4 sm:p-5">
+      <CardContent>
         <CardPicker
           mode="manage"
           addDialogOpen={isAdding}
