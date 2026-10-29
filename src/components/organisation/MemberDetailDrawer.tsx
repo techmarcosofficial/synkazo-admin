@@ -88,7 +88,7 @@ export default function MemberDetailDrawer({
   onTransferOwnership,
 }: MemberDetailDrawerProps) {
   const { currentUser } = useSynkazoAuth();
-  const updateUserMutation = useUpdateUserMutation();
+  const updateUserMutation = useUpdateUserMutation(member?.organisationId);
   const resetPasswordMutation = useResetPasswordByAdminMutation();
 
   const [activeTab, setActiveTab] = useState<'details' | 'permissions'>('details');

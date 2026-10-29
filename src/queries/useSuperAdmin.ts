@@ -1581,7 +1581,7 @@ function invalidateMembers(
 ) {
   queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
   queryClient.invalidateQueries({
-    queryKey: ['superAdmin', organisationId, 'members'],
+    queryKey: queryKeys.superAdmin.members.all(organisationId),
   });
   queryClient.invalidateQueries({
     queryKey: queryKeys.superAdmin.organisations.detail(organisationId),

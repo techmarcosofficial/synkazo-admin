@@ -437,7 +437,7 @@ export default function BillingOverviewTab() {
               currentPeriodEnd={renewalDate}
               planAccessSource={hasSubscription ? 'stripe_subscription' : 'free'}
               onChangePlan={() => setPlanSliderOpen((prev) => !prev)}
-              changePlanLabel={hasSubscription ? 'Change Plan' : 'Choose Plan'}
+              changePlanLabel={hasSubscription ? 'Upgrade Plan' : 'Choose Plan'}
               className="w-full"
             />
 

@@ -89,8 +89,10 @@ export default function OrgAdminDashboard() {
   );
   const organisation = orgQuery.data ?? null;
 
-  const [editingUser, setEditingUser] = useState<User | null>(null);
-  const openPermEditor = (member: User) => setEditingUser(member);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const editingUser =
+    orgMembers.find((member) => member.id === editingUserId) ?? null;
+  const openPermEditor = (member: User) => setEditingUserId(member.id);
 
   const header = (
     <PageHeader
@@ -342,7 +344,7 @@ export default function OrgAdminDashboard() {
 
       <MemberDetailDrawer
         open={editingUser !== null}
-        onOpenChange={(open) => !open && setEditingUser(null)}
+        onOpenChange={(open) => !open && setEditingUserId(null)}
         member={
           editingUser
             ? {
@@ -350,7 +352,7 @@ export default function OrgAdminDashboard() {
                 email: editingUser.email,
                 fullName: editingUser.fullName,
                 role: editingUser.role,
-                isActive: (editingUser as any).isActive !== false,
+                isActive: editingUser.isActive !== false,
                 organisationId: currentUser?.organisationId,
                 department: editingUser.department,
                 isEmailVerified: editingUser.isEmailVerified,

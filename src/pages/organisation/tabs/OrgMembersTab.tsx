@@ -64,7 +64,9 @@ export default function OrgMembersTab() {
   const usersQuery = useUsersQuery(currentUser?.organisationId);
   const members = usersQuery.data ?? [];
 
-  const [detailUser, setDetailUser] = useState<User | null>(null);
+  const [detailUserId, setDetailUserId] = useState<string | null>(null);
+  const detailUser =
+    members.find((member) => member.id === detailUserId) ?? null;
   const [inviteOpen, setInviteOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'org_admin' | 'editor'>('all');
@@ -234,7 +236,7 @@ export default function OrgMembersTab() {
                     <TableRow
                       key={m.id}
                       className="cursor-pointer"
-                      onClick={() => setDetailUser(m)}
+                      onClick={() => setDetailUserId(m.id)}
                     >
                       <TableCell className="min-w-64">
                         <div className="flex items-center gap-3">
@@ -289,7 +291,7 @@ export default function OrgMembersTab() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => setDetailUser(m)}
+                              onClick={() => setDetailUserId(m.id)}
                               title="View member profile"
                             >
                               <Eye className="size-3.5" />
@@ -298,7 +300,7 @@ export default function OrgMembersTab() {
                               <Button
                                 variant="secondary"
                                 size="sm"
-                                onClick={() => setDetailUser(m)}
+                                onClick={() => setDetailUserId(m.id)}
                               >
                                 Edit Permissions
                               </Button>
@@ -359,7 +361,7 @@ export default function OrgMembersTab() {
 
       <MemberDetailDrawer
         open={detailUser !== null}
-        onOpenChange={(open) => !open && setDetailUser(null)}
+        onOpenChange={(open) => !open && setDetailUserId(null)}
         member={
           detailUser
             ? {

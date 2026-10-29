@@ -47,7 +47,7 @@ import {
   useRevokeInvitationMutation,
 } from '@/queries/useInvitations';
 import { useUsersQuery } from '@/queries/useUsers';
-import type { User, UserRole } from '@/types';
+import type { UserRole } from '@/types';
 
 type InvitationExtended = Invitation & { invitedByEmail?: string };
 
@@ -117,7 +117,9 @@ export default function OrgInvitationsTab() {
   const [showForm, setShowForm] = useState(false);
   const [filter, setFilter] = useState<StatusFilter>('all');
   const [search, setSearch] = useState('');
-  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const editingUser =
+    members.find((member) => member.id === editingUserId) ?? null;
 
   const run = async (
     action: () => Promise<unknown>,
@@ -443,7 +445,7 @@ export default function OrgInvitationsTab() {
                                 <Button
                                   variant="secondary"
                                   size="sm"
-                                  onClick={() => setEditingUser(member)}
+                                  onClick={() => setEditingUserId(member.id)}
                                 >
                                   Edit Permissions
                                 </Button>
@@ -496,7 +498,7 @@ export default function OrgInvitationsTab() {
       <InviteMemberDialog open={showForm} onOpenChange={setShowForm} />
       <MemberDetailDrawer
         open={editingUser !== null}
-        onOpenChange={(open) => !open && setEditingUser(null)}
+        onOpenChange={(open) => !open && setEditingUserId(null)}
         member={
           editingUser
             ? {

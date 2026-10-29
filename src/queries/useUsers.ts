@@ -22,16 +22,26 @@ export function useUsersQuery(organisationId?: string) {
   });
 }
 
-export function useUpdateUserMutation() {
+export function useUpdateUserMutation(organisationId?: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateUserPayload }) =>
       usersApi.updateUser(id, data),
-    onSuccess: (_data, { id }) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.users.projectAccess(id),
-      });
+    onSuccess: async (_data, { id }) => {
+      const invalidations = [
+        queryClient.invalidateQueries({ queryKey: queryKeys.users.all }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.users.projectAccess(id),
+        }),
+      ];
+      if (organisationId) {
+        invalidations.push(
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.superAdmin.members.all(organisationId),
+          }),
+        );
+      }
+      await Promise.all(invalidations);
     },
   });
 }
