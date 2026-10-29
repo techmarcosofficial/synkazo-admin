@@ -190,7 +190,7 @@ export default function OrganisationProjectScheduler({
   const schedule = scheduleDraft ?? queueScheduleDraft(queue.queue);
   const availableJobsCount = (jobsQuery.data ?? []).filter(
     (job) =>
-      !queue.queueJobs.some((row) => row.jobId === job.id) &&
+      !localJobs.some((row) => row.jobId === job.id) &&
       !stagedJobs.some((row) => row.jobId === job.id),
   ).length;
   const inlineJobs = (jobsQuery.data ?? []).map((job) => {

@@ -1,11 +1,12 @@
 import type { AxiosResponse } from 'axios';
 
 import apiClient from './apiClient';
-import type {
-  AddQueueJobPayload,
-  UpdateAssociationQueuePayload,
-  UpdateQueueJobPayload,
-  UpdateQueueSchedulePayload,
+import {
+  sanitizeQueueSchedulePayload,
+  type AddQueueJobPayload,
+  type UpdateAssociationQueuePayload,
+  type UpdateQueueJobPayload,
+  type UpdateQueueSchedulePayload,
 } from './priorityQueue';
 import type {
   AssociationQueueItem,
@@ -122,7 +123,7 @@ export const superAdminPriorityQueueApi = {
     apiClient
       .patch<{ data: ProjectQueue }>(
         `${base(organisationId, projectId)}/schedule`,
-        { ...input, reason },
+        { ...sanitizeQueueSchedulePayload(input), reason },
       )
       .then(data),
   addJob: (
