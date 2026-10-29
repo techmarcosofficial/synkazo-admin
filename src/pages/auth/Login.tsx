@@ -159,12 +159,12 @@ export default function Login() {
     // of silently dumping the visitor into it; the reload keeps the target.
     if (redirectTo) {
       apiClient
-        .post('/auth/logout', {
-          refreshToken: tokenStorage.getToken('refreshToken'),
-        })
-        .catch(() => {});
-      tokenStorage.clearTokens();
-      window.location.reload();
+        .post('/auth/logout', {})
+        .catch(() => {})
+        .finally(() => {
+          tokenStorage.clearTokens();
+          window.location.reload();
+        });
       return;
     }
     navigate(resumeTarget(currentUser), { replace: true });

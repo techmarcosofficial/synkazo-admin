@@ -11,7 +11,6 @@ const d = (r: any): any => r.data.data;
 
 interface HandoffTokens {
   accessToken: string;
-  refreshToken: string;
   returnPath: string;
 }
 
