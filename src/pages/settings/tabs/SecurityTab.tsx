@@ -14,22 +14,13 @@ import {
 } from '@/components/ui/card';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { getPasswordError } from '@/lib/passwordValidation';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { showToast } from '@/lib/toast';
 import {
   useChangePasswordMutation,
-  useDeleteMeMutation,
-  useMyOwnershipSummaryQuery,
+  useDeactivateMeMutation,
 } from '@/queries/useUsers';
 
 const errorMessage = (err: unknown, fallback: string) =>
@@ -39,15 +30,10 @@ const errorMessage = (err: unknown, fallback: string) =>
 /**
  * Password and account-lifecycle sections composed into Profile & Account.
  */
-export default function SecurityTab({
-  allowDeleteAccount = true,
-}: {
-  allowDeleteAccount?: boolean;
-}) {
-  const { logout } = useSynkazoAuth();
+export default function SecurityTab() {
+  const { currentUser, logout } = useSynkazoAuth();
   const changePasswordMutation = useChangePasswordMutation();
-  const deleteMeMutation = useDeleteMeMutation();
-  const ownershipSummaryQuery = useMyOwnershipSummaryQuery();
+  const deactivateMeMutation = useDeactivateMeMutation();
   const { confirm } = useConfirmDialog();
 
   const [pwForm, setPwForm] = useState({ current: '', newPw: '', confirm: '' });
@@ -78,116 +64,34 @@ export default function SecurityTab({
     }
   };
 
-  const runFinalDelete = async () => {
-    try {
-      await deleteMeMutation.mutateAsync();
-      logout();
-    } catch (err) {
-      showToast.error(errorMessage(err, 'Failed to delete account'));
-    }
-  };
-
-  const openFinalDeleteConfirm = () => {
+  const handleDeactivateAccount = () => {
     let typedConfirmation = '';
     confirm({
       variant: 'danger',
-      title: 'Are you absolutely sure?',
-      description:
-        'This action is permanent and you will lose access immediately.',
+      title: 'Deactivate your account?',
+      description: `You will be signed out immediately. An administrator can reactivate your account later.${currentUser?.role === 'super_admin' ? '' : ' Jobs you created will be paused.'}`,
       body: (
         <Input
-          placeholder='Type "DELETE" to confirm'
+          aria-label="Type DEACTIVATE to confirm"
+          placeholder='Type "DEACTIVATE" to confirm'
           onChange={(e) => {
             typedConfirmation = e.target.value;
           }}
         />
       ),
-      confirmLabel: 'Confirm Deletion',
+      confirmLabel: 'Deactivate Account',
       onConfirm: async () => {
-        if (typedConfirmation.trim().toUpperCase() !== 'DELETE') {
-          showToast.error('Type "DELETE" to confirm.');
+        if (typedConfirmation.trim().toUpperCase() !== 'DEACTIVATE') {
+          showToast.error('Type "DEACTIVATE" to confirm.');
           throw new Error('confirmation text mismatch');
         }
-        await runFinalDelete();
-      },
-    });
-  };
-
-  const handleDeleteAccount = async () => {
-    const { data: summary } = await ownershipSummaryQuery.refetch();
-    confirm({
-      variant: 'danger',
-      title: 'Delete your account?',
-      description: 'This cannot be undone.',
-      body: (
-        <div className="space-y-3 text-sm">
-          <div className="bg-muted overflow-hidden rounded-2xl border">
-            <Table className="w-full text-sm">
-              <TableHeader>
-                <TableRow className="border-border/60 border-b text-left">
-                  <TableHead className="px-4 py-2">Account assets</TableHead>
-                  <TableHead className="px-4 py-2 text-right">Count</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow className="border-border/60 border-b">
-                  <TableCell className="px-4 py-2">Projects</TableCell>
-                  <TableCell className="px-4 py-2 text-right">
-                    {summary?.projectsCount ?? 0}
-                  </TableCell>
-                </TableRow>
-                <TableRow className="border-border/60 border-b">
-                  <TableCell className="px-4 py-2">Total Jobs</TableCell>
-                  <TableCell className="px-4 py-2 text-right">
-                    {summary?.jobsCount ?? 0}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="px-4 py-2">Synced Records</TableCell>
-                  <TableCell className="px-4 py-2 text-right">
-                    {(summary?.totalRecordsSynced ?? 0).toLocaleString()}
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </div>
-          <div className="bg-muted overflow-hidden rounded-2xl border">
-            <Table className="w-full text-sm">
-              <TableHeader>
-                <TableRow className="border-border/60 border-b text-left">
-                  <TableHead className="px-4 py-2">Job activity</TableHead>
-                  <TableHead className="px-4 py-2 text-right">Count</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow className="border-border/60 border-b">
-                  <TableCell className="px-4 py-2">Currently Running</TableCell>
-                  <TableCell className="px-4 py-2 text-right">
-                    {summary?.runningJobsCount ?? 0}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="px-4 py-2">Active Scheduled</TableCell>
-                  <TableCell className="px-4 py-2 text-right">
-                    {summary?.scheduledJobsCount ?? 0}
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </div>
-          <p className="text-muted-foreground">
-            This data will remain in the system but will no longer be attributed
-            to your account.
-          </p>
-        </div>
-      ),
-      confirmLabel: 'Delete Account',
-      onConfirm: () => {
-        // Chain to the second (final) confirmation once this dialog's own
-        // close animation/state reset has run — calling confirm() again
-        // synchronously here would have it immediately clobbered by
-        // handleConfirm's post-resolve `open: false`.
-        setTimeout(openFinalDeleteConfirm, 0);
+        try {
+          await deactivateMeMutation.mutateAsync();
+          logout();
+        } catch (err) {
+          showToast.error(errorMessage(err, 'Failed to deactivate account'));
+          throw err;
+        }
       },
     });
   };
@@ -263,35 +167,33 @@ export default function SecurityTab({
         </CardContent>
       </Card>
 
-      {allowDeleteAccount && (
-        <Card className="border-destructive/30 lg:col-span-2">
-          <CardHeader visualLevel="section">
-            <CardTitle className="text-destructive flex items-center gap-2">
-              <ShieldAlert className="size-4" /> Danger Zone
-            </CardTitle>
-            <CardDescription>
-              Destructive account actions cannot be undone.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="border-destructive/20 bg-destructive/5 flex flex-col gap-3 rounded-3xl border p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-medium">Delete Account</p>
-                <p className="text-muted-foreground text-xs">
-                  Permanently delete your account and all associated access.
-                </p>
-              </div>
-              <Button
-                className="w-fit shrink-0"
-                variant="destructive"
-                onClick={handleDeleteAccount}
-              >
-                Delete Account
-              </Button>
+      <Card className="border-destructive/30 lg:col-span-2">
+        <CardHeader visualLevel="section">
+          <CardTitle className="text-destructive flex items-center gap-2">
+            <ShieldAlert className="size-4" /> Danger Zone
+          </CardTitle>
+          <CardDescription>Manage access to your account.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="border-destructive/20 bg-destructive/5 flex flex-col gap-3 rounded-3xl border p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium">Deactivate Account</p>
+              <p className="text-muted-foreground text-xs">
+                Sign out and disable access until an administrator reactivates
+                your account.
+              </p>
             </div>
-          </CardContent>
-        </Card>
-      )}
+            <Button
+              className="w-fit shrink-0"
+              variant="destructive"
+              onClick={handleDeactivateAccount}
+              loading={deactivateMeMutation.isPending}
+            >
+              Deactivate Account
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </>
   );
 }

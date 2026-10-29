@@ -12,7 +12,7 @@ import { superAdminAssociationsApi } from '@/api/superAdminAssociations';
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
 import SkeletonList from '@/components/shared/skeletons/SkeletonList';
-import { Badge } from '@/components/ui/badge';
+import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -144,7 +144,7 @@ function AssociationRuleDetails({
                           : '—'}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{run.status}</Badge>
+                        <StatusBadge status={run.status} label={run.status} />
                       </TableCell>
                       <TableCell>{run.succeeded}</TableCell>
                       <TableCell>{run.pendingCreated}</TableCell>
@@ -209,7 +209,10 @@ function AssociationRuleDetails({
                       <TableCell>{record.sourceId}</TableCell>
                       <TableCell>{record.targetMatchValue}</TableCell>
                       <TableCell>
-                        <Badge variant="outline">{record.status}</Badge>
+                        <StatusBadge
+                          status={record.status}
+                          label={record.status}
+                        />
                       </TableCell>
                       <TableCell>{record.retryCount}</TableCell>
                       <TableCell className="max-w-xs truncate text-xs">
@@ -384,6 +387,7 @@ export function OrganisationProjectAssociationsPanel({
           ruleId,
           dto: {
             name: input.name,
+            cardinality: input.cardinality,
             conditions: input.conditions ?? undefined,
             conditionLogic: input.conditionLogic,
             reason,
@@ -449,6 +453,7 @@ export function OrganisationProjectAssociationsPanel({
                   <TableHead>Name</TableHead>
                   <TableHead>Source</TableHead>
                   <TableHead>Target</TableHead>
+                  <TableHead>Cardinality</TableHead>
                   <TableHead>Enabled</TableHead>
                   <TableHead>Conditions</TableHead>
                   <TableHead>Updated</TableHead>
@@ -475,15 +480,14 @@ export function OrganisationProjectAssociationsPanel({
                         · {rule.targetMatchField}
                       </span>
                     </TableCell>
+                    <TableCell className="text-muted-foreground text-sm capitalize">
+                      {rule.cardinality?.replace(/_/g, ' ') ?? '—'}
+                    </TableCell>
                     <TableCell>
                       {rule.isEnabled ? (
-                        <Badge className="bg-emerald-100 text-emerald-900">
-                          Enabled
-                        </Badge>
+                        <StatusBadge status="enabled" label="Enabled" />
                       ) : (
-                        <Badge className="bg-muted text-muted-foreground">
-                          Disabled
-                        </Badge>
+                        <StatusBadge status="disabled" label="Disabled" />
                       )}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
@@ -619,7 +623,7 @@ export function OrganisationProjectAssociationsPanel({
                         {row.targetMatchValue}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{row.status}</Badge>
+                        <StatusBadge status={row.status} label={row.status} />
                       </TableCell>
                       <TableCell className="text-sm">
                         {row.retryCount}
@@ -683,6 +687,7 @@ export function OrganisationProjectAssociationsPanel({
       )}
       {dialogState?.mode === 'edit' && dialogState.rule && (
         <AssociationRuleFormDialog
+          key={dialogState.rule.id}
           mode="edit"
           projectId={projectId}
           rule={dialogState.rule}

@@ -74,6 +74,7 @@ export interface SyncRun {
 
 export interface SyncLogRecord {
   id: string;
+  resolved?: boolean;
   action: 'created' | 'updated' | 'skipped' | 'failed';
   sourceRecordId: string;
   destRecordId?: string | null;

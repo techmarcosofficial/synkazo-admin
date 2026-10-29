@@ -1,6 +1,8 @@
 import { Check, ChevronDown } from 'lucide-react';
 
-import StatusBadge from '@/components/shared/StatusBadge';
+import StatusBadge, { getStatusTone } from '@/components/shared/StatusBadge';
+import { badgeToneClasses, useBadgeAppearance } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -11,21 +13,36 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-interface ProjectStatusDropdownProps {
-  current: string;
-  options: string[];
-  onSelect: (status: string) => void;
+interface ProjectStatusDropdownProps<Status extends string> {
+  current: Status;
+  options: readonly Status[];
+  onSelect: (status: Status) => void;
+  disabled?: boolean;
 }
 
-export default function ProjectStatusDropdown({
+export default function ProjectStatusDropdown<Status extends string>({
   current,
   options,
   onSelect,
-}: ProjectStatusDropdownProps) {
+  disabled = false,
+}: ProjectStatusDropdownProps<Status>) {
+  const tinted = useBadgeAppearance() === 'tinted';
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" shape="pill" className="group">
+        <Button
+          variant={tinted ? 'ghost' : 'outline'}
+          size="sm"
+          shape="pill"
+          className={cn(
+            'group',
+            tinted && 'border-0 shadow-none',
+            tinted && badgeToneClasses[getStatusTone(current)],
+          )}
+          disabled={disabled}
+          data-badge-control={tinted ? 'tinted' : undefined}
+          aria-label={`Change project status: ${current}`}
+        >
           <StatusBadge variant="menu" status={current} />
           <ChevronDown className="text-muted-foreground size-4 transition-transform group-data-[state=open]:rotate-180" />
         </Button>
@@ -37,7 +54,11 @@ export default function ProjectStatusDropdown({
         <DropdownMenuSeparator />
 
         {options.map((status) => (
-          <DropdownMenuItem key={status} onSelect={() => onSelect(status)}>
+          <DropdownMenuItem
+            key={status}
+            disabled={disabled}
+            onSelect={() => onSelect(status)}
+          >
             <StatusBadge status={status} variant="menu" showDescription />
 
             {status === current && (

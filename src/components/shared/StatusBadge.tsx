@@ -7,7 +7,12 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-import { Badge, badgeVariants } from '@/components/ui/badge';
+import {
+  Badge,
+  badgeVariants,
+  badgeToneClasses,
+  useBadgeAppearance,
+} from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 export const statusDot = cva('shrink-0 rounded-full', {
@@ -180,6 +185,45 @@ const STATUS_CONFIG: Record<
   expired: { tone: 'danger', label: 'Expired' },
 };
 
+// Platform-only vocabulary; tenant status labels and tones keep their defaults.
+const PLATFORM_STATUS_TONES: Record<string, Tone> = {
+  warning: 'warning',
+  danger: 'danger',
+  enabled: 'success',
+  on: 'success',
+  paid: 'success',
+  succeeded: 'success',
+  ok: 'success',
+  recovered: 'success',
+  synced: 'success',
+  suspended: 'warning',
+  trialing: 'warning',
+  pending_cancel: 'warning',
+  incomplete: 'warning',
+  overdue: 'warning',
+  stale: 'warning',
+  info: 'info',
+  open: 'info',
+  processing: 'info',
+  provisioning: 'info',
+  past_due: 'danger',
+  unpaid: 'danger',
+  uncollectible: 'danger',
+  critical: 'danger',
+  fatal: 'danger',
+  archived: 'muted',
+  canceled: 'muted',
+  cancelled: 'muted',
+  none: 'muted',
+  off: 'muted',
+  void: 'muted',
+};
+
+export function getStatusTone(status: string): Tone {
+  const key = status.toLowerCase();
+  return PLATFORM_STATUS_TONES[key] ?? STATUS_CONFIG[key]?.tone ?? 'muted';
+}
+
 interface StatusBadgeProps {
   status: string;
   label?: string;
@@ -188,6 +232,7 @@ interface StatusBadgeProps {
   variant?: Variant;
   showDescription?: boolean;
   className?: string;
+  tone?: Tone;
   action?: {
     label: string;
     onClick: () => void;
@@ -202,14 +247,18 @@ export default function StatusBadge({
   variant = 'default',
   showDescription = false,
   className,
+  tone,
   action,
 }: StatusBadgeProps) {
-  const cfg = STATUS_CONFIG[status] ?? {
+  const tinted = useBadgeAppearance() === 'tinted';
+  const statusKey = tinted ? status.toLowerCase() : status;
+  const cfg = STATUS_CONFIG[statusKey] ?? {
     tone: 'muted' as Tone,
     label: status,
   };
   const label = customLabel ?? cfg.label;
-  const Icon = cfg.icon;
+  const resolvedTone = tone ?? (tinted ? getStatusTone(status) : cfg.tone);
+  const Icon = tinted ? undefined : cfg.icon;
 
   if (action) {
     return (
@@ -220,25 +269,35 @@ export default function StatusBadge({
           action.onClick();
         }}
         title={title ?? `${label} - Click to ${action.label.toLowerCase()}`}
+        data-slot="badge"
+        data-tone={tinted ? resolvedTone : undefined}
+        data-appearance={tinted ? 'tinted' : undefined}
         className={cn(
-          badgeVariants({ variant: 'secondary', size: size === 'default' ? 'sm' : size }),
-          'cursor-pointer font-semibold hover:bg-muted/80',
-          statusBadge({ variant: 'default', tone: cfg.tone, size }),
+          badgeVariants({
+            variant: 'secondary',
+            size: size === 'default' ? 'sm' : size,
+          }),
+          'hover:bg-muted/80 cursor-pointer font-semibold',
+          statusBadge({ variant: 'default', tone: resolvedTone, size }),
           className,
+          tinted && '[&_*]:text-foreground border-0 shadow-none',
+          tinted && badgeToneClasses[resolvedTone],
         )}
       >
         {Icon ? (
           <Icon aria-hidden="true" />
         ) : (
           <span
+            data-slot="badge-dot"
+            aria-hidden="true"
             className={statusDot({
-              tone: cfg.tone,
+              tone: resolvedTone,
               size,
             })}
           />
         )}
         <span>{label}</span>
-        <span className="lowercase text-destructive underline underline-offset-2 font-semibold hover:opacity-80">
+        <span className="text-destructive font-semibold lowercase underline underline-offset-2 hover:opacity-80">
           {action.label}
         </span>
       </button>
@@ -253,8 +312,10 @@ export default function StatusBadge({
             <Icon className="size-3.5" aria-hidden="true" />
           ) : (
             <span
+              data-slot="badge-dot"
+              aria-hidden="true"
               className={statusDot({
-                tone: cfg.tone,
+                tone: resolvedTone,
                 size: 'md',
               })}
             />
@@ -275,11 +336,13 @@ export default function StatusBadge({
     <Badge
       title={title}
       size={size === 'default' ? 'sm' : size}
+      tone={resolvedTone}
+      indicator={false}
       className={cn(
         'font-semibold',
         statusBadge({
           variant,
-          tone: cfg.tone,
+          tone: resolvedTone,
           size,
         }),
         className,
@@ -289,8 +352,10 @@ export default function StatusBadge({
         <Icon aria-hidden="true" />
       ) : (
         <span
+          data-slot="badge-dot"
+          aria-hidden="true"
           className={statusDot({
-            tone: cfg.tone,
+            tone: resolvedTone,
             size,
           })}
         />

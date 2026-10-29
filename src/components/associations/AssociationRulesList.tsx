@@ -401,6 +401,13 @@ export function RuleRecordsList({
 
               <div className="flex items-center justify-start md:justify-end">
                 <Badge
+                  tone={
+                    record.status === 'completed'
+                      ? 'success'
+                      : record.status === 'pending'
+                        ? 'warning'
+                        : 'danger'
+                  }
                   className={cn(
                     record.status === 'completed'
                       ? 'bg-success/10 text-success'
@@ -548,14 +555,13 @@ function RuleCard({
 
   const isEnabled = rule.isEnabled ?? true;
 
-  const associationName =
+  const associationObjects =
     `${associationObjectLabel(rule.sourceObject)} → ` +
     associationObjectLabel(rule.targetObject);
+  const associationName = rule.name?.trim() || associationObjects;
 
-  const associationType =
-    rule.assocLabel ||
-    rule.cardinality?.replace(/_/g, ' ') ||
-    'Primary association';
+  const associationType = rule.assocLabel || 'Primary association';
+  const cardinalityLabel = rule.cardinality?.replace(/_/g, ' ');
 
   const latestStatus = latestRun
     ? latestRun.status === 'completed' &&
@@ -789,7 +795,20 @@ function RuleCard({
                 </div>
 
                 <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                  {associationName !== associationObjects && (
+                    <>
+                      <span>{associationObjects}</span>
+                      <span aria-hidden="true">·</span>
+                    </>
+                  )}
                   <span className="capitalize">{associationType}</span>
+
+                  {cardinalityLabel && (
+                    <>
+                      <span aria-hidden="true">·</span>
+                      <span className="capitalize">{cardinalityLabel}</span>
+                    </>
+                  )}
 
                   {rule.conditions != null && rule.conditions.length > 0 && (
                     <>

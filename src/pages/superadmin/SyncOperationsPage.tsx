@@ -200,7 +200,7 @@ function ProcessResourceCard({
                       <span title={process.id}>{process.id.slice(0, 8)}</span>
                     </span>
                     {stale ? (
-                      <Badge variant="secondary">Sample outdated</Badge>
+                  <StatusBadge status="stale" label="Sample outdated" />
                     ) : (
                       <span>Updated {date(process.sampledAt)}</span>
                     )}
@@ -446,7 +446,7 @@ function RunDrawer({
           {run && p && (
             <>
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="secondary">{label(run.status)}</Badge>
+                      <StatusBadge status={run.status} label={label(run.status)} />
                 <span className="text-muted-foreground text-xs">
                   {run.status !== 'running' && !run.executionObserved
                     ? 'Final snapshot'
@@ -465,6 +465,7 @@ function RunDrawer({
                   key={run.id}
                   runId={run.syncRunLogId ?? run.id}
                   variant="compact"
+                  statsColumns={3}
                   status={run.status}
                   totalRecords={p.total}
                   processedRecords={p.attempted}

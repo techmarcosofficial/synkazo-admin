@@ -445,6 +445,7 @@ export default function CustomObjectModal({
                     className="flex-1"
                   />
                   <Badge
+                    tone={f.type === 'string' ? 'success' : f.type === 'number' ? 'info' : f.type === 'boolean' ? 'paused' : 'warning'}
                     className={cn(
                       'font-mono',
                       FIELD_TYPE_TONE[f.type] ?? 'bg-warning/10 text-warning',

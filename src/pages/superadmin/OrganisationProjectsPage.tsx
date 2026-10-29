@@ -9,7 +9,7 @@ import ManagementCardHeader from '@/components/shared/ManagementCardHeader';
 import ManagementToolbar from '@/components/shared/ManagementToolbar';
 import PaginationBar from '@/components/shared/PaginationBar';
 import SkeletonList from '@/components/shared/skeletons/SkeletonList';
-import { Badge } from '@/components/ui/badge';
+import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -34,12 +34,13 @@ import {
   useSuperAdminProjectsQuery,
 } from '@/queries/useSuperAdmin';
 import CreateOrganisationProjectDialog from './projects/CreateOrganisationProjectDialog';
+import type { SuperAdminProjectStatus } from '@/types';
 
 const SORT_OPTIONS = [
   { value: 'lastSyncedAt', label: 'Recently synced', order: 'desc' },
   { value: 'createdAt', label: 'Recently created', order: 'desc' },
   { value: 'name', label: 'Name: A–Z', order: 'asc' },
-  { value: 'status', label: 'Status', order: 'asc' },
+  { value: 'status', label: 'Status: A–Z', order: 'asc' },
 ] as const;
 
 function extractErrorMessage(err: unknown): string {
@@ -56,9 +57,7 @@ export default function OrganisationProjectsPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [sortBy, setSortBy] =
     useState<(typeof SORT_OPTIONS)[number]['value']>('lastSyncedAt');
-  const [status, setStatus] = useState<'all' | 'active' | 'setup' | 'archived'>(
-    'all',
-  );
+  const [status, setStatus] = useState<'all' | SuperAdminProjectStatus>('all');
   const debouncedSearch = useDebouncedValue(search.trim(), 300);
 
   const orgQuery = useSuperAdminOrganisationQuery(organisationId);
@@ -130,9 +129,10 @@ export default function OrganisationProjectsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All statuses</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="setup">Setup</SelectItem>
-                  <SelectItem value="archived">Archived</SelectItem>
+                  <SelectItem value="paused">Paused</SelectItem>
+                  <SelectItem value="error">Error</SelectItem>
                 </SelectContent>
               </Select>
             }
@@ -224,13 +224,7 @@ export default function OrganisationProjectsPage() {
                   }
                   status={project.status}
                   statusBadge={
-                    <Badge
-                      variant={
-                        project.status === 'active' ? 'secondary' : 'outline'
-                      }
-                    >
-                      {project.status}
-                    </Badge>
+                    <StatusBadge status={project.status} label={project.status} />
                   }
                   activityLabel={
                     project.lastSyncedAt
@@ -285,13 +279,7 @@ export default function OrganisationProjectsPage() {
                       {project.syncMode}
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant={
-                          project.status === 'active' ? 'secondary' : 'outline'
-                        }
-                      >
-                        {project.status}
-                      </Badge>
+                        <StatusBadge status={project.status} label={project.status} />
                     </TableCell>
                     <TableCell className="text-right font-mono text-sm">
                       {project.enabledJobCount}/{project.jobCount}

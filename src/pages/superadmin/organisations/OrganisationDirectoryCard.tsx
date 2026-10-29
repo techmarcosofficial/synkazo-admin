@@ -6,7 +6,7 @@ import {
   headingSubtitleStyles,
   headingTitleStyles,
 } from '@/components/shared/headingStyles';
-import { Badge } from '@/components/ui/badge';
+import StatusBadge from '@/components/shared/StatusBadge';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type {
@@ -38,26 +38,7 @@ export const SUBSCRIPTION_LABELS: Record<SubscriptionStatus | 'all', string> = {
 
 export function OrganisationStatusBadge({ status }: { status: OrgStatus }) {
   return (
-    <Badge
-      variant="secondary"
-      className={cn(
-        status === 'active' && 'bg-success/10',
-        status === 'suspended' && 'bg-warning/10',
-        status === 'pending' && 'bg-info/10',
-      )}
-    >
-      <span
-        aria-hidden
-        className={cn(
-          'size-1.5 rounded-full',
-          status === 'active' && 'bg-success',
-          status === 'suspended' && 'bg-warning',
-          status === 'pending' && 'bg-info',
-          status === 'archived' && 'bg-muted-foreground',
-        )}
-      />
-      {ORG_STATUS_LABELS[status]}
-    </Badge>
+    <StatusBadge status={status} label={ORG_STATUS_LABELS[status]} tone={status === 'pending' ? 'info' : undefined} />
   );
 }
 
@@ -69,36 +50,9 @@ export function SubscriptionStatusBadge({
   showContext?: boolean;
 }) {
   return (
-    <Badge
-      variant="secondary"
-      className={cn(
-        status === 'active' && 'bg-success/10',
-        (status === 'trialing' || status === 'pending_cancel') &&
-          'bg-warning/10',
-        (status === 'past_due' || status === 'unpaid') && 'bg-destructive/10',
-      )}
-    >
-      <span
-        aria-hidden
-        className={cn(
-          'size-1.5 rounded-full',
-          status === 'active' && 'bg-success',
-          (status === 'trialing' || status === 'pending_cancel') &&
-            'bg-warning',
-          (status === 'past_due' || status === 'unpaid') && 'bg-destructive',
-          ![
-            'active',
-            'trialing',
-            'pending_cancel',
-            'past_due',
-            'unpaid',
-          ].includes(status) && 'bg-muted-foreground',
-        )}
-      />
-      {showContext
+    <StatusBadge status={status} label={showContext
         ? `Billing: ${SUBSCRIPTION_LABELS[status]}`
-        : SUBSCRIPTION_LABELS[status]}
-    </Badge>
+        : SUBSCRIPTION_LABELS[status]} />
   );
 }
 

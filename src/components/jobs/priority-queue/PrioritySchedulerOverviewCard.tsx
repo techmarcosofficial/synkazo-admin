@@ -20,7 +20,7 @@ export default function PrioritySchedulerOverviewCard({
 }) {
   return (
     <Card className="gap-0 py-0">
-      <CardHeader className="flex flex-row items-center justify-between gap-3 border-b px-4 py-3">
+      <CardHeader className="flex flex-row items-center justify-between gap-3 border-b px-4 py-2.5">
         <CardTitle>Priority scheduler</CardTitle>
         <Switch
           checked={enabled}
@@ -30,9 +30,9 @@ export default function PrioritySchedulerOverviewCard({
         />
       </CardHeader>
       <CardContent className={enabled ? 'p-0' : 'hidden'}>
-        <div className="grid gap-5 px-4 py-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:divide-x">
+        <div className="grid gap-3 px-4 py-3 lg:grid-cols-2 lg:gap-5">
           <div className="min-w-0">{schedule}</div>
-          <div className="min-w-0 lg:pl-5">{status}</div>
+          <div className="min-w-0">{status}</div>
         </div>
         <div>{children}</div>
       </CardContent>

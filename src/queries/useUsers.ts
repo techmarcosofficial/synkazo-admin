@@ -79,7 +79,6 @@ export function useResetPasswordByAdminMutation() {
   });
 }
 
-
 export function useMyOwnershipSummaryQuery() {
   return useQuery({
     queryKey: queryKeys.users.ownershipSummary,
@@ -88,9 +87,9 @@ export function useMyOwnershipSummaryQuery() {
   });
 }
 
-export function useDeleteMeMutation() {
+export function useDeactivateMeMutation() {
   return useMutation({
-    mutationFn: () => usersApi.deleteMe(),
+    mutationFn: () => usersApi.deactivateMe(),
   });
 }
 

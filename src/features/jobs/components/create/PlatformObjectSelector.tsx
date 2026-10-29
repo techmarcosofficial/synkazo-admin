@@ -1,4 +1,4 @@
-import { KeyRound, Lock, Plus } from 'lucide-react';
+import { Info, KeyRound, Lock, Plus } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { PlatformIcon } from '@/components/platform';
@@ -177,7 +177,7 @@ export function PlatformObjectSelectorView({
   return (
     <div className="space-y-2">
       <Field>
-        <FieldLabel>
+        <FieldLabel className="flex h-7 items-center gap-1.5 leading-none">
           <PlatformIcon platformId={platformId} size={16} />
           <span className="flex items-center gap-0.5">
             {label}
@@ -188,6 +188,26 @@ export function PlatformObjectSelectorView({
           <span className="text-muted-foreground font-normal">
             · {platformLabel}
           </span>
+          {customObjectsWarning && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={`Custom objects note for ${platformLabel}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  className="text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 inline-flex size-5 shrink-0 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <Info className="size-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs text-xs font-normal">
+                {customObjectsWarning}
+              </TooltipContent>
+            </Tooltip>
+          )}
           <Tooltip>
             <TooltipTrigger asChild>
               {/* span wrapper: a disabled button emits no pointer events, so the tooltip
@@ -236,9 +256,6 @@ export function PlatformObjectSelectorView({
           <p className="text-muted-foreground text-xs">
             Cannot be changed after creation
           </p>
-        )}
-        {customObjectsWarning && (
-          <p className="text-warning text-xs">{customObjectsWarning}</p>
         )}
         {error && <p className="text-destructive text-xs">{error}</p>}
       </Field>

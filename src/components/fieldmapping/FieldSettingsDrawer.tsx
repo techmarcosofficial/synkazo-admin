@@ -49,6 +49,7 @@ import {
 } from '@/lib/ruleEngine';
 import { buildRuleSuggestions, type RuleSuggestion } from '@/lib/ruleSuggestions';
 import { cn } from '@/lib/utils';
+import { validateRules } from '@/lib/ruleValidation';
 import type { ExcludeCondition } from '@/types/conditions';
 import {
   Popover,
@@ -239,6 +240,12 @@ export default function FieldSettingsDrawer({
   const [reverseOnEmpty, setReverseOnEmpty] = useState<OnEmptyPolicy>('none');
   const [reverseDefaultValue, setReverseDefaultValue] = useState('');
   const [rules, setRules] = useState<Rule[]>([]);
+  const [saveAttempted, setSaveAttempted] = useState(false);
+  const validationErrors = useMemo(
+    () => (saveAttempted ? validateRules(rules) : {}),
+    [rules, saveAttempted],
+  );
+  const invalidRuleCount = Object.keys(validationErrors).length;
 
   // Controlled sections state (flat, no Radix height lock)
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
@@ -274,6 +281,7 @@ export default function FieldSettingsDrawer({
 
     const currentRules = (mapping.destRules?.[destKey] ?? []) as Rule[];
     setRules(currentRules);
+    setSaveAttempted(false);
 
     // Auto-expansion & deep scroll based on targetSection
     if (!targetSection || targetSection === 'all') {
@@ -346,6 +354,15 @@ export default function FieldSettingsDrawer({
   };
 
   const handleSave = () => {
+    setSaveAttempted(true);
+    if (Object.keys(validateRules(rules)).length > 0) {
+      setExpandedSections((prev) => ({ ...prev, transforms: true }));
+      transformsRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+      requestAnimationFrame(() => {
+        transformsRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+      });
+      return;
+    }
     onSave({
       sourceKey,
       destKey,
@@ -400,6 +417,7 @@ export default function FieldSettingsDrawer({
             {destFieldDef?.required && (
               <Badge
                 size="xs"
+                    tone="danger"
                 className="border-0 bg-destructive/15 text-destructive font-medium"
               >
                 Required
@@ -408,6 +426,7 @@ export default function FieldSettingsDrawer({
             {rules.length > 0 && (
               <Badge
                 size="xs"
+                    tone="warning"
                 className="border-0 bg-warning/15 text-warning font-medium gap-1"
               >
                 <Zap className="size-3 text-warning shrink-0" />
@@ -543,7 +562,7 @@ export default function FieldSettingsDrawer({
               badge={
                 <div className="flex items-center gap-1.5 flex-wrap justify-end">
                   {rules.length > 0 ? (
-                    <Badge className="border-0 bg-warning/15 text-warning text-[10px] gap-1 font-semibold">
+                            <Badge tone="warning" className="border-0 bg-warning/15 text-warning text-[10px] gap-1 font-semibold">
                       <Zap className="size-2.5 shrink-0" />
                       <span>{rules.length} Rule{rules.length !== 1 ? 's' : ''}</span>
                     </Badge>
@@ -625,6 +644,7 @@ export default function FieldSettingsDrawer({
                     rules={rules}
                     onRulesChange={setRules}
                     destOptions={destFieldDef?.options}
+                    validationErrors={validationErrors}
                   />
                 </div>
 
@@ -676,11 +696,11 @@ export default function FieldSettingsDrawer({
               badge={
                 <div className="flex items-center gap-1.5 flex-wrap justify-end">
                   {onEmpty === 'default' ? (
-                    <Badge className="border-0 bg-success/15 text-success text-[10px] font-semibold max-w-[140px] truncate">
+                      <Badge tone="success" className="border-0 bg-success/15 text-success text-[10px] font-semibold max-w-[140px] truncate">
                       Default: {defaultValue ? `"${defaultValue}"` : 'Fallback'}
                     </Badge>
                   ) : onEmpty === 'skip_record' ? (
-                    <Badge className="border-0 bg-destructive/15 text-destructive text-[10px] font-semibold">
+                      <Badge tone="danger" className="border-0 bg-destructive/15 text-destructive text-[10px] font-semibold">
                       Skip If Empty
                     </Badge>
                   ) : (
@@ -839,7 +859,13 @@ export default function FieldSettingsDrawer({
         </div>
 
         {/* Fixed Footer */}
-        <SheetFooter className="bg-muted/20 shrink-0 border-t px-6 py-3.5">
+        <SheetFooter className="bg-muted/20 shrink-0 border-t px-6 py-3.5 flex-col gap-2">
+          {invalidRuleCount > 0 && (
+            <p role="alert" className="flex items-center gap-2 text-xs text-destructive">
+              <AlertCircle className="size-4 shrink-0" />
+              Fill the highlighted required fields in {invalidRuleCount} transformation {invalidRuleCount === 1 ? 'rule' : 'rules'} before saving.
+            </p>
+          )}
           <div className="flex w-full items-center justify-between">
             <Button
               type="button"

@@ -3,6 +3,7 @@ import { ArrowRight, Pause, Play, RotateCcw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
+import { getStatusTone } from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -94,7 +95,7 @@ export default function QueueStatusPanel({
         <div className="min-w-0">
           <p className="text-sm font-semibold">Current cycle</p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <Badge className={badgeClassName}>{displayStatus}</Badge>
+            <Badge tone={getStatusTone(queue.status)} className={badgeClassName}>{displayStatus}</Badge>
             {!currentExecution && (
               <span className="text-muted-foreground text-xs">
                 {activeCycle?.associationsStatus === 'running'

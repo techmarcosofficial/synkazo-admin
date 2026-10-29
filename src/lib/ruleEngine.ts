@@ -44,6 +44,74 @@ export interface Rule {
   [key: string]: unknown;
 }
 
+const VALIDATION_RULES = new Set([
+  'min_length',
+  'max_length',
+  'is_string',
+  'is_number',
+  'is_email',
+  'is_phone',
+  'is_currency',
+  'is_boolean',
+  'is_date',
+  'is_empty',
+  'is_not_empty',
+]);
+
+export function isValidationRule(type: string): boolean {
+  return VALIDATION_RULES.has(type);
+}
+
+export function previewSourceValue(
+  input: string,
+  sourceType?: string,
+): unknown {
+  const type = sourceType?.toLowerCase();
+  if (!input.trim() && type && type !== 'string' && type !== 'enum')
+    return null;
+  if (['number', 'integer', 'float', 'decimal'].includes(type ?? ''))
+    return Number(input);
+  if (['boolean', 'bool', 'checkbox'].includes(type ?? '')) {
+    if (/^true$/i.test(input.trim())) return true;
+    if (/^false$/i.test(input.trim())) return false;
+  }
+  if (['date', 'datetime', 'date_time'].includes(type ?? '')) {
+    const date = new Date(input);
+    if (!Number.isNaN(date.getTime())) return date;
+  }
+  return input;
+}
+
+export function passesRuleValidation(value: unknown, rule: Rule): boolean {
+  const v = String(value ?? '');
+  switch (rule.type) {
+    case 'min_length':
+      return v.length >= Number(rule.value);
+    case 'max_length':
+      return v.length <= Number(rule.value);
+    case 'is_string':
+      return typeof value === 'string';
+    case 'is_number':
+      return v.trim() !== '' && Number.isFinite(Number(v));
+    case 'is_email':
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+    case 'is_phone':
+      return /^\+?[\d\s().-]+$/.test(v) && v.replace(/\D/g, '').length >= 7;
+    case 'is_currency':
+      return /^[+-]?(?:[$€£₹]\s*)?\d+(?:,\d{3})*(?:\.\d{1,2})?$/.test(v.trim());
+    case 'is_boolean':
+      return typeof value === 'boolean' || /^(true|false|1|0)$/i.test(v.trim());
+    case 'is_date':
+      return v.trim() !== '' && !Number.isNaN(Date.parse(v));
+    case 'is_empty':
+      return v.trim() === '';
+    case 'is_not_empty':
+      return v.trim() !== '';
+    default:
+      return true;
+  }
+}
+
 export const RULE_CATEGORIES: RuleCategory[] = [
   { id: 'text', label: 'Text / String', icon: '✏️' },
   { id: 'length', label: 'Length Controls', icon: '📏' },
@@ -681,6 +749,11 @@ export function executeRulePipeline(value: string, rules: Rule[] = []): string {
   let current = value;
   for (const rule of rules) {
     if (rule.enabled === false) continue;
+    if (isValidationRule(rule.type)) {
+      if (!passesRuleValidation(current, rule))
+        return `__SKIPPED__:validation:${rule.type}`;
+      continue;
+    }
     current = applyRule(current, rule);
     if (current.startsWith('__SKIPPED__:')) {
       return current;

@@ -1,9 +1,9 @@
-import { AlertTriangle, CheckCircle2, Save, Webhook } from 'lucide-react';
+import { Save, Webhook } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import ErrorState from '@/components/shared/ErrorState';
 import SkeletonList from '@/components/shared/skeletons/SkeletonList';
-import { Badge } from '@/components/ui/badge';
+import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -67,15 +67,9 @@ export default function HubspotWebhookSettingsCard() {
                     Currently registered with HubSpot
                   </span>
                   {query.data.matches ? (
-                    <Badge className="bg-success/10 text-success gap-1.5">
-                      <CheckCircle2 className="size-3" />
-                      Matches this deployment
-                    </Badge>
+                    <StatusBadge status="success" label="Matches this deployment" />
                   ) : (
-                    <Badge className="bg-warning/10 text-warning gap-1.5">
-                      <AlertTriangle className="size-3" />
-                      Mismatch
-                    </Badge>
+                    <StatusBadge status="conflict" label="Mismatch" tone="warning" />
                   )}
                 </div>
                 <p className="font-mono text-sm break-all">

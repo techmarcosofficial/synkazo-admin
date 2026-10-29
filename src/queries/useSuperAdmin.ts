@@ -44,6 +44,7 @@ import type {
   SuperAdminCreateProjectDto,
   SuperAdminFieldMappingInput,
   SuperAdminCreateAssociationRuleDto,
+  SuperAdminAssociationRule,
   SuperAdminDeleteAssociationRuleDto,
   SuperAdminInviteMemberDto,
   SuperAdminRevokeInvitationDto,
@@ -51,6 +52,7 @@ import type {
   SuperAdminRunMigrationDto,
   SuperAdminUpdateAssociationRuleDto,
   SuperAdminUpdateOrganisationDto,
+  SuperAdminUpdateProjectDto,
   TransitionOrganisationStatusDto,
   UpsertFeatureFlagDto,
   UpsertMarketplaceCatalogEntryDto,
@@ -478,17 +480,11 @@ export function useUpdateSuperAdminProjectMutation(
 ) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (dto: { name?: string; description?: string }) =>
+    mutationFn: (dto: SuperAdminUpdateProjectDto) =>
       superAdminOperationsApi.updateProject(organisationId, projectId, dto),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.superAdmin.operations.project(
-          organisationId,
-          projectId,
-        ),
-      });
-      queryClient.invalidateQueries({
-        queryKey: ['superAdmin', organisationId, 'projects'],
+        queryKey: ['superAdmin', organisationId],
       });
     },
   });
@@ -1339,7 +1335,22 @@ export function useUpdateSuperAdminAssociationRuleMutation(
         payload.ruleId,
         payload.dto,
       ),
-    onSuccess: () => {
+    onSuccess: (updatedRule) => {
+      queryClient.setQueryData(
+        queryKeys.superAdmin.associations.rule(
+          organisationId,
+          projectId,
+          updatedRule.id,
+        ),
+        updatedRule,
+      );
+      queryClient.setQueryData<SuperAdminAssociationRule[]>(
+        queryKeys.superAdmin.associations.rules(organisationId, projectId),
+        (rules) =>
+          rules?.map((rule) =>
+            rule.id === updatedRule.id ? updatedRule : rule,
+          ),
+      );
       queryClient.invalidateQueries({
         queryKey: queryKeys.superAdmin.associations.rules(
           organisationId,

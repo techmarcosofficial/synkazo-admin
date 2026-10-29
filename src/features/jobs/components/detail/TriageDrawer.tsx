@@ -8,13 +8,13 @@ import {
   Search,
   SkipForward,
   Wrench,
+  X,
   type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
-import { jobsApi } from '@/api/jobs';
 import { syncLogsApi } from '@/api/syncLogs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import {
   Sheet,
   SheetContent,
+  SheetClose,
   SheetDescription,
   SheetHeader,
   SheetTitle,
@@ -47,6 +48,16 @@ import {
   type RecordFixAction,
 } from '@/features/jobs/utils/recordDiagnosis';
 
+function readRetryError(error: unknown, fallback: string): string {
+  const response = (
+    error as { response?: { data?: { message?: string | string[] } } }
+  )?.response?.data;
+  const message = response?.message;
+  if (Array.isArray(message)) return message.join(' ');
+  if (typeof message === 'string' && message.trim()) return message;
+  return error instanceof Error ? error.message : fallback;
+}
+
 export function TriageDrawer({
   open,
   onOpenChange,
@@ -61,6 +72,19 @@ export function TriageDrawer({
   const [records, setRecords] = useState<SyncLogRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  const [retryJobId, setRetryJobId] = useState<string | null>(null);
+  const [retryMessage, setRetryMessage] = useState<string | null>(null);
+  const [retryError, setRetryError] = useState<string | null>(null);
+  const [remainingFailed, setRemainingFailed] = useState<number | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    setRetryJobId(null);
+    setRetryMessage(null);
+    setRetryError(null);
+    setRemainingFailed(null);
+    setRetrying(false);
+  }, [run?.id]);
 
   useEffect(() => {
     if (!open || !run) {
@@ -82,11 +106,14 @@ export function TriageDrawer({
     syncLogsApi
       .listRecords(projectId, jobId, run.id, {
         action: actionParam,
+        unresolvedOnly: filter === 'failed',
         limit: 100,
       })
       .then((res) => {
         if (!isMounted) return;
         setRecords(res?.data || []);
+        if (typeof res?.remainingFailed === 'number')
+          setRemainingFailed(res.remainingFailed);
       })
       .catch(() => {
         if (!isMounted) return;
@@ -99,7 +126,72 @@ export function TriageDrawer({
     return () => {
       isMounted = false;
     };
-  }, [open, run, filter, projectId, jobId]);
+  }, [open, run?.id, filter, projectId, jobId, reloadKey]);
+
+  useEffect(() => {
+    if (!retryJobId || !run) return;
+    let cancelled = false;
+    let inFlight = false;
+    let finished = false;
+    const poll = async () => {
+      if (inFlight || finished) return;
+      inFlight = true;
+      try {
+        const result = await syncLogsApi.getRetryFailedStatus(
+          projectId,
+          jobId,
+          run.id,
+          retryJobId,
+        );
+        if (cancelled) return;
+        setRetryError(null);
+        setRemainingFailed(result.remainingFailed);
+        if (result.state === 'failed' || result.runStatus === 'failed') {
+          finished = true;
+          setRetryError(
+            result.runError ||
+              result.error ||
+              'The retry failed. Please review the run history.',
+          );
+          setRetryMessage(null);
+          setRetrying(false);
+          setRetryJobId(null);
+          setReloadKey((key) => key + 1);
+          onRefreshHistory?.();
+        } else if (result.state === 'completed') {
+          finished = true;
+          const synced = result.createdCount + result.updatedCount;
+          if (result.remainingFailed > 0) {
+            setRetryError(
+              `${synced} record(s) synced; ${result.remainingFailed} still failed. Review the latest retry run for details.`,
+            );
+            setRetryMessage(null);
+          } else {
+            setRetryMessage(
+              `${synced} record(s) synced. No failed records remain.`,
+            );
+          }
+          setRetrying(false);
+          setRetryJobId(null);
+          setReloadKey((key) => key + 1);
+          onRefreshHistory?.();
+        }
+      } catch (error) {
+        if (cancelled) return;
+        setRetryError(
+          `${readRetryError(error, 'Could not check retry progress.')} Checking again…`,
+        );
+      } finally {
+        inFlight = false;
+      }
+    };
+    void poll();
+    const timer = window.setInterval(() => void poll(), 2500);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [retryJobId, run?.id, projectId, jobId, onRefreshHistory]);
 
   const handleAction = async (action: RecordFixAction) => {
     if (action.destination === 'mapping') {
@@ -118,15 +210,24 @@ export function TriageDrawer({
   };
 
   const handleRetryRun = async () => {
+    if (retrying || !run || (remainingFailed ?? run.failedCount ?? 0) === 0)
+      return;
     setRetrying(true);
+    setRetryError(null);
+    setRetryMessage('Retrying failed records…');
     try {
-      await jobsApi.runJob(projectId, jobId);
-      toast.success('Retry sync started successfully');
-      onRefreshHistory?.();
-      onOpenChange(false);
-    } catch {
-      toast.error('Failed to trigger retry run. Please try again.');
-    } finally {
+      const result = await syncLogsApi.retryFailed(projectId, jobId, run.id);
+      if (result.bullJobId) {
+        setRetryJobId(result.bullJobId);
+      } else {
+        setRemainingFailed(0);
+        setRetryMessage('No failed records remain to retry.');
+        setReloadKey((key) => key + 1);
+        setRetrying(false);
+      }
+    } catch (error) {
+      setRetryError(readRetryError(error, 'Could not start the retry.'));
+      setRetryMessage(null);
       setRetrying(false);
     }
   };
@@ -154,17 +255,19 @@ export function TriageDrawer({
 
   if (!run) return null;
 
+  const currentFailed = remainingFailed ?? run.failedCount ?? 0;
   const totalIssues = (run.failedCount || 0) + (run.skippedCount || 0);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
+        showCloseButton={false}
         className="flex flex-col p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-[540px]"
       >
         {/* Drawer Header */}
         <SheetHeader className="shrink-0 border-b px-5 py-4">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2.5">
               <div
                 className={cn(
@@ -185,22 +288,44 @@ export function TriageDrawer({
               </div>
             </div>
 
-            {(run.failedCount ?? 0) > 0 && (
-              <Button
-                size="sm"
-                onClick={handleRetryRun}
-                disabled={retrying}
-                className="shrink-0 gap-1.5 text-xs"
-              >
-                {retrying ? (
-                  <RefreshCw className="size-3.5 animate-spin" />
-                ) : (
-                  <RotateCcw className="size-3.5" />
-                )}
-                Retry Failed
-              </Button>
-            )}
+            <div className="flex shrink-0 items-center gap-2">
+              {currentFailed > 0 && (
+                <Button
+                  size="sm"
+                  onClick={handleRetryRun}
+                  disabled={retrying}
+                  aria-label={`Retry ${currentFailed} failed records`}
+                  className="shrink-0 gap-1.5 text-xs"
+                >
+                  {retrying ? (
+                    <RefreshCw className="size-3.5 animate-spin" />
+                  ) : (
+                    <RotateCcw className="size-3.5" />
+                  )}
+                  {retrying ? 'Retrying…' : 'Retry Failed'}
+                </Button>
+              )}
+              <SheetClose asChild>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Close triage sidebar"
+                >
+                  <X className="size-4" />
+                </Button>
+              </SheetClose>
+            </div>
           </div>
+          {retryMessage && (
+            <p role="status" className="text-muted-foreground text-xs">
+              {retryMessage}
+            </p>
+          )}
+          {retryError && (
+            <p role="alert" className="text-destructive text-xs">
+              {retryError}
+            </p>
+          )}
         </SheetHeader>
 
         {/* Filter and Search Controls */}
@@ -215,7 +340,7 @@ export function TriageDrawer({
                 All ({totalIssues})
               </TabsTrigger>
               <TabsTrigger value="failed" className="h-5 px-2 text-[11px]">
-                Failed ({run.failedCount || 0})
+                Failed ({currentFailed})
               </TabsTrigger>
               <TabsTrigger value="skipped" className="h-5 px-2 text-[11px]">
                 Skipped ({run.skippedCount || 0})
@@ -252,13 +377,17 @@ export function TriageDrawer({
               <p className="text-muted-foreground text-[11px]">
                 {searchQuery
                   ? 'No records match your search filter.'
-                  : 'All processed records succeeded cleanly in this run.'}
+                  : filter === 'failed'
+                    ? 'No failed records remain for this run.'
+                    : filter === 'skipped'
+                      ? 'No skipped records in this run.'
+                      : 'No affected records in this run.'}
               </p>
             </div>
           ) : (
             <div className="space-y-2.5">
               {filteredRecords.map((rec) => {
-                const isFailed = rec.action === 'failed';
+                const isFailed = rec.action === 'failed' && !rec.resolved;
                 const diagnosis = analyzeRecordDiagnosis(rec);
 
                 return (
@@ -289,6 +418,7 @@ export function TriageDrawer({
 
                       <Badge
                         variant="secondary"
+                        tone={isFailed ? 'danger' : 'warning'}
                         className={cn(
                           'shrink-0 px-2 py-0 text-[10px] font-semibold capitalize',
                           isFailed
@@ -296,7 +426,7 @@ export function TriageDrawer({
                             : 'bg-warning/10 text-warning border-warning/20 border',
                         )}
                       >
-                        {rec.action}
+                        {rec.resolved ? 'Recovered' : rec.action}
                       </Badge>
                     </div>
 

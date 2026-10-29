@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import React, { useState } from 'react';
 
-import { Badge } from '@/components/ui/badge';
+import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -82,23 +82,7 @@ export default function BillingActions({
             <h1 className="text-lg font-bold tracking-tight text-foreground">
               {organisation.name}
             </h1>
-            <Badge
-              variant="secondary"
-              className={cn(
-                'gap-1 rounded-full px-2 py-0 text-[11px] font-medium capitalize',
-                organisation.status === 'active' && 'bg-success/15 text-success',
-              )}
-            >
-              <span
-                className={cn(
-                  'size-1.5 rounded-full',
-                  organisation.status === 'active'
-                    ? 'bg-success'
-                    : 'bg-muted-foreground',
-                )}
-              />
-              {organisation.status}
-            </Badge>
+            <StatusBadge status={organisation.status} label={organisation.status} tone={organisation.status === 'pending' ? 'info' : undefined} className="capitalize" />
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
             {organisation.slug} &middot; {providerLabel} &middot;{' '}

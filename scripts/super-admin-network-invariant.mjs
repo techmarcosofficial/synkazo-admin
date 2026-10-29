@@ -1024,6 +1024,59 @@ try {
       throw new Error(
         `Scoped page content missing at ${route}: ${expectedContent}`,
       );
+    const badgeAudit = (
+      await cdp.send('Runtime.evaluate', {
+        expression: `(() => {
+          const probe = document.createElement('span');
+          probe.className = 'text-foreground';
+          document.body.append(probe);
+          const neutral = getComputedStyle(probe).color;
+          probe.remove();
+          const canvas = document.createElement('canvas');
+          canvas.width = canvas.height = 1;
+          const ctx = canvas.getContext('2d', { willReadFrequently: true });
+          const rgba = (color) => {
+            ctx.clearRect(0, 0, 1, 1);
+            ctx.fillStyle = color;
+            ctx.fillRect(0, 0, 1, 1);
+            return [...ctx.getImageData(0, 0, 1, 1).data];
+          };
+          const badges = [...document.querySelectorAll('[data-slot="badge"]')];
+          const failures = [];
+          for (const badge of badges) {
+            const style = getComputedStyle(badge);
+            const localProbe = document.createElement('span');
+            localProbe.className = 'text-foreground';
+            badge.parentElement.append(localProbe);
+            const labelColor = getComputedStyle(localProbe).color;
+            localProbe.remove();
+            const dots = badge.querySelectorAll('[data-slot="badge-dot"]');
+            const errors = [];
+            if (badge.dataset.appearance !== 'tinted') errors.push('missing platform appearance');
+            if ([style.borderTopWidth, style.borderBottomWidth, style.borderLeftWidth, style.borderRightWidth].some(w => w !== '0px')) errors.push('visible border');
+            if (style.color !== labelColor) errors.push('accented label text');
+            const labels = [...badge.querySelectorAll('*')].filter(el => [...el.childNodes].some(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim()));
+            if (labels.some(el => getComputedStyle(el).color !== labelColor)) errors.push('accented nested label text');
+            if (dots.length !== 1) errors.push('expected one dot, got ' + dots.length);
+            if (dots.length === 1) {
+              const bg = rgba(style.backgroundColor);
+              const dot = rgba(getComputedStyle(dots[0]).backgroundColor);
+              if (bg[3] < 20 || bg[3] > 42) errors.push('background is not a subtle tint');
+              if (bg.slice(0, 3).some((c, i) => Math.abs(c - dot[i]) > 6)) errors.push('background does not match dot');
+            }
+            if (errors.length) failures.push({ label: badge.textContent.trim(), errors });
+          }
+          for (const control of document.querySelectorAll('[data-badge-control="tinted"]')) {
+            const style = getComputedStyle(control);
+            if (style.borderTopWidth !== '0px' || style.color !== neutral) failures.push({ label: control.textContent.trim(), errors: ['inconsistent status control'] });
+          }
+          return { count: badges.length, failures };
+        })()`,
+        returnByValue: true,
+      })
+    ).result.value;
+    if (!badgeAudit || badgeAudit.failures.length)
+      throw new Error(`Badge appearance failed at ${route}: ${JSON.stringify(badgeAudit)}`);
     if (route.includes('tab=run-history')) {
       const repeatedProgress = (
         await cdp.send('Runtime.evaluate', {
@@ -1786,26 +1839,25 @@ try {
       route ===
       '/super-admin/organisations/org-1/projects/project-1?tab=settings'
     ) {
-      const settingsCards = (
+      const settingsNavigation = (
         await cdp.send('Runtime.evaluate', {
           expression: `(() => {
             const region = document.querySelector('main [aria-label="Project settings"]');
-            const cards = Array.from(region?.children ?? []).map((section) => section.querySelector('[data-slot="card"]'));
-            const buttons = cards.map((card) => card?.querySelector('[data-slot="collapsible-trigger"]'));
-            return cards.length === 4 && cards.every((card) => card?.dataset.layoutSurface === 'outer') && buttons.every((button) => button?.getBoundingClientRect().width > 900);
+            const links = [...region?.querySelectorAll('aside nav a') ?? []];
+            const labels = links.map(link => link.textContent.trim());
+            const content = region?.querySelector('[aria-label="Project settings content"]');
+            return ['General', 'Bulk Scheduler', 'Associations', 'Environments'].every(label => labels.includes(label))
+              && links.some(link => link.getAttribute('aria-current') === 'page' && link.textContent.trim() === 'General')
+              && !!content?.querySelector('#sa-project-name')
+              && !!content?.querySelector('#sa-project-description');
           })()`,
           returnByValue: true,
         })
       ).result.value;
-      if (!settingsCards)
+      if (!settingsNavigation)
         throw new Error(
-          'Project Settings does not have four separate full-width cards',
+          'Project Settings is missing section navigation or its general settings form',
         );
-      await cdp.send('Runtime.evaluate', {
-        expression:
-          'document.querySelector("main [aria-label=\\"Project settings\\"] [data-slot=\\"collapsible-trigger\\"]")?.click()',
-      });
-      await wait(100);
     }
     if (
       process.env.SCREENSHOT_DIR &&

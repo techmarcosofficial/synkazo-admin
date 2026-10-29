@@ -307,7 +307,7 @@ export default function JobDetailsStep({
           />
         )}
 
-        <div className="grid grid-cols-1 items-end gap-3 md:grid-cols-[1fr_auto_1fr]">
+        <div className="grid grid-cols-1 items-start gap-3 md:grid-cols-[1fr_auto_1fr]">
           <div>
             <ObjectSelector
               label="Source"
@@ -331,25 +331,27 @@ export default function JobDetailsStep({
             />
           </div>
 
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            disabled={!allowPlatformSwap}
-            onClick={() =>
-              setConfig((c) => ({
-                ...c,
-                sourcePlatform: c.destPlatform,
-                destPlatform: c.sourcePlatform,
-                sourceObject: '',
-                destObject: '',
-                name: '',
-              }))
-            }
-            title={allowPlatformSwap ? 'Swap source and destination' : 'The project platform direction is fixed'}
-          >
-            <ArrowLeftRight />
-          </Button>
+          <div className="flex items-center justify-center md:pt-9">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              disabled={!allowPlatformSwap}
+              onClick={() =>
+                setConfig((c) => ({
+                  ...c,
+                  sourcePlatform: c.destPlatform,
+                  destPlatform: c.sourcePlatform,
+                  sourceObject: '',
+                  destObject: '',
+                  name: '',
+                }))
+              }
+              title={allowPlatformSwap ? 'Swap source and destination' : 'The project platform direction is fixed'}
+            >
+              <ArrowLeftRight />
+            </Button>
+          </div>
 
           <div>
             <ObjectSelector

@@ -202,10 +202,15 @@ afterEach(() => {
 });
 
 describe('OrganisationBillingPage', () => {
-  it('renders plan + subscription overview and the invoice row', async () => {
+  it('renders plan + subscription overview', async () => {
     renderPage();
     expect(await screen.findByText('Subscription')).toBeInTheDocument();
     expect((await screen.findAllByText('Pro')).length).toBeGreaterThan(0);
+    expect(await screen.findByText('Upcoming billing & Payment Method')).toBeInTheDocument();
+  });
+
+  it('renders Invoices & Payments tab with invoice rows and actions', async () => {
+    renderPage('org-1', 'invoices');
     expect(await screen.findByText('INV-000-1')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /open/i })).toHaveAttribute(
       'href',
@@ -231,7 +236,7 @@ describe('OrganisationBillingPage', () => {
 
   it('shows an empty state when the org has no invoices', async () => {
     mocks.invoices = { data: [], total: 0, page: 1, limit: 10 };
-    renderPage();
+    renderPage('org-1', 'invoices');
     expect(await screen.findByText('No invoices yet')).toBeInTheDocument();
   });
 

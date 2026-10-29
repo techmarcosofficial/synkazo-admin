@@ -316,6 +316,7 @@ export default function ExcludeConditionsEditor({
                     <div className="shrink-0">
                       <Badge
                         variant="outline"
+                    tone={hasRowError ? 'danger' : 'muted'}
                         className={cn(
                           'border-border/70 bg-background h-9 min-w-20 justify-center rounded-xl border px-2 text-[10px] font-semibold shadow-xs',
                           hasRowError

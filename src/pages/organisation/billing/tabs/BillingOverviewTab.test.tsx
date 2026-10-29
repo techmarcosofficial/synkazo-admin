@@ -61,35 +61,43 @@ const mocks = vi.hoisted(() => ({
     },
   ],
   history: {
+    total: 1,
+    page: 1,
+    pageSize: 10,
     items: [
       {
-        id: 'h-1',
-        paymentId: 'pi-1',
-        eventType: 'payment_succeeded',
-        createdAt: '2026-09-15T10:00:00Z',
-        amount: 4900,
+        id: 'ev-1',
+        eventType: 'subscription.updated',
+        description: 'Monthly subscription renewal',
+        createdAt: '2026-09-01T00:00:00.000Z',
+        amount: 2900,
         currency: 'usd',
         orderStatus: 'paid',
-        description: 'Monthly subscription renewal',
       },
     ],
-    total: 1,
   },
   invoices: {
+    total: 1,
+    page: 1,
+    pageSize: 10,
     items: [
       {
-        id: 'inv-1',
+        id: 'in_123',
         status: 'paid',
-        totalAmount: 4900,
+        totalAmount: 2900,
         currency: 'usd',
-        paidAt: '2026-09-15T10:00:00Z',
-        periodStart: '2026-09-01T00:00:00Z',
-        periodEnd: '2026-10-01T00:00:00Z',
-        receiptUrl: 'https://stripe.com/receipt/inv-1',
+        periodStart: '2026-09-01T00:00:00.000Z',
+        periodEnd: '2026-10-01T00:00:00.000Z',
+        paidAt: '2026-09-01T00:00:00.000Z',
+        receiptUrl: 'https://pay.stripe.com/receipts/in_123',
       },
     ],
-    total: 1,
   },
+}));
+
+vi.mock('@/lib/stripe', () => ({
+  isStripeConfigured: true,
+  stripePromise: Promise.resolve(null),
 }));
 
 vi.mock('@/queries/useBilling', () => ({
@@ -102,6 +110,8 @@ vi.mock('@/queries/useBilling', () => ({
   useUsageQuery: () => ({
     data: mocks.usage,
     isLoading: false,
+    isError: false,
+    refetch: vi.fn(),
   }),
   usePlansQuery: () => ({
     data: [
@@ -110,13 +120,17 @@ vi.mock('@/queries/useBilling', () => ({
         name: 'Pro',
         prices: [
           {
-            billingInterval: 'month',
-            amount: 4900,
+            id: 'price-pro-month',
+            amount: 2900,
             currency: 'usd',
+            billingInterval: 'month',
           },
         ],
       },
     ],
+    isLoading: false,
+    isError: false,
+    refetch: vi.fn(),
   }),
   useSubscriptionQuery: () => ({
     data: mocks.subscription,
@@ -160,29 +174,45 @@ vi.mock('@/queries/useBilling', () => ({
     mutateAsync: vi.fn(),
     isPending: false,
   }),
+  useSetDefaultPaymentMethodMutation: () => ({
+    mutate: vi.fn(),
+    isPending: false,
+  }),
+  useRemovePaymentMethodMutation: () => ({
+    mutate: vi.fn(),
+    isPending: false,
+  }),
+  useAddPaymentMethodMutation: () => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+  }),
 }));
 
 afterEach(cleanup);
 
 describe('BillingOverviewTab', () => {
-  it('shows the subscription ATM card, limits, payment method, upcoming billing, and unified history', () => {
+  it('renders Overview section with subscription ATM card, limits, payment method, upcoming billing, and sub-sidebar', () => {
     render(
-      <MemoryRouter>
+      <MemoryRouter initialEntries={['/organization/billing']}>
         <BillingOverviewTab />
       </MemoryRouter>,
     );
+
+    // Sub-sidebar Navigation items exist
+    expect(screen.getAllByText('Overview').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Manage cards').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Invoices & Payments').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Billing Activity').length).toBeGreaterThan(0);
 
     // Plan ATM Card
     expect(screen.getByText('Pro')).toBeInTheDocument();
     expect(screen.getByText('active')).toBeInTheDocument();
     expect(screen.getByText('Change Plan')).toBeInTheDocument();
 
-    // Payment Method on File
+    // Upcoming Billing & Payment Method Consolidated Card
     expect(screen.getByText('Payment Method on File')).toBeInTheDocument();
     expect(screen.getByText('•••• 4242')).toBeInTheDocument();
     expect(screen.getByText('Expires 12/2028')).toBeInTheDocument();
-
-    // Upcoming Billing
     expect(screen.getByText('Upcoming billing')).toBeInTheDocument();
 
     // Limits & Features
@@ -192,14 +222,40 @@ describe('BillingOverviewTab', () => {
     expect(
       screen.getByText('Monthly record limit reached'),
     ).toBeInTheDocument();
+  });
 
-    // Unified Billing & Payment History (Table Card with both individual sections)
-    expect(screen.getByText('Billing & Payment History')).toBeInTheDocument();
-    expect(screen.getByText('All payment history')).toBeInTheDocument();
+  it('renders Manage Cards section with direct cards list and top corner add button', () => {
+    render(
+      <MemoryRouter initialEntries={['/organization/billing?section=cards']}>
+        <BillingOverviewTab />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('Payment methods')).toBeInTheDocument();
+    expect(screen.getByText('Add card')).toBeInTheDocument();
+    expect(screen.getByText(/4242/)).toBeInTheDocument();
+  });
+
+  it('renders Invoices & Payment History section with both dedicated tables', () => {
+    render(
+      <MemoryRouter initialEntries={['/organization/billing?section=invoices']}>
+        <BillingOverviewTab />
+      </MemoryRouter>,
+    );
+
     expect(screen.getByText('All invoices')).toBeInTheDocument();
+    expect(screen.getByText('All payment history')).toBeInTheDocument();
+    expect(screen.getByText('in_123'.slice(0, 8))).toBeInTheDocument();
+  });
 
-    // Dedicated Billing Activity Tree Card in Right Column
-    expect(screen.getByText('Billing Activity')).toBeInTheDocument();
+  it('renders Billing Activity section with chronological events', () => {
+    render(
+      <MemoryRouter initialEntries={['/organization/billing?section=activity']}>
+        <BillingOverviewTab />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getAllByText('Billing Activity').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Monthly subscription renewal').length).toBeGreaterThanOrEqual(1);
   });
 });

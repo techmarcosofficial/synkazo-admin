@@ -16,6 +16,7 @@ import { Link } from 'react-router-dom';
 import HeadingPair from '@/components/shared/HeadingPair';
 import { headingTitleStyles } from '@/components/shared/headingStyles';
 import { Badge } from '@/components/ui/badge';
+import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -71,15 +72,7 @@ function EventRow({ event }: { event: Alert }) {
             >
               {event.summary.replace(/_/g, ' ')}
             </span>
-            <Badge
-              size="xs"
-              variant={
-                event.severity === 'critical' ? 'destructive' : 'secondary'
-              }
-              className={`capitalize ${event.severity === 'warning' ? 'bg-warning/10 text-warning' : ''}`}
-            >
-              {event.severity}
-            </Badge>
+            <StatusBadge status={event.severity} label={event.severity} size="xs" className="capitalize" />
           </div>
           <div className="text-muted-foreground mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs">
             <span

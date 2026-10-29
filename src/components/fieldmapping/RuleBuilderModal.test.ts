@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import type { Rule } from '@/lib/ruleEngine';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 import RuleBuilderModal, {
   buildRulePreviewSteps,
@@ -32,6 +33,33 @@ afterEach(() => {
 });
 
 describe('buildRulePreviewSteps', () => {
+  it('shows validation result and bypasses steps after a failure', () => {
+    const steps = buildRulePreviewSteps('abc', [
+      { type: 'min_length', value: '4' },
+      { type: 'uppercase' },
+    ]);
+    expect(steps[0]).toMatchObject({
+      validation: false,
+      stopped: true,
+      output: 'abc',
+    });
+    expect(steps[1]).toMatchObject({ bypassed: true, output: 'abc' });
+    expect(
+      buildRulePreviewSteps('abcd', [
+        { type: 'min_length', value: '4' },
+        { type: 'uppercase' },
+      ])[0],
+    ).toMatchObject({ validation: true });
+  });
+
+  it('uses the source field type for Is String validation', () => {
+    expect(
+      buildRulePreviewSteps('42', [{ type: 'is_string' }], 'number')[0],
+    ).toMatchObject({ validation: false });
+    expect(
+      buildRulePreviewSteps('42', [{ type: 'is_string' }], 'string')[0],
+    ).toMatchObject({ validation: true });
+  });
   it('shows the output after each rule in pipeline order', () => {
     const rules: Rule[] = [
       { type: 'trim', enabled: true },
@@ -196,5 +224,74 @@ describe('RuleBuilderModal guidance', () => {
     ).not.toBeInTheDocument();
     expect(screen.queryByText('No rules added yet')).not.toBeInTheDocument();
     expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('blocks a blank replacement and highlights Replace with', () => {
+    const onSave = vi.fn();
+    render(
+      createElement(
+        TooltipProvider,
+        null,
+        createElement(RuleBuilderModal, {
+          ...baseProps,
+          initialRules: [{ type: 'replace', find: 'old', replacement: '' }],
+          onSave,
+        }),
+      ),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Apply rules' }));
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByText('"Replace with" is required')).toBeInTheDocument();
+    expect(
+      screen.getByText('Replace with').closest('label')?.querySelector('input'),
+    ).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('blocks a blank Map Values source even when another row is complete', () => {
+    const onSave = vi.fn();
+    render(
+      createElement(
+        TooltipProvider,
+        null,
+        createElement(RuleBuilderModal, {
+          ...baseProps,
+          initialRules: [
+            {
+              type: 'value_map',
+              map: { ready: 'open', '': '' },
+              fallback: 'other',
+            },
+          ],
+          onSave,
+        }),
+      ),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Apply rules' }));
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getAllByPlaceholderText('Source value')[1]).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    );
+  });
+
+  it('allows an empty Map Values destination when source and fallback are filled', () => {
+    const onSave = vi.fn();
+    render(
+      createElement(
+        TooltipProvider,
+        null,
+        createElement(RuleBuilderModal, {
+          ...baseProps,
+          initialRules: [
+            { type: 'value_map', map: { pending: '' }, fallback: 'other' },
+          ],
+          onSave,
+        }),
+      ),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Apply rules' }));
+    expect(onSave).toHaveBeenCalledWith([
+      { type: 'value_map', map: { pending: '' }, fallback: 'other' },
+    ]);
   });
 });
