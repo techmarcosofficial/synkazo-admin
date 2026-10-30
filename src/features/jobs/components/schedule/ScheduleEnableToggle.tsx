@@ -25,6 +25,7 @@ interface ScheduleEnableToggleProps {
   /** Only meaningful with confirmPresentation="inline" — the Cancel button on
    *  the embedded confirmation closes the modal it's already inside. */
   onCancelInline?: () => void;
+  disabled?: boolean;
 }
 
 /**
@@ -45,6 +46,7 @@ export default function ScheduleEnableToggle({
   onScheduleToggle,
   confirmPresentation = 'dialog',
   onCancelInline,
+  disabled = false,
 }: ScheduleEnableToggleProps) {
   const [showConfirm, setShowConfirm] = useState(false);
   const priorityQueueQuery = usePriorityQueueQuery(projectId);
@@ -69,7 +71,7 @@ export default function ScheduleEnableToggle({
 
   const mode = schedPaused || schedLimitPaused ? 'resume' : 'run';
 
-  if (confirmPresentation === 'inline' && !schedActive) {
+  if (confirmPresentation === 'inline' && !schedActive && !disabled) {
     return (
       <RunConfirmModal
         embedded
@@ -90,7 +92,7 @@ export default function ScheduleEnableToggle({
     <div className={cn('flex items-center gap-2.5', className)}>
       <label
         htmlFor={`schedule-switch-${jobId}`}
-        className="text-xs font-medium text-foreground cursor-pointer select-none flex items-center gap-1.5"
+        className="text-foreground flex cursor-pointer items-center gap-1.5 text-xs font-medium select-none"
       >
         {scheduleToggling && <Spinner className="size-3" />}
         <span>
@@ -106,8 +108,9 @@ export default function ScheduleEnableToggle({
       <Switch
         id={`schedule-switch-${jobId}`}
         checked={Boolean(schedActive)}
-        disabled={scheduleToggling}
+        disabled={disabled || scheduleToggling}
         onCheckedChange={(checked) => {
+          if (disabled) return;
           if (!checked) {
             onScheduleToggle();
           } else {

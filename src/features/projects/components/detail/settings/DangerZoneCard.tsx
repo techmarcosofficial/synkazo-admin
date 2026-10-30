@@ -164,10 +164,7 @@ function ArchiveDialog({
           >
             Cancel
           </Button>
-          <Button
-            onClick={performArchive}
-            disabled={!confirmed || archiving}
-          >
+          <Button onClick={performArchive} disabled={!confirmed || archiving}>
             {archiving ? <RefreshCw className="animate-spin" /> : <Archive />}
             {archiving ? 'Archiving…' : 'Archive project'}
           </Button>
@@ -184,8 +181,8 @@ export default function DangerZoneCard({
   project: ProjectExt;
   onDeleted: () => void;
 }) {
-  const { hasRole } = useSynkazoAuth();
-  const canManage = hasRole('org_admin');
+  const { hasPermission } = useSynkazoAuth();
+  const canDeleteProject = hasPermission('project.delete');
   const [dialogOpen, setDialogOpen] = useState(false);
   const {
     impact,
@@ -222,8 +219,8 @@ export default function DangerZoneCard({
           </CardDescription>
         </div>
         <div className="flex flex-wrap gap-2 sm:justify-end">
-          {!canManage && (
-            <Badge variant="secondary">Admin access required</Badge>
+          {!canDeleteProject && (
+            <Badge variant="secondary">Delete permission required</Badge>
           )}
           <Button
             variant="outline"
@@ -325,18 +322,20 @@ export default function DangerZoneCard({
               </div>
               <ActionTooltip
                 tooltip={
-                  !canManage
-                    ? 'Only Organization Admins can archive integration projects. Contact your administrator.'
+                  !canDeleteProject
+                    ? "You don't have permission to archive projects. Contact your administrator."
                     : !impact.canArchive
                       ? 'Active syncs or queued jobs are currently running. Wait for them to finish before archiving.'
                       : undefined
                 }
-                disabled={!canManage || !impact.canArchive || loading}
+                disabled={!canDeleteProject || !impact.canArchive || loading}
               >
                 <Button
                   variant="destructive"
-                  onClick={() => canManage && impact.canArchive && setDialogOpen(true)}
-                  disabled={!canManage || !impact.canArchive || loading}
+                  onClick={() =>
+                    canDeleteProject && impact.canArchive && setDialogOpen(true)
+                  }
+                  disabled={!canDeleteProject || !impact.canArchive || loading}
                 >
                   <Archive /> Review and archive
                 </Button>

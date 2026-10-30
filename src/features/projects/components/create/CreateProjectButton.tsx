@@ -15,25 +15,23 @@ interface CreateProjectButtonProps {
   onCreated?: (project: ProjectExtended) => void;
 }
 
-// Renders the project creation trigger. Enforces both organization-level role
-// permissions (must be org_admin) and plan-level entitlements, providing
-// clear tooltip explanations rather than silent 403 errors.
+// Renders the project creation trigger and explains permission or plan blockers.
 export default function CreateProjectButton({
   label = 'New Project',
   variant,
   onCreated,
 }: CreateProjectButtonProps) {
   const open = useCreateProjectStore((s) => s.open);
-  const { hasRole } = useSynkazoAuth();
-  const canManage = hasRole('org_admin');
+  const { hasPermission } = useSynkazoAuth();
+  const canCreateProject = hasPermission('project.create');
   const { canAddProject } = useEntitlements();
   const { prompt, dialog } = usePlanUpgradePrompt();
 
-  const isBlockedByRole = !canManage;
-  const isBlockedByPlan = canManage && !canAddProject;
+  const isBlockedByPermission = !canCreateProject;
+  const isBlockedByPlan = canCreateProject && !canAddProject;
 
-  const tooltipExplanation = isBlockedByRole
-    ? 'Only Organization Admins can create new projects. Contact your administrator for access.'
+  const tooltipExplanation = isBlockedByPermission
+    ? "You don't have permission to create projects. Contact your administrator."
     : isBlockedByPlan
       ? "You've reached your plan's project limit. Upgrade to add more."
       : undefined;
@@ -42,14 +40,14 @@ export default function CreateProjectButton({
     <>
       <ActionTooltip
         tooltip={tooltipExplanation}
-        disabled={isBlockedByRole || isBlockedByPlan}
+        disabled={isBlockedByPermission || isBlockedByPlan}
       >
         <Button
           size="sm"
           variant={variant}
-          disabled={isBlockedByRole}
+          disabled={isBlockedByPermission}
           onClick={() => {
-            if (isBlockedByRole) return;
+            if (isBlockedByPermission) return;
             if (isBlockedByPlan) {
               prompt(
                 "You've reached the number of projects your plan allows. Upgrade to add more.",
@@ -59,7 +57,7 @@ export default function CreateProjectButton({
             open({ onCreated });
           }}
         >
-          {canManage && canAddProject ? (
+          {canCreateProject && canAddProject ? (
             <Plus className="mr-2 h-4 w-4" />
           ) : (
             <Lock className="mr-2 h-4 w-4" />

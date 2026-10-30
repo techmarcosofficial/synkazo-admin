@@ -12,8 +12,8 @@ export default function JobDangerZoneCard({
   onDelete: () => Promise<void>;
 }) {
   const { confirm } = useConfirmDialog();
-  const { hasRole } = useSynkazoAuth();
-  const canManage = hasRole('org_admin');
+  const { hasPermission } = useSynkazoAuth();
+  const canDeleteJob = hasPermission('job.delete');
 
   return (
     <section
@@ -37,8 +37,8 @@ export default function JobDangerZoneCard({
         </p>
         <ActionTooltip
           tooltip={
-            !canManage
-              ? 'Organization Admin role required to delete a sync job.'
+            !canDeleteJob
+              ? "You don't have permission to delete sync flows. Contact your administrator."
               : undefined
           }
         >
@@ -46,9 +46,9 @@ export default function JobDangerZoneCard({
             variant="outline"
             size="sm"
             className="text-destructive hover:bg-destructive/10"
-            disabled={!canManage}
+            disabled={!canDeleteJob}
             onClick={() =>
-              canManage &&
+              canDeleteJob &&
               confirm({
                 variant: 'danger',
                 title: 'Delete this job?',

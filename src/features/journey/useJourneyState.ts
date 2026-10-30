@@ -44,7 +44,7 @@ export interface UseJourneyStateResult {
 export function useJourneyState(
   options: UseJourneyStateOptions = {},
 ): UseJourneyStateResult {
-  const { currentUser, hasRole } = useSynkazoAuth();
+  const { currentUser, hasRole, hasPermission } = useSynkazoAuth();
 
   // If callers pass existing query data, use that. Otherwise, load from query hooks.
   const projectsQuery = useProjectsQuery();
@@ -129,6 +129,7 @@ export function useJourneyState(
     return projectJobs[0] ?? null;
   }, [options.targetJobId, targetProject, jobs]);
 
+  const canCreateJob = hasPermission('job.create');
   const bothConnectionsReady = useMemo(() => {
     if (!targetProject) return false;
     const projectConns = connections.filter(
@@ -138,8 +139,8 @@ export function useJourneyState(
   }, [targetProject, connections]);
 
   const activeDraft = useMemo(
-    () => resolveActiveDraft(projects, options.targetProjectId, userRole),
-    [projects, options.targetProjectId, userRole],
+    () => resolveActiveDraft(projects, options.targetProjectId, canCreateJob),
+    [projects, options.targetProjectId, canCreateJob],
   );
 
   return {

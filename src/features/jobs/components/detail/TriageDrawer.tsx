@@ -30,6 +30,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { ExtSyncRun } from '@/features/jobs/hooks';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { cn } from '@/lib/utils';
 import type { SyncLogRecord } from '@/types';
 
@@ -66,6 +67,8 @@ export function TriageDrawer({
   run,
   onRefreshHistory,
 }: TriageDrawerProps) {
+  const { hasPermission } = useSynkazoAuth();
+  const canRunJob = hasPermission('job.run');
   const navigate = useNavigate();
   const [filter, setFilter] = useState<'all' | 'failed' | 'skipped'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -210,7 +213,12 @@ export function TriageDrawer({
   };
 
   const handleRetryRun = async () => {
-    if (retrying || !run || (remainingFailed ?? run.failedCount ?? 0) === 0)
+    if (
+      !canRunJob ||
+      retrying ||
+      !run ||
+      (remainingFailed ?? run.failedCount ?? 0) === 0
+    )
       return;
     setRetrying(true);
     setRetryError(null);
@@ -289,7 +297,7 @@ export function TriageDrawer({
             </div>
 
             <div className="flex shrink-0 items-center gap-2">
-              {currentFailed > 0 && (
+              {currentFailed > 0 && canRunJob && (
                 <Button
                   size="sm"
                   onClick={handleRetryRun}

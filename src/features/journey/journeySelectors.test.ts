@@ -271,7 +271,7 @@ describe('journeySelectors', () => {
       expect(resolution?.isBlocked).toBe(false);
     });
 
-    it('marks active draft as blocked when user is editor', () => {
+    it('marks active draft as blocked when job creation permission is missing', () => {
       sessionStorage.setItem(
         'sb_draft_p1',
         JSON.stringify({
@@ -284,11 +284,30 @@ describe('journeySelectors', () => {
       const resolution = resolveActiveDraft(
         [mockProject({ id: 'p1' })],
         undefined,
-        'editor',
+        false,
       );
       expect(resolution).not.toBeNull();
       expect(resolution?.isBlocked).toBe(true);
-      expect(resolution?.blockerReason).toMatch(/Only Organization Admins/);
+      expect(resolution?.blockerReason).toMatch(/permission to resume/);
+    });
+
+    it('allows an editor with job creation permission to resume a draft', () => {
+      sessionStorage.setItem(
+        'sb_draft_p1',
+        JSON.stringify({
+          jobId: 'draft-1',
+          step: 1,
+          config: { name: 'Lead Sync' },
+        }),
+      );
+
+      const resolution = resolveActiveDraft(
+        [mockProject({ id: 'p1' })],
+        undefined,
+        true,
+      );
+      expect(resolution?.isBlocked).toBe(false);
+      expect(resolution?.blockerReason).toBeUndefined();
     });
 
     it('prioritizes targetProjectId when multiple drafts exist', () => {

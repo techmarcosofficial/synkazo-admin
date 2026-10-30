@@ -6,7 +6,7 @@ import {
   type ReactNode,
 } from 'react';
 
-import { ROLE_HIERARCHY, ROLE_DEFAULTS } from './permissions';
+import { ROLE_HIERARCHY, userHasPermission } from './permissions';
 import { sseClient } from './sseClient';
 import { tokenStorage } from './tokenStorage';
 
@@ -61,11 +61,7 @@ export function SynkazoAuthProvider({ children }: { children: ReactNode }) {
   const hasPermission = (permission: Permission): boolean => {
     if (!currentUser) return false;
     const role = resolveRole(currentUser.role ?? 'editor');
-    if (role === 'super_admin') return true;
-    const roleDefaults: Permission[] = ROLE_DEFAULTS[role] ?? [];
-    const userPerms: Permission[] =
-      (currentUser.permissions as Permission[]) ?? [];
-    return roleDefaults.includes(permission) || userPerms.includes(permission);
+    return userHasPermission({ ...currentUser, role }, permission);
   };
 
   const login = async (
@@ -134,7 +130,9 @@ export function SynkazoAuthProvider({ children }: { children: ReactNode }) {
       currentUser &&
       (currentUser.id !== data.data.id ||
         currentUser.role !== data.data.role ||
-        currentUser.organisationId !== data.data.organisationId)
+        currentUser.organisationId !== data.data.organisationId ||
+        JSON.stringify(currentUser.permissions ?? null) !==
+          JSON.stringify(data.data.permissions ?? null))
     ) {
       queryClientInstance.clear();
     }

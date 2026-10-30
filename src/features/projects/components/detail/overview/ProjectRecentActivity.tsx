@@ -110,16 +110,17 @@ export default function ProjectRecentActivity({
               const createdAt = log.createdAt ? new Date(log.createdAt) : null;
               const hasValidDate =
                 createdAt && !Number.isNaN(createdAt.getTime());
-              const activityHref = log.jobId
-                ? `/projects/${projectId}/jobs/${log.jobId}?tab=run-history`
-                : `/projects/${projectId}?tab=activity`;
+              const activityHref =
+                log.jobId && job
+                  ? `/projects/${projectId}/jobs/${log.jobId}?tab=run-history`
+                  : `/projects/${projectId}?tab=activity`;
 
               return (
                 <ListRow key={log.id} asChild className="px-4 py-1.5">
                   <Link
                     to={activityHref}
                     state={
-                      log.jobId
+                      log.jobId && job
                         ? {
                             jobBackTo: `/projects/${projectId}?tab=overview`,
                             jobBackLabel: 'Back to Project Overview',

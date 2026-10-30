@@ -75,7 +75,7 @@ export function useEntitlements(): Entitlements {
   const { currentUser, hasRole } = useSynkazoAuth();
   const isExempt = hasRole('super_admin');
   const planQuery = usePlanQuery({ enabled: !!currentUser && !isExempt });
-
+  console.log('currentUser', currentUser);
   const limits = isExempt ? null : (planQuery.data?.limits ?? null);
   const open = isExempt || limits === null;
   // `over` is computed server-side as `count >= max`, matching EntitlementService's block

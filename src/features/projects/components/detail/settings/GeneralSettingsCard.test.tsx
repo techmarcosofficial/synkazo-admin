@@ -13,6 +13,10 @@ import { projectsApi } from '@/api/projects';
 import type { ProjectExt } from '@/features/projects/hooks';
 import { showToast } from '@/lib/toast';
 
+vi.mock('@/lib/synkazoAuth', () => ({
+  useSynkazoAuth: () => ({ hasPermission: () => true }),
+}));
+
 vi.mock('@/api/projects', () => ({
   projectsApi: {
     updateProject: vi.fn(),

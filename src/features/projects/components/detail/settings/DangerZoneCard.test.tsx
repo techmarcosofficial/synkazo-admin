@@ -17,12 +17,14 @@ const api = vi.hoisted(() => ({
   getArchiveImpact: vi.fn(),
   deleteProject: vi.fn(),
 }));
-const auth = vi.hoisted(() => ({ canManage: true }));
+const auth = vi.hoisted(() => ({ canDeleteProject: true }));
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 
 vi.mock('@/api/projects', () => ({ projectsApi: api }));
 vi.mock('@/lib/synkazoAuth', () => ({
-  useSynkazoAuth: () => ({ hasRole: () => auth.canManage }),
+  useSynkazoAuth: () => ({
+    hasPermission: () => auth.canDeleteProject,
+  }),
 }));
 vi.mock('@/lib/toast', () => ({ showToast: toast }));
 
@@ -54,7 +56,7 @@ const readyImpact: ProjectArchiveImpact = {
 };
 
 beforeEach(() => {
-  auth.canManage = true;
+  auth.canDeleteProject = true;
   api.getArchiveImpact.mockResolvedValue(readyImpact);
   api.deleteProject.mockResolvedValue(readyImpact);
 });
@@ -155,12 +157,12 @@ describe('DangerZoneCard', () => {
     expect(await screen.findByText('Ready to archive')).toBeInTheDocument();
   });
 
-  it('keeps the danger action read-only for editors', async () => {
-    auth.canManage = false;
+  it('keeps archive disabled when project.delete is not granted', async () => {
+    auth.canDeleteProject = false;
     renderCard();
 
     expect(
-      await screen.findByText('Admin access required'),
+      await screen.findByText('Delete permission required'),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Review and archive' }),

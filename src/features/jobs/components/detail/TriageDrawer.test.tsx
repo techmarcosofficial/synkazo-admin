@@ -27,6 +27,10 @@ vi.mock('@/api/syncLogs', () => ({
   },
 }));
 
+vi.mock('@/lib/synkazoAuth', () => ({
+  useSynkazoAuth: () => ({ hasPermission: () => true }),
+}));
+
 describe('TriageDrawer', () => {
   const baseRun: ExtSyncRun = {
     id: 'run-123',

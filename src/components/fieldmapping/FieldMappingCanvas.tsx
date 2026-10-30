@@ -1939,6 +1939,7 @@ export default function FieldMappingCanvas({
 
   const handleDismissAutoMapBanner = () => {
     setAutoMapBanner(null);
+    setAutoMappedSourceKeys(new Set());
   };
 
   // Auto-map on load waits for the field lists to stop growing before it runs.
@@ -3091,9 +3092,9 @@ export default function FieldMappingCanvas({
             )}
 
             {autoMapBanner && (
-              <div className="border-primary/20 bg-primary/10 flex flex-wrap items-center justify-between gap-3 border-b px-4 py-2.5 text-xs">
+              <div className="border-border/70 bg-muted/30 flex flex-wrap items-center justify-between gap-3 border-b px-4 py-2.5 text-xs">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="text-primary size-4 shrink-0" />
+                  <Sparkles className="text-success size-4 shrink-0" />
                   <span className="text-foreground font-semibold">
                     Auto-mapped {autoMapBanner.count} field
                     {autoMapBanner.count !== 1 ? 's' : ''}.
@@ -3108,7 +3109,7 @@ export default function FieldMappingCanvas({
                   <Button
                     variant="outline"
                     size="xs"
-                    className="border-primary/30 text-primary hover:bg-primary/20 h-7 gap-1.5 text-xs font-semibold"
+                    className="h-7 gap-1.5 text-xs font-semibold"
                     onClick={handleRollbackAutoMap}
                   >
                     <RotateCcw className="size-3.5" />
@@ -3183,7 +3184,7 @@ export default function FieldMappingCanvas({
                             className={cn(
                               'bg-card border-border/70 border-b transition-colors',
                               n.blocking
-                                ? 'bg-destructive/[0.04] dark:bg-destructive/[0.07]'
+                                ? 'bg-warning/[0.04] dark:bg-warning/[0.07]'
                                 : 'bg-warning/[0.035] dark:bg-warning/[0.06]',
                             )}
                           >
@@ -3407,6 +3408,22 @@ export default function FieldMappingCanvas({
                                     Dismiss
                                   </Button>
                                 )}
+                                {n.sourceField && n.destKey && (
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="icon-xs"
+                                    // className="text-muted-foreground hover:text-destructive shrink-0 border-destructive"
+                                    onClick={() => {
+                                      if (!n.sourceField || !n.destKey) return;
+                                      remove(n.sourceField, n.destKey);
+                                    }}
+                                    aria-label={`Remove mapping from ${n.name} to ${n.targetLabel}`}
+                                    title="Remove mapping"
+                                  >
+                                    <X />
+                                  </Button>
+                                )}
                               </div>
                             </TableCell>
                           </TableRow>
@@ -3503,9 +3520,11 @@ export default function FieldMappingCanvas({
                                 ? 'bg-destructive/[0.04] dark:bg-destructive/[0.07]'
                                 : 'bg-warning/[0.035] dark:bg-warning/[0.06]'),
                             isJustAdded &&
+                              !isAutoMapped &&
                               'ring-primary/40 bg-primary/10 shadow-xs ring-2',
                             isAutoMapped &&
-                              'bg-primary/[0.025] dark:bg-primary/[0.04]',
+                              !hasAttentionIssue &&
+                              'bg-muted/[0.18]',
                           )}
                         >
                           {/* Column 1: Source Field (with Direction Arrow pointing to Destination) */}
@@ -3556,9 +3575,9 @@ export default function FieldMappingCanvas({
                                         <Badge
                                           variant="secondary"
                                           size="xs"
-                                          className="bg-primary/10 text-primary gap-1 border-0 font-medium"
+                                          className="bg-success/10 text-success gap-1 border-0 font-medium"
                                         >
-                                          <Sparkles className="text-primary size-2.5 shrink-0" />
+                                          <Sparkles className="text-success size-2.5 shrink-0" />
                                           <span>Auto-mapped</span>
                                         </Badge>
                                       ) : isNewlyAdded ? (

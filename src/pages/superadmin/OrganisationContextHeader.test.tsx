@@ -44,6 +44,13 @@ const fixtures = vi.hoisted(() => ({
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
+vi.mock('@/lib/synkazoAuth', () => ({
+  useSynkazoAuth: () => ({
+    hasPermission: () => true,
+    hasRole: () => true,
+  }),
+}));
+
 vi.mock('@/queries/useSuperAdmin', () => ({
   useUpdateSuperAdminProjectMutation: (
     organisationId: string,
