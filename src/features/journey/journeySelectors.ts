@@ -81,7 +81,7 @@ export interface ActiveDraftResolution {
 export function resolveActiveDraft(
   projects: Project[] = [],
   targetProjectId?: string,
-  userRole?: string,
+  canCreateJob = true,
 ): ActiveDraftResolution | null {
   if (typeof window === 'undefined') return null;
 
@@ -112,7 +112,9 @@ export function resolveActiveDraft(
 
     let stepName = 'Job Details';
     if (draft.step === 1) {
-      stepName = draft.config?.sourceObject ? 'Object & Status' : 'Field Mapping';
+      stepName = draft.config?.sourceObject
+        ? 'Object & Status'
+        : 'Field Mapping';
     } else if (draft.step === 2) {
       stepName = 'Field Mapping';
     } else if (draft.step === 3) {
@@ -128,8 +130,6 @@ export function resolveActiveDraft(
         ? `${draft.config.sourceObject} → ${draft.config.destObject}`
         : 'Sync Flow Draft');
 
-    const isEditor = userRole === 'editor';
-
     return {
       projectId: pid,
       projectName: project?.name,
@@ -138,9 +138,9 @@ export function resolveActiveDraft(
       stepLabel,
       summaryText: `${flowTitle} (${stepLabel})`,
       returnUrl: `/projects/${pid}?tab=sync-rules&create=true`,
-      isBlocked: isEditor,
-      blockerReason: isEditor
-        ? 'Only Organization Admins can resume and save sync flows.'
+      isBlocked: !canCreateJob,
+      blockerReason: !canCreateJob
+        ? "You don't have permission to resume and save sync flows."
         : undefined,
     };
   }

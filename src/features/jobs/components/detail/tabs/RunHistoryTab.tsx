@@ -70,6 +70,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import type { ExtSyncRun } from '@/features/jobs/hooks';
 import { cn } from '@/lib/utils';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { useRunLogsQuery } from '@/queries/useJobs';
 import type { SyncLogRecord } from '@/types';
 
@@ -633,6 +634,8 @@ function RunLogRow({
   onRefresh?: () => void | Promise<void>;
   initiallyExpanded?: boolean;
 }) {
+  const { hasPermission } = useSynkazoAuth();
+  const canRunJob = hasPermission('job.run');
   const [expanded, setExpanded] = useState(initiallyExpanded);
   const [pages, setPages] = useState<SyncPageLog[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
@@ -810,7 +813,7 @@ function RunLogRow({
             </div>
           </CollapsibleTrigger>
 
-          {run.status === 'running' && (
+          {run.status === 'running' && canRunJob && (
             <div className="flex items-center pr-3">
               <Separator orientation="vertical" className="mr-3 h-7" />
               <Button

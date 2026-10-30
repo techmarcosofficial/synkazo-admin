@@ -45,6 +45,50 @@ export interface UpdateQueueSchedulePayload {
   timezone: string;
 }
 
+export function sanitizeQueueSchedulePayload(
+  payload: UpdateQueueSchedulePayload,
+): UpdateQueueSchedulePayload {
+  const base: UpdateQueueSchedulePayload = {
+    scheduleMode: payload.scheduleMode,
+    timezone: payload.timezone,
+  };
+  switch (payload.scheduleMode) {
+    case 'interval':
+      return {
+        ...base,
+        intervalMinutes: payload.intervalMinutes,
+      };
+    case 'daily_time':
+      return {
+        ...base,
+        scheduleTimes: payload.scheduleTimes,
+      };
+    case 'day_specific':
+      return {
+        ...base,
+        scheduleTimes: payload.scheduleTimes,
+        scheduleDays: payload.scheduleDays,
+      };
+    case 'one_time':
+      return {
+        ...base,
+        ...(payload.oneTimeAt?.trim()
+          ? { oneTimeAt: payload.oneTimeAt.trim() }
+          : {}),
+      };
+    default:
+      return {
+        ...base,
+        scheduleTimes: payload.scheduleTimes,
+        intervalMinutes: payload.intervalMinutes,
+        scheduleDays: payload.scheduleDays,
+        ...(payload.oneTimeAt?.trim()
+          ? { oneTimeAt: payload.oneTimeAt.trim() }
+          : {}),
+      };
+  }
+}
+
 export interface AssociationQueueItemPayload {
   associationRuleId: string;
   position: number;
@@ -68,7 +112,9 @@ export const priorityQueueApi = {
     projectId: string,
     payload: UpdateQueueSchedulePayload,
   ): Promise<ProjectQueue> =>
-    apiClient.patch(`${p(projectId)}/schedule`, payload).then(d),
+    apiClient
+      .patch(`${p(projectId)}/schedule`, sanitizeQueueSchedulePayload(payload))
+      .then(d),
 
   addJob: (projectId: string, payload: AddQueueJobPayload): Promise<QueueJob> =>
     apiClient.post(`${p(projectId)}/jobs`, payload).then(d),

@@ -9,6 +9,7 @@ import AssociationRuleFormDialog, {
 
 import { associationsApi } from '@/api/associations';
 import type { AssociationRule } from '@/api/associations';
+import { useConfirmDialogStore } from '@/stores/useConfirmDialogStore';
 
 vi.mock('@/api/associations', async () => {
   const actual =
@@ -294,6 +295,120 @@ describe('AssociationRuleFormDialog', () => {
     expect(
       document.querySelector('[data-slot="sheet-content"]'),
     ).not.toBeInTheDocument();
+  });
+
+  it('saves edited name, cardinality, and condition values for the selected rule', async () => {
+    const onSuccess = vi.fn();
+    const onClose = vi.fn();
+    vi.mocked(associationsApi.updateRule).mockResolvedValue(rule);
+    const user = userEvent.setup();
+    render(
+      <AssociationRuleFormDialog
+        mode="edit"
+        projectId="project-1"
+        rule={{
+          ...rule,
+          cardinality: 'one_to_one',
+          conditions: [{ field: 'status', operator: 'equals', value: 'old' }],
+        }}
+        onSuccess={onSuccess}
+        onClose={onClose}
+      />,
+    );
+
+    expect(screen.getByDisplayValue('old')).toBeInTheDocument();
+    const nameInput = screen.getByDisplayValue('Contact to company');
+    await user.clear(nameInput);
+    await user.type(nameInput, 'Updated link');
+    await user.click(screen.getAllByRole('combobox')[0]);
+    await user.click(screen.getByRole('option', { name: 'One-to-Many' }));
+    await user.clear(screen.getByPlaceholderText('Comparison value'));
+    await user.type(screen.getByPlaceholderText('Comparison value'), 'ready');
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() =>
+      expect(associationsApi.updateRule).toHaveBeenCalledWith(
+        'project-1',
+        'rule-1',
+        expect.objectContaining({
+          name: 'Updated link',
+          cardinality: 'one_to_many',
+          conditions: [
+            expect.objectContaining({
+              field: 'status',
+              operator: 'equals',
+              value: 'ready',
+            }),
+          ],
+          conditionLogic: 'AND',
+        }),
+      ),
+    );
+    expect(onSuccess).toHaveBeenCalledOnce();
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('does not submit unsaved edits after the dialog is closed and reopened', async () => {
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    const view = render(
+      <AssociationRuleFormDialog
+        mode="edit"
+        projectId="project-1"
+        rule={rule}
+        onSuccess={vi.fn()}
+        onClose={onClose}
+      />,
+    );
+    const nameInput = screen.getByDisplayValue('Contact to company');
+    await user.clear(nameInput);
+    await user.type(nameInput, 'Unsaved link');
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+    expect(useConfirmDialogStore.getState().title).toBe('Discard changes?');
+    await useConfirmDialogStore.getState().handleConfirm();
+    expect(onClose).toHaveBeenCalledOnce();
+    expect(associationsApi.updateRule).not.toHaveBeenCalled();
+    view.unmount();
+    render(
+      <AssociationRuleFormDialog
+        mode="edit"
+        projectId="project-1"
+        rule={rule}
+        onSuccess={vi.fn()}
+        onClose={onClose}
+      />,
+    );
+    expect(screen.getByDisplayValue('Contact to company')).toBeInTheDocument();
+    expect(associationsApi.updateRule).not.toHaveBeenCalled();
+  });
+
+  it('keeps the modal open with the server error and blocks duplicate saves', async () => {
+    let rejectSave!: (error: unknown) => void;
+    vi.mocked(associationsApi.updateRule).mockReturnValue(
+      new Promise((_resolve, reject) => {
+        rejectSave = reject;
+      }),
+    );
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <AssociationRuleFormDialog
+        mode="edit"
+        projectId="project-1"
+        rule={rule}
+        onSuccess={vi.fn()}
+        onClose={onClose}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    expect(screen.getByRole('button', { name: /Saving…/ })).toBeDisabled();
+    expect(associationsApi.updateRule).toHaveBeenCalledTimes(1);
+    rejectSave({ response: { data: { message: ['Cardinality is invalid'] } } });
+    expect(
+      await screen.findByText('Cardinality is invalid'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it('skips association type settings for a Record Owner rule', async () => {

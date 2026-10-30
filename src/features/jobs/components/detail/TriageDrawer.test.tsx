@@ -1,4 +1,10 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TriageDrawer } from './TriageDrawer';
@@ -13,17 +19,18 @@ vi.mock('react-router-dom', () => ({
 }));
 
 const mockListRecords = vi.fn();
-const mockRunJob = vi.fn();
+const mockRetryFailed = vi.fn();
+const mockRetryStatus = vi.fn();
 vi.mock('@/api/syncLogs', () => ({
   syncLogsApi: {
     listRecords: (...args: unknown[]) => mockListRecords(...args),
+    retryFailed: (...args: unknown[]) => mockRetryFailed(...args),
+    getRetryFailedStatus: (...args: unknown[]) => mockRetryStatus(...args),
   },
 }));
 
-vi.mock('@/api/jobs', () => ({
-  jobsApi: {
-    runJob: (...args: unknown[]) => mockRunJob(...args),
-  },
+vi.mock('@/lib/synkazoAuth', () => ({
+  useSynkazoAuth: () => ({ hasPermission: () => true }),
 }));
 
 describe('TriageDrawer', () => {
@@ -60,8 +67,10 @@ describe('TriageDrawer', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockParams = {};
-    mockListRecords.mockResolvedValue({ data: mockRecords });
+    mockListRecords.mockResolvedValue({
+      data: mockRecords,
+      remainingFailed: 1,
+    });
   });
 
   afterEach(() => {
@@ -156,36 +165,118 @@ describe('TriageDrawer', () => {
     );
   });
 
-  it('navigates to super-admin route when in super admin context', async () => {
-    mockParams = { organisationId: 'org-123' };
-    mockListRecords.mockResolvedValue({
-      data: [
-        {
-          id: 'rec-auth',
-          action: 'failed',
-          sourceRecordId: 'SRC-AUTH-1',
-          failReason: 'auth_failed',
-          failReasonDetail: '401 Unauthorized token expired',
-        },
-      ],
+  it('retries the displayed run once and refreshes recovered records', async () => {
+    mockListRecords
+      .mockResolvedValueOnce({ data: mockRecords, remainingFailed: 1 })
+      .mockResolvedValue({
+        data: [{ ...mockRecords[0], resolved: true }, mockRecords[1]],
+        remainingFailed: 0,
+      });
+    let releaseRetry!: (value: {
+      bullJobId: string;
+      failedCount: number;
+    }) => void;
+    mockRetryFailed.mockReturnValue(
+      new Promise((resolve) => {
+        releaseRetry = resolve;
+      }),
+    );
+    mockRetryStatus.mockResolvedValue({
+      state: 'completed',
+      runStatus: 'completed',
+      error: null,
+      runError: null,
+      createdCount: 1,
+      updatedCount: 0,
+      failedCount: 0,
+      remainingFailed: 0,
     });
-
+    const refresh = vi.fn();
     render(
       <TriageDrawer
-        open={true}
+        open
+        onOpenChange={vi.fn()}
+        projectId="proj-1"
+        jobId="job-1"
+        run={baseRun}
+        onRefreshHistory={refresh}
+      />,
+    );
+    const retry = await screen.findByRole('button', {
+      name: /retry 1 failed records/i,
+    });
+    retry.focus();
+    expect(retry).toHaveFocus();
+    fireEvent.click(retry);
+    fireEvent.click(retry);
+    expect(mockRetryFailed).toHaveBeenCalledTimes(1);
+    expect(mockRetryFailed).toHaveBeenCalledWith('proj-1', 'job-1', 'run-123');
+    expect(retry).toBeDisabled();
+    releaseRetry({ bullJobId: 'queue-1', failedCount: 1 });
+    await waitFor(() =>
+      expect(mockRetryStatus).toHaveBeenCalledWith(
+        'proj-1',
+        'job-1',
+        'run-123',
+        'queue-1',
+      ),
+    );
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      '1 record(s) synced',
+    );
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+    expect(
+      screen.queryByRole('button', { name: /retry .* failed records/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows no retry action when no failed records remain and keeps close accessible', async () => {
+    mockListRecords.mockResolvedValue({ data: [], remainingFailed: 0 });
+    const close = vi.fn();
+    render(
+      <TriageDrawer
+        open
+        onOpenChange={close}
+        projectId="proj-1"
+        jobId="job-1"
+        run={{ ...baseRun, failedCount: 0, skippedCount: 0 }}
+      />,
+    );
+    await screen.findByText('No affected records found');
+    expect(
+      screen.queryByRole('button', { name: /retry .* failed records/i }),
+    ).not.toBeInTheDocument();
+    const closeButton = screen.getByRole('button', {
+      name: 'Close triage sidebar',
+    });
+    closeButton.focus();
+    expect(closeButton).toHaveFocus();
+    fireEvent.click(closeButton);
+    expect(close).toHaveBeenCalledWith(false);
+  });
+
+  it('shows retry errors and allows another attempt', async () => {
+    mockRetryFailed.mockRejectedValue({
+      response: {
+        data: { message: 'A sync is already in progress for this job' },
+      },
+    });
+    render(
+      <TriageDrawer
+        open
         onOpenChange={vi.fn()}
         projectId="proj-1"
         jobId="job-1"
         run={baseRun}
       />,
     );
-
-    const reconnectBtn = await screen.findByRole('button', {
-      name: /reconnect in connections/i,
+    const retry = await screen.findByRole('button', {
+      name: /retry 1 failed records/i,
     });
-    fireEvent.click(reconnectBtn);
-    expect(mockNavigate).toHaveBeenCalledWith(
-      '/super-admin/organisations/org-123/projects/proj-1?tab=connections',
+    fireEvent.click(retry);
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'A sync is already in progress for this job',
     );
+    expect(retry).toBeEnabled();
   });
 });

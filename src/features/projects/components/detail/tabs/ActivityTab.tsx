@@ -107,11 +107,15 @@ export default function ActivityTab() {
   }
 
   const renderHeader = () => (
-      <CardHeader visualLevel="section" className="flex flex-col gap-4 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
+    <CardHeader
+      visualLevel="section"
+      className="flex flex-col gap-4 border-b pb-4 sm:flex-row sm:items-center sm:justify-between"
+    >
       <div>
         <CardTitle>Sync activity</CardTitle>
         <CardDescription>
-          Complete history of sync executions, record outcomes, and timings across this project.
+          Complete history of sync executions, record outcomes, and timings
+          across this project.
         </CardDescription>
       </div>
       <CardAction className="flex items-center gap-2.5">
@@ -125,7 +129,9 @@ export default function ActivityTab() {
           disabled={query.isFetching}
           className="gap-1.5"
         >
-          <RefreshCw className={cn('size-3.5', query.isFetching && 'animate-spin')} />
+          <RefreshCw
+            className={cn('size-3.5', query.isFetching && 'animate-spin')}
+          />
           Refresh
         </Button>
       </CardAction>
@@ -192,7 +198,8 @@ export default function ActivityTab() {
       <CardContent className="space-y-2 p-3 sm:p-4">
         {logs.map((log) => {
           const matchedJob = jobs.find((j) => j.id === log.jobId);
-          const jobName = log.metadata?.jobName ?? matchedJob?.name ?? 'Sync run';
+          const jobName =
+            log.metadata?.jobName ?? matchedJob?.name ?? 'Sync run';
           const sourcePlatformId =
             log.metadata?.sourcePlatformId ?? project.sourcePlatformId;
           const destPlatformId =
@@ -202,20 +209,22 @@ export default function ActivityTab() {
               ? `${titleCase(log.metadata.sourceObject)} → ${titleCase(log.metadata.destObject)}`
               : jobName;
           const completedAt = log.createdAt ? new Date(log.createdAt) : null;
-          const hasValidDate = completedAt && !Number.isNaN(completedAt.getTime());
+          const hasValidDate =
+            completedAt && !Number.isNaN(completedAt.getTime());
           const failedRecords = log.metadata?.recordsFailed ?? 0;
           const status = statusFor(log);
           const isFailed = status === 'failed';
           const runType = triggerLabel(log.metadata?.triggeredBy);
-          const linkHref = log.jobId
-            ? `/projects/${projectId}/jobs/${log.jobId}?tab=run-history`
-            : null;
+          const linkHref =
+            log.jobId && matchedJob
+              ? `/projects/${projectId}/jobs/${log.jobId}?tab=run-history`
+              : null;
 
           return (
             <div
               key={log.id}
               className={cn(
-                'group relative flex flex-col justify-between gap-3 rounded-2xl border bg-card p-3 transition-all duration-200 hover:border-border/80 hover:bg-muted/15 sm:flex-row sm:items-center sm:px-4 sm:py-2.5',
+                'group bg-card hover:border-border/80 hover:bg-muted/15 relative flex flex-col justify-between gap-3 rounded-2xl border p-3 transition-all duration-200 sm:flex-row sm:items-center sm:px-4 sm:py-2.5',
                 isFailed && 'border-destructive/25 bg-destructive/[0.02]',
               )}
             >
@@ -227,7 +236,7 @@ export default function ActivityTab() {
 
                 <div className="min-w-0 flex-1 space-y-0.5">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="truncate text-sm font-semibold tracking-tight text-foreground">
+                    <p className="text-foreground truncate text-sm font-semibold tracking-tight">
                       {entity}
                     </p>
                     {sourcePlatformId && destPlatformId && (
@@ -243,7 +252,7 @@ export default function ActivityTab() {
 
                   <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
                     {jobName && jobName !== entity && (
-                      <span className="font-medium text-foreground/80 max-w-44 truncate">
+                      <span className="text-foreground/80 max-w-44 truncate font-medium">
                         {jobName}
                       </span>
                     )}
@@ -259,8 +268,8 @@ export default function ActivityTab() {
                       </Badge>
                     )}
                     <span aria-hidden="true">·</span>
-                    <span className="inline-flex items-center gap-1 tabular-nums text-[11px]">
-                      <Clock className="size-3 text-muted-foreground" />
+                    <span className="inline-flex items-center gap-1 text-[11px] tabular-nums">
+                      <Clock className="text-muted-foreground size-3" />
                       {hasValidDate
                         ? format(completedAt, 'MMM d, yyyy · h:mm a')
                         : 'Time unavailable'}
@@ -268,7 +277,7 @@ export default function ActivityTab() {
                   </div>
 
                   {log.message && isFailed && (
-                    <div className="flex items-center gap-1.5 pt-0.5 text-xs text-destructive">
+                    <div className="text-destructive flex items-center gap-1.5 pt-0.5 text-xs">
                       <AlertCircle className="size-3.5 shrink-0" />
                       <span className="line-clamp-1">{log.message}</span>
                     </div>
@@ -279,10 +288,10 @@ export default function ActivityTab() {
               {/* Middle Column: Operational Metrics */}
               <div className="flex shrink-0 flex-wrap items-center gap-3 sm:flex-col sm:items-end sm:gap-0.5">
                 <div className="flex items-baseline gap-1 text-left sm:text-right">
-                  <span className="text-sm font-bold tabular-nums text-foreground">
+                  <span className="text-foreground text-sm font-bold tabular-nums">
                     {(log.recordsProcessed ?? 0).toLocaleString()}
                   </span>
-                  <span className="text-xs text-muted-foreground font-normal">
+                  <span className="text-muted-foreground text-xs font-normal">
                     synced
                   </span>
                 </div>
@@ -296,7 +305,7 @@ export default function ActivityTab() {
                       {failedRecords.toLocaleString()} failed
                     </Badge>
                   )}
-                  <span className="text-muted-foreground inline-flex items-center gap-1 tabular-nums text-[11px]">
+                  <span className="text-muted-foreground inline-flex items-center gap-1 text-[11px] tabular-nums">
                     <Timer className="size-3" />
                     {formatDuration(log.durationMs)}
                   </span>
@@ -312,7 +321,7 @@ export default function ActivityTab() {
                         variant="ghost"
                         size="xs"
                         asChild
-                        className="gap-1 bg-destructive/10 px-2 font-medium text-destructive hover:bg-destructive/20"
+                        className="bg-destructive/10 text-destructive hover:bg-destructive/20 gap-1 px-2 font-medium"
                       >
                         <Link
                           to={linkHref}
@@ -330,7 +339,7 @@ export default function ActivityTab() {
                       variant="outline"
                       size="xs"
                       asChild
-                      className="gap-1 font-medium hover:border-primary/40 hover:bg-primary/5 hover:text-primary transition-colors"
+                      className="hover:border-primary/40 hover:bg-primary/5 hover:text-primary gap-1 font-medium transition-colors"
                     >
                       <Link
                         to={linkHref}

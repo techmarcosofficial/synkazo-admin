@@ -135,8 +135,8 @@ export default function TenantBillingHistorySection({
       </div>
 
       {/* ── Table 1: All Invoices Card ────────────────────────────────────── */}
-      <Card className="gap-0 py-0">
-        <CardHeader visualLevel="section" className="px-4 py-3 sm:px-5 sm:py-3.5 border-b">
+      <Card>
+        <CardHeader visualLevel="section">
           <div className="flex flex-wrap items-center justify-between gap-3 w-full">
             <div className="flex items-center gap-2.5">
               <span className="bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-xl">
@@ -207,7 +207,7 @@ export default function TenantBillingHistorySection({
           </div>
         </CardHeader>
 
-        <CardContent className="p-4 sm:p-5">
+        <CardContent>
           {invoicesQuery.isLoading ? (
             <SkeletonTable rows={3} columns={5} />
           ) : invoicesQuery.isError ? (
@@ -329,8 +329,8 @@ export default function TenantBillingHistorySection({
       </Card>
 
       {/* ── Table 2: All Payment History Card ─────────────────────────────── */}
-      <Card className="gap-0 py-0">
-        <CardHeader visualLevel="section" className="px-4 py-3 sm:px-5 sm:py-3.5 border-b">
+      <Card>
+        <CardHeader visualLevel="section">
           <div className="flex flex-wrap items-center justify-between gap-3 w-full">
             <div className="flex items-center gap-2.5">
               <span className="bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-xl">
@@ -401,7 +401,7 @@ export default function TenantBillingHistorySection({
           </div>
         </CardHeader>
 
-        <CardContent className="p-4 sm:p-5">
+        <CardContent>
           {paymentHistoryQuery.isLoading ? (
             <SkeletonTable rows={3} columns={4} />
           ) : paymentHistoryQuery.isError ? (

@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 
 export default function JobStatusDropdown({
   isActive,
@@ -49,6 +50,8 @@ export default function JobStatusDropdown({
 }) {
   const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false);
   const tinted = useBadgeAppearance() === 'tinted';
+  const { hasPermission } = useSynkazoAuth();
+  const canRunJob = hasPermission('job.run');
 
   const disabledReason = !hasConnection
     ? 'Connect both platforms first'
@@ -60,7 +63,7 @@ export default function JobStatusDropdown({
     <>
       <div className="relative inline-flex items-center">
         <DropdownMenu>
-          <DropdownMenuTrigger asChild disabled={toggling}>
+          <DropdownMenuTrigger asChild disabled={toggling || !canRunJob}>
             <Button
               id="job-status-dropdown"
               variant={tinted ? 'ghost' : 'outline'}
@@ -74,8 +77,16 @@ export default function JobStatusDropdown({
                 highlighted &&
                   'ring-primary ring-offset-background animate-alert-shake ring-2 ring-offset-2',
               )}
+              title={
+                canRunJob
+                  ? undefined
+                  : "You don't have permission to run or pause this job."
+              }
             >
-              <StatusBadge variant="menu" status={isActive ? 'active' : 'idle'} />
+              <StatusBadge
+                variant="menu"
+                status={isActive ? 'active' : 'idle'}
+              />
               <ChevronDown className="text-muted-foreground size-4 transition-transform group-data-[state=open]:rotate-180" />
             </Button>
           </DropdownMenuTrigger>
@@ -86,27 +97,44 @@ export default function JobStatusDropdown({
             <DropdownMenuSeparator />
 
             <DropdownMenuItem
-              disabled={isActive || !canActivate}
-              onSelect={() => !isActive && canActivate && onToggle()}
-              title={!canActivate ? disabledReason : undefined}
+              disabled={!canRunJob || isActive || !canActivate}
+              onSelect={() =>
+                canRunJob && !isActive && canActivate && onToggle()
+              }
+              title={
+                !canRunJob
+                  ? "You don't have permission to run or pause this job."
+                  : !canActivate
+                    ? disabledReason
+                    : undefined
+              }
               className="flex flex-col items-start gap-0.5 py-1.5"
             >
               <div className="flex w-full items-center justify-between">
                 <StatusBadge status="active" variant="menu" showDescription />
                 {isActive && <Check className="text-primary ml-auto size-4" />}
               </div>
-              {!canActivate && (
+              {(!canActivate || !canRunJob) && (
                 <span className="text-muted-foreground pl-6 text-[11px] font-normal">
-                  Blocked: {disabledReason}
+                  Blocked:{' '}
+                  {canRunJob
+                    ? disabledReason
+                    : "You don't have permission to run or pause this job."}
                 </span>
               )}
             </DropdownMenuItem>
 
             <DropdownMenuItem
-              disabled={!isActive || !canDeactivate}
-              title={!canDeactivate ? 'Wait for the current run to finish' : undefined}
+              disabled={!canRunJob || !isActive || !canDeactivate}
+              title={
+                !canRunJob
+                  ? "You don't have permission to run or pause this job."
+                  : !canDeactivate
+                    ? 'Wait for the current run to finish'
+                    : undefined
+              }
               onSelect={(e) => {
-                if (isActive && canDeactivate) {
+                if (canRunJob && isActive && canDeactivate) {
                   e.preventDefault();
                   setShowDeactivateConfirm(true);
                 }
@@ -122,7 +150,7 @@ export default function JobStatusDropdown({
           <div
             role="status"
             aria-live="polite"
-            className="animate-pointer-nudge pointer-events-none absolute -bottom-8 left-0 z-30 flex items-center gap-1.5 whitespace-nowrap rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-semibold text-primary-foreground shadow-lg"
+            className="animate-pointer-nudge bg-primary text-primary-foreground pointer-events-none absolute -bottom-8 left-0 z-30 flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold whitespace-nowrap shadow-lg"
           >
             <span aria-hidden="true" className="text-xs">
               👆
@@ -139,14 +167,15 @@ export default function JobStatusDropdown({
         <AlertDialogContent size="default">
           <AlertDialogHeader>
             <AlertDialogTitle>Set job to Inactive?</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2 text-sm text-muted-foreground">
+            <AlertDialogDescription className="text-muted-foreground space-y-2 text-sm">
               {isSyncing ? (
                 <>
-                  <span className="text-destructive font-semibold block">
+                  <span className="text-destructive block font-semibold">
                     ⚠️ A sync is currently in progress.
                   </span>
-                  Setting this job to Inactive will stop the running sync immediately
-                  and freeze all future scheduled and priority queue data movement.
+                  Setting this job to Inactive will stop the running sync
+                  immediately and freeze all future scheduled and priority queue
+                  data movement.
                 </>
               ) : (
                 'Setting this job to Inactive will freeze all data movement. Scheduled runs, priority queue syncs, and manual triggers will not execute until reactivated.'

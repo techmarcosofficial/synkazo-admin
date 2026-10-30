@@ -11,6 +11,10 @@ vi.mock('@/queries/useJobs', () => ({
   useRunLogsQuery: (...args: unknown[]) => mockUseRunLogsQuery(...args),
 }));
 
+vi.mock('@/lib/synkazoAuth', () => ({
+  useSynkazoAuth: () => ({ hasPermission: () => true }),
+}));
+
 vi.mock('../TriageDrawer', () => ({
   TriageDrawer: () => <div data-testid="triage-drawer" />,
 }));
@@ -19,8 +23,6 @@ describe('RunHistoryTab', () => {
   const sampleRun: ExtSyncRun = {
     id: 'run-99',
     jobId: 'job-1',
-    projectId: 'proj-1',
-    organisationId: 'org-1',
     status: 'completed',
     startedAt: '2026-10-26T10:00:00Z',
     finishedAt: '2026-10-26T10:02:00Z',

@@ -26,11 +26,7 @@ const errorMessage = (err: unknown, fallback: string) =>
  * Personal details and account security live together. Identity, role,
  * organisation, and status are deliberately shown only in SettingsHeader.
  */
-export default function ProfileTab({
-  platform = false,
-}: {
-  platform?: boolean;
-}) {
+export default function ProfileTab() {
   const { currentUser, refreshUser } = useSynkazoAuth();
   const updateMeMutation = useUpdateMeMutation();
 
@@ -262,7 +258,7 @@ export default function ProfileTab({
         </CardContent>
       </Card>
 
-      <SecurityTab allowDeleteAccount={!platform} />
+      <SecurityTab />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import type { UserRole, Permission } from '@/types';
+import type { User, UserRole, Permission } from '@/types';
 
 export const ROLE_HIERARCHY: UserRole[] = [
   'editor',
@@ -92,6 +92,17 @@ export const PERMISSION_GROUPS: Array<{ label: string; perms: Permission[] }> =
 
 export function getPermissionsForRole(role: UserRole): Permission[] {
   return ROLE_DEFAULTS[role] ?? ROLE_DEFAULTS['editor'];
+}
+
+export function userHasPermission(
+  user: Pick<User, 'role'> & {
+    permissions?: readonly Permission[] | null;
+  },
+  permission: Permission,
+): boolean {
+  if (user.role === 'org_admin' || user.role === 'super_admin') return true;
+  const permissions = user.permissions ?? getPermissionsForRole(user.role);
+  return permissions.includes(permission);
 }
 
 export function roleIndex(role: UserRole): number {

@@ -870,6 +870,7 @@ export interface SuperAdminCreateAssociationRuleDto {
 
 export interface SuperAdminUpdateAssociationRuleDto {
   name?: string;
+  cardinality?: string;
   assocTypeId?: number;
   assocCategory?: string;
   assocLabel?: string;

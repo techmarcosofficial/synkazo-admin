@@ -249,11 +249,11 @@ export default function QuickFieldMapper({
   };
 
   return (
-    <div className="bg-primary/5 border-primary/20 animate-in fade-in-0 slide-in-from-top-2 relative border-0 p-4 shadow-xs transition-all">
+    <div className="bg-muted/30 animate-in fade-in-0 slide-in-from-top-2 relative border-0 p-4 shadow-xs transition-all">
       {/* Header with Title and Actions (Discard, Apply, Close) */}
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3">
         <div className="flex items-center gap-2">
-          <div className="bg-primary/10 text-primary flex size-6 items-center justify-center rounded-lg">
+          <div className="bg-muted text-muted-foreground flex size-6 items-center justify-center rounded-lg">
             <Sparkles className="size-3.5" />
           </div>
           <span className="text-foreground text-xs font-semibold">
@@ -405,7 +405,7 @@ export default function QuickFieldMapper({
                                       <Badge
                                         variant="secondary"
                                         size="xs"
-                                        className="bg-primary/10 text-primary text-[10px]"
+                                        className="bg-success/10 text-success text-[10px]"
                                       >
                                         Mapped
                                       </Badge>
@@ -464,9 +464,7 @@ export default function QuickFieldMapper({
                               'Choose destination field…'}
                           </span>
                           {selectedDestField?.required && (
-                            <span className="text-destructive font-bold">
-                              *
-                            </span>
+                            <span className="text-warning font-bold">*</span>
                           )}
                           {selectedDestField?.type && (
                             <Badge
@@ -512,7 +510,7 @@ export default function QuickFieldMapper({
                                         {f.label || f.key}
                                       </span>
                                       {f.required && (
-                                        <span className="text-destructive font-bold">
+                                        <span className="text-warning font-bold">
                                           *
                                         </span>
                                       )}
@@ -535,8 +533,7 @@ export default function QuickFieldMapper({
                                       <Badge
                                         variant="secondary"
                                         size="xs"
-                          tone="danger"
-                                        className="bg-destructive/10 text-destructive text-[10px]"
+                                        className="bg-warning/10 text-warning text-[10px]"
                                       >
                                         Required
                                       </Badge>
@@ -544,7 +541,7 @@ export default function QuickFieldMapper({
                                       <Badge
                                         variant="outline"
                                         size="xs"
-                                        className="border-amber-500/40 text-[10px] text-amber-600 dark:text-amber-400"
+                                        className="border-warning/40 text-warning text-[10px]"
                                       >
                                         In Draft
                                       </Badge>
@@ -552,7 +549,7 @@ export default function QuickFieldMapper({
                                       <Badge
                                         variant="secondary"
                                         size="xs"
-                                        className="bg-primary/10 text-primary text-[10px]"
+                                        className="bg-success/10 text-success text-[10px]"
                                       >
                                         Mapped
                                       </Badge>
@@ -597,7 +594,7 @@ export default function QuickFieldMapper({
 
               {/* Inline Row Validation Error */}
               {status.error && (
-                <div className="text-destructive mt-1 flex items-center gap-1.5 text-[11px] font-medium">
+                <div className="text-warning mt-1 flex items-center gap-1.5 text-[11px] font-medium">
                   <AlertCircle className="size-3.5 shrink-0" />
                   <span>{status.error}</span>
                 </div>

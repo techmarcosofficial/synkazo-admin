@@ -43,6 +43,7 @@ import {
   deriveSyncJobSummary,
   formatDurationMs,
 } from '@/features/projects/lib/syncJobSummary';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { BROWSER_TIMEZONE } from '@/lib/timezones';
 import { usePriorityQueueQuery } from '@/queries/usePriorityQueue';
 import type { Project, ProjectEnvironment } from '@/types';
@@ -81,19 +82,22 @@ export default function OverviewTab() {
 
   const [searchParams, setSearchParams] = useSearchParams();
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const { hasPermission } = useSynkazoAuth();
+  const canRunJob = hasPermission('job.run');
+  const canEditJob = hasPermission('job.edit');
 
   useEffect(() => {
     if (
       searchParams.get('openSchedule') === 'true' ||
       searchParams.get('section') === 'schedule'
     ) {
-      setScheduleModalOpen(true);
+      setScheduleModalOpen(canEditJob);
       const next = new URLSearchParams(searchParams);
       next.delete('openSchedule');
       next.delete('section');
       setSearchParams(next, { replace: true });
     }
-  }, [searchParams, setSearchParams]);
+  }, [canEditJob, searchParams, setSearchParams]);
 
   const priorityQueueQuery = usePriorityQueueQuery(projectId);
   const priorityModeActive =
@@ -298,7 +302,9 @@ export default function OverviewTab() {
         sourceLabel={summaryRun?.sourceObject ?? job.sourceObject}
         destinationLabel={summaryRun?.destObject ?? job.destObject}
         errorMessage={summaryRun?.errorMessage}
-        onStop={summaryRunning ? () => void handleStop() : undefined}
+        onStop={
+          summaryRunning && canRunJob ? () => void handleStop() : undefined
+        }
         onViewHistory={() =>
           handleTabChange('run-history', {
             searchParams: summaryRun?.id ? { runId: summaryRun.id } : undefined,
@@ -357,7 +363,7 @@ export default function OverviewTab() {
                   variant="ghost"
                   size="sm"
                   onClick={handleCancelQueue}
-                  disabled={cancellingQueue}
+                  disabled={!canRunJob || cancellingQueue}
                   className="text-destructive"
                 >
                   <X /> {cancellingQueue ? 'Cancelling…' : 'Cancel queue'}
@@ -368,24 +374,28 @@ export default function OverviewTab() {
                   variant="ghost"
                   size="sm"
                   onClick={handleRetryQueue}
-                  disabled={retryingQueue}
+                  disabled={!canRunJob || retryingQueue}
                 >
                   <RotateCcw /> {retryingQueue ? 'Retrying…' : 'Retry'}
                 </Button>
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setScheduleModalOpen(true)}
-              >
-                <CalendarClock /> Schedule
-              </Button>
+              {canEditJob && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setScheduleModalOpen(true)}
+                >
+                  <CalendarClock /> Schedule
+                </Button>
+              )}
               <Button
                 id="sync-now-button"
                 size="sm"
-                data-flow-next-action={!hasRunHistory && canStartSync ? 'true' : undefined}
+                data-flow-next-action={
+                  !hasRunHistory && canStartSync ? 'true' : undefined
+                }
                 onClick={() => setManualDialogOpen(true)}
-                disabled={syncBlocked}
+                disabled={!canRunJob || syncBlocked}
               >
                 <Play /> Sync now
               </Button>
@@ -431,17 +441,20 @@ export default function OverviewTab() {
                     pipelineConfigured={pipelineConfigured}
                     onGoToPipeline={() => handleTabChange('pipeline')}
                     onScheduleToggle={handleScheduleToggle}
+                    disabled={!canRunJob}
                     className="w-auto"
                   />
                 )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setScheduleModalOpen(true)}
-                >
-                  <CalendarClock className="size-3.5" />
-                  Configure schedule
-                </Button>
+                {canEditJob && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setScheduleModalOpen(true)}
+                  >
+                    <CalendarClock className="size-3.5" />
+                    Configure schedule
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -476,25 +489,25 @@ export default function OverviewTab() {
               {overviewMessage.description}
             </p>
           </div>
-          {queued && !isSyncing && runLogs[0]?.bullmqJobId && (
+          {canRunJob && queued && !isSyncing && runLogs[0]?.bullmqJobId && (
             <div className="flex justify-center">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleCancelQueue}
-                disabled={cancellingQueue}
+                disabled={!canRunJob || cancellingQueue}
               >
                 <X /> {cancellingQueue ? 'Cancelling…' : 'Cancel queue'}
               </Button>
             </div>
           )}
-          {failedQueueJob && !isSyncing && (
+          {canRunJob && failedQueueJob && !isSyncing && (
             <div className="flex justify-center">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleRetryQueue}
-                disabled={retryingQueue}
+                disabled={!canRunJob || retryingQueue}
               >
                 <RotateCcw /> {retryingQueue ? 'Retrying…' : 'Retry queued run'}
               </Button>
@@ -503,7 +516,7 @@ export default function OverviewTab() {
         </section>
       )}
 
-      {manualDialogOpen && (
+      {manualDialogOpen && canRunJob && (
         <StartSyncModal
           projectId={projectId}
           jobId={job.id}
@@ -518,7 +531,7 @@ export default function OverviewTab() {
           )}
           pipelineRequired={pipelineRequired}
           pipelineConfigured={pipelineConfigured}
-          disabled={syncBlocked}
+          disabled={!canRunJob || syncBlocked}
           onGoToPipeline={() => {
             setManualDialogOpen(false);
             handleTabChange('pipeline');
@@ -540,7 +553,7 @@ export default function OverviewTab() {
         />
       )}
 
-      {scheduleModalOpen && (
+      {scheduleModalOpen && canEditJob && (
         <JobScheduleModal
           projectId={projectId}
           jobId={job.id}

@@ -147,8 +147,7 @@ export default function OrganisationMembersPage() {
   } | null>(null);
   const [ownershipTarget, setOwnershipTarget] =
     useState<SuperAdminMemberListItem | null>(null);
-  const [detailMember, setDetailMember] =
-    useState<SuperAdminMemberListItem | null>(null);
+  const [detailMemberId, setDetailMemberId] = useState<string | null>(null);
 
   // Reset page when search or filters change
   useEffect(() => {
@@ -157,6 +156,8 @@ export default function OrganisationMembersPage() {
   }, [search, roleFilter, statusFilter]);
 
   const members = membersQuery.data?.data ?? [];
+  const detailMember =
+    members.find((member) => member.id === detailMemberId) ?? null;
   const totalMembers = membersQuery.data?.total ?? 0;
   const invitations = invitationsQuery.data?.data ?? [];
   const pendingInvitations = useMemo(
@@ -469,7 +470,7 @@ export default function OrganisationMembersPage() {
                       <TableRow
                         key={member.id}
                         className="cursor-pointer hover:bg-muted/40 transition-colors"
-                        onClick={() => setDetailMember(member)}
+                        onClick={() => setDetailMemberId(member.id)}
                       >
                         <TableCell>
                           <div className="flex items-center gap-3">
@@ -544,7 +545,7 @@ export default function OrganisationMembersPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48">
                               <DropdownMenuItem
-                                onClick={() => setDetailMember(member)}
+                                onClick={() => setDetailMemberId(member.id)}
                               >
                                 <Eye className="size-4" />
                                 View details
@@ -854,7 +855,7 @@ export default function OrganisationMembersPage() {
 
       <MemberDetailDrawer
         open={detailMember !== null}
-        onOpenChange={(o) => (!o ? setDetailMember(null) : undefined)}
+        onOpenChange={(o) => (!o ? setDetailMemberId(null) : undefined)}
         member={
           detailMember
             ? {

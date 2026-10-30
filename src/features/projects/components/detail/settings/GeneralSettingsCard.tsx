@@ -22,6 +22,7 @@ import {
 } from '@/features/projects/hooks';
 import { cn } from '@/lib/utils';
 import { showToast } from '@/lib/toast';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 
 // Only the name/description are editable here. Source and destination platforms
 // are a one-time choice made at project creation (or, for HubSpot Marketplace
@@ -51,6 +52,8 @@ export default function GeneralSettingsCard({
   onUpdated: (updated: ProjectExt) => void;
   className?: string;
 }) {
+  const { hasPermission } = useSynkazoAuth();
+  const canEditProject = hasPermission('project.edit');
   const { updateProjectInfo } = useProjectGeneralSettings();
   const form = useForm<GeneralSettingsValues>({
     resolver: zodResolver(generalSettingsSchema),
@@ -101,7 +104,11 @@ export default function GeneralSettingsCard({
                 Project Name
               </FieldLabel>
               <FieldContent>
-                <Input id="proj-name" {...form.register('name')} />
+                <Input
+                  id="proj-name"
+                  disabled={!canEditProject}
+                  {...form.register('name')}
+                />
               </FieldContent>
               <FieldError>{form.formState.errors.name?.message}</FieldError>
             </Field>
@@ -113,6 +120,7 @@ export default function GeneralSettingsCard({
                   id="proj-desc"
                   rows={2}
                   placeholder="Optional notes about this integration."
+                  disabled={!canEditProject}
                   {...form.register('description')}
                 />
               </FieldContent>
@@ -131,7 +139,10 @@ export default function GeneralSettingsCard({
           )}
 
           <div className="flex justify-end">
-            <Button type="submit" disabled={saving || !form.formState.isDirty}>
+            <Button
+              type="submit"
+              disabled={!canEditProject || saving || !form.formState.isDirty}
+            >
               {saving ? (
                 'Saving…'
               ) : form.formState.isSubmitSuccessful &&

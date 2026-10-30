@@ -4,6 +4,7 @@ import { connectionsApi } from '@/api/connections';
 import { jobsApi } from '@/api/jobs';
 import { projectsApi } from '@/api/projects';
 import { syncLogsApi } from '@/api/syncLogs';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import type { Connection, Job, Project, ProjectEnvironment } from '@/types';
 
 export interface ProjectExt extends Project {
@@ -75,15 +76,28 @@ export function projectDetailQueryKey(projectId: string) {
 // projectId may be null/undefined for conditionally active consumers;
 // `enabled` keeps the query dormant until an id is available.
 export function useProjectDetailQuery(projectId: string | null | undefined) {
+  const { hasPermission } = useSynkazoAuth();
+  const canViewJobs = hasPermission('job.view');
+  const canViewLogs = hasPermission('logs.view');
   return useQuery({
     queryKey: projectDetailQueryKey(projectId ?? ''),
+    select: (detail) =>
+      canViewJobs && canViewLogs
+        ? detail
+        : {
+            ...detail,
+            jobs: canViewJobs ? detail.jobs : [],
+            logs: canViewLogs ? detail.logs : [],
+          },
     queryFn: async (): Promise<ProjectDetailData> => {
       const id = projectId!;
       const [proj, allJobs, allConns, logsRes] = await Promise.all([
         projectsApi.getProject(id),
-        jobsApi.listJobs(id),
+        canViewJobs ? jobsApi.listJobs(id) : Promise.resolve([]),
         connectionsApi.listProjectConnections(id),
-        syncLogsApi.listProjectSyncLogs(id, { limit: 50 }),
+        canViewLogs
+          ? syncLogsApi.listProjectSyncLogs(id, { limit: 50 })
+          : Promise.resolve([]),
       ]);
       const rawLogs = ((logsRes as { data?: unknown[] }).data ||
         logsRes) as ProjectActivityLog[];

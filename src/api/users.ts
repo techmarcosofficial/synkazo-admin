@@ -42,7 +42,8 @@ export const usersApi = {
     apiClient.post('/users/me/email-change/verify', { code }).then(d),
   getMyOwnershipSummary: (): Promise<OwnershipSummary> =>
     apiClient.get('/users/me/ownership-summary').then(d),
-  deleteMe: (): Promise<void> => apiClient.delete('/users/me').then(d),
+  deactivateMe: (): Promise<void> =>
+    apiClient.post('/users/me/deactivate').then(d),
   listUsers: (organisationId?: string): Promise<User[]> =>
     apiClient
       .get('/users', {

@@ -13,16 +13,26 @@ import LifecycleConfirmDialog from './lifecycle/LifecycleConfirmDialog';
 
 import type { ProjectArchiveImpact } from '@/api/projects';
 import { superAdminOperationsApi } from '@/api/superAdminOperations';
+import StatusBadge from '@/components/shared/StatusBadge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import ProjectSettingsNavigation from '@/features/projects/components/detail/ProjectSettingsNavigation';
 import { useUpdateSuperAdminProjectMutation } from '@/queries/useSuperAdmin';
-import type { SuperAdminProjectDetail } from '@/types/superAdmin';
+import type {
+  SuperAdminJobListItem,
+  SuperAdminProjectDetail,
+} from '@/types/superAdmin';
 
 const Associations = lazy(() =>
   import('./associations/OrganisationProjectAssociationsPage').then(
@@ -89,12 +99,14 @@ function getActiveSection(params: URLSearchParams): Section {
 function GeneralSettings({
   organisationId,
   project,
+  jobs = [],
   onHold,
   onResume,
   operationPending,
 }: {
   organisationId: string;
   project: SuperAdminProjectDetail;
+  jobs?: SuperAdminJobListItem[];
   onHold: () => void;
   onResume: () => void;
   operationPending: boolean;
@@ -109,6 +121,18 @@ function GeneralSettings({
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [archiveError, setArchiveError] = useState<string | null>(null);
   const update = useUpdateSuperAdminProjectMutation(organisationId, project.id);
+
+  const heldCount = jobs.filter(
+    (j) => j.scheduleState?.toLowerCase() === 'held',
+  ).length;
+
+  const activeCount = jobs.filter(
+    (j) => j.scheduleState?.toLowerCase() === 'active',
+  ).length;
+
+  const pausedCount = jobs.filter(
+    (j) => j.scheduleState?.toLowerCase() === 'paused',
+  ).length;
 
   useEffect(() => {
     setName(project.name);
@@ -187,9 +211,27 @@ function GeneralSettings({
               Update the display name and description for this project.
             </p>
           </div>
-          <Badge variant="secondary" className="capitalize">
-            {project.syncMode.replace(/_/g, ' ')}
-          </Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            {project.syncMode && (
+              <StatusBadge status={project.syncMode} size="sm" />
+            )}
+            {project.activeEnvironment && (
+              <StatusBadge
+                status={project.activeEnvironment}
+                label={
+                  project.activeEnvironment === 'sandbox'
+                    ? 'Sandbox (Test Mode)'
+                    : 'Production (Live)'
+                }
+                title={
+                  project.activeEnvironment === 'sandbox'
+                    ? 'Operating in Sandbox — Live customer data is not affected'
+                    : 'Live Production Sync active'
+                }
+                size="sm"
+              />
+            )}
+          </div>
         </CardHeader>
         <CardContent className="px-4 pb-4">
           <form onSubmit={save} className="space-y-3">
@@ -240,21 +282,62 @@ function GeneralSettings({
         </CardContent>
       </Card>
 
-      <Card className="gap-0 py-0">
-        <CardHeader className="px-4 py-3">
-          <CardTitle>Support operations</CardTitle>
-          <p className="text-muted-foreground mt-1 text-xs">
-            Hold active flows or resume flows held by a platform operator.
-            Customer-paused flows remain paused.
-          </p>
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <CardTitle>Support operations</CardTitle>
+              <CardDescription>
+                Hold active flows or resume flows held by a platform operator.
+                Customer-paused flows remain paused.
+              </CardDescription>
+            </div>
+
+            {/* Status indicator badge */}
+            {heldCount > 0 ? (
+              <Badge
+                variant="secondary"
+                className="bg-warning/15 text-warning dark:bg-warning/20 border-warning/30 font-semibold text-xs px-2.5 py-1 gap-1.5"
+              >
+                <span
+                  className="size-1.5 shrink-0 rounded-full bg-warning"
+                  aria-hidden="true"
+                />
+                {heldCount} {heldCount === 1 ? 'Flow' : 'Flows'} Held by Admin
+              </Badge>
+            ) : activeCount > 0 ? (
+              <Badge
+                variant="secondary"
+                className="bg-success/15 text-success dark:bg-success/20 border-success/30 font-semibold text-xs px-2.5 py-1 gap-1.5"
+              >
+                <span
+                  className="size-1.5 shrink-0 rounded-full bg-success"
+                  aria-hidden="true"
+                />
+                All Flows Active
+              </Badge>
+            ) : (
+              <Badge
+                variant="secondary"
+                className="bg-muted text-muted-foreground font-medium text-xs px-2.5 py-1 gap-1.5"
+              >
+                <span
+                  className="size-1.5 shrink-0 rounded-full bg-muted-foreground"
+                  aria-hidden="true"
+                />
+                {jobs.length === 0 ? 'No Flows Configured' : 'All Flows Paused'}
+              </Badge>
+            )}
+          </div>
         </CardHeader>
-        <CardContent className="px-4 pb-4">
-          <div className="flex flex-wrap gap-2">
+
+        <CardContent className="space-y-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Button
               size="sm"
               variant="outline"
               onClick={onHold}
-              disabled={operationPending}
+              disabled={operationPending || activeCount === 0}
             >
               Hold active flows
             </Button>
@@ -262,11 +345,21 @@ function GeneralSettings({
               size="sm"
               variant="outline"
               onClick={onResume}
-              disabled={operationPending}
+              disabled={operationPending || heldCount === 0}
             >
               Resume held flows
             </Button>
           </div>
+
+          <p className="text-muted-foreground text-xs">
+            {heldCount > 0
+              ? `${heldCount} of ${jobs.length} flow${jobs.length === 1 ? '' : 's'} suspended by platform hold. ${activeCount} active${pausedCount > 0 ? `, ${pausedCount} customer-paused` : ''}.`
+              : activeCount > 0
+                ? `${activeCount} active flow${activeCount === 1 ? '' : 's'} scheduled.${pausedCount > 0 ? ` ${pausedCount} customer-paused.` : ''}`
+                : jobs.length === 0
+                  ? 'No flows currently configured in this project.'
+                  : `All ${jobs.length} flows are currently paused by the customer.`}
+          </p>
         </CardContent>
       </Card>
 
@@ -358,6 +451,7 @@ export default function OrganisationProjectSettings({
   organisationId,
   organisationName,
   project,
+  jobs = [],
   onHold,
   onResume,
   operationPending,
@@ -365,6 +459,7 @@ export default function OrganisationProjectSettings({
   organisationId: string;
   organisationName: string;
   project: SuperAdminProjectDetail;
+  jobs?: SuperAdminJobListItem[];
   onHold: () => void;
   onResume: () => void;
   operationPending: boolean;
@@ -432,6 +527,7 @@ export default function OrganisationProjectSettings({
             <GeneralSettings
               organisationId={organisationId}
               project={project}
+              jobs={jobs}
               onHold={onHold}
               onResume={onResume}
               operationPending={operationPending}

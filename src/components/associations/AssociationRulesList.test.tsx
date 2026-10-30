@@ -33,6 +33,9 @@ vi.mock('@/api/associations', async () => {
       getRuleRecords: vi.fn(),
       getProjectRuns: vi.fn(),
       getRunLogs: vi.fn(),
+      getProjectObjects: vi.fn(),
+      getAssociationFields: vi.fn(),
+      updateRule: vi.fn(),
     },
   };
 });
@@ -42,6 +45,7 @@ const getProjectRuns = vi.mocked(associationsApi.getProjectRuns);
 const getRunLogs = vi.mocked(associationsApi.getRunLogs);
 const listRules = vi.mocked(associationsApi.listRules);
 const getRuleStats = vi.mocked(associationsApi.getRuleStats);
+const updateRule = vi.mocked(associationsApi.updateRule);
 
 function makeRecord(overrides: Partial<AssociationRecord>): AssociationRecord {
   return {
@@ -356,6 +360,9 @@ describe('AssociationRulesList', () => {
       page: 1,
       limit: 5,
     });
+    vi.mocked(associationsApi.getProjectObjects).mockResolvedValue([]);
+    vi.mocked(associationsApi.getAssociationFields).mockResolvedValue([]);
+    updateRule.mockReset();
   });
 
   afterEach(() => {
@@ -365,7 +372,8 @@ describe('AssociationRulesList', () => {
   it('shows the cumulative total on the association row with run actions', async () => {
     renderWithClient(<AssociationRulesList projectId="p1" />);
 
-    expect(await screen.findByText('Contact → Company')).toBeInTheDocument();
+    expect(await screen.findByText('Contact to company')).toBeInTheDocument();
+    expect(screen.getByText('Contact → Company')).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'New association' }),
     ).toBeInTheDocument();
@@ -382,7 +390,7 @@ describe('AssociationRulesList', () => {
     ).not.toBeInTheDocument();
 
     const associationTrigger = screen.getByRole('button', {
-      name: 'Expand Contact → Company',
+      name: 'Expand Contact to company',
     });
     const associationItem = screen.getByTestId('association-rule-item-rule-1');
     expect(associationItem).toHaveTextContent('contacts.company_domain');
@@ -399,10 +407,10 @@ describe('AssociationRulesList', () => {
     const user = userEvent.setup();
     renderWithClient(<AssociationRulesList projectId="p1" />);
 
-    await user.click(await screen.findByText('Contact → Company'));
+    await user.click(await screen.findByText('Contact to company'));
 
     expect(
-      screen.getByRole('button', { name: 'Collapse Contact → Company' }),
+      screen.getByRole('button', { name: 'Collapse Contact to company' }),
     ).toBeInTheDocument();
 
     expect(
@@ -416,6 +424,54 @@ describe('AssociationRulesList', () => {
         expect.objectContaining({ ruleId: 'rule-1' }),
       );
     });
+  });
+
+  it('refreshes the saved rule name and reopens the editor with the persisted value', async () => {
+    const updatedRule = {
+      ...rule,
+      name: 'Customers linked to companies',
+      cardinality: 'one_to_many',
+    };
+    updateRule.mockImplementation(async () => {
+      listRules.mockResolvedValue([updatedRule]);
+      return updatedRule;
+    });
+    const user = userEvent.setup();
+    renderWithClient(<AssociationRulesList projectId="p1" />);
+    await screen.findByText('Contact to company');
+    await user.click(
+      screen.getByRole('button', {
+        name: 'More actions for Contact to company',
+      }),
+    );
+    await user.click(
+      screen.getByRole('menuitem', { name: 'Edit association' }),
+    );
+    const nameInput = await screen.findByDisplayValue('Contact to company');
+    await user.clear(nameInput);
+    await user.type(nameInput, 'Customers linked to companies');
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() =>
+      expect(updateRule).toHaveBeenCalledWith(
+        'p1',
+        'rule-1',
+        expect.objectContaining({ name: 'Customers linked to companies' }),
+      ),
+    );
+    expect(
+      await screen.findByText('Customers linked to companies'),
+    ).toBeInTheDocument();
+    await user.click(
+      screen.getByRole('button', {
+        name: 'More actions for Customers linked to companies',
+      }),
+    );
+    await user.click(
+      screen.getByRole('menuitem', { name: 'Edit association' }),
+    );
+    expect(
+      await screen.findByDisplayValue('Customers linked to companies'),
+    ).toBeInTheDocument();
   });
 
   it('keeps a recoverable error state with a retry action', async () => {

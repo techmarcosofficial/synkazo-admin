@@ -16,6 +16,7 @@ import {
 import { Input } from '@/components/ui/input';
 import type { ExtJob } from '@/features/jobs/hooks';
 import { showToast } from '@/lib/toast';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 
 const jobGeneralSchema = z.object({
   name: z.string().trim().min(1, 'Job Name is required.'),
@@ -48,10 +49,15 @@ export default function JobGeneralCard({
   saveJob,
 }: {
   projectId: string;
-  job: Pick<ExtJob, 'id' | 'name' | 'sourceObject' | 'destObject' | 'lastSyncedAt'>;
+  job: Pick<
+    ExtJob,
+    'id' | 'name' | 'sourceObject' | 'destObject' | 'lastSyncedAt'
+  >;
   onUpdated: (patch: { name: string }) => void;
   saveJob?: (name: string) => Promise<unknown>;
 }) {
+  const { hasPermission } = useSynkazoAuth();
+  const canEditJob = hasPermission('job.edit');
   const form = useForm<JobGeneralValues>({
     resolver: zodResolver(jobGeneralSchema),
     mode: 'onChange',
@@ -96,7 +102,11 @@ export default function JobGeneralCard({
             Job Name
           </FieldLabel>
           <FieldContent>
-            <Input id="job-name" {...form.register('name')} />
+            <Input
+              id="job-name"
+              disabled={!canEditJob}
+              {...form.register('name')}
+            />
           </FieldContent>
           <FieldError>{form.formState.errors.name?.message}</FieldError>
         </Field>
@@ -129,7 +139,10 @@ export default function JobGeneralCard({
           </FieldContent>
         </Field>
 
-        <Button type="submit" disabled={saving || !form.formState.isDirty}>
+        <Button
+          type="submit"
+          disabled={!canEditJob || saving || !form.formState.isDirty}
+        >
           {saving
             ? 'Saving…'
             : form.formState.isSubmitSuccessful && !form.formState.isDirty

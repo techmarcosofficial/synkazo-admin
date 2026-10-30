@@ -157,10 +157,30 @@ function SyncJobCard({
   const linkState = { jobBackTo: backTo, jobBackLabel: 'Back to Sync Jobs' };
 
   const metrics = [
-    { label: 'Records synced', value: formatNum(job.recordsSynced), description: 'Total records synced', icon: Database },
-    { label: 'Avg duration', value: formatDurationMs(summary.averageDurationMs), description: 'Average time per recent run', icon: Timer },
-    { label: 'Last sync', value: formatLastSync(summary.lastSyncAt), description: 'Most recent run', icon: CalendarClock },
-    { label: 'Success rate', value: formatSuccessRate(summary.successRate), description: 'Successful recent runs', icon: CheckCircle2 },
+    {
+      label: 'Records synced',
+      value: formatNum(job.recordsSynced),
+      description: 'Total records synced',
+      icon: Database,
+    },
+    {
+      label: 'Avg duration',
+      value: formatDurationMs(summary.averageDurationMs),
+      description: 'Average time per recent run',
+      icon: Timer,
+    },
+    {
+      label: 'Last sync',
+      value: formatLastSync(summary.lastSyncAt),
+      description: 'Most recent run',
+      icon: CalendarClock,
+    },
+    {
+      label: 'Success rate',
+      value: formatSuccessRate(summary.successRate),
+      description: 'Successful recent runs',
+      icon: CheckCircle2,
+    },
   ];
 
   let guidanceMessage: React.ReactNode;
@@ -168,15 +188,25 @@ function SyncJobCard({
     guidanceMessage = (
       <>
         Choose which information moves between platforms so it arrives in the
-        right place. Select <span className="font-semibold text-foreground">Configure Mapping</span> above to begin.
+        right place. Select{' '}
+        <span className="text-foreground font-semibold">Configure Mapping</span>{' '}
+        above to begin.
       </>
     );
-  } else if (detailQuery.data?.pipelineRequired && !detailQuery.data.pipelineConfigured) {
-    guidanceMessage = 'Choose where this flow should place data in the destination. Open the flow to finish setup before syncing.';
+  } else if (
+    detailQuery.data?.pipelineRequired &&
+    !detailQuery.data.pipelineConfigured
+  ) {
+    guidanceMessage =
+      'Choose where this flow should place data in the destination. Open the flow to finish setup before syncing.';
   } else if (lifecycle.statusKey === 'ready_to_test') {
     guidanceMessage = (
       <>
-        Everything is set for a first test. Select <span className="font-semibold text-foreground">Test &amp; Activate</span> above to check the result.
+        Everything is set for a first test. Select{' '}
+        <span className="text-foreground font-semibold">
+          Test &amp; Activate
+        </span>{' '}
+        above to check the result.
       </>
     );
   } else {
@@ -184,7 +214,9 @@ function SyncJobCard({
   }
 
   const details = !hasAnyRun ? (
-    <p className="text-muted-foreground text-xs leading-normal">{guidanceMessage}</p>
+    <p className="text-muted-foreground text-xs leading-normal">
+      {guidanceMessage}
+    </p>
   ) : detailQuery.isLoading ? (
     <div className="grid grid-cols-2 md:grid-cols-4">
       {Array.from({ length: 4 }).map((_, index) => (
@@ -218,14 +250,16 @@ function SyncJobCard({
         <Link
           to={lifecycle.targetUrl}
           state={linkState}
-          className="hover:text-primary hover:underline block truncate text-sm font-semibold text-foreground transition-colors"
+          className="hover:text-primary text-foreground block truncate text-sm font-semibold transition-colors hover:underline"
         >
           {job.name}
         </Link>
       }
       subtitle={
         <>
-          <span className="truncate">{formatEntityLabel(job.sourceObject)}</span>
+          <span className="truncate">
+            {formatEntityLabel(job.sourceObject)}
+          </span>
           <DirectionIcon className="size-3 shrink-0" aria-hidden="true" />
           <span className="truncate">{formatEntityLabel(job.destObject)}</span>
         </>
@@ -240,10 +274,10 @@ function SyncJobCard({
             lifecycle.actionVariant === 'default' && 'font-medium shadow-xs',
             lifecycle.actionVariant === 'outline' &&
               lifecycle.isActionable &&
-              'font-medium border-primary/30 text-primary hover:bg-primary/5',
+              'border-primary/30 text-primary hover:bg-primary/5 font-medium',
             lifecycle.actionVariant === 'outline' &&
               !lifecycle.isActionable &&
-              'font-medium border-border/80 text-foreground hover:bg-muted/50',
+              'border-border/80 text-foreground hover:bg-muted/50 font-medium',
           )}
         >
           <Link to={lifecycle.targetUrl} state={linkState}>
@@ -261,22 +295,22 @@ export default function SyncRulesTab() {
   const navigate = useNavigate();
   const { project, jobs, showCreateJob, setShowCreateJob, refetch } =
     useProjectDetailContext();
-  const { hasRole } = useSynkazoAuth();
-  const canManage = hasRole('org_admin');
+  const { hasPermission } = useSynkazoAuth();
+  const canCreateJob = hasPermission('job.create');
   const { canAddJob } = useEntitlements();
   const { prompt, dialog: upgradeDialog } = usePlanUpgradePrompt();
 
-  const isBlockedByRole = !canManage;
-  const isBlockedByPlan = canManage && !canAddJob;
+  const isBlockedByPermission = !canCreateJob;
+  const isBlockedByPlan = canCreateJob && !canAddJob;
 
-  const tooltipExplanation = isBlockedByRole
-    ? 'Only Organization Admins can create sync flows. Contact your administrator.'
+  const tooltipExplanation = isBlockedByPermission
+    ? "You don't have permission to create sync flows. Contact your administrator."
     : isBlockedByPlan
       ? "You've reached your plan's sync flow limit. Upgrade to add more."
       : undefined;
 
   const startCreateJob = () => {
-    if (isBlockedByRole) return;
+    if (isBlockedByPermission) return;
     if (isBlockedByPlan) {
       prompt(
         "You've reached the number of sync jobs your plan allows. Upgrade to add more.",
@@ -296,7 +330,7 @@ export default function SyncRulesTab() {
   return (
     <div className="space-y-6">
       {upgradeDialog}
-      {showCreateJob && (
+      {showCreateJob && canCreateJob && canAddJob && (
         <CreateJobDialog
           projectId={project.id}
           open={showCreateJob}
@@ -314,57 +348,57 @@ export default function SyncRulesTab() {
         action={
           <ActionTooltip
             tooltip={tooltipExplanation}
-            disabled={isBlockedByRole || isBlockedByPlan}
+            disabled={isBlockedByPermission || isBlockedByPlan}
           >
             <Button
               variant={hasIncompleteJobs ? 'outline' : 'default'}
               className="shrink-0 self-start sm:self-auto"
-              disabled={isBlockedByRole}
+              disabled={isBlockedByPermission}
               onClick={startCreateJob}
               data-flow-next-action={jobs.length === 0 ? 'true' : undefined}
             >
-              {canManage && canAddJob ? <Plus /> : <Lock />}
+              {canCreateJob && canAddJob ? <Plus /> : <Lock />}
               Create Sync Flow
             </Button>
           </ActionTooltip>
         }
       >
-          {jobs.length === 0 ? (
-            <EmptyState
-              icon={ArrowLeftRight}
-              title="No sync flows configured yet"
-              description="Create your first sync flow to automatically sync data between your connected platforms."
-              // action={{
-              //   label: 'Create Sync Flow',
-              //   onClick: startCreateJob,
-              //   disabled: isBlockedByRole,
-              //   tooltip: tooltipExplanation,
-              //   timeEstimate: 'Takes ~2 mins',
-              //   icon: Plus,
-              //   dataFlowNextAction: true,
-              // }}
-              helpLink={{
-                label: 'Learn how sync flows work',
-                href: 'https://docs.synkazo.com/sync-flows',
-              }}
-            />
-          ) : (
-            jobs.map((job) => {
-              const isNeedsMapping =
-                job.status === 'draft' ||
-                !job.fieldMappings ||
-                job.fieldMappings.length === 0;
-              const shouldDefaultOpen = jobs.length === 1 || isNeedsMapping;
-              return (
-                <SyncJobCard
-                  key={job.id}
-                  job={job}
-                  projectId={project.id}
-                  defaultOpen={shouldDefaultOpen}
-                />
-              );
-            })
-          )}
+        {jobs.length === 0 ? (
+          <EmptyState
+            icon={ArrowLeftRight}
+            title="No sync flows configured yet"
+            description="Create your first sync flow to automatically sync data between your connected platforms."
+            // action={{
+            //   label: 'Create Sync Flow',
+            //   onClick: startCreateJob,
+            //   disabled: isBlockedByPermission,
+            //   tooltip: tooltipExplanation,
+            //   timeEstimate: 'Takes ~2 mins',
+            //   icon: Plus,
+            //   dataFlowNextAction: true,
+            // }}
+            helpLink={{
+              label: 'Learn how sync flows work',
+              href: 'https://docs.synkazo.com/sync-flows',
+            }}
+          />
+        ) : (
+          jobs.map((job) => {
+            const isNeedsMapping =
+              job.status === 'draft' ||
+              !job.fieldMappings ||
+              job.fieldMappings.length === 0;
+            const shouldDefaultOpen = jobs.length === 1 || isNeedsMapping;
+            return (
+              <SyncJobCard
+                key={job.id}
+                job={job}
+                projectId={project.id}
+                defaultOpen={shouldDefaultOpen}
+              />
+            );
+          })
+        )}
       </SyncFlowPanel>
     </div>
   );

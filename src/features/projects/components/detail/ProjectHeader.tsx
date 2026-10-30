@@ -7,6 +7,7 @@ import ProjectStatusDropdown from './ProjectStatusDropdown';
 
 import { projectsApi } from '@/api/projects';
 import HeaderPrimaryActionButton from '@/components/shared/HeaderPrimaryActionButton';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import type { ProjectStatus } from '@/types';
 
 const PROJECT_STATUSES = ['draft', 'active', 'paused', 'error'];
@@ -14,6 +15,8 @@ const PROJECT_STATUSES = ['draft', 'active', 'paused', 'error'];
 export default function ProjectHeader() {
   const { project, connections, jobs, patchProject, projectActiveEnv } =
     useProjectDetailContext();
+  const { hasPermission } = useSynkazoAuth();
+  const canViewJobs = hasPermission('job.view');
 
   const handleStatusSelect = async (status: string) => {
     if (status === 'active') {
@@ -23,7 +26,7 @@ export default function ProjectHeader() {
         );
         return;
       }
-      if (jobs.length === 0) {
+      if (canViewJobs && jobs.length === 0) {
         toast.error(
           'Cannot activate — no jobs exist. Create at least one job first.',
         );
@@ -54,6 +57,7 @@ export default function ProjectHeader() {
           current={project.status}
           options={PROJECT_STATUSES}
           onSelect={handleStatusSelect}
+          disabled={!hasPermission('project.edit')}
         />
       }
       action={<HeaderPrimaryActionButton />}

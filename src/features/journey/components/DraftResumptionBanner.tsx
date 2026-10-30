@@ -26,20 +26,14 @@ export default function DraftResumptionBanner({
   className,
 }: DraftResumptionBannerProps) {
   const navigate = useNavigate();
-  const { hasRole } = useSynkazoAuth();
+  const { hasPermission } = useSynkazoAuth();
   const projectsQuery = useProjectsQuery();
   const [dismissed, setDismissed] = useState(false);
-
-  const userRole = hasRole('org_admin')
-    ? 'org_admin'
-    : hasRole('super_admin')
-      ? 'super_admin'
-      : 'editor';
 
   const draftResolution: ActiveDraftResolution | null = resolveActiveDraft(
     projectsQuery.data ?? [],
     projectId,
-    userRole,
+    hasPermission('job.create'),
   );
 
   const handleDiscard = useCallback(() => {

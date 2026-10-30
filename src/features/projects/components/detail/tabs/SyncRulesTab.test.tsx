@@ -7,21 +7,22 @@ import { useProjectDetailContext } from '../context';
 import { useJobDetailQuery } from '@/features/jobs/hooks';
 import type { JobExt } from '@/features/projects/hooks';
 
+const authState = vi.hoisted(() => ({ canCreateJob: true }));
+
 vi.mock('../context', () => ({
   useProjectDetailContext: vi.fn(),
 }));
 
 vi.mock('@/lib/synkazoAuth', () => ({
   useSynkazoAuth: () => ({
-    hasRole: () => true,
+    hasPermission: () => authState.canCreateJob,
     user: { id: 'u1', email: 'test@example.com' },
   }),
 }));
 
 vi.mock('@/queries/useEntitlements', () => ({
   useEntitlements: () => ({
-    data: { plan: 'growth', isCustomAllowed: true },
-    isLoading: false,
+    canAddJob: true,
   }),
 }));
 
@@ -60,7 +61,9 @@ describe('getJobLifecycle', () => {
     expect(lifecycle.scheduleText).toBe('Setup required');
     expect(lifecycle.actionLabel).toBe('Configure Mapping');
     expect(lifecycle.actionVariant).toBe('default');
-    expect(lifecycle.targetUrl).toBe('/projects/proj-1/jobs/job-1?tab=field-mapping');
+    expect(lifecycle.targetUrl).toBe(
+      '/projects/proj-1/jobs/job-1?tab=field-mapping',
+    );
     expect(lifecycle.isActionable).toBe(true);
   });
 
@@ -72,7 +75,15 @@ describe('getJobLifecycle', () => {
       sourceObject: 'jobs',
       destObject: 'deals',
       status: 'draft',
-      fieldMappings: [{ id: 'm-1', jobId: 'job-draft', sourceField: 'id', destField: 'id', direction: 'forward_only' }],
+      fieldMappings: [
+        {
+          id: 'm-1',
+          jobId: 'job-draft',
+          sourceField: 'id',
+          destField: 'id',
+          direction: 'forward_only',
+        },
+      ],
       isEnabled: false,
       lastSyncedAt: null,
     };
@@ -81,7 +92,9 @@ describe('getJobLifecycle', () => {
 
     expect(lifecycle.statusKey).toBe('needs_mapping');
     expect(lifecycle.actionLabel).toBe('Configure Mapping');
-    expect(lifecycle.targetUrl).toBe('/projects/proj-1/jobs/job-draft?tab=field-mapping');
+    expect(lifecycle.targetUrl).toBe(
+      '/projects/proj-1/jobs/job-draft?tab=field-mapping',
+    );
   });
 
   it('identifies mapped but untested jobs as ready_to_test with Test & Activate CTA', () => {
@@ -93,7 +106,13 @@ describe('getJobLifecycle', () => {
       destObject: 'contacts',
       status: 'idle',
       fieldMappings: [
-        { id: 'm-1', jobId: 'job-2', sourceField: 'email', destField: 'email', direction: 'forward_only' },
+        {
+          id: 'm-1',
+          jobId: 'job-2',
+          sourceField: 'email',
+          destField: 'email',
+          direction: 'forward_only',
+        },
       ],
       isEnabled: false,
       lastSyncedAt: null,
@@ -118,7 +137,13 @@ describe('getJobLifecycle', () => {
       destObject: 'contacts',
       status: 'active',
       fieldMappings: [
-        { id: 'm-1', jobId: 'job-3', sourceField: 'email', destField: 'email', direction: 'forward_only' },
+        {
+          id: 'm-1',
+          jobId: 'job-3',
+          sourceField: 'email',
+          destField: 'email',
+          direction: 'forward_only',
+        },
       ],
       isEnabled: true,
       isRunning: true,
@@ -141,7 +166,13 @@ describe('getJobLifecycle', () => {
       destObject: 'contacts',
       status: 'error',
       fieldMappings: [
-        { id: 'm-1', jobId: 'job-err', sourceField: 'email', destField: 'email', direction: 'forward_only' },
+        {
+          id: 'm-1',
+          jobId: 'job-err',
+          sourceField: 'email',
+          destField: 'email',
+          direction: 'forward_only',
+        },
       ],
       isEnabled: true,
       lastSyncedAt: '2026-09-26T10:00:00Z',
@@ -163,7 +194,13 @@ describe('getJobLifecycle', () => {
       destObject: 'contacts',
       status: 'active',
       fieldMappings: [
-        { id: 'm-1', jobId: 'job-4', sourceField: 'email', destField: 'email', direction: 'forward_only' },
+        {
+          id: 'm-1',
+          jobId: 'job-4',
+          sourceField: 'email',
+          destField: 'email',
+          direction: 'forward_only',
+        },
       ],
       isEnabled: true,
       lastSyncedAt: '2026-09-26T10:00:00Z',
@@ -179,7 +216,10 @@ describe('getJobLifecycle', () => {
 });
 
 describe('SyncRulesTab UI', () => {
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    authState.canCreateJob = true;
+  });
 
   it('renders contextual Configure Mapping button directly on the unmapped job row', () => {
     vi.mocked(useProjectDetailContext).mockReturnValue({
@@ -217,7 +257,9 @@ describe('SyncRulesTab UI', () => {
     expect(screen.getByText('Setup required')).toBeInTheDocument();
 
     // Primary action button pointing straight to field mapping
-    const configureBtn = screen.getByRole('link', { name: /configure mapping/i });
+    const configureBtn = screen.getByRole('link', {
+      name: /configure mapping/i,
+    });
     expect(configureBtn).toHaveAttribute('data-flow-next-action', 'true');
     expect(configureBtn).toBeInTheDocument();
     expect(configureBtn).toHaveAttribute(
@@ -312,12 +354,19 @@ describe('SyncRulesTab UI', () => {
     );
 
     // Unmapped / single jobs are open by default with collapse toggle available
-    expect(screen.getByRole('button', { name: /collapse customers → contacts/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /collapse customers → contacts/i }),
+    ).toBeInTheDocument();
 
     // Clickable job title link to enter job directly
-    const titleLink = screen.getByRole('link', { name: 'Customers → Contacts' });
+    const titleLink = screen.getByRole('link', {
+      name: 'Customers → Contacts',
+    });
     expect(titleLink).toBeInTheDocument();
-    expect(titleLink).toHaveAttribute('href', '/projects/proj-1/jobs/job-unmapped?tab=field-mapping');
+    expect(titleLink).toHaveAttribute(
+      'href',
+      '/projects/proj-1/jobs/job-unmapped?tab=field-mapping',
+    );
 
     expect(screen.queryByText('Next step')).not.toBeInTheDocument();
     expect(screen.queryByText('Match fields')).not.toBeInTheDocument();
@@ -380,7 +429,13 @@ describe('SyncRulesTab UI', () => {
           destObject: 'contacts',
           status: 'active',
           fieldMappings: [
-            { id: 'm-1', jobId: 'job-mapped', sourceField: 'email', destField: 'email', direction: 'forward_only' },
+            {
+              id: 'm-1',
+              jobId: 'job-mapped',
+              sourceField: 'email',
+              destField: 'email',
+              direction: 'forward_only',
+            },
           ],
           isEnabled: true,
           lastSyncedAt: '2026-09-26T10:00:00Z',
@@ -400,5 +455,60 @@ describe('SyncRulesTab UI', () => {
 
     const createBtn = screen.getByRole('button', { name: /create sync flow/i });
     expect(createBtn).toHaveAttribute('data-variant', 'default');
+  });
+
+  it('lets an editor with job.create start a sync flow', () => {
+    authState.canCreateJob = true;
+    const setShowCreateJob = vi.fn();
+    vi.mocked(useProjectDetailContext).mockReturnValue({
+      project: { id: 'proj-1', name: 'My Project' },
+      jobs: [],
+      connections: [],
+      hasBothConnections: true,
+      showCreateJob: false,
+      setShowCreateJob,
+      refetch: vi.fn(),
+    } as any);
+
+    render(
+      <MemoryRouter>
+        <SyncRulesTab />
+      </MemoryRouter>,
+    );
+
+    const createButton = screen.getByRole('button', {
+      name: /create sync flow/i,
+    });
+    expect(createButton).toBeEnabled();
+    fireEvent.click(createButton);
+    expect(setShowCreateJob).toHaveBeenCalledWith(true);
+  });
+
+  it('blocks sync-flow creation when job.create is not granted', () => {
+    authState.canCreateJob = false;
+    const setShowCreateJob = vi.fn();
+    vi.mocked(useProjectDetailContext).mockReturnValue({
+      project: { id: 'proj-1', name: 'My Project' },
+      jobs: [],
+      connections: [],
+      hasBothConnections: true,
+      showCreateJob: true,
+      setShowCreateJob,
+      refetch: vi.fn(),
+    } as any);
+
+    render(
+      <MemoryRouter>
+        <SyncRulesTab />
+      </MemoryRouter>,
+    );
+
+    const createButton = screen.getByRole('button', {
+      name: /create sync flow/i,
+    });
+    expect(createButton).toBeDisabled();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    fireEvent.click(createButton);
+    expect(setShowCreateJob).not.toHaveBeenCalled();
   });
 });

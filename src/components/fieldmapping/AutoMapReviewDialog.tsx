@@ -178,14 +178,14 @@ export default function AutoMapReviewDialog({
                 size="xs"
                 className="gap-1 font-semibold"
               >
-                <Sparkles className="size-3 text-primary shrink-0" />
+                <Sparkles className="size-3 text-success shrink-0" />
                 <span>{applyCount} Mapping{applyCount !== 1 ? 's' : ''} Ready</span>
               </Badge>
             )}
           </div>
 
           <DialogTitle className="text-foreground mt-1.5 flex items-center gap-2 text-base font-semibold">
-            <Wand2 className="text-primary size-5 shrink-0" />
+            <Wand2 className="text-muted-foreground size-5 shrink-0" />
             Auto-Map Suggestions &amp; Review
           </DialogTitle>
 
@@ -250,7 +250,7 @@ export default function AutoMapReviewDialog({
                 )}
               >
                 <div className="flex min-w-0 items-center gap-2">
-                  <span className="bg-primary size-2 shrink-0 rounded-full" />
+                  <span className="bg-warning size-2 shrink-0 rounded-full" />
                   <span className="text-muted-foreground truncate">To review</span>
                 </div>
                 <div className="ml-2 flex items-center gap-1.5">
@@ -291,7 +291,7 @@ export default function AutoMapReviewDialog({
 
             {/* Reassurance Callout */}
             {preview.existingCount > 0 && (
-              <div className="border-success/20 bg-success/[0.06] dark:bg-success/[0.08] flex items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-xs">
+              <div className="border-border/70 bg-muted/30 flex items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-xs">
                 <ShieldCheck className="text-success size-4 shrink-0" />
                 <div className="text-muted-foreground min-w-0 flex-1">
                   <strong className="text-foreground font-semibold">
@@ -313,7 +313,7 @@ export default function AutoMapReviewDialog({
               <div className="border-border/70 bg-card divide-border/60 overflow-hidden rounded-xl border divide-y">
                 <div className="bg-muted/40 px-4 py-2.5 flex items-center justify-between dark:bg-muted/20">
                   <div className="flex items-center gap-2">
-                    <span className="bg-primary size-2 rounded-full" />
+                    <span className="bg-warning size-2 rounded-full" />
                     <span className="text-foreground text-xs font-bold tracking-wide uppercase">
                       Review Suggestions ({preview.review.length})
                     </span>
@@ -367,7 +367,7 @@ export default function AutoMapReviewDialog({
                         className={cn(
                           'flex flex-col gap-2.5 p-3.5 transition-colors sm:flex-row sm:items-center sm:justify-between',
                           state.status === 'accepted'
-                            ? 'bg-success/[0.04] dark:bg-success/[0.06]'
+                            ? 'bg-muted/25'
                             : 'hover:bg-muted/25',
                         )}
                       >

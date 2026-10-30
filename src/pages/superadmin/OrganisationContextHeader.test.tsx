@@ -26,6 +26,7 @@ const fixtures = vi.hoisted(() => ({
     status: 'active',
     sourcePlatformId: 'servicetitan',
     destPlatformId: 'hubspot',
+    syncMode: 'two_way',
     activeEnvironment: 'production',
     jobCount: 3,
   },
@@ -42,6 +43,13 @@ const fixtures = vi.hoisted(() => ({
 }));
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+
+vi.mock('@/lib/synkazoAuth', () => ({
+  useSynkazoAuth: () => ({
+    hasPermission: () => true,
+    hasRole: () => true,
+  }),
+}));
 
 vi.mock('@/queries/useSuperAdmin', () => ({
   useUpdateSuperAdminProjectMutation: (
@@ -236,5 +244,13 @@ describe('selected organisation context header', () => {
     expect(
       within(sections).queryByRole('link', { name: 'Pipeline' }),
     ).not.toBeInTheDocument();
+  });
+
+  it('shows sync mode and active environment badges for projects', () => {
+    fixtures.project.syncMode = 'two_way';
+    fixtures.project.activeEnvironment = 'sandbox';
+    renderAt('/super-admin/organisations/org-1/projects/proj-1?tab=sync-rules');
+    expect(screen.getByText('Two-way')).toBeInTheDocument();
+    expect(screen.getByText('Sandbox (Test Mode)')).toBeInTheDocument();
   });
 });

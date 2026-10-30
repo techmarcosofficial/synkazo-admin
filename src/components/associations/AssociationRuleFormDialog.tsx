@@ -4,7 +4,7 @@ import {
   ArrowRight,
   CircleHelp,
 } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 
 import {
@@ -157,6 +157,7 @@ export default function AssociationRuleFormDialog({
 }: AssociationRuleFormDialogProps) {
   const [step, setStep] = useState(mode === 'edit' ? 1 : 0);
   const [saving, setSaving] = useState(false);
+  const submitting = useRef(false);
   const [loadingTypes, setLoadingTypes] = useState(false);
 
   const [projectObjects, setProjectObjects] = useState<ProjectObject[]>([]);
@@ -204,6 +205,7 @@ export default function AssociationRuleFormDialog({
   const isDirty =
     mode === 'edit'
       ? form.name !== (rule.name ?? '') ||
+        form.cardinality !== (rule.cardinality ?? 'many_to_many') ||
         conditionLogic !== (rule.conditionLogic ?? 'AND') ||
         JSON.stringify(conditions) !== JSON.stringify(rule.conditions ?? []) ||
         reason.trim().length > 0
@@ -388,20 +390,23 @@ export default function AssociationRuleFormDialog({
   };
 
   const handleSubmit = async () => {
+    if (submitting.current) return;
     if (!validate()) return;
+    submitting.current = true;
     setSaving(true);
     setSubmitError(null);
     try {
       if (mode === 'edit') {
         const input = {
           name: form.name.trim(),
+          cardinality: form.cardinality,
           conditions,
           conditionLogic,
         };
         if (operations)
           await operations.updateRule(projectId, rule.id, input, reason.trim());
         else await associationsApi.updateRule(projectId, rule.id, input);
-        toast.success('Association rule saved');
+        toast.success('Association rule changes saved');
       } else {
         const selectedType = associationTypes.find(
           (t) => String(t.typeId) === String(form.hsAssociationTypeId),
@@ -432,13 +437,19 @@ export default function AssociationRuleFormDialog({
       onSuccess();
       onClose();
     } catch (err) {
-      const e = err as { response?: { data?: { message?: string } } };
-      const message =
-        e?.response?.data?.message ??
-        (mode === 'edit' ? 'Failed to save rule' : 'Failed to create rule');
+      const e = err as {
+        response?: { data?: { message?: string | string[] } };
+      };
+      const serverMessage = e?.response?.data?.message;
+      const message = Array.isArray(serverMessage)
+        ? serverMessage.join(' ')
+        : serverMessage ||
+          (err instanceof Error ? err.message : undefined) ||
+          (mode === 'edit' ? 'Failed to save rule' : 'Failed to create rule');
       setSubmitError(message);
       toast.error(message);
     } finally {
+      submitting.current = false;
       setSaving(false);
     }
   };
@@ -446,7 +457,7 @@ export default function AssociationRuleFormDialog({
   return (
     <FormDialog
       open
-      onOpenChange={(open) => !open && onClose()}
+      onOpenChange={(open) => !open && !submitting.current && onClose()}
       title={mode === 'edit' ? 'Edit association rule' : 'New association rule'}
       size="lg"
       isDirty={isDirty}
@@ -841,7 +852,7 @@ export default function AssociationRuleFormDialog({
                           </FieldLabel>
                           <Select
                             value={form.cardinality}
-                            disabled={mode === 'edit'}
+                            disabled={form.targetObject === OWNER_OBJECT}
                             onValueChange={(v) =>
                               setForm((f) => ({ ...f, cardinality: v }))
                             }

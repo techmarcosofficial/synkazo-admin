@@ -144,7 +144,7 @@ function AssociationRuleDetails({
                           : '—'}
                       </TableCell>
                       <TableCell>
-                <StatusBadge status={run.status} label={run.status} />
+                        <StatusBadge status={run.status} label={run.status} />
                       </TableCell>
                       <TableCell>{run.succeeded}</TableCell>
                       <TableCell>{run.pendingCreated}</TableCell>
@@ -209,7 +209,10 @@ function AssociationRuleDetails({
                       <TableCell>{record.sourceId}</TableCell>
                       <TableCell>{record.targetMatchValue}</TableCell>
                       <TableCell>
-                        <StatusBadge status={record.status} label={record.status} />
+                        <StatusBadge
+                          status={record.status}
+                          label={record.status}
+                        />
                       </TableCell>
                       <TableCell>{record.retryCount}</TableCell>
                       <TableCell className="max-w-xs truncate text-xs">
@@ -384,6 +387,7 @@ export function OrganisationProjectAssociationsPanel({
           ruleId,
           dto: {
             name: input.name,
+            cardinality: input.cardinality,
             conditions: input.conditions ?? undefined,
             conditionLogic: input.conditionLogic,
             reason,
@@ -449,6 +453,7 @@ export function OrganisationProjectAssociationsPanel({
                   <TableHead>Name</TableHead>
                   <TableHead>Source</TableHead>
                   <TableHead>Target</TableHead>
+                  <TableHead>Cardinality</TableHead>
                   <TableHead>Enabled</TableHead>
                   <TableHead>Conditions</TableHead>
                   <TableHead>Updated</TableHead>
@@ -475,11 +480,14 @@ export function OrganisationProjectAssociationsPanel({
                         · {rule.targetMatchField}
                       </span>
                     </TableCell>
+                    <TableCell className="text-muted-foreground text-sm capitalize">
+                      {rule.cardinality?.replace(/_/g, ' ') ?? '—'}
+                    </TableCell>
                     <TableCell>
                       {rule.isEnabled ? (
-                          <StatusBadge status="enabled" label="Enabled" />
+                        <StatusBadge status="enabled" label="Enabled" />
                       ) : (
-                          <StatusBadge status="disabled" label="Disabled" />
+                        <StatusBadge status="disabled" label="Disabled" />
                       )}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
@@ -679,6 +687,7 @@ export function OrganisationProjectAssociationsPanel({
       )}
       {dialogState?.mode === 'edit' && dialogState.rule && (
         <AssociationRuleFormDialog
+          key={dialogState.rule.id}
           mode="edit"
           projectId={projectId}
           rule={dialogState.rule}

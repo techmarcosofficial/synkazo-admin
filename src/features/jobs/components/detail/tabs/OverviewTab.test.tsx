@@ -31,6 +31,10 @@ vi.mock('@/components/shared/UpgradeRequiredDialog', () => ({
   default: () => null,
 }));
 
+vi.mock('@/lib/synkazoAuth', () => ({
+  useSynkazoAuth: () => ({ hasPermission: () => true }),
+}));
+
 vi.mock('@/components/sync/SyncRunProgress', () => ({
   default: () => null,
 }));

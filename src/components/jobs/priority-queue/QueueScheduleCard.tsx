@@ -21,7 +21,7 @@ export function queueScheduleDraft(
     scheduleTimes: queue?.scheduleTimes ?? ['02:00'],
     intervalMinutes: queue?.intervalMinutes ?? 60,
     scheduleDays: queue?.scheduleDays ?? [1, 2, 3, 4, 5],
-    oneTimeAt: queue?.oneTimeAt?.slice(0, 16) ?? '',
+    oneTimeAt: queue?.oneTimeAt?.slice(0, 16) || undefined,
   };
 }
 
@@ -138,7 +138,9 @@ export default function QueueScheduleCard({
               uiSize="sm"
               className="w-56 max-w-full"
               value={value.oneTimeAt ?? ''}
-              onChange={(event) => update({ oneTimeAt: event.target.value })}
+              onChange={(event) =>
+                update({ oneTimeAt: event.target.value || undefined })
+              }
             />
           </div>
         )}

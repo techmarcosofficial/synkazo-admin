@@ -168,6 +168,8 @@ export const queryKeys = {
         ['superAdmin', 'organisations', organisationId] as const,
     },
     members: {
+      all: (organisationId: string) =>
+        ['superAdmin', organisationId, 'members'] as const,
       list: (
         organisationId: string,
         page: number,
@@ -175,15 +177,13 @@ export const queryKeys = {
         filters: Record<string, unknown> = {},
       ) =>
         [
-          'superAdmin',
-          organisationId,
-          'members',
+          ...queryKeys.superAdmin.members.all(organisationId),
           page,
           limit,
           filters,
         ] as const,
       detail: (organisationId: string, userId: string) =>
-        ['superAdmin', organisationId, 'members', userId] as const,
+        [...queryKeys.superAdmin.members.all(organisationId), userId] as const,
     },
     invitations: {
       list: (

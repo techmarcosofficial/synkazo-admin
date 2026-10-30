@@ -11,7 +11,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import OrganisationProjectSettings from './OrganisationProjectSettings';
 
-import type { SuperAdminProjectDetail } from '@/types/superAdmin';
+import type {
+  SuperAdminJobListItem,
+  SuperAdminProjectDetail,
+} from '@/types/superAdmin';
 
 const archiveApi = vi.hoisted(() => ({
   getProjectArchiveImpact: vi.fn(),
@@ -76,13 +79,17 @@ function Location() {
   return <output data-testid="location">{location.search}</output>;
 }
 
-function renderSettings(initialEntry: string) {
+function renderSettings(
+  initialEntry: string,
+  jobs?: SuperAdminJobListItem[],
+) {
   return render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <OrganisationProjectSettings
         organisationId="org-1"
         organisationName="Northwind"
         project={project}
+        jobs={jobs}
         onHold={vi.fn()}
         onResume={vi.fn()}
         operationPending={false}
@@ -219,5 +226,131 @@ describe('OrganisationProjectSettings', () => {
         'Requested by support',
       ),
     );
+  });
+
+  it('displays All Flows Active status and enables Hold button when active flows exist', () => {
+    const jobs: SuperAdminJobListItem[] = [
+      {
+        id: 'job-1',
+        projectId: 'project-1',
+        organisationId: 'org-1',
+        name: 'Contacts sync',
+        sourceObject: 'Customer',
+        destObject: 'Contact',
+        isEnabled: true,
+        syncEnabled: true,
+        isRunning: false,
+        recordsSynced: 100,
+        status: 'active',
+        scheduleState: 'active',
+        scheduleMode: null,
+        scheduleTimes: null,
+        intervalMinutes: null,
+        scheduleDays: null,
+        timezone: null,
+        cronExpression: null,
+        syncDirection: 'one_way',
+        lastSyncedAt: null,
+        nextRunAt: null,
+        checkpointPage: null,
+        checkpointSince: null,
+        checkpointRunId: null,
+        syncAllPage: null,
+        dataformaStartingCustomerId: null,
+        createdAt: '2026-01-01',
+        updatedAt: '2026-01-01',
+      },
+    ];
+
+    renderSettings(
+      '/super-admin/organisations/org-1/projects/project-1?tab=settings',
+      jobs,
+    );
+
+    expect(screen.getByText('All Flows Active')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Hold active flows' }),
+    ).toBeEnabled();
+    expect(
+      screen.getByRole('button', { name: 'Resume held flows' }),
+    ).toBeDisabled();
+  });
+
+  it('displays Held by Admin status and enables Resume button when held flows exist', () => {
+    const jobs: SuperAdminJobListItem[] = [
+      {
+        id: 'job-1',
+        projectId: 'project-1',
+        organisationId: 'org-1',
+        name: 'Contacts sync',
+        sourceObject: 'Customer',
+        destObject: 'Contact',
+        isEnabled: true,
+        syncEnabled: true,
+        isRunning: false,
+        recordsSynced: 100,
+        status: 'active',
+        scheduleState: 'held',
+        scheduleMode: null,
+        scheduleTimes: null,
+        intervalMinutes: null,
+        scheduleDays: null,
+        timezone: null,
+        cronExpression: null,
+        syncDirection: 'one_way',
+        lastSyncedAt: null,
+        nextRunAt: null,
+        checkpointPage: null,
+        checkpointSince: null,
+        checkpointRunId: null,
+        syncAllPage: null,
+        dataformaStartingCustomerId: null,
+        createdAt: '2026-01-01',
+        updatedAt: '2026-01-01',
+      },
+      {
+        id: 'job-2',
+        projectId: 'project-1',
+        organisationId: 'org-1',
+        name: 'Invoices sync',
+        sourceObject: 'Invoice',
+        destObject: 'Deal',
+        isEnabled: true,
+        syncEnabled: true,
+        isRunning: false,
+        recordsSynced: 50,
+        status: 'active',
+        scheduleState: 'held',
+        scheduleMode: null,
+        scheduleTimes: null,
+        intervalMinutes: null,
+        scheduleDays: null,
+        timezone: null,
+        cronExpression: null,
+        syncDirection: 'one_way',
+        lastSyncedAt: null,
+        nextRunAt: null,
+        checkpointPage: null,
+        checkpointSince: null,
+        checkpointRunId: null,
+        syncAllPage: null,
+        dataformaStartingCustomerId: null,
+        createdAt: '2026-01-01',
+        updatedAt: '2026-01-01',
+      },
+    ];
+
+    renderSettings(
+      '/super-admin/organisations/org-1/projects/project-1?tab=settings',
+      jobs,
+    );
+
+    expect(screen.getByText('2 Flows Held by Admin')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Hold active flows' }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: 'Resume held flows' }),
+    ).toBeEnabled();
   });
 });

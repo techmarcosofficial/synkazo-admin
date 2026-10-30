@@ -2,6 +2,7 @@ import { useState, type MouseEvent, type ReactNode } from 'react';
 import { ArrowLeftRight, ArrowRight, ChevronDown, Clock } from 'lucide-react';
 
 import StatusBadge from '@/components/shared/StatusBadge';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
@@ -25,6 +26,7 @@ interface SyncFlowCardProps {
   defaultOpen?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  heldByAdmin?: boolean;
 }
 
 /** Shared flow card frame. Each route owns its queries, links and actions. */
@@ -41,6 +43,7 @@ export default function SyncFlowCard({
   defaultOpen = false,
   open: controlledOpen,
   onOpenChange,
+  heldByAdmin = false,
 }: SyncFlowCardProps) {
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
   const open = controlledOpen ?? internalOpen;
@@ -76,6 +79,18 @@ export default function SyncFlowCard({
               <Clock className="size-3.5" aria-hidden="true" />
               {scheduleText}
             </span>
+            {heldByAdmin && (
+              <Badge
+                variant="secondary"
+                className="bg-warning/15 text-warning dark:bg-warning/20 border-warning/30 font-semibold text-xs gap-1.5 py-0.5 px-2"
+              >
+                <span
+                  className="size-1.5 shrink-0 rounded-full bg-warning"
+                  aria-hidden="true"
+                />
+                Held by Admin
+              </Badge>
+            )}
             <StatusBadge status={status} size="sm" />
             <Separator
               orientation="vertical"
