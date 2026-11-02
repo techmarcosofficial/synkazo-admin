@@ -14,7 +14,9 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
-import RunJobDialog, { type RunJobDialogValues } from './projects/RunJobDialog';
+import StartSyncModal from '@/components/sync/StartSyncModal';
+import type { ExtJob } from '@/features/jobs/hooks/useJobDetail';
+import type { SuperAdminRunJobDto } from '@/types/superAdmin';
 import OrganisationJobMappingPanel from './OrganisationJobMappingPanel';
 import OrganisationJobPipelinePanel from './OrganisationJobPipelinePanel';
 
@@ -782,17 +784,33 @@ export default function OrganisationJobDetailPage() {
 
   const job = jobQuery.data;
   const project = projectQuery.data;
+  const runs = historyQuery.data?.data ?? [];
   const pipelineRequired =
     project.destPlatformId === 'hubspot' &&
     KNOWN_PIPELINE_OBJECTS.has(job.destObject.toLowerCase());
-  const submitRun = async (values: RunJobDialogValues) => {
+  const mappingReady = Boolean(
+    job.fieldMappings?.length &&
+    job.fieldMappings.some((mapping) => mapping.isMatchField),
+  );
+  const pipelineReady =
+    !pipelineRequired ||
+    Boolean(
+      job.destPipelineId &&
+      job.statusMapping &&
+      Object.keys(job.statusMapping).length,
+    );
+  const submitRun = async (values: SuperAdminRunJobDto) => {
     try {
       const result = await runJob.mutateAsync(values);
       setRunOpen(false);
       setBullJobId(result.bullJobId ?? null);
       toast.success(result.message ?? 'Sync run queued.');
-    } catch {
-      // The dialog keeps the server error visible for correction.
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Could not start sync run. Please try again.',
+      );
     }
   };
   const changeEnabled = async () => {
@@ -840,7 +858,7 @@ export default function OrganisationJobDetailPage() {
       <div className="space-y-4">
         <JobSetupJourney
           job={job}
-          runs={historyQuery.data?.data ?? []}
+          runs={runs}
           pipelineRequired={pipelineRequired}
           activeTab={tab}
           onTabChange={goToTab}
@@ -852,7 +870,7 @@ export default function OrganisationJobDetailPage() {
         <TabsContent value="overview">
           <JobOverview
             job={job}
-            runs={historyQuery.data?.data ?? []}
+            runs={runs}
             runAction={
               <div className="flex flex-wrap gap-2">
                 <Button variant="outline" onClick={() => setScheduleOpen(true)}>
@@ -882,15 +900,18 @@ export default function OrganisationJobDetailPage() {
                     {job.syncEnabled ? 'Pause schedule' : 'Start schedule'}
                   </Button>
                 )}
-                <Button
-                  onClick={() => {
-                    runJob.reset();
-                    setRunOpen(true);
-                  }}
-                  disabled={runJob.isPending || job.isRunning}
-                >
-                  <Play /> Run now
-                </Button>
+                {mappingReady && (
+                  <Button
+                    id="sync-now-button"
+                    onClick={() => {
+                      runJob.reset();
+                      setRunOpen(true);
+                    }}
+                    disabled={runJob.isPending || job.isRunning}
+                  >
+                    <Play /> Sync now
+                  </Button>
+                )}
               </div>
             }
             runStatus={
@@ -962,18 +983,48 @@ export default function OrganisationJobDetailPage() {
           />
         </TabsContent>
       </div>
-      <RunJobDialog
-        open={runOpen}
-        onOpenChange={setRunOpen}
-        jobName={job.name}
-        isSubmitting={runJob.isPending}
-        errorMessage={
-          runJob.isError
-            ? 'Could not start this run. Check the selected job and try again.'
-            : null
-        }
-        onSubmit={submitRun}
-      />
+      {runOpen && (
+        <StartSyncModal
+          projectId={projectId}
+          jobId={job.id}
+          job={job as unknown as ExtJob}
+          environment={project.activeEnvironment ?? project.active_environment}
+          sourcePlatformId={project.sourcePlatformId}
+          hasBaseline={Boolean(
+            job.lastSyncedAt ||
+              runs.some(
+                (r) => r.status === 'completed' || r.status === 'success',
+              ),
+          )}
+          pipelineRequired={pipelineRequired}
+          pipelineConfigured={pipelineReady}
+          onGoToPipeline={() => {
+            setRunOpen(false);
+            goToTab('pipeline');
+          }}
+          onClose={() => setRunOpen(false)}
+          onRunNow={() => {
+            setRunOpen(false);
+            void submitRun({ fullSync: false });
+          }}
+          onLimitSyncStarted={() => {
+            void jobQuery.refetch();
+            void historyQuery.refetch();
+          }}
+          onLimitSyncDone={() => {
+            void jobQuery.refetch();
+            void historyQuery.refetch();
+          }}
+          onSyncAll={(range) => {
+            setRunOpen(false);
+            void submitRun({
+              fullSync: true,
+              startDate: range?.startDate,
+              endDate: range?.endDate,
+            });
+          }}
+        />
+      )}
       <JobScheduleModal
         projectId={projectId}
         jobId={jobId}
