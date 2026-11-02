@@ -19,6 +19,9 @@ export interface Project {
   /** One-time, immutable gate on which job sync directions this project allows.
    *  Null = legacy/unrestricted (both one-way and two-way jobs selectable). */
   syncMode?: ProjectSyncMode | null;
+  /** Two-way safety opt-in. While false no job may delete or deactivate records
+   *  on either platform. Turning it on requires typing "I UNDERSTAND". */
+  allowRecordDeletionAndDeactivation?: boolean;
   status: ProjectStatus;
   active_environment?: ProjectEnvironment;
   schedulerMode?: SchedulerMode;

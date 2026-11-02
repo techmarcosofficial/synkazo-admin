@@ -8,6 +8,7 @@ import {
   DangerZoneCard,
   GeneralSettingsCard,
   ProjectContextCard,
+  RecordDeletionPolicyCard,
 } from '../settings';
 
 import ConnectionEnvDropdown from '@/components/connections/ConnectionEnvToggle';
@@ -66,6 +67,9 @@ function GeneralSection({ environmentsHref }: { environmentsHref: string }) {
           environmentsHref={environmentsHref}
           className="h-full border"
         />
+      </div>
+      <div className="min-w-0 xl:col-span-12">
+        <RecordDeletionPolicyCard project={project} onUpdated={patchProject} />
       </div>
       <div className="min-w-0 xl:col-span-12">
         <DangerZoneCard

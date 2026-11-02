@@ -47,6 +47,12 @@ export interface SyncDirectionFieldsProps {
    * `readOnly` (that branch already shows locked static text).
    */
   projectSyncMode?: 'one_way' | 'two_way' | null;
+  /**
+   * The project's record deletion/deactivation opt-in. When false, only
+   * "Don't propagate" can be chosen for deletes. Undefined (callers that don't
+   * load the project) leaves every option enabled; the API still enforces it.
+   */
+  deletionAllowed?: boolean;
   /** Reduces helper copy and spacing for the standalone create dialog. */
   compact?: boolean;
 }
@@ -103,8 +109,10 @@ export default function SyncDirectionFields({
   fieldMappingLocationLabel = 'the next step',
   readOnly = false,
   projectSyncMode = null,
+  deletionAllowed,
   compact = false,
 }: SyncDirectionFieldsProps) {
+  const deletesLocked = deletionAllowed === false;
   const platformLabel = (platformId: string) =>
     availablePlatforms.find((p) => p.platformId === platformId)?.label ??
     platformId;
@@ -259,13 +267,25 @@ export default function SyncDirectionFields({
                     value="soft_archive"
                     id="delete-handling-soft_archive"
                     title="Archive on other side"
+                    disabled={deletesLocked}
                   />
                   <ChoiceCardItem
                     value="hard_delete"
                     id="delete-handling-hard_delete"
                     title="Delete on other side"
+                    disabled={deletesLocked}
                   />
                 </RadioGroup>
+                {deletesLocked && (
+                  <p
+                    className="text-muted-foreground text-xs"
+                    data-testid="delete-handling-locked"
+                  >
+                    Record deletion is turned off for this project. To allow it,
+                    go to Project Settings → General → Record deletion and
+                    deactivation.
+                  </p>
+                )}
                 {!compact && (
                   <p className="text-muted-foreground text-xs">
                     ServiceTitan has no generic delete API — only a few object

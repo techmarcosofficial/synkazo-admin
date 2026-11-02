@@ -132,6 +132,8 @@ export const CreateJobForm = forwardRef<
   // to match below.
   const projectSyncMode = (projectQuery.data?.syncMode ?? null) as
     'one_way' | 'two_way' | null;
+  const deletionAllowed =
+    projectQuery.data?.allowRecordDeletionAndDeactivation === true;
   const connectionsQuery = useProjectConnectionsQuery(projectId);
   // Creating custom fields on a connected platform is its own plan capability, on top of
   // whether the platform supports them at all.
@@ -301,6 +303,14 @@ export const CreateJobForm = forwardRef<
     if (!projectSyncMode || config.syncDirection === projectSyncMode) return;
     setConfig((prev) => ({ ...prev, syncDirection: projectSyncMode }));
   }, [projectSyncMode, config.syncDirection]);
+
+  // Deletes can only be propagated once the project allows it; a restored draft
+  // that chose otherwise falls back to "Don't propagate" (the API rejects it).
+  useEffect(() => {
+    if (!projectQuery.data || deletionAllowed) return;
+    if (config.deleteHandling === 'ignore') return;
+    setConfig((prev) => ({ ...prev, deleteHandling: 'ignore' }));
+  }, [projectQuery.data, deletionAllowed, config.deleteHandling]);
 
   const [configSeeded, setConfigSeeded] = useState(false);
   useEffect(() => {
@@ -1077,6 +1087,7 @@ export const CreateJobForm = forwardRef<
           config={config}
           setConfig={setConfig}
           projectSyncMode={projectSyncMode}
+          deletionAllowed={deletionAllowed}
           errors={errors}
           setErrors={setErrors}
           availablePlatforms={availablePlatforms}

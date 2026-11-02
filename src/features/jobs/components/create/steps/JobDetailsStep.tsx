@@ -137,6 +137,7 @@ export default function JobDetailsStep({
   onAddCustomObject,
   projectId,
   projectSyncMode = null,
+  deletionAllowed,
   compact = false,
   existingJobs = [],
   ObjectSelector = PlatformObjectSelector,
@@ -158,6 +159,8 @@ export default function JobDetailsStep({
   projectId: string;
   /** Project-level gate — locks the Job Type radio to the project's mode. Null = unrestricted. */
   projectSyncMode?: 'one_way' | 'two_way' | null;
+  /** Project's record deletion/deactivation opt-in — see SyncDirectionFields. */
+  deletionAllowed?: boolean;
   /** Uses tighter spacing and concise copy in the standalone create dialog. */
   compact?: boolean;
   existingJobs?: Array<{
@@ -433,6 +436,7 @@ export default function JobDetailsStep({
 
         <SyncDirectionFields
           projectSyncMode={projectSyncMode}
+          deletionAllowed={deletionAllowed}
           syncDirection={config.syncDirection}
           sourceOfTruth={config.sourceOfTruth}
           deleteHandling={config.deleteHandling}
