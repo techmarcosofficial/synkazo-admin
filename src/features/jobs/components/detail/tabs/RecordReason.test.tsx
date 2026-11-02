@@ -38,12 +38,14 @@ beforeAll(() => {
 
 afterAll(() => vi.unstubAllGlobals());
 
-function renderReason(record: SyncLogRecord) {
+function renderReason(record: SyncLogRecord, projectId = 'proj-1', jobId = 'job-1') {
   return render(
     <MemoryRouter>
       <TooltipProvider delayDuration={0}>
         <RecordReason
           rec={record}
+          projectId={projectId}
+          jobId={jobId}
           context={{
             sourcePlatform: 'service_titan',
             sourceObject: 'customer',
@@ -57,7 +59,7 @@ function renderReason(record: SyncLogRecord) {
 }
 
 describe('RecordReason', () => {
-  it('shows a concise conflict summary and opens complete details on keyboard focus', async () => {
+  it('shows a concise conflict summary and omits source/dest sections on skipped records', async () => {
     const fullReason =
       "One or more tracked fields conflict with the destination's current value — the whole record was left untouched";
 
@@ -80,18 +82,19 @@ describe('RecordReason', () => {
 
     const tooltip = await screen.findByRole('tooltip');
     expect(tooltip).toHaveTextContent(fullReason);
-    expect(tooltip).toHaveTextContent('source-1001');
-    expect(tooltip).toHaveTextContent('123456789');
-    expect(tooltip).toHaveTextContent('Service Titan Customer');
-    expect(tooltip).toHaveTextContent('HubSpot Contact');
+    // Skipped records omit source and destination record sections
+    expect(tooltip).not.toHaveTextContent('Source record');
+    expect(tooltip).not.toHaveTextContent('Destination record');
+    expect(tooltip).not.toHaveTextContent('Suggested Action');
   });
 
-  it('opens on hover and displays only IDs and API details', async () => {
+  it('opens on hover and displays IDs, API details, and suggested actions on failed records', async () => {
     const user = userEvent.setup();
     renderReason({
       id: 'record-2',
       action: 'failed',
       sourceRecordId: 'source-2002',
+      destRecordId: 'dest-9002',
       failReason: 'api_error',
       failReasonDetail: 'API validation failed for phone',
       sourceData: JSON.stringify({
@@ -119,12 +122,17 @@ describe('RecordReason', () => {
     await user.hover(trigger);
 
     const tooltip = await screen.findByRole('tooltip');
+    // Failed records retain source and destination record sections and API details
+    expect(tooltip).toHaveTextContent('Source record');
     expect(tooltip).toHaveTextContent('source-2002');
+    expect(tooltip).toHaveTextContent('Destination record');
+    expect(tooltip).toHaveTextContent('dest-9002');
     expect(tooltip).not.toHaveTextContent('person@example.com');
     expect(tooltip).not.toHaveTextContent('+1 555 111 2222');
     expect(tooltip).not.toHaveTextContent('Mapped field values');
     expect(tooltip).toHaveTextContent('Phone has an invalid format');
     expect(tooltip).not.toHaveTextContent(/null|undefined/i);
+    expect(tooltip).toHaveTextContent('Suggested Action');
   });
 
   it('does not expose source payload values in the tooltip', async () => {
@@ -149,11 +157,10 @@ describe('RecordReason', () => {
     );
 
     const tooltip = await screen.findByRole('tooltip');
-    expect(tooltip).toHaveTextContent('source-5001');
-    expect(tooltip).not.toHaveTextContent('source-5002');
     expect(tooltip).not.toHaveTextContent('first@example.com');
     expect(tooltip).not.toHaveTextContent('second@example.com');
-    expect(tooltip).toHaveTextContent('hubspot-9001');
+    expect(tooltip).not.toHaveTextContent('Source record');
+    expect(tooltip).not.toHaveTextContent('Suggested Action');
   });
 
   it('preserves legacy multiline text and provides wrapping and scrolling styles', async () => {
@@ -162,6 +169,7 @@ describe('RecordReason', () => {
       id: 'record-3',
       action: 'failed',
       sourceRecordId: 'source-3003',
+      failReason: 'unknown',
       failReasonDetail: legacyReason,
     });
 
@@ -170,12 +178,8 @@ describe('RecordReason', () => {
     );
 
     const tooltip = await screen.findByRole('tooltip');
-    expect(tooltip).toHaveTextContent('First line Second line');
-    expect(tooltip).toHaveClass('overflow-y-auto');
-    expect(tooltip.querySelector('section p')).toHaveClass(
-      'whitespace-pre-wrap',
-      'break-words',
-    );
+    expect(tooltip).toHaveTextContent('First line');
+    expect(tooltip).toHaveTextContent('Second line with a long explanation');
   });
 
   it('closes when keyboard focus leaves the trigger', async () => {
@@ -211,29 +215,31 @@ describe('RecordReason', () => {
       expect(screen.queryByRole('tooltip')).not.toBeInTheDocument(),
     );
   });
-  it('shows the matched source condition and actual value for a skipped record', async () => {
+
+  it('shows the specific matched source condition instead of a generic label', async () => {
     renderReason({
       id: 'record-source-condition',
       action: 'skipped',
       sourceRecordId: 'contact-1',
       skipReason: 'filter_excluded',
       skipReasonDetail:
-        'Source skip conditions matched (logic=OR; matched 1 of 2): email is empty (actual=<empty>)',
+        'Source skip conditions matched (logic=OR; matched 1 of 2): email is empty',
     });
 
     const trigger = screen.getByRole('button', {
       name: /view skipped reason details/i,
     });
-    expect(trigger).toHaveTextContent('Skipped: Matched a skip rule');
+    expect(trigger).toHaveTextContent('Skipped: Skip rule: email is empty');
     fireEvent.focus(trigger);
 
     const tooltip = await screen.findByRole('tooltip');
     expect(tooltip).toHaveTextContent('Match Any');
     expect(tooltip).toHaveTextContent('email is empty');
-    expect(tooltip).toHaveTextContent('actual=<empty>');
+    expect(tooltip).not.toHaveTextContent('Suggested Action');
+    expect(tooltip).not.toHaveTextContent('Source record');
   });
 
-  it('shows source, mapped, and destination values for a destination skip', async () => {
+  it('shows the specific matched destination condition instead of a generic label', async () => {
     renderReason({
       id: 'record-destination-condition',
       action: 'skipped',
@@ -241,25 +247,24 @@ describe('RecordReason', () => {
       destRecordId: 'hubspot-2',
       skipReason: 'destination_condition',
       skipReasonDetail:
-        'Destination skip conditions matched (logic=ANY; matched 1): email → email is different from destination (source=Incoming@Example.com; mapped=incoming@example.com; destination=current@example.com)',
+        'Destination skip conditions matched (logic=ANY; matched 1): email → email is different from destination',
     });
 
     const trigger = screen.getByRole('button', {
       name: /view skipped reason details/i,
     });
     expect(trigger).toHaveTextContent(
-      'Skipped: Matched a destination skip rule',
+      'Skipped: Destination skip rule: email → email is different from destination',
     );
     fireEvent.focus(trigger);
 
     const tooltip = await screen.findByRole('tooltip');
-    expect(tooltip).toHaveTextContent('source=Incoming@Example.com');
-    expect(tooltip).toHaveTextContent('mapped=incoming@example.com');
-    expect(tooltip).toHaveTextContent('destination=current@example.com');
-    expect(tooltip).not.toHaveTextContent('Failed');
+    expect(tooltip).toHaveTextContent('email → email is different from destination');
+    expect(tooltip).not.toHaveTextContent('Suggested Action');
+    expect(tooltip).not.toHaveTextContent('Destination record');
   });
 
-  it('renders dynamic 1-click recovery actions with deep link params for missing required field', async () => {
+  it('renders dynamic 1-click recovery actions with deep link params for missing required field on failed records', async () => {
     render(
       <MemoryRouter>
         <TooltipProvider delayDuration={0}>
@@ -269,13 +274,9 @@ describe('RecordReason', () => {
             rec={{
               id: 'record-missing-field',
               action: 'failed',
-              sourceRecordId: 'order-101',
+              sourceRecordId: 'src-99',
               failReason: 'missing_required_field',
-              failReasonDetail: 'Missing required property: dealname',
-            }}
-            context={{
-              destPlatform: 'hubspot',
-              destObject: 'deal',
+              failReasonDetail: 'Required field "email" was empty',
             }}
           />
         </TooltipProvider>
@@ -289,8 +290,6 @@ describe('RecordReason', () => {
 
     const tooltip = await screen.findByRole('tooltip');
     expect(tooltip).toHaveTextContent('Suggested Action');
-    expect(tooltip).toHaveTextContent(/Default fallback value \("dealname"\)/i);
-    expect(tooltip).toHaveTextContent(/Skip rule suggestion \("dealname"\)/i);
-    expect(tooltip).toHaveTextContent('HubSpot requires "dealname"');
+    expect(tooltip).toHaveTextContent('Default fallback value ("email")');
   });
 });

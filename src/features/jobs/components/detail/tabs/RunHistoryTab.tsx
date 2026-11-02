@@ -660,7 +660,12 @@ function RunLogRow({
   }, [initiallyExpanded, pages.length, projectId, jobId, run.id]);
 
   const displayStatus = getRunStatus(run);
-  const recordsSynced = (run.createdCount ?? 0) + (run.updatedCount ?? 0);
+  const recordsProcessed =
+    run.recordsProcessed ??
+    (run.createdCount ?? 0) +
+      (run.updatedCount ?? 0) +
+      (run.skippedCount ?? 0) +
+      (run.failedCount ?? 0);
   const runMessage = friendlyRunMessage(run.errorMessage);
 
   const handleStopRun = async (e: React.MouseEvent) => {
@@ -754,7 +759,7 @@ function RunLogRow({
                     : 'Start time unavailable'}
                 </span>
                 <span aria-hidden="true">·</span>
-                <span>{recordsSynced.toLocaleString()} synced</span>
+                <span>{recordsProcessed.toLocaleString()} processed</span>
                 <span aria-hidden="true">·</span>
                 <span>{formatDuration(run.durationMs)}</span>
               </div>
@@ -770,9 +775,9 @@ function RunLogRow({
                 </p>
               </div>
               <div className="min-w-28 px-4">
-                <p className="text-muted-foreground text-xs">Records synced</p>
+                <p className="text-muted-foreground text-xs">Records processed</p>
                 <p className="mt-0.5 text-sm font-medium">
-                  {recordsSynced.toLocaleString()}
+                  {recordsProcessed.toLocaleString()}
                 </p>
               </div>
               <div className="min-w-24 px-4">
@@ -838,13 +843,19 @@ function RunLogRow({
         <CollapsibleContent className="bg-muted/35 border-t">
           <div className="space-y-4 p-4">
             <section>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
                 {[
                   {
-                    label: 'Processed',
+                    label: 'Fetched',
                     value: run.totalFetched ?? 0,
-                    icon: FileText,
+                    icon: Database,
                     iconClassName: 'text-muted-foreground',
+                  },
+                  {
+                    label: 'Processed',
+                    value: recordsProcessed,
+                    icon: FileText,
+                    iconClassName: 'text-foreground',
                   },
                   {
                     label: 'Created',

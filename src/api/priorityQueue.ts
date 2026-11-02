@@ -67,8 +67,16 @@ export const priorityQueueApi = {
   updateSchedule: (
     projectId: string,
     payload: UpdateQueueSchedulePayload,
-  ): Promise<ProjectQueue> =>
-    apiClient.patch(`${p(projectId)}/schedule`, payload).then(d),
+  ): Promise<ProjectQueue> => {
+    const cleanPayload: UpdateQueueSchedulePayload = {
+      ...payload,
+      oneTimeAt:
+        payload.scheduleMode === 'one_time' && payload.oneTimeAt?.trim()
+          ? payload.oneTimeAt.trim()
+          : undefined,
+    };
+    return apiClient.patch(`${p(projectId)}/schedule`, cleanPayload).then(d);
+  },
 
   addJob: (projectId: string, payload: AddQueueJobPayload): Promise<QueueJob> =>
     apiClient.post(`${p(projectId)}/jobs`, payload).then(d),

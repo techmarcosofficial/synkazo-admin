@@ -192,6 +192,9 @@ function friendlyError(message?: string | null) {
     return 'The platform could not be reached reliably. Check the connection and try again.';
   if (value.includes('polling timed out'))
     return 'Live updates timed out. Check run history for the final result.';
+  if (message.length < 250 && !message.includes(' at ') && !message.includes('Error:')) {
+    return message;
+  }
   return 'This run could not be completed. Review run history for details.';
 }
 

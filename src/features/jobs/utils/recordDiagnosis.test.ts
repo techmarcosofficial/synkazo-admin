@@ -186,5 +186,21 @@ describe('recordDiagnosis', () => {
         action: 'identity',
       });
     });
+
+    it('produces 0 actions for skipped records with skip_rule', () => {
+      const rec: SyncLogRecord = {
+        id: 'rec-5',
+        action: 'skipped',
+        sourceRecordId: '105',
+        skipReason: 'filter_excluded',
+        skipReasonDetail:
+          'Source skip conditions matched (logic=OR; matched 1 of 2): status equals',
+      };
+
+      const diag = analyzeRecordDiagnosis(rec);
+      expect(diag.category).toBe('skip_rule');
+      expect(diag.summary).toBe('Skip rule: status equals');
+      expect(diag.actions).toHaveLength(0);
+    });
   });
 });

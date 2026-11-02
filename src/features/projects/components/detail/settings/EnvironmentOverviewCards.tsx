@@ -139,9 +139,6 @@ export default function EnvironmentOverviewCards({
   const sharedSource = sameHubSpotAccount(
     readiness.sandbox.source, readiness.production.source,
   );
-  const sharedDestination = sameHubSpotAccount(
-    readiness.sandbox.destination, readiness.production.destination,
-  );
   const [sharedSourceStatus, setSharedSourceStatus] = useState<SharedSourceAcknowledgement | null>(null);
   const [sharedSourceError, setSharedSourceError] = useState<string | null>(null);
   const [checkingSharedSource, setCheckingSharedSource] = useState(false);
@@ -251,28 +248,65 @@ export default function EnvironmentOverviewCards({
         : 'Production'
       : 'no active environment';
 
+    const hasBulk = Boolean(preview.schedulerImpact?.activeBulkScheduler);
+    const bulkJobCount = preview.schedulerImpact?.bulkSchedulerJobCount ?? 0;
+    const individualCount = preview.schedulerImpact?.activeIndividualSchedules ?? 0;
+    const hasRunningExecutions = Boolean(preview.schedulerImpact?.hasRunningExecutions);
+
     confirm({
       variant: 'warning',
       title: `${activeEnvironment ? 'Switch to' : 'Activate'} ${targetLabel}?`,
       description: `This changes the active sync environment from ${currentLabel} to ${targetLabel}.`,
       body: (
-        <div className="space-y-2 text-sm">
-          {isolated ? <>
+        <div className="space-y-3 text-sm">
+          {isolated ? (
+            <>
+              <p>
+                Wait for running syncs and priority stages to finish. Switching
+                pauses active scheduler execution in the current workspace.
+                Job activation state, webhook write-back, and scheduler settings are preserved.
+              </p>
+              {preview.schedulerImpact?.activeBulkScheduler && (
+                <p>
+                  Bulk Scheduler (Priority Queue) with {preview.schedulerImpact.bulkSchedulerJobCount} job(s) will pause.
+                </p>
+              )}
+              <p>
+                {preview.jobsToPause} enabled job(s) will pause. Target workspace:
+                {' '}{preview.targetCounts?.jobs ?? 0} saved job(s),
+                {' '}{preview.targetCounts?.runs ?? 0} run(s),
+                {' '}{preview.targetCounts?.runLogs ?? 0} run log(s).
+              </p>
+              {(hasBulk || individualCount > 0 || hasRunningExecutions) ? (
+                <div className="rounded-md border border-warning/30 bg-warning/10 p-2.5 space-y-1 text-xs text-warning-foreground">
+                  <p className="font-semibold text-warning">
+                    Active schedulers will stop and be disabled
+                  </p>
+                  {hasBulk && (
+                    <p>• Bulk Scheduler with {bulkJobCount} job(s) will be stopped and paused.</p>
+                  )}
+                  {individualCount > 0 && (
+                    <p>• {individualCount} active individual job schedule(s) will be paused.</p>
+                  )}
+                  {hasRunningExecutions && (
+                    <p>• In-flight sync jobs and priority cycles in {currentLabel} will be safely stopped before switching.</p>
+                  )}
+                  <p className="text-muted-foreground pt-0.5 border-t border-warning/20">
+                    When you switch back to {currentLabel}, schedulers will remain paused until you choose to re-enable them.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-xs">
+                  When you switch back to this workspace, schedulers will remain paused until you choose to re-enable them.
+                </p>
+              )}
+            </>
+          ) : (
             <p>
-              Wait for running syncs and priority stages to finish. Switching
-              pauses job activation, schedules, priority scheduling, and webhook
-              write-back. Review and resume each action manually on return.
+              This existing project keeps its jobs, schedules, associations, and
+              run history. Syncs will use the selected environment's connections.
             </p>
-            <p>
-              {preview.jobsToPause} enabled job(s) will pause. Target workspace:
-              {' '}{preview.targetCounts?.jobs ?? 0} saved job(s),
-              {' '}{preview.targetCounts?.runs ?? 0} run(s),
-              {' '}{preview.targetCounts?.runLogs ?? 0} run log(s).
-            </p>
-          </> : <p>
-            This existing project keeps its jobs, schedules, associations, and
-            run history. Syncs will use the selected environment's connections.
-          </p>}
+          )}
           <p>
             Target destination: {preview.targetDestination?.accountName ??
               preview.targetDestination?.accountIdentity ?? 'unlabelled account'}.
@@ -283,10 +317,11 @@ export default function EnvironmentOverviewCards({
               {preview.sandboxDestinationWriteSafety.reason}
             </p>
           )}
-          {isolated && <p className="text-muted-foreground">
-            This does not copy jobs, mappings, objects, or properties between
-            environments.
-          </p>}
+          {isolated && (
+            <p className="text-muted-foreground">
+              This does not copy jobs, mappings, objects, or properties between environments.
+            </p>
+          )}
         </div>
       ),
       confirmLabel: activeEnvironment
@@ -381,15 +416,6 @@ export default function EnvironmentOverviewCards({
                 {acknowledgingSource ? 'Saving…' : 'Acknowledge source'}
               </Button>
             )}
-          </AlertDescription>
-        </Alert>
-      )}
-      {isolated && sharedDestination && (
-        <Alert variant="destructive">
-          <AlertCircle className="size-4" />
-          <AlertDescription>
-            Sandbox destination writes are blocked because both workspaces use the
-            same live HubSpot portal. Connect a distinct Sandbox destination.
           </AlertDescription>
         </Alert>
       )}

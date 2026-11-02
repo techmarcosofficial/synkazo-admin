@@ -76,9 +76,43 @@ function formatErrorDetails(value: unknown): string | null {
   return typeof value === 'object' ? JSON.stringify(value, null, 2) : null;
 }
 
+export function formatSkipSummary(detail?: string | null): string | null {
+  if (!detail) return null;
+  const matchSource = detail.match(
+    /Source skip conditions matched [^:]*:\s*(.+)/i,
+  );
+  if (matchSource && matchSource[1]) {
+    const cond = matchSource[1].split(';')[0]?.trim();
+    return cond ? `Skip rule: ${cond}` : 'Source skip rule matched';
+  }
+  const matchDest = detail.match(
+    /Destination skip conditions matched [^:]*:\s*(.+)/i,
+  );
+  if (matchDest && matchDest[1]) {
+    const cond = matchDest[1].split(';')[0]?.trim();
+    return cond ? `Destination skip rule: ${cond}` : 'Destination skip rule matched';
+  }
+  if (
+    detail.startsWith('Source skip rule:') ||
+    detail.startsWith('Destination skip rule:')
+  ) {
+    return detail.split(/\r?\n/)[0].trim();
+  }
+  return null;
+}
+
 function getSummary(rec: SyncLogRecord, reason?: string | null): string {
   const detail = rec.skipReasonDetail || rec.failReasonDetail || '';
   const normalizedDetail = detail.toLowerCase();
+
+  if (
+    rec.action === 'skipped' ||
+    reason === 'filter_excluded' ||
+    reason === 'destination_condition'
+  ) {
+    const specificSkip = formatSkipSummary(detail);
+    if (specificSkip) return specificSkip;
+  }
 
   if (
     normalizedDetail.includes('multiple source records') &&
@@ -279,39 +313,42 @@ export function RecordReason({
               {diagnosis.humanExplanation}
             </p>
 
-            {/* 1-Click Contextual Recovery Actions with Deep Links */}
-            {diagnosis.actions.length > 0 && projectId && jobId && (
-              <div className="space-y-1.5 pt-1">
-                <span className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
-                  Suggested Action
-                </span>
-                <div className="flex flex-col gap-1.5">
-                  {diagnosis.actions.map((act) => {
-                    const Icon = DIAGNOSIS_ICONS[act.iconName];
-                    return (
-                      <Button
-                        key={act.label}
-                        type="button"
-                        variant="secondary"
-                        size="xs"
-                        className="group/act hover:bg-primary/10 hover:text-primary hover:border-primary/40 flex h-7 w-full cursor-pointer items-center justify-between border px-2.5 text-xs font-medium transition-colors"
-                        title={act.hint}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleActionClick(act);
-                        }}
-                      >
-                        <span className="flex items-center gap-1.5 truncate">
-                          <Icon className="text-primary size-3.5 shrink-0" />
-                          <span className="truncate">{act.label}</span>
-                        </span>
-                        <ArrowRight className="size-3 shrink-0 opacity-60 transition-transform group-hover/act:translate-x-0.5" />
-                      </Button>
-                    );
-                  })}
+            {/* 1-Click Contextual Recovery Actions with Deep Links (Failed records only) */}
+            {rec.action === 'failed' &&
+              diagnosis.actions.length > 0 &&
+              projectId &&
+              jobId && (
+                <div className="space-y-1.5 pt-1">
+                  <span className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
+                    Suggested Action
+                  </span>
+                  <div className="flex flex-col gap-1.5">
+                    {diagnosis.actions.map((act) => {
+                      const Icon = DIAGNOSIS_ICONS[act.iconName];
+                      return (
+                        <Button
+                          key={act.label}
+                          type="button"
+                          variant="secondary"
+                          size="xs"
+                          className="group/act hover:bg-primary/10 hover:text-primary hover:border-primary/40 flex h-7 w-full cursor-pointer items-center justify-between border px-2.5 text-xs font-medium transition-colors"
+                          title={act.hint}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleActionClick(act);
+                          }}
+                        >
+                          <span className="flex items-center gap-1.5 truncate">
+                            <Icon className="text-primary size-3.5 shrink-0" />
+                            <span className="truncate">{act.label}</span>
+                          </span>
+                          <ArrowRight className="size-3 shrink-0 opacity-60 transition-transform group-hover/act:translate-x-0.5" />
+                        </Button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
           </div>
 
           {/* Detail Sections */}
@@ -323,13 +360,13 @@ export function RecordReason({
             </DetailSection>
           )}
 
-          {sourceItems.length > 0 && (
+          {rec.action === 'failed' && sourceItems.length > 0 && (
             <DetailSection title="Source record">
               <DetailList items={sourceItems} />
             </DetailSection>
           )}
 
-          {destinationItems.length > 0 && (
+          {rec.action === 'failed' && destinationItems.length > 0 && (
             <DetailSection title="Destination record">
               <DetailList items={destinationItems} />
             </DetailSection>

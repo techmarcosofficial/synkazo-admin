@@ -214,15 +214,15 @@ describe('EnvironmentOverviewCards', () => {
       .toHaveBeenCalledWith('project-1', 'a'.repeat(64)));
   });
 
-  it('warns when Sandbox and Production destinations use the same HubSpot portal', () => {
+  it('does not block Sandbox destination writes when Sandbox and Production destinations use the same HubSpot portal', () => {
     renderCards({ connections: [
       ...sandboxPair.map((item) => item.connectionType === 'destination'
         ? { ...item, providerHubId: 123 } : item),
       ...productionPair.map((item) => item.connectionType === 'destination'
         ? { ...item, providerHubId: 123 } : item),
     ] });
-    expect(screen.getByText(/Sandbox destination writes are blocked because both workspaces/))
-      .toBeInTheDocument();
+    expect(screen.queryByText(/Sandbox destination writes are blocked/))
+      .not.toBeInTheDocument();
   });
 
   it('shows the active environment and both readiness columns', () => {
@@ -278,6 +278,41 @@ describe('EnvironmentOverviewCards', () => {
 
     await confirmation.onConfirm?.();
     expect(props.onActivate).toHaveBeenCalledWith('production', '4');
+  });
+
+  it('shows bulk scheduler details and reassuring preservation message in switch confirmation', async () => {
+    vi.mocked(connectionsApi.previewEnvironmentSwitch).mockResolvedValueOnce({
+      currentEnvironment: 'sandbox', targetEnvironment: 'production',
+      targetWorkspaceId: 'production-id', expectedGeneration: '4',
+      targetReady: true, canSwitch: true,
+      blockers: { runningJobs: 0, runningRuns: 0, priorityCycles: 0, associationRuns: 0 },
+      pendingWebhookEvents: 0, jobsToPause: 2,
+      schedulerImpact: {
+        schedulerMode: 'priority',
+        activeBulkScheduler: true,
+        bulkSchedulerJobCount: 5,
+        activeIndividualSchedules: 2,
+      },
+      targetCounts: { jobs: 3, runs: 2, runLogs: 1 },
+      targetSource: null, targetDestination: null,
+      sandboxDestinationWriteSafety: null,
+    });
+    renderCards();
+    await userEvent.click(screen.getByRole('button', { name: 'Switch to Production' }));
+    await waitFor(() => expect(useConfirmDialogStore.getState().open).toBe(true));
+    const confirmation = useConfirmDialogStore.getState();
+    render(<>{confirmation.body}</>);
+    expect(screen.getByText(/Bulk Scheduler \(Priority Queue\) with 5 job\(s\) will pause/)).toBeInTheDocument();
+    expect(screen.getByText(/Job activation state, webhook write-back, and scheduler settings are preserved/)).toBeInTheDocument();
+  });
+
+  it('cancels confirmation without calling onActivate or mutating state', async () => {
+    const props = renderCards();
+    await userEvent.click(screen.getByRole('button', { name: 'Switch to Production' }));
+    await waitFor(() => expect(useConfirmDialogStore.getState().open).toBe(true));
+    useConfirmDialogStore.getState().close();
+    expect(useConfirmDialogStore.getState().open).toBe(false);
+    expect(props.onActivate).not.toHaveBeenCalled();
   });
 
   it('shows server-reported blockers without opening a switch confirmation', async () => {

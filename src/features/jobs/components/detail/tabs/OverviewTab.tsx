@@ -1,4 +1,5 @@
 import {
+  AlertCircle,
   CalendarClock,
   Clock,
   Database,
@@ -9,8 +10,11 @@ import {
   X,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
+import { toast } from 'sonner';
+
+import { connectionsApi } from '@/api/connections';
 
 import { useJobDetailContext } from '../context';
 import JobSummaryMetric from '../JobSummaryMetric';
@@ -79,8 +83,10 @@ export default function OverviewTab() {
     handleScheduleToggle,
   } = useJobDetailContext();
 
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [acknowledgingSource, setAcknowledgingSource] = useState(false);
 
   useEffect(() => {
     if (
@@ -220,6 +226,11 @@ export default function OverviewTab() {
       ? activeRunLog
       : runLogs[0];
   const summaryRunning = isSyncing || summaryRun?.status === 'running';
+  const hasFailedRun =
+    summaryRun?.status === 'failed' ||
+    summaryRun?.executionStatus === 'failed' ||
+    runLogs[0]?.status === 'failed' ||
+    runLogs[0]?.executionStatus === 'failed';
   const currentProgress =
     liveProgress && (!summaryRun?.id || liveProgress.runId === summaryRun.id)
       ? liveProgress
@@ -255,7 +266,7 @@ export default function OverviewTab() {
       : summaryRunning && summaryRun?.triggeredBy !== 'sync_all'
         ? summaryRun?.totalFetched
         : undefined);
-  const showingSummary = summaryRunning || !!summaryRun?.id;
+  const showingSummary = summaryRunning || !!summaryRun?.id || hasFailedRun;
   const renderProgress = (
     variant: 'default' | 'compact',
     defaultOpen = true,
@@ -313,9 +324,72 @@ export default function OverviewTab() {
         stopping={stopping}
       />
     ) : null;
+  const isSharedSourceError = Boolean(
+    summaryRun?.errorMessage?.includes(
+      'Acknowledge the shared Production source account',
+    ) ||
+      runLogs[0]?.errorMessage?.includes(
+        'Acknowledge the shared Production source account',
+      ),
+  );
+
+  const handleAcknowledgeSharedSource = async () => {
+    setAcknowledgingSource(true);
+    try {
+      const status = await connectionsApi.getSharedSourceAcknowledgement(projectId);
+      if (status.fingerprint) {
+        await connectionsApi.acknowledgeSharedSource(
+          projectId,
+          status.fingerprint,
+        );
+        toast.success('Shared source account acknowledged for Sandbox sync.');
+        await refetch();
+      } else {
+        toast.error(
+          'Could not retrieve account details. Please check Environments settings.',
+        );
+      }
+    } catch (err) {
+      toast.error('Failed to acknowledge shared source.');
+    } finally {
+      setAcknowledgingSource(false);
+    }
+  };
+
+  const sharedSourceBanner = isSharedSourceError ? (
+    <Alert variant="destructive" className="rounded-2xl">
+      <AlertCircle className="size-4 shrink-0 mt-0.5" />
+      <AlertDescription className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <span>
+          Sandbox and Production share the same live source account. Acknowledge this shared source before running Sandbox syncs.
+        </span>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="bg-background"
+            disabled={acknowledgingSource}
+            onClick={() => void handleAcknowledgeSharedSource()}
+          >
+            {acknowledgingSource ? 'Acknowledging…' : 'Acknowledge shared source'}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              navigate(`/projects/${projectId}?tab=settings&section=environments`);
+            }}
+          >
+            Environments settings
+          </Button>
+        </div>
+      </AlertDescription>
+    </Alert>
+  ) : null;
+
   const progress = renderProgress(
     'default',
-    Boolean(summaryRunning || activeRunLog),
+    Boolean(summaryRunning || activeRunLog || hasFailedRun),
   );
   const overviewMessage = queued
     ? {
@@ -327,17 +401,25 @@ export default function OverviewTab() {
           title: 'Your first sync is in progress',
           description: 'This overview will show results once the run finishes.',
         }
-      : runLogs.length > 0
+      : hasFailedRun
         ? {
-            title: 'No completed sync yet',
+            title: 'Sync failed',
             description:
-              'Review the previous attempt in Run History. After a run completes, you’ll see records synced, run timing, and upcoming activity here.',
+              summaryRun?.errorMessage ||
+              runLogs[0]?.errorMessage ||
+              'The previous sync attempt encountered an error. Review the details above or check Run History.',
           }
-        : {
-            title: 'Your sync overview starts after the first run',
-            description:
-              'Follow the setup steps above to prepare this job and run its first sync. Once it finishes, you’ll see records synced, run timing, and upcoming activity here.',
-          };
+        : runLogs.length > 0
+          ? {
+              title: 'No completed sync yet',
+              description:
+                'Review the previous attempt in Run History. After a run completes, you’ll see records synced, run timing, and upcoming activity here.',
+            }
+          : {
+              title: 'Your sync overview starts after the first run',
+              description:
+                'Follow the setup steps above to prepare this job and run its first sync. Once it finishes, you’ll see records synced, run timing, and upcoming activity here.',
+            };
 
   return (
     <div className="space-y-5">
@@ -394,6 +476,7 @@ export default function OverviewTab() {
 
           <CardContent className="space-y-5">
             {/* Sync progress — appears right after header on sync */}
+            {!manualDialogOpen && sharedSourceBanner}
             {!manualDialogOpen && progress}
 
             {/* Embedded Automated Schedule Card */}
@@ -467,6 +550,7 @@ export default function OverviewTab() {
         </Card>
       ) : (
         <section className="min-w-0 space-y-5 py-8" aria-label="Sync overview">
+          {!manualDialogOpen && sharedSourceBanner}
           {!manualDialogOpen && progress}
           <div className="mx-auto max-w-xl space-y-2 text-center">
             <h2 className="font-heading text-foreground text-lg font-semibold">

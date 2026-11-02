@@ -11,6 +11,8 @@ import { MemoryRouter } from 'react-router-dom';
 import type { JobDetailContextValue } from '../context';
 import OverviewTab from './OverviewTab';
 
+import { connectionsApi } from '@/api/connections';
+
 let mockContext: JobDetailContextValue;
 
 afterEach(() => cleanup());
@@ -31,8 +33,30 @@ vi.mock('@/components/shared/UpgradeRequiredDialog', () => ({
   default: () => null,
 }));
 
+vi.mock('@/api/connections', () => ({
+  connectionsApi: {
+    getSharedSourceAcknowledgement: vi.fn(),
+    acknowledgeSharedSource: vi.fn(),
+  },
+}));
+
 vi.mock('@/components/sync/SyncRunProgress', () => ({
-  default: () => null,
+  default: ({
+    status,
+    errorMessage,
+  }: {
+    status?: string | null;
+    errorMessage?: string | null;
+  }) => (
+    <div
+      data-testid="sync-run-progress"
+      data-status={status}
+      data-error={errorMessage}
+    >
+      <span>Status: {status}</span>
+      {errorMessage && <span>Error: {errorMessage}</span>}
+    </div>
+  ),
 }));
 
 vi.mock('@/components/sync/StartSyncModal', () => ({
@@ -255,5 +279,77 @@ describe('OverviewTab sync prerequisite guidance', () => {
     expect(screen.getByText('1,250')).toBeInTheDocument();
     expect(screen.getByText('Last run')).toBeInTheDocument();
     expect(screen.getByText(/ago/)).toBeInTheDocument();
+  });
+
+  it('keeps failed progress visible and displays failure error message when previous run failed', () => {
+    mockContext = buildContext({
+      runLogs: [
+        {
+          id: 'run-failed-1',
+          status: 'failed',
+          errorMessage:
+            'Sandbox write blocked: its destination is the live Production account',
+          startedAt: new Date().toISOString(),
+          finishedAt: new Date().toISOString(),
+        } as JobDetailContextValue['runLogs'][number],
+      ],
+    });
+    renderOverview();
+
+    expect(screen.getByTestId('sync-run-progress')).toBeInTheDocument();
+    expect(screen.getByText('Status: failed')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Error: Sandbox write blocked: its destination is the live Production account',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('renders shared source acknowledgement banner with action button when sync failed due to unacknowledged shared source', async () => {
+    vi.mocked(connectionsApi.getSharedSourceAcknowledgement).mockResolvedValueOnce({
+      shared: true,
+      verificationRequired: false,
+      acknowledged: false,
+      accountName: 'Shared ServiceTitan',
+      accountIdentity: 'servicetitan:123',
+      platformId: 'servicetitan',
+      fingerprint: 'fp-shared-123',
+      sandboxConnectionId: 'sb-1',
+      productionConnectionId: 'prod-1',
+    });
+    vi.mocked(connectionsApi.acknowledgeSharedSource).mockResolvedValueOnce(undefined as never);
+
+    mockContext = buildContext({
+      runLogs: [
+        {
+          id: 'run-failed-ack',
+          status: 'failed',
+          errorMessage:
+            'Acknowledge the shared Production source account in Environments before Sandbox sync',
+          startedAt: new Date().toISOString(),
+          finishedAt: new Date().toISOString(),
+        } as JobDetailContextValue['runLogs'][number],
+      ],
+    });
+    renderOverview();
+
+    expect(
+      screen.getByText(/Sandbox and Production share the same live source account/i),
+    ).toBeInTheDocument();
+
+    const ackButton = screen.getByRole('button', {
+      name: /acknowledge shared source/i,
+    });
+    expect(ackButton).toBeInTheDocument();
+
+    fireEvent.click(ackButton);
+
+    await waitFor(() => {
+      expect(connectionsApi.acknowledgeSharedSource).toHaveBeenCalledWith(
+        'project-1',
+        'fp-shared-123',
+      );
+    });
+    expect(mockContext.refetch).toHaveBeenCalled();
   });
 });

@@ -132,22 +132,26 @@ function FlatSection({
     primary: {
       icon: 'bg-primary/10 text-primary border-0',
       headerExpanded: 'bg-primary/[0.04] dark:bg-primary/[0.08]',
-      highlight: 'bg-primary/[0.03] dark:bg-primary/[0.06]',
+      highlight:
+        'ring-2 ring-primary/60 bg-primary/10 shadow-md ring-inset transition-all duration-500',
     },
     info: {
       icon: 'bg-info/10 text-info border-0',
       headerExpanded: 'bg-info/[0.04] dark:bg-info/[0.08]',
-      highlight: 'bg-info/[0.03] dark:bg-info/[0.06]',
+      highlight:
+        'ring-2 ring-info/60 bg-info/10 shadow-md ring-inset transition-all duration-500',
     },
     warning: {
       icon: 'bg-warning/10 text-warning border-0',
       headerExpanded: 'bg-warning/[0.04] dark:bg-warning/[0.08]',
-      highlight: 'bg-warning/[0.03] dark:bg-warning/[0.06]',
+      highlight:
+        'ring-2 ring-warning/60 bg-warning/10 shadow-md ring-inset transition-all duration-500',
     },
     success: {
       icon: 'bg-success/10 text-success border-0',
       headerExpanded: 'bg-success/[0.04] dark:bg-success/[0.08]',
-      highlight: 'bg-success/[0.03] dark:bg-success/[0.06]',
+      highlight:
+        'ring-2 ring-success/60 bg-success/10 shadow-md ring-inset transition-all duration-500',
     },
   }[theme];
 

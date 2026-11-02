@@ -51,6 +51,14 @@ export interface EnvironmentSwitchPreview {
   };
   pendingWebhookEvents: number;
   jobsToPause: number;
+  schedulerImpact?: {
+    schedulerMode: 'individual' | 'priority';
+    activeBulkScheduler: boolean;
+    bulkSchedulerJobCount: number;
+    activeIndividualSchedules: number;
+    hasRunningExecutions?: boolean;
+    runningExecutionsCount?: number;
+  };
   targetCounts: { jobs: number; runs: number; runLogs: number } | null;
   targetSource: { accountName: string | null; accountIdentity: string | null; status: string } | null;
   targetDestination: { accountName: string | null; accountIdentity: string | null; status: string } | null;

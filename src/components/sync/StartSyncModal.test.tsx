@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import StartSyncModal from './StartSyncModal';
 
+import { connectionsApi } from '@/api/connections';
 import { jobsApi } from '@/api/jobs';
 import type { ExtJob } from '@/features/jobs/hooks/useJobDetail';
 
@@ -141,5 +142,52 @@ describe('StartSyncModal', () => {
     expect(
       screen.getByRole('button', { name: /^start date$/i }),
     ).toBeInTheDocument();
+  });
+
+  it('prompts to acknowledge shared source and disables sync until acknowledged', async () => {
+    vi.spyOn(connectionsApi, 'getSharedSourceAcknowledgement').mockResolvedValue({
+      shared: true,
+      verificationRequired: false,
+      acknowledged: false,
+      accountName: 'Shared ServiceTitan',
+      accountIdentity: 'servicetitan:123',
+      platformId: 'servicetitan',
+      fingerprint: 'fp-123',
+      sandboxConnectionId: 'sb-1',
+      productionConnectionId: 'prod-1',
+    });
+    vi.spyOn(connectionsApi, 'acknowledgeSharedSource').mockResolvedValue(undefined as never);
+
+    render(
+      <StartSyncModal
+        projectId="project-1"
+        jobId="job-1"
+        environment="sandbox"
+        job={{ id: 'job-1', sourceObject: 'jobs', isEnabled: true } as ExtJob}
+        hasBaseline={true}
+        onGoToPipeline={vi.fn()}
+        onClose={vi.fn()}
+        onRunNow={vi.fn()}
+        onLimitSyncDone={vi.fn()}
+        onSyncAll={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Shared source approval needed/i),
+      ).toBeInTheDocument();
+    });
+
+    const ackButton = screen.getByRole('button', { name: /acknowledge source/i });
+    expect(ackButton).toBeInTheDocument();
+
+    fireEvent.click(ackButton);
+    await waitFor(() => {
+      expect(connectionsApi.acknowledgeSharedSource).toHaveBeenCalledWith(
+        'project-1',
+        'fp-123',
+      );
+    });
   });
 });

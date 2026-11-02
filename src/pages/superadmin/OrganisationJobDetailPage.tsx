@@ -963,8 +963,15 @@ export default function OrganisationJobDetailPage() {
                         </div>
                         <div className="flex flex-wrap items-center gap-3">
                           <span className="text-muted-foreground">
-                            {run.createdCount} created · {run.updatedCount}{' '}
-                            updated · {run.skippedCount} skipped ·{' '}
+                            {(
+                              (run as { recordsProcessed?: number }).recordsProcessed ??
+                              (run.createdCount ?? 0) +
+                                (run.updatedCount ?? 0) +
+                                (run.skippedCount ?? 0) +
+                                (run.failedCount ?? 0)
+                            ).toLocaleString()}{' '}
+                            processed · {run.createdCount} created ·{' '}
+                            {run.updatedCount} updated · {run.skippedCount} skipped ·{' '}
                             {run.failedCount} failed
                           </span>
                           <StatusBadge status={run.executionStatus || run.status} label={run.executionStatus || run.status} tone={run.failedCount ? 'danger' : undefined} />

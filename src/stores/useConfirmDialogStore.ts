@@ -11,6 +11,7 @@ export interface ConfirmOptions {
    *  (e.g. an impact summary for a disconnect action). */
   body?: ReactNode;
   confirmLabel?: string;
+  confirmingLabel?: string;
   cancelLabel?: string;
   onConfirm: () => void | Promise<void>;
 }
@@ -22,6 +23,7 @@ interface ConfirmDialogState {
   description?: ReactNode;
   body?: ReactNode;
   confirmLabel: string;
+  confirmingLabel?: string;
   cancelLabel: string;
   isConfirming: boolean;
   onConfirm: (() => void | Promise<void>) | null;
@@ -37,6 +39,7 @@ export const useConfirmDialogStore = create<ConfirmDialogState>((set, get) => ({
   description: undefined,
   body: undefined,
   confirmLabel: 'Confirm',
+  confirmingLabel: undefined,
   cancelLabel: 'Cancel',
   isConfirming: false,
   onConfirm: null,
@@ -49,12 +52,13 @@ export const useConfirmDialogStore = create<ConfirmDialogState>((set, get) => ({
       description: options.description,
       body: options.body,
       confirmLabel: options.confirmLabel ?? 'Confirm',
+      confirmingLabel: options.confirmingLabel,
       cancelLabel: options.cancelLabel ?? 'Cancel',
       isConfirming: false,
       onConfirm: options.onConfirm,
     }),
 
-  close: () => set({ open: false, isConfirming: false, onConfirm: null }),
+  close: () => set({ open: false, isConfirming: false, confirmingLabel: undefined, onConfirm: null }),
 
   handleConfirm: async () => {
     const { onConfirm } = get();

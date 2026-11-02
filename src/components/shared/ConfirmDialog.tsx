@@ -64,6 +64,7 @@ export default function ConfirmDialog() {
     description,
     body,
     confirmLabel,
+    confirmingLabel,
     cancelLabel,
     isConfirming,
     close,

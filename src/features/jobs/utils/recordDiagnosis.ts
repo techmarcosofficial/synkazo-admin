@@ -444,21 +444,31 @@ export function analyzeRecordDiagnosis(
     }
 
     case 'skip_rule': {
-      summary = 'Matched a skip rule';
-      humanExplanation =
-        'This record was intentionally excluded by your configured filter conditions.';
+      const matchSource = rawDetail?.match(
+        /Source skip conditions matched [^:]*:\s*(.+)/i,
+      );
+      const matchDest = rawDetail?.match(
+        /Destination skip conditions matched [^:]*:\s*(.+)/i,
+      );
+      const extractedCondition =
+        matchSource?.[1]?.split(';')[0]?.trim() ||
+        matchDest?.[1]?.split(';')[0]?.trim() ||
+        null;
 
-      actions.push({
-        label: 'Review Skip Rules',
-        hint: 'Inspect or adjust exclusion rules in Field Mapping',
-        iconName: 'skip',
-        destination: 'mapping',
-        deepLink: {
-          tab: 'field-mapping',
-          field: offendingField || undefined,
-          action: 'skips',
-        },
-      });
+      if (extractedCondition) {
+        summary = matchDest
+          ? `Destination skip rule: ${extractedCondition}`
+          : `Skip rule: ${extractedCondition}`;
+        humanExplanation = `This record was intentionally excluded because it matched configured skip condition: ${extractedCondition}.`;
+      } else {
+        summary = 'Matched a skip rule';
+        humanExplanation =
+          'This record was intentionally excluded by your configured filter conditions.';
+      }
+
+      // Suggested actions should be shown for failed/error records only.
+      // Skipped records are intentional non-write outcomes and must not show suggested actions.
+      actions.length = 0;
       break;
     }
 
@@ -492,18 +502,6 @@ export function analyzeRecordDiagnosis(
             tab: 'field-mapping',
             field: offendingField || undefined,
             action: 'fallbacks',
-          },
-        });
-      } else {
-        actions.push({
-          label: 'Review Skip Rules',
-          hint: 'Inspect configured skip conditions',
-          iconName: 'skip',
-          destination: 'mapping',
-          deepLink: {
-            tab: 'field-mapping',
-            field: offendingField || undefined,
-            action: 'skips',
           },
         });
       }

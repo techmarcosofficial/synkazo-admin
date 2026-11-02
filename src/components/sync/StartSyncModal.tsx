@@ -1,6 +1,8 @@
-import { Info, XIcon } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { AlertCircle, Info, XIcon } from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { toast } from 'sonner';
 
+import { connectionsApi, type SharedSourceAcknowledgement } from '@/api/connections';
 import { ChoiceCardItem } from '@/components/form/ChoiceCard';
 import StatusBadge from '@/components/shared/StatusBadge';
 import LimitSyncModal from '@/components/sync/LimitSyncModal';
@@ -60,6 +62,48 @@ function ManualSyncContent({
   onFooterChange,
 }: StartSyncModalProps & { onFooterChange?: (footer: ReactNode) => void }) {
   const isSandbox = environment === 'sandbox';
+  const [sharedSourceStatus, setSharedSourceStatus] =
+    useState<SharedSourceAcknowledgement | null>(null);
+  const [acknowledgingSource, setAcknowledgingSource] = useState(false);
+
+  useEffect(() => {
+    if (!isSandbox) return;
+    let cancelled = false;
+    void connectionsApi
+      .getSharedSourceAcknowledgement(projectId)
+      .then((res) => {
+        if (!cancelled) setSharedSourceStatus(res);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isSandbox, projectId]);
+
+  const handleAcknowledgeSource = async () => {
+    if (!sharedSourceStatus?.fingerprint) return;
+    setAcknowledgingSource(true);
+    try {
+      await connectionsApi.acknowledgeSharedSource(
+        projectId,
+        sharedSourceStatus.fingerprint,
+      );
+      toast.success('Shared source account acknowledged for Sandbox sync.');
+      setSharedSourceStatus((prev) =>
+        prev ? { ...prev, acknowledged: true } : null,
+      );
+    } catch (err) {
+      toast.error('Failed to acknowledge shared source.');
+    } finally {
+      setAcknowledgingSource(false);
+    }
+  };
+
+  const isSharedSourceUnacknowledged =
+    isSandbox &&
+    Boolean(sharedSourceStatus?.shared && !sharedSourceStatus?.acknowledged);
+  const effectiveDisabled = disabled;
+
   const [runType, setRunType] = useState<'all' | 'limited'>(
     !hasBaseline ? 'limited' : 'all',
   );
@@ -73,6 +117,30 @@ function ManualSyncContent({
 
   return (
     <div className="space-y-3 p-3">
+      {isSharedSourceUnacknowledged && (
+        <Alert className="border-warning/40 bg-warning/5 text-foreground px-3 py-2.5">
+          <AlertCircle className="text-warning size-4 shrink-0 mt-0.5" />
+          <AlertDescription className="flex flex-col gap-2 text-xs sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              <strong className="text-foreground font-semibold">Shared source approval needed:</strong>{' '}
+              Sandbox reads from the shared live Production source account (
+              {sharedSourceStatus?.accountName ?? sharedSourceStatus?.platformId ?? 'source'}
+              {sharedSourceStatus?.accountIdentity ? ` ${sharedSourceStatus.accountIdentity}` : ''}
+              ). Acknowledge before syncing.
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={acknowledgingSource}
+              onClick={() => void handleAcknowledgeSource()}
+              className="shrink-0 self-start sm:self-auto"
+            >
+              {acknowledgingSource ? 'Acknowledging…' : 'Acknowledge source'}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {!job?.isEnabled && !isLimitRunningOrDone && (
         <Alert className="border-primary/30 bg-primary/5 text-foreground px-3 py-2">
           <Info className="text-primary size-4 shrink-0" />
@@ -107,7 +175,7 @@ function ManualSyncContent({
                   ? 'Recommended for first test run'
                   : 'Sync a controlled number of records'
               }
-              disabled={disabled}
+              disabled={effectiveDisabled}
             />
             <ChoiceCardItem
               value="all"
@@ -118,7 +186,7 @@ function ManualSyncContent({
                   ? 'Initial sync: import all historical records'
                   : 'Sync all available records'
               }
-              disabled={disabled}
+              disabled={effectiveDisabled}
             />
           </RadioGroup>
         </div>
@@ -136,7 +204,7 @@ function ManualSyncContent({
               pipelineRequired={pipelineRequired}
               pipelineConfigured={pipelineConfigured}
               onGoToPipeline={onGoToPipeline}
-              disabled={disabled}
+              disabled={effectiveDisabled}
               onFooterChange={onFooterChange}
             />
           </div>
@@ -156,7 +224,7 @@ function ManualSyncContent({
             pipelineRequired={pipelineRequired}
             pipelineConfigured={pipelineConfigured}
             onGoToPipeline={onGoToPipeline}
-            disabled={disabled}
+            disabled={effectiveDisabled}
             onFooterChange={onFooterChange}
           />
         )}

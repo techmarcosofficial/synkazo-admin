@@ -76,4 +76,29 @@ describe('ConfirmDialog', () => {
       expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument(),
     );
   });
+
+  it('renders spinner with existing button label and disables buttons while confirming an async action', async () => {
+    let resolveConfirm: () => void = () => {};
+    const onConfirm = vi.fn().mockImplementation(() => new Promise<void>((resolve) => {
+      resolveConfirm = resolve;
+    }));
+
+    useConfirmDialogStore.getState().confirm({
+      title: 'Switch workspace?',
+      confirmLabel: 'Switch now',
+      onConfirm,
+    });
+
+    render(<ConfirmDialog />);
+    const confirmButton = screen.getByRole('button', { name: 'Switch now' });
+    fireEvent.click(confirmButton);
+
+    expect(await screen.findByRole('button', { name: /Switch now/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+
+    resolveConfirm();
+    await waitFor(() =>
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument(),
+    );
+  });
 });

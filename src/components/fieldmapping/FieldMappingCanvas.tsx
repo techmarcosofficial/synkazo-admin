@@ -1097,36 +1097,49 @@ export default function FieldMappingCanvas({
 
   useEffect(() => {
     if (
-      !targetField ||
+      (!targetField && !targetSection) ||
       (sourceFields.length === 0 && destFields.length === 0)
     ) {
       return;
     }
 
-    const targetKey = `${targetField}:${targetSection || 'all'}`;
+    const targetKey = `${targetField || 'any'}:${targetSection || 'all'}`;
     if (handledTargetRef.current === targetKey) {
       return;
     }
     handledTargetRef.current = targetKey;
 
-    const normalizedTarget = targetField.toLowerCase().trim();
+    const normalizedTarget = targetField?.toLowerCase().trim();
 
     // 1. Search existing mappings for matching field (source or destination)
-    const matching = mappings.find((m) => {
-      const srcMatch = m.sourceField?.toLowerCase() === normalizedTarget;
-      const dests = Array.isArray(m.destField) ? m.destField : [m.destField];
-      const destMatch = dests.some(
-        (df) => df?.toLowerCase() === normalizedTarget,
-      );
-      return srcMatch || destMatch;
-    });
+    let matching = normalizedTarget
+      ? mappings.find((m) => {
+          const srcMatch = m.sourceField?.toLowerCase() === normalizedTarget;
+          const dests = Array.isArray(m.destField) ? m.destField : [m.destField];
+          const destMatch = dests.some(
+            (df) => df?.toLowerCase() === normalizedTarget,
+          );
+          return srcMatch || destMatch;
+        })
+      : undefined;
+
+    // If targetSection is 'identity' and no specific targetField was found,
+    // locate the match identifier mapping (or fallback to an ID mapping)
+    if (!matching && targetSection === 'identity') {
+      matching =
+        mappings.find((m) => Boolean(m.isMatchField || m.matchDestKey)) ||
+        mappings.find((m) => m.sourceField?.toLowerCase() === 'id') ||
+        mappings[0];
+    }
 
     if (matching) {
       const dests = Array.isArray(matching.destField)
         ? matching.destField
         : [matching.destField];
       const matchedDest =
-        dests.find((df) => df?.toLowerCase() === normalizedTarget) || dests[0];
+        (normalizedTarget &&
+          dests.find((df) => df?.toLowerCase() === normalizedTarget)) ||
+        dests[0];
       const pairKey = `${matching.sourceField}-${matchedDest}`;
 
       // Smooth scroll and pulse highlight
@@ -1142,10 +1155,12 @@ export default function FieldMappingCanvas({
       }
 
       toast.info(
-        `Focused on "${targetField}". Opened ${targetSection || 'settings'} to resolve sync issue.`,
+        targetField
+          ? `Focused on "${targetField}". Opened ${targetSection || 'settings'} to resolve sync issue.`
+          : `Opened match identifier settings to resolve sync issue.`,
       );
       onClearTarget?.();
-    } else {
+    } else if (normalizedTarget) {
       // 2. Field is not mapped yet! Check if it is a known destination field or source field
       const isKnownDest = destFields.some(
         (f) => f.key.toLowerCase() === normalizedTarget,
