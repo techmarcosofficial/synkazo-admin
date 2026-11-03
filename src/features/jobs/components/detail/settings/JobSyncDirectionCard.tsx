@@ -115,6 +115,8 @@ export default function JobSyncDirectionCard() {
         onDeleteHandlingChange={withDirty(setDeleteHandling)}
         onHubspotWebhookEnabledChange={withDirty(setHubspotWebhookEnabled)}
         onSyncTriggerChange={withDirty(setSyncTrigger)}
+        syncFromMode={job.syncFromMode}
+        syncFromDate={job.syncFromDate}
         fieldMappingLocationLabel="the Field Mapping tab"
         readOnly
       />

@@ -24,6 +24,24 @@ export type ConnectionWrite = Partial<Connection> & {
   credentials?: Record<string, string>;
 };
 
+/** Mirrors ObjectCapability in synkazo-api connections/two-way-capabilities.ts. */
+export interface ObjectCapability {
+  objectName: string;
+  canRead: boolean;
+  canWrite: boolean;
+  isTwoWaySupported: boolean;
+  reason: string | null;
+  /** HubSpot property holding this source object's id, e.g. st_customer_id. */
+  identityProperty?: string | null;
+}
+
+export interface TwoWayCapabilities {
+  sourcePlatform: string;
+  destPlatform: string;
+  source: ObjectCapability[];
+  dest: ObjectCapability[];
+}
+
 export const connectionsApi = {
   listAllConnections: (): Promise<Connection[]> =>
     apiClient.get('/connections').then(d),
@@ -127,6 +145,19 @@ export const connectionsApi = {
         params: environment ? { environment } : {},
       })
       .then((r) => r.data.data ?? []),
+
+  // Which objects on each side can take part in a two-way job (both readable
+  // and writable). Read-only objects come back with a `reason`.
+  getTwoWayCapabilities: (
+    projectId: string,
+    sourcePlatform: string,
+    destPlatform: string,
+  ): Promise<TwoWayCapabilities> =>
+    apiClient
+      .get(`/projects/${projectId}/capabilities/two-way-objects`, {
+        params: { sourcePlatform, destPlatform },
+      })
+      .then(d),
 
   getProperties: (
     projectId: string,

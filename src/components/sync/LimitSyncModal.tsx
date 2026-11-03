@@ -11,7 +11,7 @@ import {
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 
-import { jobsApi } from '@/api/jobs';
+import { jobsApi, type SyncRunDirection } from '@/api/jobs';
 import { syncLogsApi } from '@/api/syncLogs';
 import UpgradeRequiredDialog from '@/components/shared/UpgradeRequiredDialog';
 import SyncRunProgress from '@/components/sync/SyncRunProgress';
@@ -74,6 +74,8 @@ interface LimitSyncModalProps {
   compact?: boolean;
   disabled?: boolean;
   onFooterChange?: (footer: ReactNode) => void;
+  /** Two-way jobs: which leg the limited run syncs. */
+  direction?: SyncRunDirection;
 }
 
 // DialogTitle requires Radix Dialog context — swap for a plain equivalent when embedded.
@@ -149,6 +151,7 @@ export default function LimitSyncModal({
   compact = false,
   disabled = false,
   onFooterChange,
+  direction,
 }: LimitSyncModalProps) {
   const isSandbox = environment === 'sandbox';
   const isSandboxTest = isSandbox && !job?.lastSyncedAt;
@@ -388,6 +391,7 @@ export default function LimitSyncModal({
         limit: safeLimit,
         startPage: safeStart,
         batchSize: safeBatch,
+        direction,
         ...(dateFilterEnabled &&
           startDate && {
             startDate: combineDateTime(startDate, startTime).toISOString(),
@@ -508,6 +512,7 @@ export default function LimitSyncModal({
     pipelineBlocked,
     disabled,
     runButtonLabel,
+    direction,
     onFooterChange,
     onClose,
   ]);

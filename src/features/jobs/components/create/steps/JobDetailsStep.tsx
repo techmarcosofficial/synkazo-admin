@@ -15,7 +15,11 @@ import SyncDirectionFields from '@/features/jobs/components/SyncDirectionFields'
 import { KNOWN_PIPELINE_OBJECTS, type JobConfig } from '@/features/jobs/types';
 import { supportsCustomObjects } from '@/lib/platformCapabilities';
 import { cn } from '@/lib/utils';
-import type { ObjectItem } from '@/queries/useConnections';
+import type { ObjectCapability } from '@/api/connections';
+import {
+  useTwoWayCapabilitiesQuery,
+  type ObjectItem,
+} from '@/queries/useConnections';
 import type { Connection } from '@/types';
 
 interface SyncRecipe {
@@ -199,6 +203,37 @@ export default function JobDetailsStep({
     destConnection,
     'destination',
   );
+  // Two-way jobs write back to the source, so objects either side can't write
+  // to are greyed out with the reason (capability endpoint).
+  const isTwoWay = (projectSyncMode ?? config.syncDirection) === 'two_way';
+  const capabilities = useTwoWayCapabilitiesQuery(
+    projectId,
+    config.sourcePlatform,
+    config.destPlatform,
+    isTwoWay,
+  ).data;
+  const withTwoWayBlocks = (
+    objects: ObjectItem[],
+    caps: ObjectCapability[] | undefined,
+  ): ObjectItem[] => {
+    if (!isTwoWay || !caps) return objects;
+    const byName = new Map(caps.map((c) => [c.objectName, c]));
+    return objects.map((o) => {
+      const cap = byName.get(o.id);
+      return cap && !cap.isTwoWaySupported
+        ? {
+            ...o,
+            twoWayBlockedReason:
+              cap.reason ?? "Can't be used in a two-way job",
+          }
+        : o;
+    });
+  };
+  const sourceIdentityProperty = isTwoWay
+    ? capabilities?.source.find((c) => c.objectName === config.sourceObject)
+        ?.identityProperty
+    : null;
+
   const handleObjectChange = (
     field: 'sourceObject' | 'destObject',
     val: string,
@@ -320,7 +355,10 @@ export default function JobDetailsStep({
                   (p) => p.platformId === config.sourcePlatform,
                 )?.label ?? config.sourcePlatform
               }
-              objects={objectsByPlatform[config.sourcePlatform] || []}
+              objects={withTwoWayBlocks(
+                objectsByPlatform[config.sourcePlatform] || [],
+                capabilities?.source,
+              )}
               object={config.sourceObject}
               onObjectChange={(val) => handleObjectChange('sourceObject', val)}
               error={errors.sourceObject}
@@ -365,7 +403,10 @@ export default function JobDetailsStep({
                   (p) => p.platformId === config.destPlatform,
                 )?.label ?? config.destPlatform
               }
-              objects={objectsByPlatform[config.destPlatform] || []}
+              objects={withTwoWayBlocks(
+                objectsByPlatform[config.destPlatform] || [],
+                capabilities?.dest,
+              )}
               object={config.destObject}
               onObjectChange={(val) => handleObjectChange('destObject', val)}
               error={errors.destObject}
@@ -379,6 +420,19 @@ export default function JobDetailsStep({
             />
           </div>
         </div>
+
+        {sourceIdentityProperty && (
+          <Alert>
+            <InfoIcon />
+            <AlertDescription>
+              HubSpot keeps this record&apos;s source ID in{' '}
+              <code className="text-foreground">{sourceIdentityProperty}</code>
+              . Map the source <code className="text-foreground">id</code> to
+              it in the next step so two-way sync can always find the existing
+              record.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {!compact &&
           config.destObject &&
@@ -458,6 +512,17 @@ export default function JobDetailsStep({
           onDeleteHandlingChange={(v) =>
             setConfig({ ...config, deleteHandling: v })
           }
+          syncFromMode={config.syncFromMode}
+          syncFromDate={config.syncFromDate}
+          onSyncFromModeChange={(v) => {
+            setConfig({ ...config, syncFromMode: v });
+            setErrors((prev) => ({ ...prev, syncFromDate: undefined }));
+          }}
+          onSyncFromDateChange={(v) => {
+            setConfig({ ...config, syncFromDate: v });
+            setErrors((prev) => ({ ...prev, syncFromDate: undefined }));
+          }}
+          syncFromError={errors.syncFromDate}
           onHubspotWebhookEnabledChange={(v) =>
             setConfig({ ...config, hubspotWebhookEnabled: v })
           }

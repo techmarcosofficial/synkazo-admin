@@ -5,11 +5,13 @@ import TwoWayAuthNotice from './TwoWayAuthNotice';
 
 import { ChoiceCardItem } from '@/components/form/ChoiceCard';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Field, FieldLabel } from '@/components/ui/field';
+import { Field, FieldError, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
 import { RadioGroup } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import type { Connection } from '@/types';
+import type { SyncFromMode } from '@/types/job';
 
 export interface SyncDirectionFieldsProps {
   syncDirection: string;
@@ -30,6 +32,15 @@ export interface SyncDirectionFieldsProps {
   onDeleteHandlingChange: (value: string) => void;
   onHubspotWebhookEnabledChange: (value: boolean) => void;
   onSyncTriggerChange: (value: string) => void;
+  /**
+   * Two-way "sync from" cutoff. Rendered only when the handlers are supplied
+   * (create flows); read-only views pass just the values to show them locked.
+   */
+  syncFromMode?: SyncFromMode | '' | null;
+  syncFromDate?: string | null;
+  onSyncFromModeChange?: (value: SyncFromMode) => void;
+  onSyncFromDateChange?: (value: string) => void;
+  syncFromError?: string;
   /** Where field-mapping direction is configured — differs by context (wizard step vs. a separate tab). */
   fieldMappingLocationLabel?: string;
   /**
@@ -106,6 +117,11 @@ export default function SyncDirectionFields({
   onDeleteHandlingChange,
   onHubspotWebhookEnabledChange,
   onSyncTriggerChange,
+  syncFromMode,
+  syncFromDate,
+  onSyncFromModeChange,
+  onSyncFromDateChange,
+  syncFromError,
   fieldMappingLocationLabel = 'the next step',
   readOnly = false,
   projectSyncMode = null,
@@ -242,6 +258,67 @@ export default function SyncDirectionFields({
               </RadioGroup>
             )}
           </Field>
+
+          {(readOnly ? !!syncFromMode : !!onSyncFromModeChange) && (
+            <Field>
+              <FieldLabel>Start syncing from</FieldLabel>
+              {!readOnly && !compact && (
+                <p className="text-muted-foreground -mt-1 mb-2 text-xs">
+                  Scheduled syncs never pick up records changed before this
+                  point. To bring in older records, run Sync All with a date
+                  range.
+                </p>
+              )}
+              {readOnly ? (
+                <LockedValue>
+                  {syncFromMode === 'date' && syncFromDate
+                    ? new Date(syncFromDate).toLocaleString()
+                    : 'Future changes only'}
+                </LockedValue>
+              ) : (
+                <>
+                  <RadioGroup
+                    value={syncFromMode ?? ''}
+                    onValueChange={(v) =>
+                      onSyncFromModeChange?.(v as SyncFromMode)
+                    }
+                    className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+                  >
+                    <ChoiceCardItem
+                      value="future_only"
+                      id="sync-from-future_only"
+                      title="Future changes only"
+                      description={
+                        compact
+                          ? undefined
+                          : 'Only records changed after this job is saved'
+                      }
+                    />
+                    <ChoiceCardItem
+                      value="date"
+                      id="sync-from-date"
+                      title="From a date"
+                      description={
+                        compact
+                          ? undefined
+                          : 'Also records changed since a past date'
+                      }
+                    />
+                  </RadioGroup>
+                  {syncFromMode === 'date' && (
+                    <Input
+                      type="datetime-local"
+                      aria-label="Start syncing from date"
+                      value={syncFromDate ?? ''}
+                      onChange={(e) => onSyncFromDateChange?.(e.target.value)}
+                      className="mt-2 sm:max-w-xs"
+                    />
+                  )}
+                  {syncFromError && <FieldError>{syncFromError}</FieldError>}
+                </>
+              )}
+            </Field>
+          )}
 
           <Field>
             <FieldLabel>

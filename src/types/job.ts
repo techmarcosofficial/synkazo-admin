@@ -3,6 +3,9 @@ import type { DestinationSkipCondition, ExcludeCondition } from './conditions';
 export type JobStatus =
   'active' | 'paused' | 'error' | 'idle' | 'running' | 'draft';
 
+/** Where a two-way job's scheduled runs start: a chosen date, or from when it was saved. */
+export type SyncFromMode = 'date' | 'future_only';
+
 export interface DefaultValuesConfig {
   destination?: Record<string, unknown>;
   source?: Record<string, unknown>;
@@ -47,6 +50,9 @@ export interface Job {
   sourceOfTruth?: string | null;
   conflictResolutionStrategy?: string;
   deleteHandling?: string;
+  /** Two-way cutoff: scheduled runs never fetch records modified before syncFromDate. */
+  syncFromMode?: SyncFromMode | null;
+  syncFromDate?: string | null;
   hubspotWebhookEnabled?: boolean;
   syncTrigger?: string;
   idMappingSourceField?: string | null;

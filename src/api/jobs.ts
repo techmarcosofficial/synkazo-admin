@@ -22,10 +22,12 @@ interface RunOptions {
   /** Resume an interrupted Sync All from this page instead of restarting at page 1 — see
    *  Job.syncAllPage. Only meaningful together with `full: true`. */
   startPage?: number;
-  /** Date-bounded Sync All (one-way jobs only) — only meaningful together with `full: true`.
+  /** Date-bounded Sync All — only meaningful together with `full: true`.
    *  ISO date strings. See Job.syncAllRangeStart/syncAllRangeEnd. */
   startDate?: string;
   endDate?: string;
+  /** Two-way jobs: which leg to run. Defaults to a_to_b (source → destination). */
+  direction?: SyncRunDirection;
 }
 interface LimitSyncOptions {
   limit?: number;
@@ -33,7 +35,9 @@ interface LimitSyncOptions {
   batchSize?: number;
   startDate?: string;
   endDate?: string;
+  direction?: SyncRunDirection;
 }
+export type SyncRunDirection = 'a_to_b' | 'b_to_a';
 interface PriorityUpdate {
   id: string;
   priority: number;
@@ -80,13 +84,13 @@ export const jobsApi = {
   runJob: (
     projectId: string,
     jobId: string,
-    { full = false, startPage, startDate, endDate }: RunOptions = {},
+    { full = false, startPage, startDate, endDate, direction }: RunOptions = {},
   ): Promise<unknown> =>
     apiClient
       .post(
         `/projects/${projectId}/jobs/${jobId}/run${full ? '?full=true' : ''}`,
-        startPage || startDate || endDate
-          ? { startPage, startDate, endDate }
+        startPage || startDate || endDate || direction
+          ? { startPage, startDate, endDate, direction }
           : undefined,
       )
       .then((r) => r.data),
@@ -115,11 +119,12 @@ export const jobsApi = {
       batchSize = 100,
       startDate,
       endDate,
+      direction,
     }: LimitSyncOptions = {},
   ): Promise<unknown> =>
     apiClient
       .post(
-        `/projects/${projectId}/jobs/${jobId}/run?limit=${limit}&startPage=${startPage}&batchSize=${batchSize}`,
+        `/projects/${projectId}/jobs/${jobId}/run?limit=${limit}&startPage=${startPage}&batchSize=${batchSize}${direction ? `&direction=${direction}` : ''}`,
         startDate || endDate ? { startDate, endDate } : undefined,
       )
       .then((r) => r.data),

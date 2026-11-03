@@ -260,6 +260,8 @@ export interface SuperAdminCreateJobDto {
   syncTrigger?: 'new' | 'updated' | 'both';
   sourceOfTruth?: string;
   deleteHandling?: 'ignore' | 'soft_archive' | 'hard_delete';
+  syncFromMode?: 'date' | 'future_only';
+  syncFromDate?: string;
   hubspotWebhookEnabled?: boolean;
   idMappingSourceField?: string;
   idMappingDestField?: string;

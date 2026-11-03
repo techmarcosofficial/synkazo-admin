@@ -6,6 +6,7 @@ import type {
   ExtSyncRun,
   ScheduleTogglePayload,
 } from '@/features/jobs/hooks';
+import type { SyncRunDirection } from '@/api/jobs';
 import type { JobDetailTabId } from '@/features/jobs/lib/jobDetailTabs';
 import type { Project, SyncProgressEvent } from '@/types';
 
@@ -49,7 +50,11 @@ export interface JobDetailContextValue {
   handleRunNow: () => Promise<void>;
   handleSyncAll: (
     onStarted?: () => void,
-    range?: { startDate?: string; endDate?: string },
+    range?: {
+      startDate?: string;
+      endDate?: string;
+      direction?: SyncRunDirection;
+    },
   ) => Promise<void>;
   handleScheduleToggle: (payload?: ScheduleTogglePayload) => Promise<void>;
   handleStop: () => Promise<void>;

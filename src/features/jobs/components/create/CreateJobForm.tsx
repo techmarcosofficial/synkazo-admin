@@ -38,6 +38,10 @@ import {
   type PipelineStatusResponse,
   type SchedInterval,
 } from '@/features/jobs/types';
+import {
+  syncFromError,
+  syncFromPayload,
+} from '@/features/jobs/lib/syncFromCutoff';
 import { toCanvasField, type CanvasField } from '@/features/jobs/utils';
 import { supportsCustomObjects } from '@/lib/platformCapabilities';
 import { getRequiredFieldItems } from '@/lib/requiredFields';
@@ -177,6 +181,8 @@ export const CreateJobForm = forwardRef<
     syncDirection: 'one_way',
     sourceOfTruth: 'servicetitan',
     deleteHandling: 'ignore',
+    syncFromMode: '',
+    syncFromDate: '',
     // On by default: choosing two-way is choosing to hear about HubSpot
     // changes. The toggle below the direction picker turns it back off.
     hubspotWebhookEnabled: true,
@@ -521,6 +527,11 @@ export const CreateJobForm = forwardRef<
       errs.destObject =
         'Destination object must differ from the source object when both are on the same platform';
     }
+    const cutoffError = syncFromError({
+      ...config,
+      syncDirection: projectSyncMode ?? config.syncDirection,
+    });
+    if (cutoffError) errs.syncFromDate = cutoffError;
     return errs;
   };
 
@@ -545,6 +556,7 @@ export const CreateJobForm = forwardRef<
             sourceOfTruth: config.sourceOfTruth,
             deleteHandling: config.deleteHandling,
             hubspotWebhookEnabled: config.hubspotWebhookEnabled,
+            ...syncFromPayload(config),
           }),
           syncTrigger: config.syncTrigger,
           idMappingSourceField: config.idMappingSourceField,
@@ -773,6 +785,7 @@ export const CreateJobForm = forwardRef<
           sourceOfTruth: config.sourceOfTruth,
           deleteHandling: config.deleteHandling,
           hubspotWebhookEnabled: config.hubspotWebhookEnabled,
+          ...syncFromPayload(config),
         }),
         syncTrigger: config.syncTrigger,
         idMappingSourceField: config.idMappingSourceField,
@@ -907,6 +920,7 @@ export const CreateJobForm = forwardRef<
             sourceOfTruth: config.sourceOfTruth,
             deleteHandling: config.deleteHandling,
             hubspotWebhookEnabled: config.hubspotWebhookEnabled,
+            ...syncFromPayload(config),
           }),
           syncTrigger: config.syncTrigger,
           idMappingSourceField: config.idMappingSourceField,
