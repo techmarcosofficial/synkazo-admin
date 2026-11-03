@@ -22,10 +22,12 @@ const SelectContext = React.createContext<{
 
 function Select({
   size: controlledSize,
+  modal = false,
   children,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Root> & {
   size?: SelectSize;
+  modal?: boolean;
 }) {
   const [size, setSize] = React.useState<SelectSize>(controlledSize ?? 'default');
 
@@ -35,9 +37,14 @@ function Select({
     }
   }, [controlledSize, size]);
 
+  const rootProps = {
+    ...props,
+    ...(modal !== undefined ? { modal } : {}),
+  } as React.ComponentProps<typeof SelectPrimitive.Root>;
+
   return (
     <SelectContext.Provider value={{ size, setSize }}>
-      <SelectPrimitive.Root data-slot="select" {...props}>
+      <SelectPrimitive.Root data-slot="select" {...rootProps}>
         {children}
       </SelectPrimitive.Root>
     </SelectContext.Provider>

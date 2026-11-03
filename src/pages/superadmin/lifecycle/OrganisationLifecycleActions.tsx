@@ -5,6 +5,7 @@ import {
   CreditCard,
   Play,
   PlayCircle,
+  ShieldAlert,
   ShieldCheck,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -19,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { showToast } from '@/lib/toast';
+import { cn } from '@/lib/utils';
 import {
   useClearPaymentHoldMutation,
   useHoldOrganisationWorkMutation,
@@ -48,9 +50,13 @@ function extractErrorMessage(err: unknown): string {
 export default function OrganisationLifecycleActions({
   organisation,
   compact = false,
+  variant = 'dropdown',
+  className,
 }: {
   organisation: SuperAdminOrganisationDetail;
   compact?: boolean;
+  variant?: 'dropdown' | 'buttons';
+  className?: string;
 }) {
   const [openAction, setOpenAction] = useState<ActionKey | null>(null);
   const closeDialog = () => setOpenAction(null);
@@ -64,6 +70,7 @@ export default function OrganisationLifecycleActions({
   const clearHoldMutation = useClearPaymentHoldMutation(organisation.id);
 
   const paymentHoldActive = organisation.paymentHoldActive ?? false;
+  const isWorkHeld = organisation.syncHealth?.isWorkHeld ?? false;
 
   const handleTransition = (
     targetStatus: 'active' | 'suspended' | 'archived',
@@ -124,64 +131,172 @@ export default function OrganisationLifecycleActions({
 
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" aria-label="Manage organisation">
-            {compact ? 'Manage' : 'Manage organisation'}
-            <ChevronDown className="size-4" aria-hidden="true" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-52">
-          {canSuspend ? (
-            <DropdownMenuItem onSelect={() => setOpenAction('suspend')}>
-              <ShieldCheck className="size-4" aria-hidden />
-              Suspend
-            </DropdownMenuItem>
-          ) : null}
-          {canReactivate ? (
-            <DropdownMenuItem onSelect={() => setOpenAction('reactivate')}>
-              <PlayCircle className="size-4" aria-hidden />
-              Reactivate
-            </DropdownMenuItem>
-          ) : null}
-          {canArchive ? (
-            <DropdownMenuItem onSelect={() => setOpenAction('archive')}>
-              <Archive className="size-4" aria-hidden />
-              Archive
-            </DropdownMenuItem>
-          ) : null}
-          {canRestore ? (
-            <DropdownMenuItem onSelect={() => setOpenAction('restore')}>
-              <PlayCircle className="size-4" aria-hidden />
-              Restore from archive
-            </DropdownMenuItem>
-          ) : null}
-          {canHold ? (
-            <DropdownMenuItem onSelect={() => setOpenAction('hold')}>
-              <CircleStop className="size-4" aria-hidden />
-              Hold work
-            </DropdownMenuItem>
-          ) : null}
-          {canHold ? (
-            <DropdownMenuItem onSelect={() => setOpenAction('resume')}>
-              <Play className="size-4" aria-hidden />
+      {variant === 'buttons' ? (
+        <div className={cn('flex flex-wrap items-center gap-2', className)}>
+          {/* Operational Hold Action */}
+          {isWorkHeld ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs font-medium text-success border-success/30 hover:bg-success/10"
+              disabled={resumeMutation.isPending}
+              onClick={() => {
+                resumeMutation.mutate(undefined, {
+                  onSuccess: (data) => {
+                    showToast.success(
+                      `Resumed ${data.resumedJobs} job${data.resumedJobs === 1 ? '' : 's'}.`,
+                    );
+                  },
+                  onError: () => {
+                    showToast.error('Could not resume work. Please try again.');
+                  },
+                });
+              }}
+            >
+              <Play className="size-3.5" aria-hidden="true" />
               Resume held work
-            </DropdownMenuItem>
+            </Button>
+          ) : canHold ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs font-medium"
+              onClick={() => setOpenAction('hold')}
+            >
+              <CircleStop className="size-3.5" aria-hidden="true" />
+              Hold work
+            </Button>
           ) : null}
-          <DropdownMenuItem
-            onSelect={() =>
+
+          {/* Payment Hold Action */}
+          <Button
+            variant="outline"
+            size="sm"
+            aria-label={paymentHoldActive ? 'Clear payment hold' : 'Impose payment hold'}
+            className={cn(
+              'h-8 gap-1.5 text-xs font-medium',
+              paymentHoldActive &&
+                'text-success border-success/30 hover:bg-success/10',
+            )}
+            onClick={() =>
               setOpenAction(
-                paymentHoldActive
-                  ? 'clear-payment-hold'
-                  : 'impose-payment-hold',
+                paymentHoldActive ? 'clear-payment-hold' : 'impose-payment-hold',
               )
             }
           >
-            <CreditCard className="size-4" aria-hidden />
+            <CreditCard className="size-3.5" aria-hidden="true" />
             {paymentHoldActive ? 'Clear payment hold' : 'Impose payment hold'}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+          </Button>
+
+          {/* Lifecycle Transitions */}
+          {canSuspend ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs font-medium text-destructive border-destructive/30 hover:bg-destructive/10"
+              onClick={() => setOpenAction('suspend')}
+            >
+              <ShieldAlert className="size-3.5" aria-hidden="true" />
+              Suspend
+            </Button>
+          ) : null}
+
+          {canReactivate ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs font-medium text-success border-success/30 hover:bg-success/10"
+              onClick={() => setOpenAction('reactivate')}
+            >
+              <PlayCircle className="size-3.5" aria-hidden="true" />
+              Reactivate
+            </Button>
+          ) : null}
+
+          {canArchive ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs font-medium text-destructive border-destructive/30 hover:bg-destructive/10"
+              onClick={() => setOpenAction('archive')}
+            >
+              <Archive className="size-3.5" aria-hidden="true" />
+              Archive
+            </Button>
+          ) : null}
+
+          {canRestore ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs font-medium text-success border-success/30 hover:bg-success/10"
+              onClick={() => setOpenAction('restore')}
+            >
+              <PlayCircle className="size-3.5" aria-hidden="true" />
+              Restore
+            </Button>
+          ) : null}
+        </div>
+      ) : (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" aria-label="Manage organisation">
+              {compact ? 'Manage' : 'Manage organisation'}
+              <ChevronDown className="size-4" aria-hidden="true" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-52">
+            {canSuspend ? (
+              <DropdownMenuItem onSelect={() => setOpenAction('suspend')}>
+                <ShieldCheck className="size-4" aria-hidden />
+                Suspend
+              </DropdownMenuItem>
+            ) : null}
+            {canReactivate ? (
+              <DropdownMenuItem onSelect={() => setOpenAction('reactivate')}>
+                <PlayCircle className="size-4" aria-hidden />
+                Reactivate
+              </DropdownMenuItem>
+            ) : null}
+            {canArchive ? (
+              <DropdownMenuItem onSelect={() => setOpenAction('archive')}>
+                <Archive className="size-4" aria-hidden />
+                Archive
+              </DropdownMenuItem>
+            ) : null}
+            {canRestore ? (
+              <DropdownMenuItem onSelect={() => setOpenAction('restore')}>
+                <PlayCircle className="size-4" aria-hidden />
+                Restore from archive
+              </DropdownMenuItem>
+            ) : null}
+            {canHold ? (
+              <DropdownMenuItem onSelect={() => setOpenAction('hold')}>
+                <CircleStop className="size-4" aria-hidden />
+                Hold work
+              </DropdownMenuItem>
+            ) : null}
+            {canHold ? (
+              <DropdownMenuItem onSelect={() => setOpenAction('resume')}>
+                <Play className="size-4" aria-hidden />
+                Resume held work
+              </DropdownMenuItem>
+            ) : null}
+            <DropdownMenuItem
+              onSelect={() =>
+                setOpenAction(
+                  paymentHoldActive
+                    ? 'clear-payment-hold'
+                    : 'impose-payment-hold',
+                )
+              }
+            >
+              <CreditCard className="size-4" aria-hidden />
+              {paymentHoldActive ? 'Clear payment hold' : 'Impose payment hold'}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
 
       <LifecycleConfirmDialog
         open={openAction === 'suspend'}

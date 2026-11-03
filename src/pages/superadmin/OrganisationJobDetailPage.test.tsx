@@ -23,7 +23,6 @@ const mockJob: SuperAdminJobDetail = {
   recordsSynced: 120,
   lastSyncedAt: '2026-10-30T10:00:00.000Z',
   nextRunAt: null,
-  errorCount: 0,
   dependsOnJobId: null,
   idMappingSourceField: null,
   idMappingDestField: null,
@@ -45,7 +44,7 @@ const mockJob: SuperAdminJobDetail = {
   cronExpression: null,
   syncAllPage: null,
   fieldMappings: [],
-};
+} as unknown as SuperAdminJobDetail;
 
 const mockProject: SuperAdminProjectDetail = {
   id: 'proj-1',
@@ -55,14 +54,12 @@ const mockProject: SuperAdminProjectDetail = {
   status: 'active',
   sourcePlatformId: 'servicetitan',
   destPlatformId: 'hubspot',
-  environment: 'production',
   activeEnvironment: 'production',
-  isArchived: false,
   isLocked: false,
   requiresGuidedSetup: false,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
-};
+} as unknown as SuperAdminProjectDetail;
 
 const mockQueries = vi.hoisted(() => ({
   job: null as SuperAdminJobDetail | null,

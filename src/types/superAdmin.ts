@@ -71,6 +71,15 @@ export interface SuperAdminOrganisationDetail {
   paymentHoldActive?: boolean;
   paymentHoldSince?: string | null;
   manualHoldReason?: string | null;
+  syncHealth?: {
+    totalJobs: number;
+    activeJobs: number;
+    heldJobs: number;
+    pausedJobs: number;
+    failingJobs: number;
+    isWorkHeld: boolean;
+    lastSyncedAt: string | null;
+  };
   createdAt: string;
   updatedAt: string;
 }

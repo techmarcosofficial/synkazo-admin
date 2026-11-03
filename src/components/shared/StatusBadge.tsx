@@ -113,6 +113,11 @@ const STATUS_CONFIG: Record<
     label: 'Paused',
     description: 'Scheduled syncs are stopped',
   },
+  held: {
+    tone: 'warning',
+    label: 'Held by Support',
+    description: 'Placed on operational hold by Synkazo Support',
+  },
   error: {
     tone: 'danger',
     label: 'Error',

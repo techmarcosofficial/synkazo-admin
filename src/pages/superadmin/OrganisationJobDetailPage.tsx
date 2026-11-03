@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 
 import StartSyncModal from '@/components/sync/StartSyncModal';
 import type { ExtJob } from '@/features/jobs/hooks/useJobDetail';
+import type { ProjectEnvironment } from '@/types';
 import type { SuperAdminRunJobDto } from '@/types/superAdmin';
 import OrganisationJobMappingPanel from './OrganisationJobMappingPanel';
 import OrganisationJobPipelinePanel from './OrganisationJobPipelinePanel';
@@ -988,7 +989,9 @@ export default function OrganisationJobDetailPage() {
           projectId={projectId}
           jobId={job.id}
           job={job as unknown as ExtJob}
-          environment={project.activeEnvironment ?? project.active_environment}
+          environment={
+            (project.activeEnvironment as ProjectEnvironment) || undefined
+          }
           sourcePlatformId={project.sourcePlatformId}
           hasBaseline={Boolean(
             job.lastSyncedAt ||

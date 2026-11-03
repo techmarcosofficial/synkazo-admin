@@ -183,57 +183,64 @@ afterEach(() => {
 });
 
 describe('OrganisationDetailPage', () => {
-  it('keeps overview context and actions in the account card', async () => {
+  it('keeps overview context in Workspace Pulse and lifecycle actions in dedicated management card', async () => {
     mocks.detail = detailFixture({ description: 'Regional HVAC workspace' });
     renderPage();
 
-    const accountHeading = await screen.findByRole('heading', {
-      name: 'Account & billing',
+    const pulseHeading = await screen.findByRole('heading', {
+      name: 'Workspace Pulse',
     });
-    const accountCard = accountHeading.closest('[data-slot="card"]');
-    expect(accountCard).not.toBeNull();
+    const pulseCard = pulseHeading.closest('[data-slot="card"]');
+    expect(pulseCard).not.toBeNull();
     expect(
-      within(accountCard as HTMLElement).getByText('Regional HVAC workspace'),
+      within(pulseCard as HTMLElement).getByRole('button', {
+        name: 'Edit metadata',
+      }),
     ).toBeInTheDocument();
+
+    const mgmtHeading = await screen.findByRole('heading', {
+      name: 'Organisation Management',
+    });
+    const mgmtCard = mgmtHeading.closest('[data-slot="card"]');
+    expect(mgmtCard).not.toBeNull();
     expect(
-      within(accountCard as HTMLElement).getByRole('button', {
-        name: 'Edit organisation metadata',
+      within(mgmtCard as HTMLElement).getByRole('button', {
+        name: 'Hold work',
       }),
     ).toBeInTheDocument();
     expect(
-      within(accountCard as HTMLElement).getByRole('button', {
-        name: 'Manage organisation',
+      within(mgmtCard as HTMLElement).getByRole('button', {
+        name: 'Impose payment hold',
       }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole('heading', { name: 'Overview' }),
-    ).not.toBeInTheDocument();
+      within(mgmtCard as HTMLElement).getByRole('button', {
+        name: 'Suspend organisation',
+      }),
+    ).toBeInTheDocument();
   });
 
-  it('renders name, plan, owner, and usage metrics', async () => {
+  it('renders name, plan, owner, and sync health metrics', async () => {
     renderPage();
 
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Northwind HVAC' }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/northwind · Pro · active/)).toBeInTheDocument();
     expect(screen.getByText('owner@northwind.example')).toBeInTheDocument();
-    expect(screen.getByText('8')).toBeInTheDocument(); // members total
-    expect(screen.getByText('3')).toBeInTheDocument(); // projects count
-    expect(await screen.findByText('CRM sync')).toBeInTheDocument();
-    expect(screen.getByText('Sync flows: 2 enabled of 3')).toBeInTheDocument();
-    expect(screen.getByText('Nov 1, 2026')).toBeInTheDocument();
+    expect(screen.getByText('Active & Scheduled')).toBeInTheDocument();
+    expect(screen.getByText('Sync Engine Health')).toBeInTheDocument();
+    expect(screen.getByText('Monthly Record Quota')).toBeInTheDocument();
     expect(
       screen.queryByRole('link', { name: /view limits/i }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole('link', { name: /^Sync flows:/i }),
+      screen.getByRole('link', { name: /flows/i }),
     ).toHaveAttribute(
       'href',
       '/super-admin/organisations/org-1/billing?highlight=jobs#entitlements-usage',
     );
     expect(
-      screen.getByRole('link', { name: /^Records this period:/i }),
+      screen.getByRole('link', { name: /1,042 \/ 100,000/i }),
     ).toHaveAttribute(
       'href',
       '/super-admin/organisations/org-1/billing?highlight=records#entitlements-usage',
@@ -245,11 +252,11 @@ describe('OrganisationDetailPage', () => {
     renderPage();
 
     expect(
-      await screen.findByText('Organisation is suspended'),
+      await screen.findByText('Organisation Suspended'),
     ).toBeInTheDocument();
   });
 
-  it('shows the payment hold and its matching management action', async () => {
+  it('shows the payment hold banner and its matching management action', async () => {
     mocks.detail = detailFixture({
       paymentHoldActive: true,
       paymentHoldSince: '2026-10-10T00:00:00.000Z',
@@ -257,15 +264,16 @@ describe('OrganisationDetailPage', () => {
     });
     renderPage();
 
-    expect(await screen.findByText('Payment hold active')).toBeInTheDocument();
-    fireEvent.pointerDown(
-      screen.getByRole('button', { name: 'Manage organisation' }),
-      { button: 0, ctrlKey: false, pointerType: 'mouse' },
-    );
-    const clearHold = await screen.findByRole('menuitem', {
+    expect(
+      await screen.findByText('Payment / Billing Hold Active'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Clear Payment Hold' }),
+    ).toBeInTheDocument();
+    const clearHoldAction = screen.getByRole('button', {
       name: 'Clear payment hold',
     });
-    fireEvent.click(clearHold);
+    fireEvent.click(clearHoldAction);
     expect(
       await screen.findByRole('dialog', { name: 'Clear payment hold' }),
     ).toBeInTheDocument();
@@ -299,17 +307,37 @@ describe('OrganisationDetailPage', () => {
     expect(backLink).toHaveAttribute('href', '/super-admin/organisations');
   });
 
-  it('keeps core context available when billing and project previews fail', async () => {
+  it('keeps core context available when billing preview fails', async () => {
     mocks.billingError = true;
-    mocks.projectsError = true;
     renderPage();
 
-    expect(await screen.findByText('Workspace usage')).toBeInTheDocument();
+    expect(await screen.findByText('Workspace Pulse')).toBeInTheDocument();
     expect(
-      await screen.findByText('Billing dates unavailable.'),
+      await screen.findByText('Sync Engine Health'),
     ).toBeInTheDocument();
-    expect(
-      await screen.findByText('Could not load recent projects.'),
-    ).toBeInTheDocument();
+  });
+
+  it('allows dismissing account warnings for the session', async () => {
+    mocks.detail = detailFixture({
+      usage: {
+        members: { total: 8, active: 6, limit: 10 },
+        projects: { count: 15, limit: 10, over: true },
+        jobs: { count: 12, limit: 50, over: false },
+        records: {
+          used: 500,
+          limit: 1000,
+          remaining: 500,
+          periodStart: new Date().toISOString(),
+        },
+      },
+    });
+
+    renderPage();
+
+    expect(await screen.findByText('Needs attention')).toBeInTheDocument();
+    const dismissBtn = screen.getByRole('button', { name: 'Dismiss alert' });
+    fireEvent.click(dismissBtn);
+
+    expect(screen.queryByText('Needs attention')).not.toBeInTheDocument();
   });
 });

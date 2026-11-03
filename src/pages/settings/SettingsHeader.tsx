@@ -25,7 +25,9 @@ function getInitials(fullName?: string, email?: string) {
 /** Personal identity and account context kept visible while changing settings. */
 export default function SettingsHeader() {
   const { currentUser } = useSynkazoAuth();
-  const { data: org } = useMyOrgQuery();
+  const { data: org } = useMyOrgQuery({
+    enabled: currentUser?.role !== 'super_admin',
+  });
 
   if (!currentUser) return null;
 

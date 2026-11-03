@@ -92,6 +92,9 @@ const PlatformAuditPage = lazy(
 const PlatformProfilePage = lazy(
   () => import('@/pages/superadmin/PlatformProfilePage'),
 );
+const PlatformSettingsLayout = lazy(
+  () => import('@/pages/superadmin/PlatformSettingsLayout'),
+);
 
 function ProjectSettingsLegacyRedirect({
   section,
@@ -356,7 +359,28 @@ function App() {
                     path="sync-operations"
                     element={<SyncOperationsPage />}
                   />
+                  <Route path="settings" element={<PlatformSettingsLayout />}>
+                    <Route index element={<Navigate to="profile" replace />} />
+                    <Route path="profile" element={<ProfileTab />} />
+                    <Route path="preferences" element={<PreferencesTab />} />
+                    <Route
+                      path="*"
+                      element={<Navigate to="profile" replace />}
+                    />
+                  </Route>
                   <Route path="profile" element={<PlatformProfilePage />} />
+                  <Route
+                    path="profile/preferences"
+                    element={
+                      <Navigate to="/super-admin/settings/preferences" replace />
+                    }
+                  />
+                  <Route
+                    path="preferences"
+                    element={
+                      <Navigate to="/super-admin/settings/preferences" replace />
+                    }
+                  />
                   <Route path="organisations" element={<OrganisationsPage />} />
                   <Route
                     path="organisations/:organisationId"

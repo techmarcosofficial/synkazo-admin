@@ -79,6 +79,26 @@ vi.mock('@/queries/useSuperAdmin', () => ({
     isPending: false,
     mutateAsync: vi.fn(),
   }),
+  useTransitionOrganisationStatusMutation: () => ({
+    isPending: false,
+    mutate: vi.fn(),
+  }),
+  useHoldOrganisationWorkMutation: () => ({
+    isPending: false,
+    mutate: vi.fn(),
+  }),
+  useResumeOrganisationWorkMutation: () => ({
+    isPending: false,
+    mutate: vi.fn(),
+  }),
+  useImposePaymentHoldMutation: () => ({
+    isPending: false,
+    mutate: vi.fn(),
+  }),
+  useClearPaymentHoldMutation: () => ({
+    isPending: false,
+    mutate: vi.fn(),
+  }),
 }));
 
 function renderAt(path: string) {
