@@ -175,9 +175,27 @@ export interface SyncConflict {
   resolutionStrategy: string;
   resolvedValue: string | null;
   resolvedBy: 'system' | 'user';
-  status: 'auto_resolved' | 'pending_review' | 'resolved_manually';
+  status: SyncConflictStatus;
   createdAt: string;
   resolvedAt: string | null;
+  /** Record-level conflicts only, e.g. MISSING_PARENT_MAPPING. */
+  errorCode?: SyncConflictCode | null;
+  recordId?: string | null;
+  direction?: 'a_to_b' | 'b_to_a' | null;
+  parentObject?: string | null;
+  parentRecordId?: string | null;
+  parentSyncRequestedAt?: string | null;
+}
+
+export type SyncConflictStatus =
+  'auto_resolved' | 'pending_review' | 'resolved_manually';
+export type SyncConflictCode = 'MISSING_PARENT_MAPPING';
+
+export interface SyncConflictPage {
+  items: SyncConflict[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
 export interface PipelineStatus {

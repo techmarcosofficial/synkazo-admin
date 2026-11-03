@@ -29,6 +29,8 @@ export const queryKeys = {
         limit,
         filters ?? {},
       ] as const,
+    conflicts: (projectId: string, jobId: string, filters?: object) =>
+      ['jobs', 'conflicts', projectId, jobId, filters ?? {}] as const,
   },
   connections: {
     all: ['connections'] as const,

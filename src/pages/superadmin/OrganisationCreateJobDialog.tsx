@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import CreateJobDialogFrame from '@/features/jobs/components/create/CreateJobDialogFrame';
 import { PlatformObjectSelectorView, type PlatformObjectSelectorProps } from '@/features/jobs/components/create/PlatformObjectSelector';
 import JobDetailsStep from '@/features/jobs/components/create/steps/JobDetailsStep';
+import { conflictStrategyPayload } from '@/features/jobs/lib/conflictStrategy';
 import {
   syncFromError,
   syncFromPayload,
@@ -98,7 +99,7 @@ export default function OrganisationCreateJobDialog({
         syncDirection: syncDirection as 'one_way' | 'two_way',
         syncTrigger: config.syncTrigger as 'new' | 'updated' | 'both',
         ...(syncDirection === 'two_way' && {
-          sourceOfTruth: config.sourceOfTruth,
+          ...conflictStrategyPayload(config.sourceOfTruth),
           deleteHandling: config.deleteHandling as 'ignore' | 'soft_archive' | 'hard_delete',
           hubspotWebhookEnabled: config.hubspotWebhookEnabled,
           ...syncFromPayload(config),

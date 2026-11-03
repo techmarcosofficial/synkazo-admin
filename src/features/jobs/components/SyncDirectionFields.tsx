@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import TwoWayAuthNotice from './TwoWayAuthNotice';
 
 import { ChoiceCardItem } from '@/components/form/ChoiceCard';
+import { MOST_RECENT } from '@/features/jobs/lib/conflictStrategy';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -235,17 +236,21 @@ export default function SyncDirectionFields({
             <FieldLabel>Primary System (Source of Truth)</FieldLabel>
             {!readOnly && (
               <p className="text-muted-foreground -mt-1 mb-2 text-xs">
-                When a record changes in both systems at the same time, this
-                system wins the conflict.
+                When a record changes in both systems, this decides whose values
+                win. Every conflict is logged on the Conflicts tab.
               </p>
             )}
             {readOnly ? (
-              <LockedValue>{platformLabel(sourceOfTruth)}</LockedValue>
+              <LockedValue>
+                {sourceOfTruth === MOST_RECENT
+                  ? 'Most recent change wins'
+                  : platformLabel(sourceOfTruth)}
+              </LockedValue>
             ) : (
               <RadioGroup
                 value={sourceOfTruth}
                 onValueChange={onSourceOfTruthChange}
-                className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+                className="grid grid-cols-1 gap-3 sm:grid-cols-3"
               >
                 {[sourcePlatform, destPlatform].map((platformId) => (
                   <ChoiceCardItem
@@ -255,6 +260,14 @@ export default function SyncDirectionFields({
                     title={platformLabel(platformId)}
                   />
                 ))}
+                <ChoiceCardItem
+                  value={MOST_RECENT}
+                  id="source-of-truth-most_recent"
+                  title="Most recent change"
+                  description={
+                    compact ? undefined : 'Whichever side was edited last wins'
+                  }
+                />
               </RadioGroup>
             )}
           </Field>

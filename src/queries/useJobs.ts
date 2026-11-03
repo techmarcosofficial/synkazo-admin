@@ -7,10 +7,15 @@ import {
 
 import { queryKeys } from './queryKeys';
 
-import { jobsApi } from '@/api/jobs';
+import { jobsApi, type ConflictRunResponse } from '@/api/jobs';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { syncLogsApi, type RunLogFilters } from '@/api/syncLogs';
-import type { Job } from '@/types';
+import type {
+  Job,
+  SyncConflict,
+  SyncConflictCode,
+  SyncConflictStatus,
+} from '@/types';
 
 export function useJobsQuery(options?: { enabled?: boolean }) {
   const { hasPermission } = useSynkazoAuth();
@@ -60,6 +65,51 @@ export function useRunLogsQuery(
     placeholderData: keepPreviousData,
     select: (logs) =>
       canViewLogs ? logs : { data: [], total: 0, page: 1, limit },
+  });
+}
+
+export interface ConflictFilters {
+  status?: SyncConflictStatus;
+  errorCode?: SyncConflictCode;
+  page: number;
+  limit: number;
+}
+
+export function useJobConflictsQuery(
+  projectId: string,
+  jobId: string,
+  filters: ConflictFilters,
+) {
+  const { hasPermission } = useSynkazoAuth();
+  return useQuery({
+    queryKey: queryKeys.jobs.conflicts(projectId, jobId, filters),
+    queryFn: () => jobsApi.listConflictsForReview(projectId, jobId, filters),
+    enabled: !!projectId && !!jobId && hasPermission('job.view'),
+    placeholderData: keepPreviousData,
+  });
+}
+
+// Resolve / trigger-parent-sync / retry-record all change what the tab shows.
+export function useConflictActionMutation(projectId: string, jobId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      action,
+      conflictId,
+    }: {
+      action: 'resolve' | 'triggerParentSync' | 'retryRecord';
+      conflictId: string;
+    }): Promise<SyncConflict | ConflictRunResponse> =>
+      action === 'resolve'
+        ? jobsApi.resolveConflict(projectId, jobId, conflictId)
+        : action === 'triggerParentSync'
+          ? jobsApi.triggerConflictParentSync(projectId, jobId, conflictId)
+          : jobsApi.retryConflictRecord(projectId, jobId, conflictId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ['jobs', 'conflicts', projectId, jobId],
+      });
+    },
   });
 }
 

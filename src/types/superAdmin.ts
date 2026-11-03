@@ -259,6 +259,8 @@ export interface SuperAdminCreateJobDto {
   syncDirection?: 'one_way' | 'two_way';
   syncTrigger?: 'new' | 'updated' | 'both';
   sourceOfTruth?: string;
+  conflictResolutionStrategy?:
+    'source_of_truth_wins' | 'most_recently_modified_wins';
   deleteHandling?: 'ignore' | 'soft_archive' | 'hard_delete';
   syncFromMode?: 'date' | 'future_only';
   syncFromDate?: string;

@@ -7,6 +7,9 @@ import type {
   PipelineStatus,
   SchedulerJob,
   SyncConflict,
+  SyncConflictCode,
+  SyncConflictPage,
+  SyncConflictStatus,
   DataCheckupResult,
   RuleMatchScoreResult,
   SyncRun,
@@ -38,6 +41,11 @@ interface LimitSyncOptions {
   direction?: SyncRunDirection;
 }
 export type SyncRunDirection = 'a_to_b' | 'b_to_a';
+export interface ConflictRunResponse {
+  success: boolean;
+  alreadyRunning?: boolean;
+  message?: string;
+}
 interface PriorityUpdate {
   id: string;
   priority: number;
@@ -184,6 +192,51 @@ export const jobsApi = {
     apiClient.get(`${p(projectId)}/${jobId}/pipeline-status`).then(d),
   getConflicts: (projectId: string, jobId: string): Promise<SyncConflict[]> =>
     apiClient.get(`${p(projectId)}/${jobId}/conflicts`).then(d),
+
+  // Conflicts tab: paged, filterable list plus review actions.
+  listConflictsForReview: (
+    projectId: string,
+    jobId: string,
+    params: {
+      status?: SyncConflictStatus;
+      errorCode?: SyncConflictCode;
+      page?: number;
+      limit?: number;
+    },
+  ): Promise<SyncConflictPage> =>
+    apiClient
+      .get(`${p(projectId)}/${jobId}/conflicts/review`, { params })
+      .then(d),
+
+  resolveConflict: (
+    projectId: string,
+    jobId: string,
+    conflictId: string,
+  ): Promise<SyncConflict> =>
+    apiClient
+      .post(`${p(projectId)}/${jobId}/conflicts/${conflictId}/resolve`)
+      .then(d),
+
+  // Both return the manual-run envelope ({ success, alreadyRunning?, message }).
+  triggerConflictParentSync: (
+    projectId: string,
+    jobId: string,
+    conflictId: string,
+  ): Promise<ConflictRunResponse> =>
+    apiClient
+      .post(
+        `${p(projectId)}/${jobId}/conflicts/${conflictId}/trigger-parent-sync`,
+      )
+      .then((r) => r.data),
+
+  retryConflictRecord: (
+    projectId: string,
+    jobId: string,
+    conflictId: string,
+  ): Promise<ConflictRunResponse> =>
+    apiClient
+      .post(`${p(projectId)}/${jobId}/conflicts/${conflictId}/retry-record`)
+      .then((r) => r.data),
   provisionDefaultPipeline: (
     projectId: string,
     jobId: string,

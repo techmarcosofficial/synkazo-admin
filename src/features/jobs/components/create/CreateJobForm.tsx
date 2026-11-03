@@ -38,6 +38,7 @@ import {
   type PipelineStatusResponse,
   type SchedInterval,
 } from '@/features/jobs/types';
+import { conflictStrategyPayload } from '@/features/jobs/lib/conflictStrategy';
 import {
   syncFromError,
   syncFromPayload,
@@ -553,7 +554,7 @@ export const CreateJobForm = forwardRef<
           destObject: config.destObject.toLowerCase(),
           syncDirection: config.syncDirection,
           ...(config.syncDirection === 'two_way' && {
-            sourceOfTruth: config.sourceOfTruth,
+            ...conflictStrategyPayload(config.sourceOfTruth),
             deleteHandling: config.deleteHandling,
             hubspotWebhookEnabled: config.hubspotWebhookEnabled,
             ...syncFromPayload(config),
@@ -782,7 +783,7 @@ export const CreateJobForm = forwardRef<
         destObject: config.destObject.toLowerCase(),
         syncDirection,
         ...(syncDirection === 'two_way' && {
-          sourceOfTruth: config.sourceOfTruth,
+          ...conflictStrategyPayload(config.sourceOfTruth),
           deleteHandling: config.deleteHandling,
           hubspotWebhookEnabled: config.hubspotWebhookEnabled,
           ...syncFromPayload(config),
@@ -917,7 +918,7 @@ export const CreateJobForm = forwardRef<
           destObject: config.destObject.toLowerCase(),
           syncDirection: config.syncDirection,
           ...(config.syncDirection === 'two_way' && {
-            sourceOfTruth: config.sourceOfTruth,
+            ...conflictStrategyPayload(config.sourceOfTruth),
             deleteHandling: config.deleteHandling,
             hubspotWebhookEnabled: config.hubspotWebhookEnabled,
             ...syncFromPayload(config),
