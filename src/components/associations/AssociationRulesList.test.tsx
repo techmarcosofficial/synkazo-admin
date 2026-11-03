@@ -17,7 +17,32 @@ import AssociationRulesList, {
 
 import { associationsApi } from '@/api/associations';
 import type { AssociationRecord, AssociationRule } from '@/api/associations';
+import { superAdminAssociationsApi } from '@/api/superAdminAssociations';
 import type { PaginatedResponse } from '@/types';
+
+vi.mock('@/api/superAdminAssociations', async () => {
+  const actual = await vi.importActual<
+    typeof import('@/api/superAdminAssociations')
+  >('@/api/superAdminAssociations');
+  return {
+    ...actual,
+    superAdminAssociationsApi: {
+      ...actual.superAdminAssociationsApi,
+      listRules: vi.fn(),
+      getRuleStats: vi.fn(),
+      listRuns: vi.fn(),
+      getRuleRecords: vi.fn(),
+      runRule: vi.fn(),
+      retryFailed: vi.fn(),
+      updateRule: vi.fn(),
+      deleteRule: vi.fn(),
+      getObjects: vi.fn(),
+      getObjectFields: vi.fn(),
+      getOwnerFields: vi.fn(),
+      getAssociationTypes: vi.fn(),
+    },
+  };
+});
 
 vi.mock('@/api/associations', async () => {
   const actual =
@@ -513,5 +538,206 @@ describe('layout: no overlap between record status and metadata (regression guar
     const source = screen.getByText('row-check');
     expect(within(badge!.closest('div')!).queryByText('row-check')).toBeNull();
     expect(source).not.toBe(badge);
+  });
+});
+
+describe('Super Admin AssociationRulesList parity', () => {
+  const saRule: AssociationRule = {
+    id: 'sa-rule-1',
+    projectId: 'sa-proj-1',
+    name: 'SA Contacts to Companies',
+    sourceObject: 'contacts',
+    sourceMatchField: 'company_id',
+    targetObject: 'companies',
+    targetMatchField: 'id',
+    isEnabled: true,
+    conditions: [],
+  };
+
+  beforeEach(() => {
+    vi.mocked(superAdminAssociationsApi.listRules).mockReset();
+    vi.mocked(superAdminAssociationsApi.getRuleStats).mockReset();
+    vi.mocked(superAdminAssociationsApi.listRuns).mockReset();
+    vi.mocked(superAdminAssociationsApi.runRule).mockReset();
+    vi.mocked(superAdminAssociationsApi.deleteRule).mockReset();
+  });
+
+  it('fetches rules, stats, and runs through superAdminAssociationsApi when organisationId is provided', async () => {
+    vi.mocked(superAdminAssociationsApi.listRules).mockResolvedValue([saRule]);
+    vi.mocked(superAdminAssociationsApi.getRuleStats).mockResolvedValue({
+      total: 150,
+      resolved: 140,
+      pending: 5,
+      failed: 5,
+    });
+    vi.mocked(superAdminAssociationsApi.listRuns).mockResolvedValue({
+      data: [
+        {
+          id: 'run-sa-1',
+          associationRuleId: 'sa-rule-1',
+          status: 'completed',
+          startedAt: '2026-01-01T10:00:00.000Z',
+          triggeredBy: 'manual',
+          succeeded: 140,
+          pendingCreated: 5,
+          failed: 5,
+        },
+      ],
+      total: 1,
+      page: 1,
+      limit: 10,
+    });
+
+    renderWithClient(
+      <AssociationRulesList
+        projectId="sa-proj-1"
+        organisationId="org-1"
+        organisationName="Acme Corp"
+      />,
+    );
+
+    expect(
+      await screen.findByText('SA Contacts to Companies'),
+    ).toBeInTheDocument();
+    expect(superAdminAssociationsApi.listRules).toHaveBeenCalledWith(
+      'org-1',
+      'sa-proj-1',
+    );
+    expect(superAdminAssociationsApi.getRuleStats).toHaveBeenCalledWith(
+      'org-1',
+      'sa-proj-1',
+      'sa-rule-1',
+    );
+    expect(await screen.findByText('150')).toBeInTheDocument();
+  });
+
+  it('requires an operator reason before triggering Run now in Super Admin mode', async () => {
+    const user = userEvent.setup();
+    vi.mocked(superAdminAssociationsApi.listRules).mockResolvedValue([saRule]);
+    vi.mocked(superAdminAssociationsApi.getRuleStats).mockResolvedValue({
+      total: 10,
+      resolved: 10,
+      pending: 0,
+      failed: 0,
+    });
+    vi.mocked(superAdminAssociationsApi.listRuns).mockResolvedValue({
+      data: [],
+      total: 0,
+      page: 1,
+      limit: 10,
+    });
+    vi.mocked(superAdminAssociationsApi.runRule).mockResolvedValue({
+      id: 'run-new',
+      status: 'completed',
+      succeeded: 1,
+      failed: 0,
+      pendingCreated: 0,
+    });
+
+    renderWithClient(
+      <AssociationRulesList
+        projectId="sa-proj-1"
+        organisationId="org-1"
+        organisationName="Acme Corp"
+      />,
+    );
+
+    await screen.findByText('SA Contacts to Companies');
+    const runBtn = screen.getByRole('button', { name: 'Run now' });
+    await user.click(runBtn);
+
+    // Lifecycle dialog should open
+    expect(
+      screen.getByRole('heading', {
+        name: /Run “SA Contacts to Companies” now\?/,
+      }),
+    ).toBeInTheDocument();
+    const reasonInput = screen.getByPlaceholderText('Why is this operation needed?');
+    expect(reasonInput).toBeInTheDocument();
+
+    const confirmBtn = screen.getByRole('button', { name: 'Run rule' });
+    expect(confirmBtn).toBeDisabled();
+
+    await user.type(reasonInput, 'Manual sync trigger by admin');
+    expect(confirmBtn).not.toBeDisabled();
+
+    await user.click(confirmBtn);
+    await waitFor(() => {
+      expect(superAdminAssociationsApi.runRule).toHaveBeenCalledWith(
+        'org-1',
+        'sa-proj-1',
+        'sa-rule-1',
+        'Manual sync trigger by admin',
+      );
+    });
+  });
+
+  it('requires typed rule name and operator reason before deleting a rule in Super Admin mode', async () => {
+    const user = userEvent.setup();
+    vi.mocked(superAdminAssociationsApi.listRules).mockResolvedValue([saRule]);
+    vi.mocked(superAdminAssociationsApi.getRuleStats).mockResolvedValue({
+      total: 0,
+      resolved: 0,
+      pending: 0,
+      failed: 0,
+    });
+    vi.mocked(superAdminAssociationsApi.listRuns).mockResolvedValue({
+      data: [],
+      total: 0,
+      page: 1,
+      limit: 10,
+    });
+    vi.mocked(superAdminAssociationsApi.deleteRule).mockResolvedValue({
+      ruleId: 'sa-rule-1',
+      deleted: true,
+    });
+
+    renderWithClient(
+      <AssociationRulesList
+        projectId="sa-proj-1"
+        organisationId="org-1"
+        organisationName="Acme Corp"
+      />,
+    );
+
+    await screen.findByText('SA Contacts to Companies');
+    const moreBtn = screen.getByRole('button', {
+      name: 'More actions for SA Contacts to Companies',
+    });
+    await user.click(moreBtn);
+
+    const deleteMenuItem = screen.getByRole('menuitem', {
+      name: 'Delete rule',
+    });
+    await user.click(deleteMenuItem);
+
+    // Lifecycle dialog should open requiring typed confirmation
+    expect(
+      screen.getByRole('heading', { name: 'Delete association rule' }),
+    ).toBeInTheDocument();
+    const nameInput = screen.getByLabelText(/type/i);
+    const reasonInput = screen.getByPlaceholderText(
+      'Why is this rule being removed?',
+    );
+    const deleteBtn = screen.getByRole('button', { name: 'Delete rule' });
+
+    expect(deleteBtn).toBeDisabled();
+
+    await user.type(nameInput, 'SA Contacts to Companies');
+    await user.type(reasonInput, 'Removing rule per request');
+    expect(deleteBtn).not.toBeDisabled();
+
+    await user.click(deleteBtn);
+    await waitFor(() => {
+      expect(superAdminAssociationsApi.deleteRule).toHaveBeenCalledWith(
+        'org-1',
+        'sa-proj-1',
+        'sa-rule-1',
+        {
+          reason: 'Removing rule per request',
+          confirmName: 'SA Contacts to Companies',
+        },
+      );
+    });
   });
 });

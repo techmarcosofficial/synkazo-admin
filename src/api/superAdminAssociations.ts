@@ -123,6 +123,7 @@ export const superAdminAssociationsApi = {
       status?: string;
       result?: string;
       search?: string;
+      days?: number;
     } = {},
   ): Promise<SuperAdminPage<AssociationRunLog>> =>
     apiClient

@@ -30,7 +30,9 @@ import {
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
-import AssociationRuleFormDialog from './AssociationRuleFormDialog';
+import AssociationRuleFormDialog, {
+  type AssociationRuleFormOperations,
+} from './AssociationRuleFormDialog';
 import AssociationRunsList, {
   type AssociationResultFilter,
   type AssociationRunFilters,
@@ -41,8 +43,11 @@ import {
   type AssociationRecordStatus,
   type AssociationRule as BaseAssociationRule,
   type AssociationRuleStats,
+  type AssociationRunLog,
   type AssociationRunResult,
 } from '@/api/associations';
+import { superAdminAssociationsApi } from '@/api/superAdminAssociations';
+import LifecycleConfirmDialog from '@/pages/superadmin/lifecycle/LifecycleConfirmDialog';
 import EmptyState from '@/components/shared/EmptyState';
 import ListRow from '@/components/shared/list/ListRow';
 import PaginationBar from '@/components/shared/PaginationBar';
@@ -85,7 +90,7 @@ import {
   useAssociationRecordsQuery,
   useAssociationRunLogsQuery,
 } from '@/queries/useAssociations';
-import type { ApiError } from '@/types';
+import type { ApiError, PaginatedResponse } from '@/types';
 
 interface AssociationRule extends BaseAssociationRule {
   name?: string;
@@ -167,11 +172,13 @@ function formatTimestamp(isoString: string) {
 export function RecentRunsList({
   projectId,
   ruleId,
+  organisationId,
 }: {
   projectId: string;
   ruleId: string;
+  organisationId?: string;
 }) {
-  const query = useAssociationRunLogsQuery(projectId, ruleId);
+  const query = useAssociationRunLogsQuery(projectId, ruleId, organisationId);
   const logs = query.data?.data ?? [];
   const total = query.data?.total ?? 0;
 
@@ -273,9 +280,11 @@ function RecordRowSkeleton() {
 export function RuleRecordsList({
   projectId,
   ruleId,
+  organisationId,
 }: {
   projectId: string;
   ruleId: string;
+  organisationId?: string;
 }) {
   const [recordFilter, setRecordFilter] = useState<
     'all' | AssociationRecordStatus
@@ -284,12 +293,17 @@ export function RuleRecordsList({
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  const query = useAssociationRecordsQuery(projectId, ruleId, {
-    page,
-    limit: pageSize,
-    status: recordFilter,
-    search,
-  });
+  const query = useAssociationRecordsQuery(
+    projectId,
+    ruleId,
+    {
+      page,
+      limit: pageSize,
+      status: recordFilter,
+      search,
+    },
+    organisationId,
+  );
 
   const records = query.data?.data ?? [];
   const total = query.data?.total ?? 0;
@@ -484,6 +498,9 @@ function RuleOutcomeMetric({
 function RuleCard({
   rule,
   projectId,
+  organisationId,
+  organisationName,
+  formOperations,
   onRefresh,
   runFilters,
   expanded,
@@ -491,6 +508,9 @@ function RuleCard({
 }: {
   rule: AssociationRule;
   projectId: string;
+  organisationId?: string;
+  organisationName?: string;
+  formOperations?: AssociationRuleFormOperations;
   onRefresh: () => void;
   runFilters: AssociationRunFilters;
   expanded: boolean;
@@ -499,6 +519,9 @@ function RuleCard({
   const [stats, setStats] = useState<AssociationRuleStats | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [operatorAction, setOperatorAction] = useState<{
+    kind: 'run' | 'retry' | 'toggle' | 'delete';
+  } | null>(null);
 
   const [isProcessing, setIsProcessing] = useState({
     stats: false,
@@ -511,7 +534,11 @@ function RuleCard({
   const queryClient = useQueryClient();
   const { confirm } = useConfirmDialog();
 
-  const runsQuery = useAssociationRunLogsQuery(projectId, rule.id);
+  const runsQuery = useAssociationRunLogsQuery(
+    projectId,
+    rule.id,
+    organisationId,
+  );
 
   const latestRun = runsQuery.data?.data?.[0];
 
@@ -521,8 +548,11 @@ function RuleCard({
       stats: true,
     }));
 
-    associationsApi
-      .getRuleStats(projectId, rule.id)
+    const fetchStats = organisationId
+      ? superAdminAssociationsApi.getRuleStats(organisationId, projectId, rule.id)
+      : associationsApi.getRuleStats(projectId, rule.id);
+
+    fetchStats
       .then((nextStats) => {
         setStats(nextStats);
       })
@@ -533,7 +563,7 @@ function RuleCard({
           stats: false,
         }));
       });
-  }, [projectId, rule.id]);
+  }, [organisationId, projectId, rule.id]);
 
   useEffect(() => {
     loadStats();
@@ -541,17 +571,11 @@ function RuleCard({
 
   const invalidateRuleData = useCallback(() => {
     queryClient.invalidateQueries({
-      queryKey: ['associations', 'records', projectId, rule.id],
+      predicate: (query) =>
+        query.queryKey[0] === 'associations' &&
+        query.queryKey.includes(projectId),
     });
-
-    queryClient.invalidateQueries({
-      queryKey: ['associations', 'logs', projectId, rule.id],
-    });
-
-    queryClient.invalidateQueries({
-      queryKey: ['associations', 'project-runs', projectId],
-    });
-  }, [queryClient, projectId, rule.id]);
+  }, [queryClient, projectId]);
 
   const isEnabled = rule.isEnabled ?? true;
 
@@ -685,7 +709,104 @@ function RuleCard({
     }
   };
 
+  const executeOperatorAction = async ({ reason }: { reason: string }) => {
+    if (!organisationId || !operatorAction) return;
+    setActionError(null);
+    const kind = operatorAction.kind;
+
+    setIsProcessing((prev) => ({
+      ...prev,
+      [kind]: true,
+    }));
+
+    try {
+      if (kind === 'run') {
+        const result = await superAdminAssociationsApi.runRule(
+          organisationId,
+          projectId,
+          rule.id,
+          reason,
+        );
+
+        const parts: string[] = [];
+        if (result?.succeeded > 0) {
+          parts.push(`${result.succeeded} linked`);
+        }
+        if (result?.pendingCreated > 0) {
+          parts.push(`${result.pendingCreated} pending`);
+        }
+        if (result?.failed > 0) {
+          parts.push(`${result.failed} failed`);
+        }
+
+        toast.success(
+          `"${rule.name}": ${parts.length ? parts.join(', ') : 'complete'}`,
+        );
+
+        loadStats();
+        invalidateRuleData();
+      } else if (kind === 'retry') {
+        await superAdminAssociationsApi.retryFailed(
+          organisationId,
+          projectId,
+          rule.id,
+          reason,
+        );
+
+        toast.success('Failed associations queued for retry');
+        loadStats();
+        invalidateRuleData();
+      } else if (kind === 'toggle') {
+        await superAdminAssociationsApi.updateRule(
+          organisationId,
+          projectId,
+          rule.id,
+          {
+            isEnabled: !isEnabled,
+            reason,
+          },
+        );
+
+        toast.success(isEnabled ? 'Rule disabled' : 'Rule enabled');
+        onRefresh();
+      } else if (kind === 'delete') {
+        await superAdminAssociationsApi.deleteRule(
+          organisationId,
+          projectId,
+          rule.id,
+          {
+            reason,
+            confirmName: rule.name ?? '',
+          },
+        );
+
+        toast.success('Rule deleted');
+        onRefresh();
+      }
+
+      setOperatorAction(null);
+    } catch (err) {
+      const e = err as ApiError;
+      const message =
+        (e?.response?.data?.message as string) ??
+        `Failed to perform ${kind} operation on this rule.`;
+
+      setActionError(message);
+      toast.error(message);
+    } finally {
+      setIsProcessing((prev) => ({
+        ...prev,
+        [kind]: false,
+      }));
+    }
+  };
+
   const requestRun = () => {
+    if (organisationId) {
+      setOperatorAction({ kind: 'run' });
+      return;
+    }
+
     confirm({
       title: `Run “${rule.name}” now?`,
       description:
@@ -695,7 +816,21 @@ function RuleCard({
     });
   };
 
+  const requestRetry = () => {
+    if (organisationId) {
+      setOperatorAction({ kind: 'retry' });
+      return;
+    }
+
+    void handleRetry();
+  };
+
   const requestToggle = () => {
+    if (organisationId) {
+      setOperatorAction({ kind: 'toggle' });
+      return;
+    }
+
     if (!isEnabled) {
       void handleToggle();
       return;
@@ -710,7 +845,12 @@ function RuleCard({
     });
   };
 
-  const handleDelete = () => {
+  const requestDelete = () => {
+    if (organisationId) {
+      setOperatorAction({ kind: 'delete' });
+      return;
+    }
+
     confirm({
       variant: 'danger',
       title: 'Delete association rule?',
@@ -972,7 +1112,7 @@ function RuleCard({
 
                   {stats != null && stats.failed > 0 && (
                     <DropdownMenuItem
-                      onSelect={() => void handleRetry()}
+                      onSelect={requestRetry}
                       disabled={isProcessing.retry}
                     >
                       <RotateCcw />
@@ -991,7 +1131,7 @@ function RuleCard({
 
                   <DropdownMenuItem
                     variant="destructive"
-                    onSelect={handleDelete}
+                    onSelect={requestDelete}
                     disabled={isProcessing.delete}
                   >
                     <Trash2 />
@@ -1019,6 +1159,7 @@ function RuleCard({
           <CollapsibleContent className="bg-muted/20 overflow-hidden border-t p-3 sm:p-4">
             <AssociationRunsList
               projectId={projectId}
+              organisationId={organisationId}
               ruleId={rule.id}
               filters={runFilters}
               showToolbar={false}
@@ -1031,11 +1172,81 @@ function RuleCard({
             mode="edit"
             projectId={projectId}
             rule={rule}
+            operations={formOperations}
             onSuccess={onRefresh}
             onClose={() => setShowEditModal(false)}
           />
         )}
       </Card>
+
+      {organisationId && (
+        <LifecycleConfirmDialog
+          open={operatorAction !== null}
+          onOpenChange={(open) => {
+            if (!open) setOperatorAction(null);
+          }}
+          title={
+            operatorAction?.kind === 'run'
+              ? `Run “${rule.name ?? rule.id}” now?`
+              : operatorAction?.kind === 'retry'
+                ? `Retry failed associations for “${rule.name ?? rule.id}”`
+                : operatorAction?.kind === 'toggle'
+                  ? `${isEnabled ? 'Disable' : 'Enable'} “${rule.name ?? rule.id}”?`
+                  : 'Delete association rule'
+          }
+          description={
+            operatorAction?.kind === 'delete'
+              ? 'This deletes the rule and stops all future association resolution for it. Existing associations already resolved are not reversed.'
+              : `${rule.name ?? rule.id} · ${organisationName ?? 'Selected organisation'}`
+          }
+          bodyWarning={
+            operatorAction?.kind === 'run'
+              ? 'This may create new associations for matching synced records.'
+              : operatorAction?.kind === 'retry'
+                ? 'Failed records will be processed again.'
+                : operatorAction?.kind === 'toggle'
+                  ? isEnabled
+                    ? 'Existing associations will remain, but this rule will no longer run automatically after sync jobs.'
+                    : 'This rule will run automatically after synced jobs.'
+                  : undefined
+          }
+          actionLabel={
+            operatorAction?.kind === 'run'
+              ? 'Run rule'
+              : operatorAction?.kind === 'retry'
+                ? 'Retry failed'
+                : operatorAction?.kind === 'toggle'
+                  ? isEnabled
+                    ? 'Disable rule'
+                    : 'Enable rule'
+                  : 'Delete rule'
+          }
+          tone={operatorAction?.kind === 'delete' ? 'danger' : 'warning'}
+          organisationName={
+            operatorAction?.kind === 'delete'
+              ? (rule.name ?? '')
+              : (organisationName ?? '')
+          }
+          requiresNameConfirm={operatorAction?.kind === 'delete' && !!rule.name}
+          minReasonLength={10}
+          reasonPlaceholder={
+            operatorAction?.kind === 'delete'
+              ? 'Why is this rule being removed?'
+              : 'Why is this operation needed?'
+          }
+          isSubmitting={
+            operatorAction?.kind === 'run'
+              ? isProcessing.run
+              : operatorAction?.kind === 'retry'
+                ? isProcessing.retry
+                : operatorAction?.kind === 'toggle'
+                  ? isProcessing.toggle
+                  : isProcessing.delete
+          }
+          errorMessage={actionError}
+          onSubmit={executeOperatorAction}
+        />
+      )}
     </Collapsible>
   );
 }
@@ -1072,8 +1283,12 @@ function AssociationMetric({
 
 export default function AssociationRulesList({
   projectId,
+  organisationId,
+  organisationName,
 }: {
   projectId: string;
+  organisationId?: string;
+  organisationName?: string;
 }) {
   const [rules, setRules] = useState<AssociationRule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1085,6 +1300,87 @@ export default function AssociationRulesList({
   const [runSearch, setRunSearch] = useState('');
   const [runResult, setRunResult] = useState<AssociationResultFilter>('all');
   const [runDays, setRunDays] = useState('all');
+
+  const formOperations = useMemo<AssociationRuleFormOperations | undefined>(
+    () => {
+      if (!organisationId) return undefined;
+      return {
+        getProjectObjects: async () =>
+          (
+            await superAdminAssociationsApi.getObjects(organisationId, projectId)
+          ).map((object) => ({
+            sourceObject: object.sourceObject,
+            hsObjectType: object.destObjectType,
+          })),
+        getAssociationFields: (_projectId, sourceObject) =>
+          superAdminAssociationsApi.getObjectFields(
+            organisationId,
+            projectId,
+            sourceObject,
+          ),
+        getOwnerFields: () =>
+          superAdminAssociationsApi.getOwnerFields(organisationId, projectId),
+        getAssociationTypes: (_projectId, from, to) =>
+          superAdminAssociationsApi.getAssociationTypes(
+            organisationId,
+            projectId,
+            from,
+            to,
+          ),
+        createRule: async (_projectId, input, reason) => {
+          if (
+            !input.name ||
+            !input.sourceObject ||
+            !input.sourceMatchField ||
+            !input.destSourceObjectType ||
+            !input.targetObject ||
+            !input.targetMatchField ||
+            !input.destTargetObjectType ||
+            input.assocTypeId == null
+          ) {
+            throw new Error('Complete the required association fields.');
+          }
+          return superAdminAssociationsApi.createRule(
+            organisationId,
+            projectId,
+            {
+              name: input.name,
+              sourceObject: input.sourceObject,
+              sourceMatchField: input.sourceMatchField,
+              destSourceObjectType: input.destSourceObjectType,
+              targetObject: input.targetObject,
+              targetMatchField: input.targetMatchField,
+              destTargetObjectType: input.destTargetObjectType,
+              assocTypeId: input.assocTypeId,
+              assocCategory: input.assocCategory,
+              assocLabel: input.assocLabel ?? undefined,
+              cardinality: input.cardinality,
+              conditions: input.conditions ?? undefined,
+              conditionLogic: input.conditionLogic,
+              reason,
+            },
+          );
+        },
+        updateRule: async (_projectId, ruleId, input, reason) => {
+          return superAdminAssociationsApi.updateRule(
+            organisationId,
+            projectId,
+            ruleId,
+            {
+              name: input.name,
+              isEnabled: input.isEnabled,
+              assocTypeId: input.assocTypeId,
+              cardinality: input.cardinality,
+              conditions: input.conditions ?? undefined,
+              conditionLogic: input.conditionLogic,
+              reason,
+            },
+          );
+        },
+      };
+    },
+    [organisationId, projectId],
+  );
 
   useEffect(() => {
     const timeout = window.setTimeout(
@@ -1107,15 +1403,42 @@ export default function AssociationRulesList({
   const hasRunFilters =
     Boolean(runSearch) || runResult !== 'all' || runDays !== 'all';
   const matchingRunsQuery = useQuery({
-    queryKey: ['associations', 'matching-runs', projectId, runFilters],
-    queryFn: () =>
-      associationsApi.getProjectRuns(projectId, {
+    queryKey: [
+      'associations',
+      'matching-runs',
+      projectId,
+      organisationId,
+      runFilters,
+    ],
+    queryFn: async (): Promise<PaginatedResponse<AssociationRunLog>> => {
+      if (organisationId) {
+        const res = await superAdminAssociationsApi.listRuns(
+          organisationId,
+          projectId,
+          {
+            result: runResult === 'all' ? undefined : runResult,
+            days: runDays === 'all' ? undefined : Number(runDays),
+            search: runSearch || undefined,
+            page: 1,
+            limit: 100,
+          },
+        );
+        return {
+          success: true,
+          data: res.data,
+          total: res.total,
+          page: res.page,
+          limit: res.limit,
+        };
+      }
+      return associationsApi.getProjectRuns(projectId, {
         result: runResult === 'all' ? undefined : runResult,
         days: runDays === 'all' ? undefined : Number(runDays),
         search: runSearch || undefined,
         page: 1,
         limit: 100,
-      }),
+      });
+    },
     enabled: hasRunFilters,
     placeholderData: keepPreviousData,
   });
@@ -1147,8 +1470,11 @@ export default function AssociationRulesList({
   const load = useCallback(() => {
     setRefreshing(true);
     setLoadError(null);
-    associationsApi
-      .listRules(projectId)
+    const fetchRules = organisationId
+      ? superAdminAssociationsApi.listRules(organisationId, projectId)
+      : associationsApi.listRules(projectId);
+
+    fetchRules
       .then((nextRules) => {
         setRules(nextRules);
       })
@@ -1163,7 +1489,7 @@ export default function AssociationRulesList({
         setLoading(false);
         setRefreshing(false);
       });
-  }, [projectId]);
+  }, [organisationId, projectId]);
 
   useEffect(() => {
     load();
@@ -1268,6 +1594,9 @@ export default function AssociationRulesList({
                   key={rule.id}
                   rule={rule}
                   projectId={projectId}
+                  organisationId={organisationId}
+                  organisationName={organisationName}
+                  formOperations={formOperations}
                   onRefresh={load}
                   runFilters={runFilters}
                   expanded={expandedRuleId === rule.id}
@@ -1306,6 +1635,7 @@ export default function AssociationRulesList({
         <AssociationRuleFormDialog
           mode="create"
           projectId={projectId}
+          operations={formOperations}
           onSuccess={load}
           onClose={() => setShowCreate(false)}
         />

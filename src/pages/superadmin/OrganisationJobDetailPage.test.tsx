@@ -76,6 +76,10 @@ vi.mock('@/lib/synkazoAuth', () => ({
   }),
 }));
 
+vi.mock('@/queries/usePriorityQueue', () => ({
+  usePriorityQueueQuery: () => ({ data: undefined }),
+}));
+
 vi.mock('@/queries/useSuperAdmin', () => ({
   useSuperAdminJobQuery: () => ({
     data: mockQueries.job,
@@ -111,6 +115,14 @@ vi.mock('@/queries/useSuperAdmin', () => ({
     isPending: false,
   }),
   useSetSuperAdminJobSyncEnabledMutation: () => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+  }),
+  usePauseSuperAdminJobScheduleMutation: () => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+  }),
+  useResumeSuperAdminJobScheduleMutation: () => ({
     mutateAsync: vi.fn(),
     isPending: false,
   }),
@@ -154,7 +166,7 @@ describe('OrganisationJobDetailPage - Field Mapping Gating & Manual Sync Modal',
     cleanup();
   });
 
-  it('hides the "Sync now" / "Run now" button when field mappings are empty or pending', () => {
+  it('disables the "Sync now" button when field mappings are empty on a job with history', () => {
     mockQueries.job = {
       ...mockJob,
       fieldMappings: [], // No mappings
@@ -162,12 +174,12 @@ describe('OrganisationJobDetailPage - Field Mapping Gating & Manual Sync Modal',
 
     renderPage();
 
-    expect(screen.queryByRole('button', { name: /sync now/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /run now/i })).not.toBeInTheDocument();
+    const syncNowBtn = screen.getByRole('button', { name: /sync now/i });
+    expect(syncNowBtn).toBeDisabled();
     expect(screen.getByText(/Configure schedule/i)).toBeInTheDocument();
   });
 
-  it('hides the "Sync now" / "Run now" button when mappings exist but no match field is set', () => {
+  it('disables the "Sync now" button when mappings exist but no match field is set', () => {
     mockQueries.job = {
       ...mockJob,
       fieldMappings: [
@@ -193,8 +205,23 @@ describe('OrganisationJobDetailPage - Field Mapping Gating & Manual Sync Modal',
 
     renderPage();
 
+    const syncNowBtn = screen.getByRole('button', { name: /sync now/i });
+    expect(syncNowBtn).toBeDisabled();
+  });
+
+  it('hides the "Sync now" button when a new job has no history and mappings are pending', () => {
+    mockQueries.job = {
+      ...mockJob,
+      lastSyncedAt: null,
+      fieldMappings: [],
+    };
+
+    renderPage();
+
     expect(screen.queryByRole('button', { name: /sync now/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /run now/i })).not.toBeInTheDocument();
+    expect(
+      screen.getByText('Your sync overview starts after the first run'),
+    ).toBeInTheDocument();
   });
 
   it('renders "Sync now" button when field mapping is complete and opens the "Run manually" modal', async () => {

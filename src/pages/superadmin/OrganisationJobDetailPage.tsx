@@ -1,22 +1,22 @@
-import { format, formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  CalendarClock,
-  Database,
-  History,
-  Play,
   RotateCcw,
   Settings2,
-  Timer,
   Workflow,
 } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import StartSyncModal from '@/components/sync/StartSyncModal';
-import type { ExtJob } from '@/features/jobs/hooks/useJobDetail';
-import type { ProjectEnvironment } from '@/types';
+import {
+  consolidateMappings,
+  type ExtJob,
+  type ExtSyncRun,
+  type ScheduleTogglePayload,
+} from '@/features/jobs/hooks';
+import type { FieldMapping, Project, ProjectEnvironment } from '@/types';
 import type { SuperAdminRunJobDto } from '@/types/superAdmin';
 import OrganisationJobMappingPanel from './OrganisationJobMappingPanel';
 import OrganisationJobPipelinePanel from './OrganisationJobPipelinePanel';
@@ -35,18 +35,22 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
-import JobSummaryMetric from '@/features/jobs/components/detail/JobSummaryMetric';
+import {
+  JobDetailProvider,
+  type JobDetailContextValue,
+} from '@/features/jobs/components/detail/context';
+import OverviewTab from '@/features/jobs/components/detail/tabs/OverviewTab';
 import JobGeneralCard from '@/features/jobs/components/detail/settings/JobGeneralCard';
 import JobRetryCard from '@/features/jobs/components/detail/settings/JobRetryCard';
 import JobSkipUpdateCard from '@/features/jobs/components/detail/settings/JobSkipUpdateCard';
 import SyncDirectionFields from '@/features/jobs/components/SyncDirectionFields';
-import JobScheduleModal from '@/features/jobs/components/schedule/JobScheduleModal';
 import RunHistoryTab from '@/features/jobs/components/detail/tabs/RunHistoryTab';
 import SetupJourneyCard, {
   type SetupJourneyStep,
 } from '@/features/onboarding/components/SetupJourneyCard';
 import { KNOWN_PIPELINE_OBJECTS } from '@/features/jobs/types';
-import { formatDurationMs } from '@/features/projects/lib/syncJobSummary';
+import type { JobDetailTabId } from '@/features/jobs/lib/jobDetailTabs';
+import type { buildScheduleUpdatePayload } from '@/features/jobs/lib/jobScheduleSettings';
 import {
   useSuperAdminJobQuery,
   useSuperAdminJobRunsQuery,
@@ -55,6 +59,8 @@ import {
   useSuperAdminRunStatusQuery,
   useSetSuperAdminJobEnabledMutation,
   useSetSuperAdminJobSyncEnabledMutation,
+  usePauseSuperAdminJobScheduleMutation,
+  useResumeSuperAdminJobScheduleMutation,
   useUpdateSuperAdminJobMutation,
 } from '@/queries/useSuperAdmin';
 import type {
@@ -90,142 +96,7 @@ function DetailItem({
   );
 }
 
-function JobOverview({
-  job,
-  runAction,
-  runStatus,
-  runs,
-}: {
-  job: SuperAdminJobDetail;
-  runAction: ReactNode;
-  runStatus: ReactNode;
-  runs: SuperAdminJobRunListItem[];
-}) {
-  const failures = job.recentFailures ?? [];
-  const schedule =
-    job.scheduleMode === 'interval' && job.intervalMinutes != null
-      ? `Every ${job.intervalMinutes} minutes`
-      : job.scheduleMode === 'daily_time' && job.scheduleTimes?.length
-        ? `Daily at ${job.scheduleTimes.join(', ')}`
-        : job.scheduleMode === 'day_specific' && job.scheduleTimes?.length
-          ? `${job.scheduleTimes.join(', ')} on selected days`
-          : job.cronExpression || 'Not configured';
-  const durations = runs
-    .map((run) => run.durationMs)
-    .filter((duration): duration is number => duration != null);
-  const averageDuration = durations.length
-    ? durations.reduce((sum, duration) => sum + duration, 0) / durations.length
-    : null;
 
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-base font-semibold">Sync overview</h2>
-          <p className="text-muted-foreground text-sm">
-            Current job and schedule state.
-          </p>
-        </div>
-        {runAction}
-      </div>
-      {runStatus}
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <JobSummaryMetric
-          icon={Database}
-          label="Total records synced"
-          value={(job.recordsSynced ?? 0).toLocaleString()}
-          description="Across all executions"
-        />
-        <JobSummaryMetric
-          icon={History}
-          label="Last run"
-          value={
-            job.lastSyncedAt
-              ? formatDistanceToNow(new Date(job.lastSyncedAt), {
-                  addSuffix: true,
-                })
-              : 'Never'
-          }
-          description={
-            job.lastSyncedAt
-              ? 'Previous sync execution'
-              : 'No runs recorded yet'
-          }
-        />
-        <JobSummaryMetric
-          icon={Play}
-          label="Next run"
-          value={
-            job.syncEnabled && job.nextRunAt
-              ? dateLabel(job.nextRunAt)
-              : job.syncEnabled
-                ? 'Pending'
-                : 'Paused'
-          }
-          description={
-            job.syncEnabled ? 'Current scheduled time' : 'Schedule is paused'
-          }
-        />
-        <JobSummaryMetric
-          icon={CalendarClock}
-          label="Schedule at"
-          value={schedule}
-          description={
-            job.scheduleMode || job.cronExpression
-              ? 'Current schedule'
-              : 'Configure a schedule'
-          }
-        />
-        <JobSummaryMetric
-          icon={Timer}
-          label="Avg duration"
-          value={
-            averageDuration == null ? '—' : formatDurationMs(averageDuration)
-          }
-          description="Based on recent runs"
-        />
-      </div>
-
-      <Card className="gap-0 py-0">
-        <CardHeader className="px-4 py-3">
-          <CardTitle>Recent failed runs</CardTitle>
-        </CardHeader>
-        <CardContent className="px-4 pb-4">
-          {failures.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              No recent failed runs.
-            </p>
-          ) : (
-            <ul className="divide-y rounded-3xl border">
-              {failures.map((failure) => (
-                <li
-                  key={failure.id}
-                  className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm"
-                >
-                  <div>
-                    <p className="font-medium">
-                      {dateLabel(failure.startedAt)}
-                    </p>
-                    <p className="text-muted-foreground text-xs">
-                      Run {failure.id}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-muted-foreground">
-                      {failure.failedCount} failed · {failure.totalFetched}{' '}
-                      fetched
-                    </span>
-                <StatusBadge status={failure.status} label={failure.status} tone="danger" />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
 
 function JobSetupJourney({
   job,
@@ -678,7 +549,7 @@ export default function OrganisationJobDetailPage() {
   }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const [runOpen, setRunOpen] = useState(false);
-  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [scheduleToggling, setScheduleToggling] = useState(false);
   const [bullJobId, setBullJobId] = useState<string | null>(null);
   const tab: JobTab =
     searchParams.get('tab') === 'field-mapping'
@@ -706,6 +577,16 @@ export default function OrganisationJobDetailPage() {
     jobId,
   );
   const setSyncEnabled = useSetSuperAdminJobSyncEnabledMutation(
+    organisationId,
+    projectId,
+    jobId,
+  );
+  const pauseSchedule = usePauseSuperAdminJobScheduleMutation(
+    organisationId,
+    projectId,
+    jobId,
+  );
+  const resumeSchedule = useResumeSuperAdminJobScheduleMutation(
     organisationId,
     projectId,
     jobId,
@@ -815,6 +696,7 @@ export default function OrganisationJobDetailPage() {
     }
   };
   const changeEnabled = async () => {
+    if (!job) return;
     try {
       await setEnabled.mutateAsync(!job.isEnabled);
       toast.success(
@@ -822,6 +704,7 @@ export default function OrganisationJobDetailPage() {
           ? 'Sync Flow disabled.'
           : 'Sync Flow enabled. Its schedule remains paused until started.',
       );
+      void jobQuery.refetch();
     } catch (error) {
       toast.error(
         error instanceof Error
@@ -830,220 +713,278 @@ export default function OrganisationJobDetailPage() {
       );
     }
   };
-  const changeSchedule = async () => {
+  const handleScheduleToggle = async (payload?: ScheduleTogglePayload) => {
+    if (!job) return;
+    setScheduleToggling(true);
     try {
-      await setSyncEnabled.mutateAsync(!job.syncEnabled);
-      toast.success(job.syncEnabled ? 'Schedule paused.' : 'Schedule started.');
+      if (
+        job.scheduleState === 'paused' ||
+        job.scheduleState === 'paused_limit_reached'
+      ) {
+        await resumeSchedule.mutateAsync(payload?.resumeMode);
+        toast.success(
+          payload?.resumeMode === 'start_now'
+            ? 'Schedule resumed from now — missed changes were skipped.'
+            : 'Schedule resumed — catching up on missed changes.',
+        );
+      } else if (job.syncEnabled) {
+        await pauseSchedule.mutateAsync();
+        toast.success('Schedule paused. Runs will not fire until resumed.');
+      } else {
+        await setSyncEnabled.mutateAsync(true);
+        toast.success(
+          'Schedule started — sync will run per configured interval.',
+        );
+      }
+      await jobQuery.refetch();
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
           : 'Could not change the schedule.',
       );
+    } finally {
+      setScheduleToggling(false);
     }
   };
-  const goToTab = (value: JobTab) =>
-    setSearchParams((previous) => {
-      const next = new URLSearchParams(previous);
-      next.set('tab', value);
-      if (value !== 'settings') next.delete('section');
-      return next;
+  const saveSchedule = async (
+    payload: ReturnType<typeof buildScheduleUpdatePayload>,
+  ) => {
+    await updateJob.mutateAsync({
+      ...payload,
+      scheduleMode: payload.scheduleMode as
+        | 'daily_time'
+        | 'interval'
+        | 'day_specific',
     });
+    await jobQuery.refetch();
+  };
+  const handleTabChange = (
+    value: JobDetailTabId,
+    options?: {
+      replace?: boolean;
+      searchParams?: Record<string, string | undefined | null>;
+    },
+  ) =>
+    setSearchParams(
+      (previous) => {
+        const next = new URLSearchParams(previous);
+        next.set('tab', value);
+        if (value !== 'settings') next.delete('section');
+        if (options?.searchParams) {
+          for (const [k, v] of Object.entries(options.searchParams)) {
+            if (v == null) next.delete(k);
+            else next.set(k, v);
+          }
+        }
+        return next;
+      },
+      { replace: options?.replace },
+    );
+
+  const contextValue: JobDetailContextValue = {
+    projectId,
+    jobId,
+    job: job as unknown as ExtJob,
+    project: project as unknown as Project,
+    runLogs: runs as unknown as ExtSyncRun[],
+    jobFieldMappings: consolidateMappings(
+      job.fieldMappings as unknown as FieldMapping[],
+    ),
+    hasConnection: true,
+    isProductionReady: true,
+    pipelineRequired,
+    pipelineConfigured: pipelineReady,
+
+    activeTab: tab as JobDetailTabId,
+    patchJob: () => undefined,
+    refetch: () => {
+      void jobQuery.refetch();
+      void historyQuery.refetch();
+    },
+    handleTabChange,
+
+    activeRunLog: bullJobId
+      ? {
+          bullmqJobId: bullJobId,
+          status:
+            runStatusQuery.data?.state === 'active' ||
+            runStatusQuery.data?.state === 'running'
+              ? 'running'
+              : runStatusQuery.data?.state === 'waiting' ||
+                  runStatusQuery.data?.state === 'delayed'
+                ? 'queued'
+                : runStatusQuery.data?.state === 'failed'
+                  ? 'failed'
+                  : 'success',
+        }
+      : null,
+    liveProgress: null,
+    upgradeDialog: { open: false, message: '' },
+    setUpgradeDialog: () => undefined,
+    isSyncing:
+      runJob.isPending ||
+      runStatusQuery.data?.state === 'active' ||
+      runStatusQuery.data?.state === 'running',
+    running:
+      job.isRunning ||
+      runStatusQuery.data?.state === 'active' ||
+      runStatusQuery.data?.state === 'running',
+    fullResyncing: false,
+    stopping: false,
+    toggling: setEnabled.isPending,
+    scheduleToggling,
+    cancellingQueue: false,
+    retryingQueue: false,
+    beginTracking: async () => {
+      void jobQuery.refetch();
+      void historyQuery.refetch();
+    },
+    handleRunNow: async () => {
+      await submitRun({ fullSync: false });
+    },
+    handleSyncAll: async (onStarted, range) => {
+      onStarted?.();
+      await submitRun({
+        fullSync: true,
+        startDate: range?.startDate,
+        endDate: range?.endDate,
+      });
+    },
+    handleScheduleToggle,
+    saveSchedule,
+    handleStop: async () => undefined,
+    handleCancelQueue: async () => undefined,
+    handleRetryQueue: async () => undefined,
+    handleToggle: changeEnabled,
+
+    highlightStatusGuide: false,
+    triggerInactiveGuide: () => undefined,
+    manualDialogOpen: runOpen,
+    setManualDialogOpen: setRunOpen,
+  };
 
   return (
-    <Tabs
-      value={tab === 'pipeline' && !pipelineRequired ? 'overview' : tab}
-      onValueChange={(value) => goToTab(value as JobTab)}
-      className="gap-0"
-    >
-      <div className="space-y-4">
-        <JobSetupJourney
-          job={job}
-          runs={runs}
-          pipelineRequired={pipelineRequired}
-          activeTab={tab}
-          onTabChange={goToTab}
-          onRun={() => {
-            runJob.reset();
-            setRunOpen(true);
-          }}
-        />
-        <TabsContent value="overview">
-          <JobOverview
+    <JobDetailProvider value={contextValue}>
+      <Tabs
+        value={tab === 'pipeline' && !pipelineRequired ? 'overview' : tab}
+        onValueChange={(value) => handleTabChange(value as JobDetailTabId)}
+        className="gap-0"
+      >
+        <div className="space-y-4">
+          <JobSetupJourney
             job={job}
             runs={runs}
-            runAction={
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" onClick={() => setScheduleOpen(true)}>
-                  <CalendarClock /> Configure schedule
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={changeEnabled}
-                  disabled={
-                    setEnabled.isPending ||
-                    setSyncEnabled.isPending ||
-                    job.isRunning
-                  }
-                >
-                  {job.isEnabled ? 'Disable flow' : 'Enable flow'}
-                </Button>
-                {job.isEnabled && (
-                  <Button
-                    variant="outline"
-                    onClick={changeSchedule}
-                    disabled={
-                      setSyncEnabled.isPending ||
-                      setEnabled.isPending ||
-                      job.isRunning
-                    }
-                  >
-                    {job.syncEnabled ? 'Pause schedule' : 'Start schedule'}
-                  </Button>
-                )}
-                {mappingReady && (
-                  <Button
-                    id="sync-now-button"
-                    onClick={() => {
-                      runJob.reset();
-                      setRunOpen(true);
-                    }}
-                    disabled={runJob.isPending || job.isRunning}
-                  >
-                    <Play /> Sync now
-                  </Button>
-                )}
-              </div>
-            }
-            runStatus={
-              bullJobId ? (
-                <div
-                  className="bg-muted/40 rounded-2xl border p-3 text-sm"
-                  role="status"
-                >
-                  Run {bullJobId}:{' '}
-                  {runStatusQuery.isError
-                    ? 'Status unavailable'
-                    : (runStatusQuery.data?.state ?? 'Checking status')}
-                </div>
-              ) : null
-            }
+            pipelineRequired={pipelineRequired}
+            activeTab={tab}
+            onTabChange={(t) => handleTabChange(t as JobDetailTabId)}
+            onRun={() => {
+              runJob.reset();
+              setRunOpen(true);
+            }}
           />
-        </TabsContent>
-        <TabsContent value="field-mapping">
-          <OrganisationJobMappingPanel
-            key={job.id}
-            organisationId={organisationId}
-            project={project}
-            job={job}
-          />
-        </TabsContent>
-        {pipelineRequired && (
-          <TabsContent value="pipeline">
-            <OrganisationJobPipelinePanel
+          <TabsContent value="overview">
+            <OverviewTab />
+          </TabsContent>
+          <TabsContent value="field-mapping">
+            <OrganisationJobMappingPanel
               key={job.id}
               organisationId={organisationId}
               project={project}
               job={job}
             />
           </TabsContent>
-        )}
-        <TabsContent value="run-history">
-          <RunHistoryTab
-            projectId={project.id}
+          {pipelineRequired && (
+            <TabsContent value="pipeline">
+              <OrganisationJobPipelinePanel
+                key={job.id}
+                organisationId={organisationId}
+                project={project}
+                job={job}
+              />
+            </TabsContent>
+          )}
+          <TabsContent value="run-history">
+            <RunHistoryTab
+              projectId={project.id}
+              jobId={job.id}
+              refetch={() => {
+                void jobQuery.refetch();
+                void historyQuery.refetch();
+              }}
+            />
+          </TabsContent>
+          <TabsContent value="settings">
+            <JobSettings
+              job={job}
+              project={project}
+              projectId={projectId}
+              projectPath={projectPath}
+              section={section}
+              onSectionChange={(value) =>
+                setSearchParams((previous) => {
+                  const next = new URLSearchParams(previous);
+                  next.set('tab', 'settings');
+                  next.set('section', value);
+                  return next;
+                })
+              }
+              saveName={(name) => updateJob.mutateAsync({ name })}
+              saveWebhook={(enabled) =>
+                updateJob.mutateAsync({ hubspotWebhookEnabled: enabled })
+              }
+              saveRetry={(patch) => updateJob.mutateAsync(patch)}
+              saveSkipUpdate={(skipUpdateOnMatch) =>
+                updateJob.mutateAsync({ skipUpdateOnMatch })
+              }
+            />
+          </TabsContent>
+        </div>
+        {runOpen && tab !== 'overview' && (
+          <StartSyncModal
+            projectId={projectId}
             jobId={job.id}
-            refetch={() => {
+            job={job as unknown as ExtJob}
+            environment={
+              (project.activeEnvironment as ProjectEnvironment) || undefined
+            }
+            sourcePlatformId={project.sourcePlatformId}
+            hasBaseline={Boolean(
+              job.lastSyncedAt ||
+                runs.some(
+                  (r) => r.status === 'completed' || r.status === 'success',
+                ),
+            )}
+            pipelineRequired={pipelineRequired}
+            pipelineConfigured={pipelineReady}
+            onGoToPipeline={() => {
+              setRunOpen(false);
+              handleTabChange('pipeline');
+            }}
+            onClose={() => setRunOpen(false)}
+            onRunNow={() => {
+              setRunOpen(false);
+              void submitRun({ fullSync: false });
+            }}
+            onLimitSyncStarted={() => {
               void jobQuery.refetch();
               void historyQuery.refetch();
             }}
+            onLimitSyncDone={() => {
+              void jobQuery.refetch();
+              void historyQuery.refetch();
+            }}
+            onSyncAll={(range) => {
+              setRunOpen(false);
+              void submitRun({
+                fullSync: true,
+                startDate: range?.startDate,
+                endDate: range?.endDate,
+              });
+            }}
           />
-        </TabsContent>
-        <TabsContent value="settings">
-          <JobSettings
-            job={job}
-            project={project}
-            projectId={projectId}
-            projectPath={projectPath}
-            section={section}
-            onSectionChange={(value) =>
-              setSearchParams((previous) => {
-                const next = new URLSearchParams(previous);
-                next.set('tab', 'settings');
-                next.set('section', value);
-                return next;
-              })
-            }
-            saveName={(name) => updateJob.mutateAsync({ name })}
-            saveWebhook={(enabled) =>
-              updateJob.mutateAsync({ hubspotWebhookEnabled: enabled })
-            }
-            saveRetry={(patch) => updateJob.mutateAsync(patch)}
-            saveSkipUpdate={(skipUpdateOnMatch) =>
-              updateJob.mutateAsync({ skipUpdateOnMatch })
-            }
-          />
-        </TabsContent>
-      </div>
-      {runOpen && (
-        <StartSyncModal
-          projectId={projectId}
-          jobId={job.id}
-          job={job as unknown as ExtJob}
-          environment={
-            (project.activeEnvironment as ProjectEnvironment) || undefined
-          }
-          sourcePlatformId={project.sourcePlatformId}
-          hasBaseline={Boolean(
-            job.lastSyncedAt ||
-              runs.some(
-                (r) => r.status === 'completed' || r.status === 'success',
-              ),
-          )}
-          pipelineRequired={pipelineRequired}
-          pipelineConfigured={pipelineReady}
-          onGoToPipeline={() => {
-            setRunOpen(false);
-            goToTab('pipeline');
-          }}
-          onClose={() => setRunOpen(false)}
-          onRunNow={() => {
-            setRunOpen(false);
-            void submitRun({ fullSync: false });
-          }}
-          onLimitSyncStarted={() => {
-            void jobQuery.refetch();
-            void historyQuery.refetch();
-          }}
-          onLimitSyncDone={() => {
-            void jobQuery.refetch();
-            void historyQuery.refetch();
-          }}
-          onSyncAll={(range) => {
-            setRunOpen(false);
-            void submitRun({
-              fullSync: true,
-              startDate: range?.startDate,
-              endDate: range?.endDate,
-            });
-          }}
-        />
-      )}
-      <JobScheduleModal
-        projectId={projectId}
-        jobId={jobId}
-        job={job}
-        open={scheduleOpen}
-        onOpenChange={setScheduleOpen}
-        skipPriorityQueue
-        minIntervalMinutesOverride={1}
-        saveSchedule={(payload) =>
-          updateJob.mutateAsync({
-            ...payload,
-            scheduleMode: payload.scheduleMode as
-              'daily_time' | 'interval' | 'day_specific',
-          })
-        }
-      />
-    </Tabs>
+        )}
+      </Tabs>
+    </JobDetailProvider>
   );
 }

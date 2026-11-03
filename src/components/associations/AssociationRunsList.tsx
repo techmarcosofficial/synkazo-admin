@@ -19,10 +19,12 @@ import {
   type AssociationRecordStatus,
   type AssociationRunLog,
 } from '@/api/associations';
+import { superAdminAssociationsApi } from '@/api/superAdminAssociations';
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
 import PaginationBar from '@/components/shared/PaginationBar';
 import StatusBadge from '@/components/shared/StatusBadge';
+import type { PaginatedResponse } from '@/types';
 import {
   Card,
   CardContent,
@@ -128,11 +130,13 @@ function RunMetric({
 
 function RecordDetails({
   projectId,
+  organisationId,
   run,
   search,
   globalResult,
 }: {
   projectId: string;
+  organisationId?: string;
   run: AssociationRunLog;
   search: string;
   globalResult: AssociationResultFilter;
@@ -155,20 +159,43 @@ function RecordDetails({
       'associations',
       'run-records',
       projectId,
+      organisationId,
       run.id,
       status,
       search,
       page,
       pageSize,
     ],
-    queryFn: () =>
-      associationsApi.getRuleRecords(projectId, ruleId, {
+    queryFn: async (): Promise<PaginatedResponse<AssociationRecord>> => {
+      if (organisationId) {
+        const res = await superAdminAssociationsApi.getRuleRecords(
+          organisationId,
+          projectId,
+          ruleId,
+          {
+            runId: run.id,
+            status: status as 'pending' | 'completed' | 'failed',
+            search,
+            page,
+            limit: pageSize,
+          },
+        );
+        return {
+          success: true,
+          data: res.data,
+          total: res.total,
+          page: res.page,
+          limit: res.limit,
+        };
+      }
+      return associationsApi.getRuleRecords(projectId, ruleId, {
         runId: run.id,
         status: status as AssociationRecordStatus,
         search,
         page,
         limit: pageSize,
-      }),
+      });
+    },
     enabled: Boolean(ruleId && result),
     placeholderData: keepPreviousData,
   });
@@ -366,11 +393,13 @@ function RecordDetails({
 
 function AssociationRunRow({
   projectId,
+  organisationId,
   run,
   search,
   result,
 }: {
   projectId: string;
+  organisationId?: string;
   run: AssociationRunLog;
   search: string;
   result: AssociationResultFilter;
@@ -462,6 +491,7 @@ function AssociationRunRow({
 
           <RecordDetails
             projectId={projectId}
+            organisationId={organisationId}
             run={run}
             search={search}
             globalResult={result}
@@ -474,11 +504,13 @@ function AssociationRunRow({
 
 export default function AssociationRunsList({
   projectId,
+  organisationId,
   ruleId,
   filters,
   showToolbar = true,
 }: {
   projectId: string;
+  organisationId?: string;
   ruleId?: string;
   filters?: AssociationRunFilters;
   showToolbar?: boolean;
@@ -529,8 +561,30 @@ export default function AssociationRunsList({
     ],
   );
   const query = useQuery({
-    queryKey: ['associations', 'project-runs', projectId, params],
-    queryFn: () => associationsApi.getProjectRuns(projectId, params),
+    queryKey: [
+      'associations',
+      'project-runs',
+      projectId,
+      organisationId,
+      params,
+    ],
+    queryFn: async (): Promise<PaginatedResponse<AssociationRunLog>> => {
+      if (organisationId) {
+        const res = await superAdminAssociationsApi.listRuns(
+          organisationId,
+          projectId,
+          params,
+        );
+        return {
+          success: true,
+          data: res.data,
+          total: res.total,
+          page: res.page,
+          limit: res.limit,
+        };
+      }
+      return associationsApi.getProjectRuns(projectId, params);
+    },
     placeholderData: keepPreviousData,
   });
 
@@ -567,6 +621,7 @@ export default function AssociationRunsList({
             <AssociationRunRow
               key={run.id}
               projectId={projectId}
+              organisationId={organisationId}
               run={run}
               search={activeSearch}
               result={activeResult}

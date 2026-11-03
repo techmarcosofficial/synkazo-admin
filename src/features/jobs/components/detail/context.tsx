@@ -62,6 +62,9 @@ export interface JobDetailContextValue {
   triggerInactiveGuide: () => void;
   manualDialogOpen: boolean;
   setManualDialogOpen: (open: boolean) => void;
+  saveSchedule?: (
+    payload: ReturnType<typeof import('@/features/jobs/lib/jobScheduleSettings').buildScheduleUpdatePayload>,
+  ) => Promise<unknown>;
 }
 
 const JobDetailContext = createContext<JobDetailContextValue | null>(null);

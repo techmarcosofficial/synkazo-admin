@@ -277,6 +277,7 @@ export interface SuperAdminCreateJobDto {
   scheduleDays?: number[] | null;
   intervalMinutes?: number | null;
   timezone?: string;
+  cronExpression?: string | null;
   destPipelineId?: string;
   statusMapping?: Record<string, string>;
   skipUpdateOnMatch?: boolean;

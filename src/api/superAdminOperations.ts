@@ -219,6 +219,30 @@ export const superAdminOperationsApi = {
       )
       .then(d),
 
+  pauseJobSchedule: (
+    organisationId: string,
+    projectId: string,
+    jobId: string,
+  ): Promise<SuperAdminJobDetail> =>
+    apiClient
+      .patch<{ data: SuperAdminJobDetail }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs/${jobId}/pause-schedule`,
+      )
+      .then(d),
+
+  resumeJobSchedule: (
+    organisationId: string,
+    projectId: string,
+    jobId: string,
+    resumeMode?: 'sync_missed' | 'start_now',
+  ): Promise<SuperAdminJobDetail> =>
+    apiClient
+      .patch<{ data: SuperAdminJobDetail }>(
+        `/super-admin/organisations/${organisationId}/projects/${projectId}/jobs/${jobId}/resume-schedule`,
+        { resumeMode },
+      )
+      .then(d),
+
   discoverObjects: (
     organisationId: string,
     projectId: string,

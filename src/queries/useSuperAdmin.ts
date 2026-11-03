@@ -781,6 +781,69 @@ export function useSetSuperAdminJobSyncEnabledMutation(
   });
 }
 
+export function usePauseSuperAdminJobScheduleMutation(
+  organisationId: string,
+  projectId: string,
+  jobId: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      superAdminOperationsApi.pauseJobSchedule(
+        organisationId,
+        projectId,
+        jobId,
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.superAdmin.operations.job(
+          organisationId,
+          projectId,
+          jobId,
+        ),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.superAdmin.operations.jobs(
+          organisationId,
+          projectId,
+        ),
+      });
+    },
+  });
+}
+
+export function useResumeSuperAdminJobScheduleMutation(
+  organisationId: string,
+  projectId: string,
+  jobId: string,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (resumeMode?: 'sync_missed' | 'start_now') =>
+      superAdminOperationsApi.resumeJobSchedule(
+        organisationId,
+        projectId,
+        jobId,
+        resumeMode,
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.superAdmin.operations.job(
+          organisationId,
+          projectId,
+          jobId,
+        ),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.superAdmin.operations.jobs(
+          organisationId,
+          projectId,
+        ),
+      });
+    },
+  });
+}
+
 export function useReplaceSuperAdminJobMappingsMutation(
   organisationId: string,
   projectId: string,

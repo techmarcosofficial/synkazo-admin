@@ -78,6 +78,7 @@ export default function OverviewTab() {
     setManualDialogOpen,
     scheduleToggling,
     handleScheduleToggle,
+    saveSchedule,
   } = useJobDetailContext();
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -561,6 +562,7 @@ export default function OverviewTab() {
           open={scheduleModalOpen}
           onOpenChange={setScheduleModalOpen}
           onSaved={refetch}
+          saveSchedule={saveSchedule}
         />
       )}
 
