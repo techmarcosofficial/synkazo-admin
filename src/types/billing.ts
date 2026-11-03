@@ -54,6 +54,7 @@ export interface OverLimitResource {
   count: number;
   limit: number | null; // null = unlimited
   over: boolean;
+  canAdd?: boolean;
 }
 
 export interface OverLimitSummary {

@@ -126,8 +126,15 @@ export default function InviteMemberDialog({
       toast.success(`Invitation sent to ${form.email}`);
       handleOpenChange(false);
     } catch (err) {
-      const e = err as { response?: { data?: { message?: string } } };
-      setFormError(e.response?.data?.message ?? 'Failed to send invitation');
+      const e = err as {
+        response?: { data?: { message?: string | string[]; code?: string } };
+      };
+      const apiMessage = e.response?.data?.message;
+      const message = Array.isArray(apiMessage)
+        ? apiMessage.join(', ')
+        : (apiMessage ?? 'Failed to send invitation');
+      setFormError(message);
+      toast.error(message);
     }
   };
 

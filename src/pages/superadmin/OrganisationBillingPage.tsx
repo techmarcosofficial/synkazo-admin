@@ -484,8 +484,8 @@ export default function OrganisationBillingPage() {
           <AlertTitle>Over-plan resources</AlertTitle>
           <AlertDescription>
             One or more resource counts exceed this plan&rsquo;s limits.
-            Scheduled runs may fail until the plan is upgraded or the count
-            reduces.
+            Creating new resources is paused until the plan is upgraded or
+            excess items are removed.
           </AlertDescription>
         </Alert>
       )}

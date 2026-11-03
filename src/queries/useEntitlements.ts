@@ -78,8 +78,8 @@ export function useEntitlements(): Entitlements {
 
   const limits = isExempt ? null : (planQuery.data?.limits ?? null);
   const open = isExempt || limits === null;
-  // `over` is computed server-side as `count >= max`, matching EntitlementService's block
-  // threshold — so it already means "the next create would be rejected".
+  // OverLimit carries explicit `canAdd` (count < max) separated from `over` (count > max),
+  // ensuring capacity limits block new creation without falsely displaying overage warnings.
   const overLimit = isExempt ? undefined : planQuery.data?.overLimit;
 
   return {
@@ -103,7 +103,19 @@ export function useEntitlements(): Entitlements {
     priorityScheduling: open || limits!.priorityScheduling,
     minIntervalMinutes: limits?.minIntervalMinutes ?? 1,
     logRetentionDays: open ? null : limits!.logRetentionDays,
-    canAddProject: !overLimit?.projects.over,
-    canAddJob: !overLimit?.jobs.over,
+    canAddProject:
+      open ||
+      (overLimit?.projects.canAdd !== undefined
+        ? overLimit.projects.canAdd
+        : overLimit?.projects.limit != null
+          ? overLimit.projects.count < overLimit.projects.limit
+          : true),
+    canAddJob:
+      open ||
+      (overLimit?.jobs.canAdd !== undefined
+        ? overLimit.jobs.canAdd
+        : overLimit?.jobs.limit != null
+          ? overLimit.jobs.count < overLimit.jobs.limit
+          : true),
   };
 }

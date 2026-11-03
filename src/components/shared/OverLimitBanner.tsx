@@ -3,8 +3,8 @@ import { usePlanQuery } from '@/queries/useBilling';
 
 /**
  * Soft-lock notice shown when an org holds more resources than its current plan allows
- * (e.g. after a downgrade). Backend already blocks new creation / extra runs; this just
- * tells the user why and how to resolve it.
+ * (e.g. after a downgrade). Backend blocks adding further resources; this tells the user
+ * why and how to resolve it.
  */
 export default function OverLimitBanner() {
   const { data } = usePlanQuery();
@@ -30,15 +30,15 @@ export default function OverLimitBanner() {
       title={`You're over your ${data.planName} plan limit`}
       description={
         <>
-          You currently have {parts.join(', ')}. New creation and syncing on the
-          extra items are paused.{' '}
+          You currently have {parts.join(', ')}. Creating new resources is
+          paused until your plan is upgraded or extra items are removed.{' '}
           <a
             href={`${import.meta.env.VITE_FRONTEND_URL}/pricing`}
             className="text-primary hover:underline"
           >
             Upgrade
           </a>{' '}
-          or remove the extras to resume.
+          or remove the extras to continue.
         </>
       }
     />
