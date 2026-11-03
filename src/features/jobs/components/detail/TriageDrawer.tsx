@@ -435,7 +435,24 @@ export function TriageDrawer({
                       <p className="text-foreground text-xs leading-relaxed font-medium break-words">
                         {diagnosis.humanExplanation}
                       </p>
-                      {diagnosis.rawDetail && (
+                      {diagnosis.skipRules && diagnosis.skipRules.length > 0 && (
+                        <div className="bg-muted/40 mt-1.5 space-y-1.5 rounded-lg border p-2 text-[11px]">
+                          {diagnosis.skipRules.map((rule, idx) => (
+                            <div key={idx} className="flex flex-wrap items-center gap-1.5">
+                              <span className="bg-muted text-foreground border-border/60 rounded border px-1 py-0 font-mono text-[10px] font-semibold">
+                                {rule.property}
+                              </span>
+                              <span className="text-foreground font-medium">{rule.rule}</span>
+                              {rule.recordValue && rule.recordValue !== 'empty' && (
+                                <span className="text-muted-foreground font-mono">
+                                  (value: "{rule.recordValue}")
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {!diagnosis.skipRules && diagnosis.rawDetail && (
                         <p className="text-muted-foreground text-[11px] leading-relaxed break-words">
                           {diagnosis.rawDetail}
                         </p>

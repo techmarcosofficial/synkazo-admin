@@ -117,7 +117,7 @@ describe('RecordReason', () => {
     const trigger = screen.getByRole('button', {
       name: /view failed reason details/i,
     });
-    expect(trigger).toHaveTextContent('Failed: API validation error');
+    expect(trigger).toHaveTextContent('Failed: Invalid value for "phone"');
 
     await user.hover(trigger);
 
@@ -291,5 +291,64 @@ describe('RecordReason', () => {
     const tooltip = await screen.findByRole('tooltip');
     expect(tooltip).toHaveTextContent('Suggested Action');
     expect(tooltip).toHaveTextContent('Default fallback value ("email")');
+  });
+
+  it('renders structured skip rules with property badge and actual record value', async () => {
+    renderReason({
+      id: 'record-skip-property-detail',
+      action: 'skipped',
+      sourceRecordId: 'contact-301',
+      skipReason: 'filter_excluded',
+      skipReasonDetail:
+        'Source skip conditions matched (logic=OR; matched 1 of 1): status equals "Cancelled" (record status: "Cancelled")',
+    });
+
+    const trigger = screen.getByRole('button', {
+      name: /view skipped reason details/i,
+    });
+    expect(trigger).toHaveTextContent(
+      'Skipped: Skip rule: status equals "Cancelled"',
+    );
+    fireEvent.focus(trigger);
+
+    const tooltip = await screen.findByRole('tooltip');
+    expect(tooltip).toHaveTextContent('Matched Skip Rule & Property Details');
+    expect(tooltip).toHaveTextContent('status');
+    expect(tooltip).toHaveTextContent('equals "Cancelled"');
+    expect(tooltip).toHaveTextContent('Record value:');
+    expect(tooltip).toHaveTextContent('"Cancelled"');
+    expect(tooltip).toHaveTextContent('Match Any');
+  });
+
+  it('renders validation error with offending field badge and explanation', async () => {
+    renderReason({
+      id: 'record-val-offending-field',
+      action: 'failed',
+      sourceRecordId: 'contact-401',
+      failReason: 'validation_error',
+      failReasonDetail:
+        'Destination validation failed for field "dealstage": Value "lead" is not valid for stage',
+      destResponse: JSON.stringify({
+        status: 'error',
+        message: 'Invalid property value',
+        errors: [
+          {
+            message: 'dealstage: Stage "lead" does not exist in pipeline',
+            context: { propertyName: ['dealstage'] },
+          },
+        ],
+      }),
+    });
+
+    const trigger = screen.getByRole('button', {
+      name: /view failed reason details/i,
+    });
+    expect(trigger).toHaveTextContent('Failed: Invalid value for "dealstage"');
+    fireEvent.focus(trigger);
+
+    const tooltip = await screen.findByRole('tooltip');
+    expect(tooltip).toHaveTextContent('dealstage');
+    expect(tooltip).toHaveTextContent('Invalid property value');
+    expect(tooltip).toHaveTextContent('Suggested Action');
   });
 });

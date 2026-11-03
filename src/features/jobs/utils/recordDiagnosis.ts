@@ -39,6 +39,14 @@ export interface RecordFixAction {
   };
 }
 
+export interface SkipRuleDetail {
+  property: string;
+  destProperty?: string;
+  rule: string;
+  expectedValue?: string;
+  recordValue?: string;
+}
+
 export interface RecordDiagnosis {
   category: DiagnosisCategory;
   offendingField: string | null;
@@ -47,6 +55,8 @@ export interface RecordDiagnosis {
   actions: RecordFixAction[];
   rawDetail: string | null;
   rawApiResponse: string | null;
+  skipRules?: SkipRuleDetail[];
+  skipLogic?: 'Match All' | 'Match Any';
 }
 
 export const DIAGNOSIS_ICONS: Record<RecordFixAction['iconName'], LucideIcon> =
@@ -72,6 +82,92 @@ function getPlatformDisplayName(platformId?: string): string {
 }
 
 /**
+ * Parses structured skip condition rule and property breakdown from detailed backend strings.
+ */
+export function parseSkipRuleDetails(detail: string | null | undefined): {
+  rules: SkipRuleDetail[];
+  logic?: 'Match All' | 'Match Any';
+  summaryRule: string | null;
+} {
+  if (!detail) return { rules: [], summaryRule: null };
+
+  const logicMatch = detail.match(
+    /logic=(Match All|Match Any|AND|OR|ALL|ANY)\b/i,
+  );
+  const rawLogic = logicMatch?.[1]?.toUpperCase();
+  const logic: 'Match All' | 'Match Any' | undefined =
+    rawLogic === 'AND' || rawLogic === 'ALL' || rawLogic === 'MATCH ALL'
+      ? 'Match All'
+      : rawLogic === 'OR' || rawLogic === 'ANY' || rawLogic === 'MATCH ANY'
+        ? 'Match Any'
+        : undefined;
+
+  const colonIdx = detail.indexOf(':');
+  const conditionsText =
+    colonIdx !== -1 &&
+    /skip (?:rule|conditions matched)/i.test(detail.slice(0, colonIdx))
+      ? detail.slice(colonIdx + 1).trim()
+      : detail.trim();
+
+  const chunks = conditionsText
+    .split(/;\s*(?=[a-zA-Z_0-9])/)
+    .map((c) => c.trim())
+    .filter(Boolean);
+
+  const rules: SkipRuleDetail[] = [];
+
+  for (const chunk of chunks) {
+    // 1. Destination pattern: sourceField → destinationField operator (source: "...", destination: "...")
+    const destMatch = chunk.match(
+      /^([a-zA-Z0-9_.-]+)\s*→\s*([a-zA-Z0-9_.-]+)\s+([^()]+?)(?:\s*\((?:source:\s*"([^"]*)",\s*destination:\s*"([^"]*)")?\))?$/,
+    );
+    if (destMatch) {
+      const [, srcField, dstField, op, srcVal, dstVal] = destMatch;
+      rules.push({
+        property: `${srcField} → ${dstField}`,
+        destProperty: dstField,
+        rule: `${srcField} → ${dstField} ${op.trim()}`,
+        expectedValue: dstVal !== undefined ? `dest: ${dstVal}` : undefined,
+        recordValue: srcVal !== undefined ? `source: ${srcVal}` : undefined,
+      });
+      continue;
+    }
+
+    // 2. Source pattern: property operator "targetValue" (record property: "recordValue")
+    const srcMatch = chunk.match(
+      /^([a-zA-Z0-9_.-]+)\s+([^"()]+?)(?:\s+"([^"]*)")?(?:\s*\(record\s+[^:]+:\s*"([^"]*)"\))?$/,
+    );
+    if (srcMatch) {
+      const [, prop, op, targetVal, recVal] = srcMatch;
+      const cleanOp = op.trim();
+      const ruleDesc =
+        targetVal !== undefined
+          ? `${prop} ${cleanOp} "${targetVal}"`
+          : `${prop} ${cleanOp}`;
+      rules.push({
+        property: prop,
+        rule: ruleDesc,
+        expectedValue: targetVal !== undefined ? targetVal : undefined,
+        recordValue: recVal !== undefined ? recVal : undefined,
+      });
+      continue;
+    }
+
+    // 3. Fallback: capture first token as property and full chunk as rule
+    const simpleMatch = chunk.match(/^([a-zA-Z0-9_.-]+)\s+(.+)$/);
+    if (simpleMatch) {
+      rules.push({
+        property: simpleMatch[1],
+        rule: chunk,
+      });
+    }
+  }
+
+  const summaryRule = rules.length > 0 ? rules[0].rule : null;
+  return { rules, logic, summaryRule };
+}
+
+/**
  * Extracts the offending field name dynamically from API responses and failure logs
  * across HubSpot, Salesforce, ServiceTitan, Zoho, Dataforma, etc.
  */
@@ -94,10 +190,50 @@ export function extractOffendingField(rec: SyncLogRecord): {
   }
 
   if (respObj) {
+    // Direct field on object (e.g. from compactErrorResponse)
+    const directField =
+      respObj.field ??
+      respObj.propertyName ??
+      respObj.fieldName ??
+      respObj.property;
+    if (
+      typeof directField === 'string' &&
+      directField !== 'field' &&
+      directField !== 'property' &&
+      /^[a-zA-Z_][a-zA-Z0-9_.-]{0,79}$/.test(directField)
+    ) {
+      const isMissing = Boolean(
+        respObj.message &&
+          String(respObj.message).toLowerCase().includes('required'),
+      );
+      return { field: directField, isMissing };
+    }
+
+    // Top-level context (e.g. HubSpot context: { propertyName: ['pipeline_id'] })
+    if (respObj.context && typeof respObj.context === 'object') {
+      const ctx = respObj.context as Record<string, unknown>;
+      const prop = ctx.propertyName || ctx.property || ctx.field;
+      const candidate = Array.isArray(prop) ? prop[0] : prop;
+      if (
+        typeof candidate === 'string' &&
+        candidate !== 'field' &&
+        candidate !== 'property' &&
+        /^[a-zA-Z_][a-zA-Z0-9_.-]{0,79}$/.test(candidate)
+      ) {
+        const isMissing = Boolean(
+          respObj.message &&
+            String(respObj.message).toLowerCase().includes('required'),
+        );
+        return { field: candidate, isMissing };
+      }
+    }
+
     // Salesforce: fields array e.g. fields: ["LastName"]
     if (
       Array.isArray(respObj.fields) &&
-      typeof respObj.fields[0] === 'string'
+      typeof respObj.fields[0] === 'string' &&
+      respObj.fields[0] !== 'field' &&
+      respObj.fields[0] !== 'property'
     ) {
       return { field: respObj.fields[0], isMissing: true };
     }
@@ -118,32 +254,53 @@ export function extractOffendingField(rec: SyncLogRecord): {
       }
     }
 
-    // HubSpot errors array: [{ message: "...", context: { propertyName: ["dealname"] } }]
+    // HubSpot / generic errors array: [{ message: "...", context: { propertyName: ["dealname"] } }]
     if (Array.isArray(respObj.errors) && respObj.errors.length > 0) {
-      const firstErr = respObj.errors[0] as Record<string, unknown>;
-      if (firstErr?.context && typeof firstErr.context === 'object') {
-        const ctx = firstErr.context as Record<string, unknown>;
-        const prop = ctx.propertyName || ctx.property || ctx.field;
-        if (Array.isArray(prop) && typeof prop[0] === 'string') {
-          const isMissing = String(firstErr.message || '')
+      for (const err of respObj.errors) {
+        if (!err || typeof err !== 'object') continue;
+        const errObj = err as Record<string, unknown>;
+        if (errObj.context && typeof errObj.context === 'object') {
+          const ctx = errObj.context as Record<string, unknown>;
+          const prop = ctx.propertyName || ctx.property || ctx.field;
+          const candidate = Array.isArray(prop) ? prop[0] : prop;
+          if (
+            typeof candidate === 'string' &&
+            candidate !== 'field' &&
+            candidate !== 'property' &&
+            /^[a-zA-Z_][a-zA-Z0-9_.-]{0,79}$/.test(candidate)
+          ) {
+            const isMissing = String(errObj.message || '')
+              .toLowerCase()
+              .includes('required');
+            return { field: candidate, isMissing };
+          }
+        }
+        const directErrField =
+          errObj.propertyName || errObj.fieldName || errObj.field;
+        if (
+          typeof directErrField === 'string' &&
+          directErrField !== 'field' &&
+          directErrField !== 'property' &&
+          /^[a-zA-Z_][a-zA-Z0-9_.-]{0,79}$/.test(directErrField)
+        ) {
+          const isMissing = String(errObj.message || '')
             .toLowerCase()
             .includes('required');
-          return { field: prop[0], isMissing };
+          return { field: directErrField, isMissing };
         }
-        if (typeof prop === 'string') {
-          const isMissing = String(firstErr.message || '')
-            .toLowerCase()
-            .includes('required');
-          return { field: prop, isMissing };
-        }
-      }
-      if (typeof firstErr?.message === 'string') {
-        const fieldMatch = firstErr.message.match(
-          /property ['"]?([a-zA-Z0-9_.-]+)['"]?/i,
-        );
-        if (fieldMatch?.[1]) {
-          const isMissing = firstErr.message.toLowerCase().includes('required');
-          return { field: fieldMatch[1], isMissing };
+        if (typeof errObj.message === 'string') {
+          const fieldMatch =
+            errObj.message.match(/(?:property|field) ['"]?([a-zA-Z0-9_.-]+)['"]?/i) ||
+            errObj.message.match(/values were not valid for \[?['"]?([a-zA-Z0-9_.-]+)\]?['"]?/i) ||
+            errObj.message.match(/^([a-zA-Z_][a-zA-Z0-9_.-]*):\s+/i);
+          if (
+            fieldMatch?.[1] &&
+            fieldMatch[1] !== 'field' &&
+            fieldMatch[1] !== 'property'
+          ) {
+            const isMissing = errObj.message.toLowerCase().includes('required');
+            return { field: fieldMatch[1], isMissing };
+          }
         }
       }
     }
@@ -183,25 +340,28 @@ export function extractOffendingField(rec: SyncLogRecord): {
 
   for (const pat of missingPatterns) {
     const match = combinedText.match(pat);
-    if (match?.[1]) {
+    if (match?.[1] && match[1] !== 'field' && match[1] !== 'property') {
       return { field: match[1], isMissing: true };
     }
   }
 
   // Invalid / transform / validation patterns
   const validationPatterns = [
+    /offending (?:field|property):?\s*['"]?([a-zA-Z0-9_.-]+)['"]?/i,
+    /^([a-zA-Z_][a-zA-Z0-9_.-]*):\s+/i,
+    /validation failed for (?:field |property )?['"]?([a-zA-Z0-9_.-]+)['"]?/i,
+    /values were not valid for (?:field |property )?\[?['"]?([a-zA-Z0-9_.-]+)\]?['"]?/i,
     /property ['"]([a-zA-Z0-9_.-]+)['"] (?:does not exist|invalid|not valid|could not)/i,
     /(?:for|on) (?:property|field) ['"]([a-zA-Z0-9_.-]+)['"]/i,
+    /invalid (?:email|phone|date|number|value) for (?:field |property )?['"]?([a-zA-Z0-9_.-]+)['"]?/i,
+    /not a valid option for (?:field |property )?['"]?([a-zA-Z0-9_.-]+)['"]?/i,
+    /Provided (?:value was not valid for )?['"]?([a-zA-Z0-9_.-]+)['"]?/i,
     /(?:property|field) ['"]([a-zA-Z0-9_.-]+)['"]/i,
-    /Provided ([a-zA-Z0-9_.-]+):/i,
-    /values were not valid for ['"]([a-zA-Z0-9_.-]+)['"]/i,
-    /invalid (?:email|phone|date|number|value) for ['"]?([a-zA-Z0-9_.-]+)['"]?/i,
-    /validation failed for ([a-zA-Z0-9_.-]+)/i,
   ];
 
   for (const pat of validationPatterns) {
     const match = combinedText.match(pat);
-    if (match?.[1]) {
+    if (match?.[1] && match[1] !== 'field' && match[1] !== 'property') {
       return { field: match[1], isMissing: false };
     }
   }
@@ -246,6 +406,8 @@ export function analyzeRecordDiagnosis(
 
   // Classify issue category
   let category: DiagnosisCategory = 'other';
+  let skipRules: SkipRuleDetail[] | undefined;
+  let skipLogic: 'Match All' | 'Match Any' | undefined;
   if (
     isMissing ||
     rec.failReason === 'missing_required_field' ||
@@ -354,8 +516,10 @@ export function analyzeRecordDiagnosis(
         ? `Invalid value for "${offendingField}"`
         : 'Invalid field value';
       humanExplanation = offendingField
-        ? `The value provided for "${offendingField}" does not match ${destName}'s expected format or allowed values.`
-        : `One of the mapped field values was rejected by ${destName}'s data validation rules.`;
+        ? `The value provided for "${offendingField}" was rejected by ${destName}'s data validation rules.`
+        : rawDetail && !rawDetail.toLowerCase().includes('validation failed')
+          ? `Destination validation rejected this record: ${rawDetail}`
+          : `One of the mapped field values was rejected by ${destName}'s data validation rules.`;
 
       actions.push({
         label: offendingField
@@ -444,26 +608,40 @@ export function analyzeRecordDiagnosis(
     }
 
     case 'skip_rule': {
-      const matchSource = rawDetail?.match(
-        /Source skip conditions matched [^:]*:\s*(.+)/i,
-      );
-      const matchDest = rawDetail?.match(
-        /Destination skip conditions matched [^:]*:\s*(.+)/i,
-      );
-      const extractedCondition =
-        matchSource?.[1]?.split(';')[0]?.trim() ||
-        matchDest?.[1]?.split(';')[0]?.trim() ||
-        null;
+      const skipInfo = parseSkipRuleDetails(rawDetail);
+      skipRules = skipInfo.rules.length > 0 ? skipInfo.rules : undefined;
+      skipLogic = skipInfo.logic;
 
-      if (extractedCondition) {
-        summary = matchDest
-          ? `Destination skip rule: ${extractedCondition}`
-          : `Skip rule: ${extractedCondition}`;
-        humanExplanation = `This record was intentionally excluded because it matched configured skip condition: ${extractedCondition}.`;
+      if (skipInfo.rules.length > 0) {
+        const first = skipInfo.rules[0];
+        summary = `Skip rule: ${first.rule}`;
+        if (first.recordValue && first.recordValue !== 'empty') {
+          humanExplanation = `This record was intentionally excluded by filter rule: ${first.rule} (record ${first.property}: "${first.recordValue}").`;
+        } else {
+          humanExplanation = `This record was intentionally excluded because it matched configured skip condition: ${first.rule}.`;
+        }
       } else {
-        summary = 'Matched a skip rule';
-        humanExplanation =
-          'This record was intentionally excluded by your configured filter conditions.';
+        const matchSource = rawDetail?.match(
+          /Source skip conditions matched [^:]*:\s*(.+)/i,
+        );
+        const matchDest = rawDetail?.match(
+          /Destination skip conditions matched [^:]*:\s*(.+)/i,
+        );
+        const extractedCondition =
+          matchSource?.[1]?.split(';')[0]?.trim() ||
+          matchDest?.[1]?.split(';')[0]?.trim() ||
+          null;
+
+        if (extractedCondition) {
+          summary = matchDest
+            ? `Destination skip rule: ${extractedCondition}`
+            : `Skip rule: ${extractedCondition}`;
+          humanExplanation = `This record was intentionally excluded because it matched configured skip condition: ${extractedCondition}.`;
+        } else {
+          summary = 'Matched a skip rule';
+          humanExplanation =
+            'This record was intentionally excluded by your configured filter conditions.';
+        }
       }
 
       // Suggested actions should be shown for failed/error records only.
@@ -517,5 +695,7 @@ export function analyzeRecordDiagnosis(
     actions,
     rawDetail,
     rawApiResponse,
+    skipRules,
+    skipLogic,
   };
 }

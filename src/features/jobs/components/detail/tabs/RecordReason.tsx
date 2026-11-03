@@ -79,24 +79,41 @@ function formatErrorDetails(value: unknown): string | null {
 export function formatSkipSummary(detail?: string | null): string | null {
   if (!detail) return null;
   const matchSource = detail.match(
-    /Source skip conditions matched [^:]*:\s*(.+)/i,
+    /Source skip (?:conditions matched|rule)[^:]*:\s*(.+)/i,
   );
   if (matchSource && matchSource[1]) {
     const cond = matchSource[1].split(';')[0]?.trim();
-    return cond ? `Skip rule: ${cond}` : 'Source skip rule matched';
+    const cleanCond = cond
+      .replace(/\s*\(record\s+[^)]+\)/i, '')
+      .replace(/\s*\(source:\s*[^)]+\)/i, '')
+      .trim();
+    return cleanCond ? `Skip rule: ${cleanCond}` : 'Source skip rule matched';
   }
   const matchDest = detail.match(
-    /Destination skip conditions matched [^:]*:\s*(.+)/i,
+    /Destination skip (?:conditions matched|rule)[^:]*:\s*(.+)/i,
   );
   if (matchDest && matchDest[1]) {
     const cond = matchDest[1].split(';')[0]?.trim();
-    return cond ? `Destination skip rule: ${cond}` : 'Destination skip rule matched';
+    const cleanCond = cond.replace(/\s*\(source:\s*[^)]+\)/i, '').trim();
+    return cleanCond
+      ? `Destination skip rule: ${cleanCond}`
+      : 'Destination skip rule matched';
   }
   if (
-    detail.startsWith('Source skip rule:') ||
-    detail.startsWith('Destination skip rule:')
+    detail.startsWith('Source skip rule') ||
+    detail.startsWith('Destination skip rule')
   ) {
-    return detail.split(/\r?\n/)[0].trim();
+    const firstLine = detail.split(/\r?\n/)[0].trim();
+    const colonIdx = firstLine.indexOf(':');
+    if (colonIdx !== -1) {
+      const cond = firstLine.slice(colonIdx + 1).split(';')[0]?.trim();
+      const cleanCond = cond
+        .replace(/\s*\(record\s+[^)]+\)/i, '')
+        .replace(/\s*\(source:\s*[^)]+\)/i, '')
+        .trim();
+      if (cleanCond) return `Skip rule: ${cleanCond}`;
+    }
+    return firstLine;
   }
   return null;
 }
@@ -112,6 +129,24 @@ function getSummary(rec: SyncLogRecord, reason?: string | null): string {
   ) {
     const specificSkip = formatSkipSummary(detail);
     if (specificSkip) return specificSkip;
+  }
+
+  if (rec.action === 'failed') {
+    const diag = analyzeRecordDiagnosis(rec);
+    if (diag.offendingField) {
+      if (
+        reason === 'validation_error' ||
+        normalizedDetail.includes('validation')
+      ) {
+        return `Invalid value for "${diag.offendingField}"`;
+      }
+      if (
+        reason === 'missing_required_field' ||
+        normalizedDetail.includes('missing')
+      ) {
+        return `Missing required field "${diag.offendingField}"`;
+      }
+    }
   }
 
   if (
@@ -350,6 +385,67 @@ export function RecordReason({
                 </div>
               )}
           </div>
+
+          {/* Structured Skip Rule & Property Details (Skipped records) */}
+          {rec.action === 'skipped' &&
+            diagnosis.skipRules &&
+            diagnosis.skipRules.length > 0 && (
+              <DetailSection title="Matched Skip Rule & Property Details">
+                <div className="space-y-2">
+                  {diagnosis.skipLogic && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-muted-foreground text-[11px]">
+                        Condition logic:
+                      </span>
+                      <Badge
+                        variant="secondary"
+                        className="px-1.5 py-0 text-[10px] font-medium"
+                      >
+                        {diagnosis.skipLogic}
+                      </Badge>
+                    </div>
+                  )}
+                  <div className="bg-muted/30 space-y-2 rounded-xl border p-2.5">
+                    {diagnosis.skipRules.map((rule, idx) => (
+                      <div
+                        key={idx}
+                        className={cn(
+                          'space-y-1 text-xs',
+                          idx > 0 && 'border-border/40 border-t pt-2',
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-foreground flex items-center gap-1.5 font-semibold">
+                            <span className="bg-muted text-foreground border-border/60 rounded border px-1.5 py-0.5 font-mono text-[11px] font-semibold">
+                              {rule.property}
+                            </span>
+                          </span>
+                          <span className="text-muted-foreground text-[11px]">
+                            Rule {idx + 1}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-1 text-[11px]">
+                          <span className="text-muted-foreground">Condition:</span>
+                          <span className="text-foreground font-medium">
+                            {rule.rule}
+                          </span>
+                        </div>
+                        {rule.recordValue && rule.recordValue !== 'empty' && (
+                          <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-1 text-[11px]">
+                            <span className="text-muted-foreground">
+                              Record value:
+                            </span>
+                            <span className="text-foreground font-mono font-semibold break-words">
+                              "{rule.recordValue}"
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </DetailSection>
+            )}
 
           {/* Detail Sections */}
           {detail && (
