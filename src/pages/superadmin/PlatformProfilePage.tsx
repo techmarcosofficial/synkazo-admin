@@ -1,15 +1,14 @@
-import PageHeader from '@/components/shared/PageHeader';
-import ProfileTab from '@/pages/settings/tabs/ProfileTab';
+import { Navigate, useSearchParams } from 'react-router-dom';
 
-/** Personal account controls that do not assume a tenant organisation. */
+/**
+ * Legacy profile redirect for platform administrators.
+ * Redirects to the unified platform settings section.
+ */
 export default function PlatformProfilePage() {
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Profile"
-        description="Manage your platform administrator account."
-      />
-      <ProfileTab />
-    </div>
-  );
+  const [searchParams] = useSearchParams();
+  const tab = searchParams.get('tab');
+  if (tab === 'preferences') {
+    return <Navigate to="/super-admin/settings/preferences" replace />;
+  }
+  return <Navigate to="/super-admin/settings/profile" replace />;
 }

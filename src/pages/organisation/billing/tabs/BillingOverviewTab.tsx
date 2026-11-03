@@ -211,17 +211,19 @@ export default function BillingOverviewTab() {
 
   return (
     <div className="space-y-5">
-      {/* Top Menu / Tabs Navigation (matching Super Admin Dashboard style) */}
-      <BillingSubNavigation
-        activeId={activeSection}
-        items={navItems}
-        onSelect={setActiveSection}
-        title="Billing"
-        selectId="tenant-billing-section-select"
-      />
+      <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
+        {/* Sidebar Navigation (matching Project Details style) */}
+        <BillingSubNavigation
+          activeId={activeSection}
+          items={navItems}
+          onSelect={setActiveSection}
+          title="Billing"
+          selectId="tenant-billing-section-select"
+        />
 
-      {/* ── SECTION CONTENT AREA ────────────────────────────────────────── */}
-      {/* ── SECTION 1: OVERVIEW ───────────────────────────────────────── */}
+        {/* ── SECTION CONTENT AREA ────────────────────────────────────────── */}
+        <div className="min-w-0 space-y-5">
+          {/* ── SECTION 1: OVERVIEW ───────────────────────────────────────── */}
       {activeSection === 'overview' && (
         <div className="grid gap-4 sm:gap-5 lg:grid-cols-12">
           {/* Left Column: Plan Limits & Features (~60-65%) */}
@@ -437,7 +439,7 @@ export default function BillingOverviewTab() {
               currentPeriodEnd={renewalDate}
               planAccessSource={hasSubscription ? 'stripe_subscription' : 'free'}
               onChangePlan={() => setPlanSliderOpen((prev) => !prev)}
-              changePlanLabel={hasSubscription ? 'Upgrade Plan' : 'Choose Plan'}
+              changePlanLabel={hasSubscription ? 'Change Plan' : 'Choose Plan'}
               className="w-full"
             />
 
@@ -504,6 +506,8 @@ export default function BillingOverviewTab() {
       {activeSection === 'activity' && (
         <TenantBillingActivityCard />
       )}
+        </div>
+      </div>
 
       {/* In-App Plan Change Confirmation / Upgrade Dialog */}
       <Dialog

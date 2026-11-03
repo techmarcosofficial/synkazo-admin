@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 import OverLimitBanner from './OverLimitBanner';
 import PastDueBanner from './PastDueBanner';
+import WorkHeldBanner from './WorkHeldBanner';
 
 import { usePlanQuery } from '@/queries/useBilling';
 import { useAlertDismissStore } from '@/stores/useAlertDismissStore';
@@ -34,6 +35,10 @@ export default function AccountContextAlert({
     (pendingCancel && !dismissed['account:pending-cancellation'])
   ) {
     return <PastDueBanner />;
+  }
+
+  if (data.isWorkHeld || (data.heldJobsCount && data.heldJobsCount > 0)) {
+    return <WorkHeldBanner />;
   }
 
   if (data.overLimit?.isOverLimit && !dismissed['account:over-plan-limit']) {

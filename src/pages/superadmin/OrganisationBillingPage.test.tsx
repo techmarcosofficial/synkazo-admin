@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -280,5 +280,43 @@ describe('OrganisationBillingPage', () => {
     expect(
       await screen.findByText(/Subscription Past Due \(Grace Period Active\)/i),
     ).toBeInTheDocument();
+  });
+
+  it('displays operational work hold banner when isWorkHeld is true', async () => {
+    mocks.org = {
+      ...orgFixture,
+      syncHealth: {
+        activeJobs: 2,
+        heldJobs: 4,
+        pausedJobs: 0,
+        failingJobs: 0,
+        isWorkHeld: true,
+        lastSyncedAt: null,
+      },
+    };
+    renderPage();
+    expect(await screen.findByText('Operational Work Hold Active')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /resume held work/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('allows dismissing over-plan resources alert for the current session', async () => {
+    mocks.overview = {
+      ...overviewFixture,
+      plan: {
+        ...overviewFixture.plan,
+        overLimit: {
+          ...overviewFixture.plan.overLimit,
+          projects: { count: 12, limit: 10, over: true },
+          isOverLimit: true,
+        },
+      },
+    };
+    renderPage();
+    expect(await screen.findByText('Over-plan resources')).toBeInTheDocument();
+    const dismissBtn = screen.getByRole('button', { name: /dismiss alert/i });
+    fireEvent.click(dismissBtn);
+    expect(screen.queryByText('Over-plan resources')).not.toBeInTheDocument();
   });
 });

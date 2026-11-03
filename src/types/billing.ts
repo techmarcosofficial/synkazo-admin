@@ -69,6 +69,10 @@ export type BillingInterval = 'month' | 'year' | 'day';
 export interface PlanStatus {
   planAccessSource?: 'free' | 'stripe_subscription' | 'manual_override';
   paymentHoldActive?: boolean;
+  paymentHoldSince?: string | null;
+  manualHoldReason?: string | null;
+  isWorkHeld?: boolean;
+  heldJobsCount?: number;
   pastDueStartedAt?: string | null;
   planId: PlanId;
   planName: string;

@@ -1,6 +1,6 @@
-import { ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CreditCard, LogOut } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { BillingToggle } from '@/components/common/BillingToggle';
 import HeadingPair from '@/components/shared/HeadingPair';
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { usePricingPlans } from '@/hooks/usePricingPlans';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { cn } from '@/lib/utils';
+import { usePlanQuery } from '@/queries/useBilling';
 import type { PricingPlan, PublicBillingInterval } from '@/types/pricing';
 
 // Kept local rather than a shared "site" module — the dashboard only ever needs this one
@@ -28,6 +29,7 @@ export default function SubscriptionPaywall() {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useSynkazoAuth();
+  const planQuery = usePlanQuery();
   const { plans, isLoading: plansLoading } = usePricingPlans();
   const [interval, setInterval] = useState<PublicBillingInterval>('month');
   const planViewportRef = useRef<HTMLDivElement>(null);
@@ -78,6 +80,44 @@ export default function SubscriptionPaywall() {
     );
     viewport.scrollTo({ left: positions[nextIndex], behavior: 'smooth' });
   };
+
+  if (planQuery.data?.paymentHoldActive) {
+    return (
+      <div className="bg-background fixed inset-0 z-[70] flex flex-col items-center justify-center p-6 text-center">
+        <div className="max-w-md w-full rounded-3xl border border-destructive/30 bg-destructive/5 p-8 flex flex-col items-center gap-4">
+          <div className="size-12 rounded-full bg-destructive/10 flex items-center justify-center text-destructive">
+            <CreditCard className="size-6" aria-hidden="true" />
+          </div>
+          <HeadingPair
+            level="h1"
+            title="Account On Administrative Hold"
+            subtitle={
+              planQuery.data.manualHoldReason
+                ? `Reason: ${planQuery.data.manualHoldReason}`
+                : 'Your organization workspace is on hold pending administrative or billing review.'
+            }
+            className="items-center"
+          />
+          <p className="text-muted-foreground text-xs leading-relaxed">
+            Automated sync flow executions are paused while this hold remains active. If you need assistance or wish to resolve outstanding invoices, please contact support.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center gap-2 w-full mt-2">
+            <Button asChild className="w-full">
+              <a href={`mailto:${SUPPORT_EMAIL}?subject=Synkazo Administrative Hold Assistance`}>
+                Contact Support
+              </a>
+            </Button>
+            <Button asChild variant="outline" className="w-full">
+              <Link to="/organization/billing/invoices">View Invoices</Link>
+            </Button>
+          </div>
+          <Button variant="ghost" size="sm" onClick={logout} className="mt-2 text-xs">
+            <LogOut className="size-3.5 mr-1" aria-hidden="true" /> Log out
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   // Mirrors PricingPage's buy CTA: admin-configured label wins, else "Subscribe".
   const buyLabel = (plan: PricingPlan): string => plan.ctaLabel ?? 'Subscribe';

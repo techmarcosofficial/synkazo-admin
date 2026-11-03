@@ -435,7 +435,24 @@ export default function OrganisationContextHeader() {
                   {title}
                 </h1>
                 {level === 'organisation' && org && (
-                  <StatusBadge status={org.status} label={org.status} tone={org.status === 'pending' ? 'info' : undefined} className="capitalize" />
+                  <>
+                    <StatusBadge
+                      status={org.status}
+                      label={org.status}
+                      tone={org.status === 'pending' ? 'info' : undefined}
+                      className="capitalize"
+                    />
+                    {org.syncHealth?.isWorkHeld && (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-400">
+                        Work Held ({org.syncHealth.heldJobs})
+                      </span>
+                    )}
+                    {org.paymentHoldActive && (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-xs font-semibold text-destructive">
+                        Payment Hold
+                      </span>
+                    )}
+                  </>
                 )}
                 {level === 'project' && project && projectId && (
                   <ProjectHeaderStatusControl

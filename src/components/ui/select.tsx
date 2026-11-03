@@ -22,6 +22,7 @@ const SelectContext = React.createContext<{
 
 function Select({
   size: controlledSize,
+  modal = false,
   children,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Root> & {
@@ -37,7 +38,7 @@ function Select({
 
   return (
     <SelectContext.Provider value={{ size, setSize }}>
-      <SelectPrimitive.Root data-slot="select" {...props}>
+      <SelectPrimitive.Root data-slot="select" modal={modal} {...props}>
         {children}
       </SelectPrimitive.Root>
     </SelectContext.Provider>

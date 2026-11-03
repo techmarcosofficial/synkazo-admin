@@ -15,8 +15,9 @@ export default function SiteHeader({ kind }: { kind: WorkspaceKind }) {
   const location = useLocation();
   const platform = kind === 'platform';
   const title =
-    location.pathname === '/super-admin/profile'
-      ? 'Profile'
+    location.pathname.startsWith('/super-admin/profile') ||
+    location.pathname.startsWith('/super-admin/settings')
+      ? 'Settings'
       : (findSuperAdminNavItem(location.pathname)?.item.title ??
         'Platform admin');
 
@@ -46,7 +47,7 @@ export default function SiteHeader({ kind }: { kind: WorkspaceKind }) {
         />
         <NavUser
           variant="avatar"
-          settingsPath={platform ? '/super-admin/profile' : '/settings'}
+          settingsPath={platform ? '/super-admin/settings' : '/settings'}
         />
       </div>
     </header>

@@ -3,10 +3,14 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import AppLayout from './app-layout';
 
-const state = vi.hoisted(() => ({ status: 'active', hold: false }));
+const state = vi.hoisted(() => ({
+  status: 'active',
+  hold: false,
+  currentUser: { id: 'user-1', role: 'editor' } as { id: string; role?: string } | null,
+}));
 vi.mock('@/lib/synkazoAuth', () => ({
   useSynkazoAuth: () => ({
-    currentUser: { id: 'user-1' },
+    currentUser: state.currentUser,
     isLoading: false,
     hasRole: () => false,
     hasPermission: () => true,
@@ -80,5 +84,49 @@ describe('Dashboard billing gate', () => {
   it('restores dashboard access after successful recovery', () => {
     show('active', false);
     expect(screen.getByText('Workspace content')).toBeInTheDocument();
+  });
+
+  it('redirects super_admin to platform settings when accessing /settings/preferences', () => {
+    state.currentUser = { id: 'sa-1', role: 'super_admin' };
+    render(
+      <MemoryRouter initialEntries={['/settings/preferences']}>
+        <Routes>
+          <Route element={<AppLayout />}>
+            <Route
+              path="/settings/preferences"
+              element={<div>Workspace content</div>}
+            />
+          </Route>
+          <Route
+            path="/super-admin/settings/preferences"
+            element={<div>Platform settings preferences destination</div>}
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(
+      screen.getByText('Platform settings preferences destination'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Workspace content')).not.toBeInTheDocument();
+  });
+
+  it('redirects super_admin to platform home when accessing /dashboard', () => {
+    state.currentUser = { id: 'sa-1', role: 'super_admin' };
+    render(
+      <MemoryRouter initialEntries={['/dashboard']}>
+        <Routes>
+          <Route element={<AppLayout />}>
+            <Route path="/dashboard" element={<div>Workspace content</div>} />
+          </Route>
+          <Route
+            path="/super-admin/overview"
+            element={<div>Platform overview destination</div>}
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(
+      screen.getByText('Platform overview destination'),
+    ).toBeInTheDocument();
   });
 });

@@ -7,6 +7,9 @@ import { usePricingPlans } from '@/hooks/usePricingPlans';
 import type { PricingPlan } from '@/types/pricing';
 
 vi.mock('@/hooks/usePricingPlans', () => ({ usePricingPlans: vi.fn() }));
+vi.mock('@/queries/useBilling', () => ({
+  usePlanQuery: () => ({ data: null, isLoading: false }),
+}));
 vi.mock('@/lib/synkazoAuth', () => ({
   useSynkazoAuth: () => ({ logout: vi.fn() }),
 }));

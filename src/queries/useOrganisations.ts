@@ -21,10 +21,11 @@ export function useOrgQuery(id: string, options?: { enabled?: boolean }) {
   });
 }
 
-export function useMyOrgQuery() {
+export function useMyOrgQuery(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: queryKeys.organisations.mine,
     queryFn: organisationsApi.getMyOrg,
+    enabled: options?.enabled !== false,
   });
 }
 

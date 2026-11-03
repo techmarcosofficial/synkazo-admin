@@ -6,6 +6,7 @@ import {
   Activity,
   Megaphone,
   Percent,
+  Settings,
   Settings2,
   Tag,
   Users,
@@ -86,6 +87,12 @@ export const SUPER_ADMIN_NAV: NavGroup[] = [
         title: 'System',
         url: '/super-admin/system',
         icon: Settings2,
+        minRole: 'super_admin',
+      },
+      {
+        title: 'Settings',
+        url: '/super-admin/settings',
+        icon: Settings,
         minRole: 'super_admin',
       },
       {

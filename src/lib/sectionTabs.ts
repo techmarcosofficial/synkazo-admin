@@ -61,6 +61,17 @@ export const SETTINGS_SECTION: SectionDef = {
   ],
 };
 
+export const SUPER_ADMIN_SETTINGS_SECTION: SectionDef = {
+  basePath: '/super-admin/settings',
+  title: 'Settings',
+  description:
+    'Manage your platform administrator account and application preferences.',
+  tabs: [
+    { id: 'profile', label: 'Profile & Account' },
+    { id: 'preferences', label: 'Preferences' },
+  ],
+};
+
 export const ORGANIZATION_SECTION: SectionDef = {
   basePath: '/organization',
   title: 'Organization',

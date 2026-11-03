@@ -61,6 +61,27 @@ export default function ScheduleEnableToggle({
     );
   }
 
+  const isHeld = job.scheduleState === 'held';
+
+  if (isHeld) {
+    return (
+      <div
+        className={cn('flex items-center gap-2', className)}
+        title="This sync schedule was placed on operational hold by Synkazo Support. Contact support to resume."
+      >
+        <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-400">
+          Held by Support
+        </span>
+        <Switch
+          id={`schedule-switch-${jobId}`}
+          checked={false}
+          disabled={true}
+          aria-label="Schedule held by support"
+        />
+      </div>
+    );
+  }
+
   const schedPaused = job.scheduleState === 'paused';
   const schedLimitPaused = job.scheduleState === 'paused_limit_reached';
   const schedActive =

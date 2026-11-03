@@ -1,10 +1,8 @@
 import {
-  AlertTriangle,
   CreditCard,
   Gauge,
   History,
   Receipt,
-  ShieldAlert,
 } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
@@ -14,11 +12,11 @@ import PlanSlider from '@/components/billing/PlanSlider';
 import UpcomingBillingAndPaymentCard from '@/components/billing/UpcomingBillingAndPaymentCard';
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
+import PageContextAlert from '@/components/shared/PageContextAlert';
 import PaginationBar from '@/components/shared/PaginationBar';
 import SkeletonList from '@/components/shared/skeletons/SkeletonList';
 import SkeletonTable from '@/components/shared/skeletons/SkeletonTable';
 import StatusBadge from '@/components/shared/StatusBadge';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -57,6 +55,7 @@ import {
   useCancelSubscriptionImmediateMutation,
   useClearPaymentHoldMutation,
   useImposePaymentHoldMutation,
+  useResumeOrganisationWorkMutation,
   useResumeSubscriptionMutation,
   useSuperAdminBillingHistoryQuery,
   useSuperAdminBillingOverviewQuery,
@@ -65,6 +64,17 @@ import {
   useSuperAdminSubscriptionQuery,
 } from '@/queries/useSuperAdmin';
 import type { SuperAdminInvoiceListItem } from '@/types';
+
+function formatDate(value: string | null | undefined): string {
+  if (!value) return '—';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+}
 
 function extractErrorMessage(err: unknown): string {
   const e = err as { response?: { data?: { message?: string } } };
@@ -166,6 +176,9 @@ export default function OrganisationBillingPage() {
     organisationId ?? '',
   );
   const clearHoldMutation = useClearPaymentHoldMutation(
+    organisationId ?? '',
+  );
+  const resumeWorkMutation = useResumeOrganisationWorkMutation(
     organisationId ?? '',
   );
   const cancelScheduledMutation =
@@ -415,28 +428,36 @@ export default function OrganisationBillingPage() {
         </>
       )}
 
+      {/* ── UNIFIED CONTEXTUAL ALERTS ───────────────────────────────────── */}
+      {/* Critical Status: Suspended (Non-dismissible error) */}
+      {organisation?.status === 'suspended' && (
+        <PageContextAlert
+          variant="error"
+          title="Organisation Suspended"
+          description="Tenant logins and API sessions are completely rejected. Scheduled sync jobs are paused. Reactivate via the Manage organisation dropdown in the header."
+          dismissible={false}
+        />
+      )}
+
       {/* Top Banner: Manual Payment Hold Active (CAP-027) */}
       {paymentHoldActive && (
-        <Alert
-          variant="destructive"
-          className="border-amber-300 bg-amber-50 text-amber-900"
-        >
-          <AlertTriangle className="size-4 text-amber-700" />
-          <div className="flex flex-1 flex-wrap items-center justify-between gap-3">
-            <div>
-              <AlertTitle className="font-semibold text-amber-900">
-                Manual Billing Hold Active
-              </AlertTitle>
-              <AlertDescription className="text-xs text-amber-800">
-                This organisation is currently placed on a manual service
-                hold. Scheduled sync execution and queued runs are paused until
-                lifted.
-              </AlertDescription>
-            </div>
+        <PageContextAlert
+          variant="error"
+          title="Manual Billing Hold Active"
+          description={
+            <>
+              Scheduled sync execution and queued runs are paused
+              {organisation?.paymentHoldSince ? ` since ${formatDate(organisation.paymentHoldSince)}` : ''}
+              {organisation?.manualHoldReason ? `. Reason: ${organisation.manualHoldReason}` : '.'}
+            </>
+          }
+          dismissible={false}
+          actions={
             <Button
               variant="outline"
-              size="sm"
-              className="border-amber-400 bg-white text-xs font-medium text-amber-900 hover:bg-amber-100"
+              size="xs"
+              className="h-6 text-xs font-semibold"
+              disabled={clearHoldMutation.isPending}
               onClick={() => {
                 setHoldError(null);
                 setHoldAction('clear');
@@ -444,41 +465,62 @@ export default function OrganisationBillingPage() {
             >
               Clear payment hold
             </Button>
-          </div>
-        </Alert>
+          }
+        />
+      )}
+
+      {/* Top Banner: Operational Work Hold Active */}
+      {organisation?.syncHealth?.isWorkHeld && (
+        <PageContextAlert
+          variant="warning"
+          title="Operational Work Hold Active"
+          description={`${organisation.syncHealth.heldJobs} sync flow${organisation.syncHealth.heldJobs === 1 ? '' : 's'} placed on hold. Future scheduler execution is paused while in-flight jobs finish gracefully.`}
+          dismissible={false}
+          actions={
+            <Button
+              size="xs"
+              variant="outline"
+              className="h-6 text-xs font-semibold"
+              disabled={resumeWorkMutation.isPending}
+              onClick={() => {
+                resumeWorkMutation.mutate(undefined, {
+                  onSuccess: (data) => {
+                    showToast.success(
+                      `Resumed ${data.resumedJobs} job${data.resumedJobs === 1 ? '' : 's'}.`,
+                    );
+                    void orgQuery.refetch();
+                  },
+                  onError: () => {
+                    showToast.error('Could not resume work. Please try again.');
+                  },
+                });
+              }}
+            >
+              {resumeWorkMutation.isPending ? 'Resuming…' : 'Resume Held Work'}
+            </Button>
+          }
+        />
       )}
 
       {/* Top Banner: Recurring-Payment Failure Grace Period (CAP-032) */}
       {isPastDue && (
-        <Alert
-          variant="destructive"
-          className="border-red-300 bg-red-50 text-red-900"
-        >
-          <ShieldAlert className="size-4 text-red-700" />
-          <div>
-            <AlertTitle className="font-semibold text-red-900">
-              Subscription Past Due (Grace Period Active)
-            </AlertTitle>
-            <AlertDescription className="text-xs text-red-800">
-              Payment retries failed. The organisation is currently in the
-              grace period. If payment is not settled before the grace period
-              expires, the system will downgrade the organisation to the Free
-              tier and halt paid-only sync schedules.
-            </AlertDescription>
-          </div>
-        </Alert>
+        <PageContextAlert
+          variant="warning"
+          title="Subscription Past Due (Grace Period Active)"
+          description="Payment retries failed. The organisation is currently in the grace period. If payment is not settled before the grace period expires, the system will downgrade the organisation to the Free tier and halt paid-only sync schedules."
+          dismissible={false}
+        />
       )}
 
-      {/* Over-Plan Alert Banner */}
+      {/* Over-Plan Alert Banner (Session-dismissible warning) */}
       {overview?.plan.overLimit.isOverLimit && (
-        <Alert variant="destructive">
-          <AlertTitle>Over-plan resources</AlertTitle>
-          <AlertDescription>
-            One or more resource counts exceed this plan&rsquo;s limits.
-            Scheduled runs may fail until the plan is upgraded or the count
-            reduces.
-          </AlertDescription>
-        </Alert>
+        <PageContextAlert
+          variant="warning"
+          title="Over-plan resources"
+          description="One or more resource counts exceed this plan's limits. Scheduled runs may fail until the plan is upgraded or the count reduces."
+          dismissible={true}
+          dismissKey={`org-billing:${organisationId}:over-plan`}
+        />
       )}
 
       {/* Top Organisation Billing Actions Bar (pinned on top) */}
@@ -500,17 +542,18 @@ export default function OrganisationBillingPage() {
         />
       ) : null}
 
-      {/* ── TOP HORIZONTAL TABS (MATCHING SUPER ADMIN DASHBOARD STYLE) ──── */}
-      <BillingSubNavigation
-        activeId={activeSection}
-        items={navItems}
-        onSelect={(id) => setActiveSection(id as SuperAdminBillingSection)}
-        title="Organisation Billing"
-        selectId="superadmin-billing-section-select"
-      />
+      {/* ── BILLING WORKSPACE WITH SIDEBAR NAVIGATION ─────────────────── */}
+      <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
+        <BillingSubNavigation
+          activeId={activeSection}
+          items={navItems}
+          onSelect={(id) => setActiveSection(id as SuperAdminBillingSection)}
+          title="Organisation Billing"
+          selectId="superadmin-billing-section-select"
+        />
 
-      {/* ── SECTION CONTENT AREA ────────────────────────────────────────── */}
-      <div className="space-y-6">
+        {/* ── SECTION CONTENT AREA ──────────────────────────────────────── */}
+        <div className="min-w-0 space-y-6">
         {/* ── SECTION 1: OVERVIEW ───────────────────────────────────────── */}
         {activeSection === 'overview' && (
           <div className="space-y-6">
@@ -525,7 +568,7 @@ export default function OrganisationBillingPage() {
             ) : overview ? (
               <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
                 {/* Left Column: 6 mini stat cards + Entitlements & Usage (~60-65%) */}
-                <div className="space-y-6 lg:col-span-7 xl:col-span-8">
+                <div className="space-y-6 lg:col-span-7 xl:col-span-7">
                   {/* 6 mini stat cards */}
                   <BillingOverviewHeader
                     overview={overview}
@@ -542,7 +585,7 @@ export default function OrganisationBillingPage() {
                 </div>
 
                 {/* Right Column: Subscription Card (top right) + Inline PlanSlider + Upcoming Billing & Payment Method (~35-40%) */}
-                <div className="space-y-4 lg:col-span-5 xl:col-span-4">
+                <div className="space-y-4 lg:col-span-5 xl:col-span-5">
                   <span className="sr-only">Subscription</span>
 
                   {/* Subscription Plan "ATM" Card - always appears on top right! */}
@@ -796,6 +839,7 @@ export default function OrganisationBillingPage() {
             <BillingNotesCard organisationId={organisationId} />
           </div>
         )}
+        </div>
       </div>
     </div>
   );

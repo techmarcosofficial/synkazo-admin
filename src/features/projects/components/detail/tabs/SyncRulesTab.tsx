@@ -92,6 +92,17 @@ export function getJobLifecycle(
     };
   }
 
+  if (job.scheduleState === 'held') {
+    return {
+      statusKey: 'held',
+      scheduleText: 'Held by Support',
+      actionLabel: 'View Details',
+      actionVariant: 'outline',
+      targetUrl: `/projects/${projectId}/jobs/${job.id}`,
+      isActionable: false,
+    };
+  }
+
   if (job.status === 'error') {
     return {
       statusKey: 'error',

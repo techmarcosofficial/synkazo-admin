@@ -50,7 +50,18 @@ export default function AppLayout() {
     return <Navigate to="/login" replace />;
   }
 
-  if (!isTenant) return <Navigate to={PLATFORM_HOME} replace />;
+  if (!isTenant) {
+    if (location.pathname.startsWith('/settings')) {
+      const subpath = location.pathname.slice('/settings'.length);
+      return (
+        <Navigate
+          to={`/super-admin/settings${subpath}${location.search}`}
+          replace
+        />
+      );
+    }
+    return <Navigate to={PLATFORM_HOME} replace />;
+  }
 
   // Wait for the tenant plan before allowing a tenant page to paint.
   if (planQuery.isLoading) {

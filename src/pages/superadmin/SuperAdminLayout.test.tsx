@@ -100,8 +100,11 @@ describe('SuperAdminLayout', () => {
 
   it('keeps account settings inside the platform workspace', () => {
     renderAt('/super-admin/overview');
-    const link = screen.getByRole('link', { name: /settings/i });
-    expect(link).toHaveAttribute('href', '/super-admin/profile');
+    const links = screen.getAllByRole('link', { name: /settings/i });
+    expect(links.length).toBeGreaterThan(0);
+    links.forEach((link) => {
+      expect(link).toHaveAttribute('href', '/super-admin/settings');
+    });
     expect(
       screen.queryByRole('link', { name: /return to workspace/i }),
     ).not.toBeInTheDocument();
