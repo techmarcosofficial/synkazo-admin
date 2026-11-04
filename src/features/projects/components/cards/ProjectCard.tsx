@@ -55,8 +55,8 @@ export default function ProjectCard({ project, jobCount }: ProjectCardProps) {
             className="focus-visible:ring-ring inline-flex rounded-full transition-opacity hover:opacity-85 focus-visible:ring-2 focus-visible:outline-none"
             title={
               isSandbox
-                ? 'Operating in Sandbox (Test Mode) — Click to open Environment Settings'
-                : 'Operating in Production (Live) — Click to open Environment Settings'
+                ? 'Operating in Sandbox — Click to open Environment Settings'
+                : 'Operating in Production — Click to open Environment Settings'
             }
           >
             <StatusBadge

@@ -39,13 +39,6 @@ import StatusBadge from '@/components/shared/StatusBadge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
@@ -1133,16 +1126,15 @@ export default function RunHistoryTab() {
   };
 
   return (
-    <Card className="gap-0 overflow-hidden">
-      <CardHeader
-        visualLevel="section"
-        className="flex flex-col gap-4 border-b pb-4 xl:flex-row xl:items-center xl:justify-between"
-      >
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 pb-2 xl:flex-row xl:items-center xl:justify-between">
         <div className="shrink-0">
-          <CardTitle>Run History</CardTitle>
-          <CardDescription>
-            Review each sync run and expand it for page and record details.
-          </CardDescription>
+          <HeadingPair
+            level="h2"
+            visualLevel="section"
+            title="Run History"
+            subtitle="Review each sync run and expand it for page and record details."
+          />
         </div>
 
         <div
@@ -1210,9 +1202,9 @@ export default function RunHistoryTab() {
             )}
           </div>
         </div>
-      </CardHeader>
+      </div>
 
-      <CardContent className="space-y-4 p-4 sm:p-5">
+      <div className="space-y-4">
         <div className="bg-info/5 text-muted-foreground border-info/10 flex items-center gap-2 rounded-2xl border px-3 py-2 text-xs">
           <Info className="text-info size-3.5 shrink-0" />
           Run filters narrow this history. Record filters stay scoped to the
@@ -1268,7 +1260,7 @@ export default function RunHistoryTab() {
             />
           </>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

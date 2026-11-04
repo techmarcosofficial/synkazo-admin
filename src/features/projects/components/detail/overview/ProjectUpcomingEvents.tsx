@@ -7,7 +7,6 @@ import ListPanel from '@/components/shared/list/ListPanel';
 import ListRow from '@/components/shared/list/ListRow';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import type { JobExt } from '@/features/projects/hooks';
 import { getUpcomingScheduledJobs } from '@/features/projects/lib/projectOverview';
 import { formatSchedule } from '@/features/projects/utils';
@@ -32,14 +31,14 @@ export default function ProjectUpcomingEvents({
   const upcomingJobs = getUpcomingScheduledJobs(jobs);
 
   return (
-    <Card className="h-full">
-      <CardContent className="flex h-full flex-col gap-4">
-        <div className="flex items-start justify-between gap-4">
+    <div className="flex h-full flex-col gap-4">
+      <div className="flex items-start justify-between gap-4">
           <HeadingPair
             visualLevel="card"
             level="h3"
             title="Upcoming Events"
             subtitle="Next scheduled sync runs."
+            subtitleInTooltip
           />
           <Button
             variant="link"
@@ -106,7 +105,6 @@ export default function ProjectUpcomingEvents({
             })
           )}
         </ListPanel>
-      </CardContent>
-    </Card>
+    </div>
   );
 }

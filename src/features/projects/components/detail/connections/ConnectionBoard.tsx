@@ -45,6 +45,8 @@ interface ConnectionBoardProps {
   onSaved?: () => void;
   onContinue?: () => void;
   className?: string;
+  asCard?: boolean;
+  subtitleInTooltip?: boolean;
 }
 
 function verificationErrorKey(projectId: string, conn: ExtConnection): string {
@@ -227,6 +229,8 @@ export default function ConnectionBoard({
   onSaved,
   onContinue,
   className,
+  asCard = true,
+  subtitleInTooltip = false,
 }: ConnectionBoardProps) {
   const { api: connectionsApi, audience } = useConnectionAccess();
   const {
@@ -319,12 +323,16 @@ export default function ConnectionBoard({
   };
 
   if (loading) {
-    return (
+    return asCard ? (
       <Card size="sm" className="w-full">
         <CardContent className="flex h-40 items-center justify-center">
           <Spinner className="size-6" />
         </CardContent>
       </Card>
+    ) : (
+      <div className="flex h-40 w-full items-center justify-center">
+        <Spinner className="size-6" />
+      </div>
     );
   }
 
@@ -461,143 +469,183 @@ export default function ConnectionBoard({
     }
   };
 
+  const envBadge = (
+    <StatusBadge
+      status={activeEnv === 'production' ? 'production' : 'sandbox'}
+      label={
+        activeEnv === 'production'
+          ? 'Production'
+          : 'Sandbox'
+      }
+      title={
+        activeEnv === 'production'
+          ? 'Production Sync active'
+          : 'Operating in Sandbox — Live customer data is not affected'
+      }
+      size="sm"
+    />
+  );
+
+  const envToggle = !hideEnvironmentToggle ? (
+    <ConnectionEnvDropdown
+      activeEnv={activeEnv}
+      onChange={setActiveEnv}
+      projectActiveEnv={projectActiveEnv}
+      envHasAnyConnected={envHasAnyConnected}
+      envFullyConnected={envFullyConnected}
+    />
+  ) : null;
+
+  const stepsContent = (
+    <div className="space-y-5">
+      <ConnectionStep
+        number={1}
+        title="Connect source"
+        description="First, connect the platform your records come from."
+        complete={sourceComplete}
+        hasConnection={Boolean(sourceConn)}
+        hasVerificationError={Boolean(sourceError)}
+        showSuccessBorder={Boolean(
+          sourceSlot &&
+          successBorders[borderFeedbackKey(projectId, sourceSlot)],
+        )}
+        nextRequired={nextRequired === 'source'}
+        isTesting={testingSource}
+        onFix={sourceSlot ? () => openConnect(sourceSlot) : undefined}
+      >
+        {sourceSlot ? (
+          <PlatformCard
+            conn={sourceSlot}
+            onConnect={openConnect}
+            oauthPending={
+              oauthPending && sourceSlot.platformId === 'hubspot'
+            }
+            onUpdated={(updated) =>
+              handleConnectionUpdated(sourceSlot, updated)
+            }
+            onTestError={(message) => showErrorFor(sourceSlot, message)}
+            nextRequired={nextRequired === 'source'}
+            isTesting={testingSource}
+            onTestingChange={setTestingSource}
+          />
+        ) : audience === 'tenant' ? (
+          <SourcePlatformPicker projectId={projectId} />
+        ) : (
+          <p className="text-muted-foreground px-4 py-3 text-sm">
+            This project has no source platform configured.
+          </p>
+        )}
+      </ConnectionStep>
+
+      <ConnectionStep
+        number={2}
+        title="Connect destination"
+        description="Then, connect the platform your records will sync to."
+        complete={destinationComplete}
+        hasConnection={Boolean(destConn)}
+        hasVerificationError={Boolean(destinationError)}
+        showSuccessBorder={Boolean(
+          destinationSlot &&
+          successBorders[borderFeedbackKey(projectId, destinationSlot)],
+        )}
+        nextRequired={nextRequired === 'destination'}
+        isTesting={testingDest}
+        onFix={
+          destinationSlot ? () => openConnect(destinationSlot) : undefined
+        }
+        last
+      >
+        {destinationSlot ? (
+          <PlatformCard
+            conn={destinationSlot}
+            onConnect={openConnect}
+            oauthPending={
+              oauthPending && destinationSlot.platformId === 'hubspot'
+            }
+            onUpdated={(updated) =>
+              handleConnectionUpdated(destinationSlot, updated)
+            }
+            onTestError={(message) =>
+              showErrorFor(destinationSlot, message)
+            }
+            nextRequired={nextRequired === 'destination'}
+            connectDisabled={!sourceComplete && !destConn}
+            isTesting={testingDest}
+            onTestingChange={setTestingDest}
+          />
+        ) : (
+          <div className="text-muted-foreground px-4 py-3 text-sm">
+            Choose a destination platform before connecting credentials.
+          </div>
+        )}
+      </ConnectionStep>
+    </div>
+  );
+
+  const continueBanner =
+    sourceComplete && destinationComplete && onContinue && !showReadyDialog ? (
+      <div
+        className={cn(
+          'flex flex-wrap items-center justify-between gap-3',
+          asCard ? 'px-4' : 'pt-2',
+        )}
+      >
+        <p className="text-muted-foreground text-sm">
+          Both platforms are connected. Create a sync flow to start syncing.
+        </p>
+        <Button size="sm" onClick={onContinue}>
+          Create Sync Flow
+        </Button>
+      </div>
+    ) : null;
+
   return (
     <>
-      <Card className={cn('w-full', className)}>
-        <CardHeader
-          visualLevel="section"
-          className="gap-2 has-data-[slot=card-action]:grid-cols-1 sm:has-data-[slot=card-action]:grid-cols-[minmax(0,1fr)_auto]"
-        >
-          <div className="flex flex-wrap items-center gap-2">
-            <CardTitle>Connections</CardTitle>
-            <StatusBadge
-              status={activeEnv === 'production' ? 'production' : 'sandbox'}
-              label={
-                activeEnv === 'production'
-                  ? 'Production (Live)'
-                  : 'Sandbox (Test Mode)'
-              }
-              title={
-                activeEnv === 'production'
-                  ? 'Live Production Sync active'
-                  : 'Operating in Sandbox — Live customer data is not affected'
-              }
-              size="sm"
+      {asCard ? (
+        <Card className={cn('w-full', className)}>
+          <CardHeader
+            visualLevel="section"
+            className="gap-2 has-data-[slot=card-action]:grid-cols-1 sm:has-data-[slot=card-action]:grid-cols-[minmax(0,1fr)_auto]"
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <CardTitle>Connections</CardTitle>
+              {envBadge}
+            </div>
+            <CardDescription>{boardDescription}</CardDescription>
+            {envToggle && (
+              <CardAction className="col-start-1 row-span-1 row-start-3 w-full justify-self-start sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:w-auto sm:justify-self-end">
+                {envToggle}
+              </CardAction>
+            )}
+          </CardHeader>
+
+          <CardContent className="space-y-6 pt-2">
+            {stepsContent}
+          </CardContent>
+          {continueBanner}
+        </Card>
+      ) : (
+        <div className={cn('w-full space-y-6', className)}>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <HeadingPair
+              level="h2"
+              visualLevel="section"
+              title="Connections"
+              subtitle={boardDescription}
+              subtitleInTooltip={subtitleInTooltip}
+              trailing={envBadge}
             />
+            {envToggle && (
+              <div className="w-full sm:w-auto sm:self-start">
+                {envToggle}
+              </div>
+            )}
           </div>
-          <CardDescription>{boardDescription}</CardDescription>
-          {!hideEnvironmentToggle && (
-            <CardAction className="col-start-1 row-span-1 row-start-3 w-full justify-self-start sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:w-auto sm:justify-self-end">
-              <ConnectionEnvDropdown
-                activeEnv={activeEnv}
-                onChange={setActiveEnv}
-                projectActiveEnv={projectActiveEnv}
-                envHasAnyConnected={envHasAnyConnected}
-                envFullyConnected={envFullyConnected}
-              />
-            </CardAction>
-          )}
-        </CardHeader>
 
-        <CardContent className="space-y-6 pt-2">
-          <div className="space-y-5">
-            <ConnectionStep
-              number={1}
-              title="Connect source"
-              description="First, connect the platform your records come from."
-              complete={sourceComplete}
-              hasConnection={Boolean(sourceConn)}
-              hasVerificationError={Boolean(sourceError)}
-              showSuccessBorder={Boolean(
-                sourceSlot &&
-                successBorders[borderFeedbackKey(projectId, sourceSlot)],
-              )}
-              nextRequired={nextRequired === 'source'}
-              isTesting={testingSource}
-              onFix={sourceSlot ? () => openConnect(sourceSlot) : undefined}
-            >
-              {sourceSlot ? (
-                <PlatformCard
-                  conn={sourceSlot}
-                  onConnect={openConnect}
-                  oauthPending={
-                    oauthPending && sourceSlot.platformId === 'hubspot'
-                  }
-                  onUpdated={(updated) =>
-                    handleConnectionUpdated(sourceSlot, updated)
-                  }
-                  onTestError={(message) => showErrorFor(sourceSlot, message)}
-                  nextRequired={nextRequired === 'source'}
-                  isTesting={testingSource}
-                  onTestingChange={setTestingSource}
-                />
-              ) : audience === 'tenant' ? (
-                <SourcePlatformPicker projectId={projectId} />
-              ) : (
-                <p className="text-muted-foreground px-4 py-3 text-sm">
-                  This project has no source platform configured.
-                </p>
-              )}
-            </ConnectionStep>
-
-            <ConnectionStep
-              number={2}
-              title="Connect destination"
-              description="Then, connect the platform your records will sync to."
-              complete={destinationComplete}
-              hasConnection={Boolean(destConn)}
-              hasVerificationError={Boolean(destinationError)}
-              showSuccessBorder={Boolean(
-                destinationSlot &&
-                successBorders[borderFeedbackKey(projectId, destinationSlot)],
-              )}
-              nextRequired={nextRequired === 'destination'}
-              isTesting={testingDest}
-              onFix={
-                destinationSlot ? () => openConnect(destinationSlot) : undefined
-              }
-              last
-            >
-              {destinationSlot ? (
-                <PlatformCard
-                  conn={destinationSlot}
-                  onConnect={openConnect}
-                  oauthPending={
-                    oauthPending && destinationSlot.platformId === 'hubspot'
-                  }
-                  onUpdated={(updated) =>
-                    handleConnectionUpdated(destinationSlot, updated)
-                  }
-                  onTestError={(message) =>
-                    showErrorFor(destinationSlot, message)
-                  }
-                  nextRequired={nextRequired === 'destination'}
-                  connectDisabled={!sourceComplete && !destConn}
-                  isTesting={testingDest}
-                  onTestingChange={setTestingDest}
-                />
-              ) : (
-                <div className="text-muted-foreground px-4 py-3 text-sm">
-                  Choose a destination platform before connecting credentials.
-                </div>
-              )}
-            </ConnectionStep>
-          </div>
-        </CardContent>
-        {sourceComplete &&
-        destinationComplete &&
-        onContinue &&
-        !showReadyDialog ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 px-4">
-            <p className="text-muted-foreground text-sm">
-              Both platforms are connected. Create a sync flow to start syncing.
-            </p>
-            <Button size="sm" onClick={onContinue}>
-              Create Sync Flow
-            </Button>
-          </div>
-        ) : null}
-      </Card>
+          {stepsContent}
+          {continueBanner}
+        </div>
+      )}
 
       {showManualModal && activeConn && (
         <CredentialsModal

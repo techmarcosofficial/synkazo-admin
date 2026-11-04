@@ -220,12 +220,12 @@ export default function StartSyncModal(props: StartSyncModalProps) {
                 <StatusBadge
                   status={props.environment}
                   label={
-                    isSandbox ? 'Sandbox (Test Mode)' : 'Production (Live)'
+                    isSandbox ? 'Sandbox' : 'Production'
                   }
                   title={
                     isSandbox
                       ? 'Operating in Sandbox — Live customer data is not affected'
-                      : 'Live Production Sync active'
+                      : 'Production Sync active'
                   }
                   size="sm"
                 />

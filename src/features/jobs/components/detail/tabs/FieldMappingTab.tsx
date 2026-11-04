@@ -29,7 +29,6 @@ export { supportsCrossObjectProperties } from '@/components/fieldmapping/support
 import JobFiltersDialog from '@/components/fieldmapping/JobFiltersDialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   consolidateMappings,
@@ -100,54 +99,52 @@ export type MappingWorkspaceTab =
 
 function FieldMappingSkeleton() {
   return (
-    <Card
-      className="gap-0 overflow-hidden py-0"
+    <div
+      className="space-y-4"
       role="status"
       aria-label="Loading field mappings"
     >
-      <CardContent className="p-0">
-        <div className="flex flex-col gap-3 border-b px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex gap-2">
-            <Skeleton className="h-8 w-28 rounded-xl" />
-            <Skeleton className="h-8 w-32 rounded-xl" />
-            <Skeleton className="h-8 w-24 rounded-xl" />
-          </div>
-          <div className="flex gap-2">
-            <Skeleton className="h-9 w-48 rounded-xl" />
-            <Skeleton className="size-9 rounded-xl" />
-          </div>
+      <div className="flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex gap-2">
+          <Skeleton className="h-8 w-28 rounded-xl" />
+          <Skeleton className="h-8 w-32 rounded-xl" />
+          <Skeleton className="h-8 w-24 rounded-xl" />
         </div>
+        <div className="flex gap-2">
+          <Skeleton className="h-9 w-48 rounded-xl" />
+          <Skeleton className="size-9 rounded-xl" />
+        </div>
+      </div>
 
-        <div className="p-5">
-          <div className="grid gap-3 lg:grid-cols-2">
-            {Array.from({ length: 2 }).map((_, column) => (
-              <div key={column} className="space-y-3 rounded-3xl border p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-28" />
-                    <Skeleton className="h-3 w-20" />
-                  </div>
-                  <Skeleton className="h-8 w-24 rounded-xl" />
+      <div>
+        <div className="grid gap-3 lg:grid-cols-2">
+          {Array.from({ length: 2 }).map((_, column) => (
+            <div key={column} className="space-y-3 rounded-3xl border p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="h-3 w-20" />
                 </div>
-                {Array.from({ length: 4 }).map((_, row) => (
-                  <div
-                    key={row}
-                    className="flex items-center gap-3 rounded-2xl border px-3 py-3"
-                  >
-                    <Skeleton className="size-5 rounded-full" />
-                    <div className="flex-1 space-y-1.5">
-                      <Skeleton className="h-3.5 w-3/4" />
-                      <Skeleton className="h-2.5 w-1/3" />
-                    </div>
-                  </div>
-                ))}
+                <Skeleton className="h-8 w-24 rounded-xl" />
               </div>
-            ))}
-          </div>
+              {Array.from({ length: 4 }).map((_, row) => (
+                <div
+                  key={row}
+                  className="flex items-center gap-3 rounded-2xl border px-3 py-3"
+                >
+                  <Skeleton className="size-5 rounded-full" />
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton className="h-3.5 w-3/4" />
+                    <Skeleton className="h-2.5 w-1/3" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
         </div>
-      </CardContent>
+      </div>
       <span className="sr-only">Loading field mappings…</span>
-    </Card>
+    </div>
   );
 }
 
@@ -774,9 +771,8 @@ export default function FieldMappingTab() {
         </div>
       )}
 
-      <Card className="border-border bg-card gap-0 py-0 shadow-xs">
-        <CardContent className="p-0">
-          <FieldMappingWorkspaceHeader
+      <div className="space-y-4">
+        <FieldMappingWorkspaceHeader
             mappedCount={fieldMappings.length}
             dirty={anyDirty}
             filtersCount={totalFiltersCount}
@@ -956,8 +952,7 @@ export default function FieldMappingTab() {
               </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
       <FieldMappingDraftFooter
         dirty={anyDirty}

@@ -3,6 +3,7 @@ import { type ReactNode, useLayoutEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 interface StickyDetailHeaderProps {
@@ -136,7 +137,9 @@ export default function StickyDetailHeader({
         {header}
       </div>
 
-      <div className="space-y-4 pt-4">{children}</div>
+      <Card className="mt-4">
+        <CardContent className="space-y-4">{children}</CardContent>
+      </Card>
     </section>
   );
 }

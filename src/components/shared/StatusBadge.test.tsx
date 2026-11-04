@@ -26,11 +26,11 @@ describe('StatusBadge', () => {
     render(
       <StatusBadge
         status="sandbox"
-        label="Sandbox (Test Mode)"
+        label="Sandbox"
         title="Operating in Sandbox — Live customer data is not affected"
       />,
     );
-    const badge = screen.getByText('Sandbox (Test Mode)');
+    const badge = screen.getByText('Sandbox');
     expect(badge).toBeInTheDocument();
     expect(badge).toHaveAttribute(
       'title',

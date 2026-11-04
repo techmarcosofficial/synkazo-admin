@@ -123,7 +123,7 @@ describe('ProjectsPage - Environment Awareness in Table View', () => {
     ).toBeInTheDocument();
 
     // Verify Sandbox badge and link
-    const sandboxBadge = screen.getByText('Sandbox (Test Mode)');
+    const sandboxBadge = screen.getByText('Sandbox');
     expect(sandboxBadge).toBeInTheDocument();
     const sandboxLink = sandboxBadge.closest('a');
     expect(sandboxLink).toHaveAttribute(
@@ -132,7 +132,7 @@ describe('ProjectsPage - Environment Awareness in Table View', () => {
     );
 
     // Verify Production badge and link
-    const prodBadge = screen.getByText('Production (Live)');
+    const prodBadge = screen.getByText('Production');
     expect(prodBadge).toBeInTheDocument();
     const prodLink = prodBadge.closest('a');
     expect(prodLink).toHaveAttribute(

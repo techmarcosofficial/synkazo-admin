@@ -37,7 +37,7 @@ function Card({
           resolvedSurface === 'inset'
             ? 'bg-surface-inset border-border/70 dark:border-border/70 rounded-2xl *:[img:first-child]:rounded-t-2xl *:[img:last-child]:rounded-b-2xl'
             : resolvedSurface === 'inner'
-              ? 'bg-surface-inner border-border/70 dark:border-border/70 rounded-3xl *:[img:first-child]:rounded-t-3xl *:[img:last-child]:rounded-b-3xl'
+              ? 'border-border/70 dark:border-border/70 rounded-3xl *:[img:first-child]:rounded-t-3xl *:[img:last-child]:rounded-b-3xl'
               : 'bg-card border-border/80 dark:border-border/80 rounded-4xl *:[img:first-child]:rounded-t-4xl *:[img:last-child]:rounded-b-4xl',
           className,
         )}
