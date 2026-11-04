@@ -6,6 +6,7 @@ import { jobsApi } from '@/api/jobs';
 import HeadingPair from '@/components/shared/HeadingPair';
 import { Button } from '@/components/ui/button';
 import SyncDirectionFields from '@/features/jobs/components/SyncDirectionFields';
+import { conflictStrategyChoice } from '@/features/jobs/lib/conflictStrategy';
 import { showToast } from '@/lib/toast';
 import { useProjectConnectionsQuery } from '@/queries/useConnections';
 import { usePlatformsQuery } from '@/queries/usePlatforms';
@@ -39,7 +40,7 @@ export default function JobSyncDirectionCard() {
     job.syncDirection ?? 'one_way',
   );
   const [sourceOfTruth, setSourceOfTruth] = useState(
-    job.sourceOfTruth ?? sourcePlatformId,
+    conflictStrategyChoice(job, sourcePlatformId),
   );
   const [deleteHandling, setDeleteHandling] = useState(
     job.deleteHandling ?? 'ignore',
@@ -53,7 +54,7 @@ export default function JobSyncDirectionCard() {
 
   useEffect(() => {
     setSyncDirection(job.syncDirection ?? 'one_way');
-    setSourceOfTruth(job.sourceOfTruth ?? sourcePlatformId);
+    setSourceOfTruth(conflictStrategyChoice(job, sourcePlatformId));
     setDeleteHandling(job.deleteHandling ?? 'ignore');
     setHubspotWebhookEnabled(job.hubspotWebhookEnabled ?? false);
     setSyncTrigger(job.syncTrigger ?? 'both');
@@ -115,6 +116,8 @@ export default function JobSyncDirectionCard() {
         onDeleteHandlingChange={withDirty(setDeleteHandling)}
         onHubspotWebhookEnabledChange={withDirty(setHubspotWebhookEnabled)}
         onSyncTriggerChange={withDirty(setSyncTrigger)}
+        syncFromMode={job.syncFromMode}
+        syncFromDate={job.syncFromDate}
         fieldMappingLocationLabel="the Field Mapping tab"
         readOnly
       />

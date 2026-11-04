@@ -113,6 +113,10 @@ import {
 } from '@/lib/fieldMatching';
 import { suggestCastRule, type Rule } from '@/lib/ruleEngine';
 import { combineMappingName, type CombineConfig } from '@/lib/combineFields';
+import {
+  isReversibleTransform,
+  ONE_WAY_TRANSFORM_HINT,
+} from '@/lib/transformReversibility';
 import { cn } from '@/lib/utils';
 import { useEntitlements } from '@/queries/useEntitlements';
 
@@ -3446,7 +3450,18 @@ export default function FieldMappingCanvas({
                         (n) => n.blocking,
                       );
                       const primaryIssue = rowAttentionIssues[0];
-                      const direction = m.direction ?? 'bidirectional';
+                      // Same per-destination transform the save payload uses.
+                      const rowReversible = isReversibleTransform(
+                        m.transformType,
+                        m.transformType !== 'combine' && m.destRules?.[dk]
+                          ? { rules: m.destRules[dk] }
+                          : m.transformConfig,
+                      );
+                      const direction: MappingDirection = rowReversible
+                        ? (m.direction ?? 'bidirectional')
+                        : m.direction === 'reverse_only'
+                          ? 'reverse_only'
+                          : 'forward_only';
                       const rowDirectionReadOnly =
                         m.transformType === 'combine' ||
                         m.sourceField.startsWith('__cross_object__:') ||
@@ -3738,15 +3753,26 @@ export default function FieldMappingCanvas({
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent align="start">
-                                    {DIRECTION_OPTIONS.map((o) => (
-                                      <SelectItem
-                                        key={o.value}
-                                        value={o.value}
-                                        className="text-xs"
-                                      >
-                                        {o.label}
-                                      </SelectItem>
-                                    ))}
+                                    {DIRECTION_OPTIONS.map((o) => {
+                                      const blocked =
+                                        o.value === 'bidirectional' &&
+                                        !rowReversible;
+                                      return (
+                                        <SelectItem
+                                          key={o.value}
+                                          value={o.value}
+                                          disabled={blocked}
+                                          title={
+                                            blocked
+                                              ? ONE_WAY_TRANSFORM_HINT
+                                              : undefined
+                                          }
+                                          className="text-xs"
+                                        >
+                                          {o.label}
+                                        </SelectItem>
+                                      );
+                                    })}
                                   </SelectContent>
                                 </Select>
                               )}

@@ -39,6 +39,26 @@ describe('toFieldMappingPayload', () => {
     });
   });
 
+  it('stores a two-way mapping whose transform cannot be reversed as forward only', () => {
+    const payload = toFieldMappingPayload(
+      [
+        {
+          sourceField: 'name',
+          destField: ['company_name', 'slug'],
+          direction: 'bidirectional',
+          destRules: {
+            company_name: [{ type: 'trim' }],
+            slug: [{ type: 'slug' }],
+          },
+        },
+      ],
+      'two_way',
+    );
+
+    expect(payload[0]).toMatchObject({ direction: 'bidirectional' });
+    expect(payload[1]).toMatchObject({ direction: 'forward_only' });
+  });
+
   it('preserves a saved fill-if-empty rule when saving edited mappings', () => {
     const [mapping] = toFieldMappingPayload([{
       sourceField: 'phone',

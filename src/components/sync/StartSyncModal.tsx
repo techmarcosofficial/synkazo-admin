@@ -1,6 +1,7 @@
 import { Info, XIcon } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
+import type { SyncRunDirection } from '@/api/jobs';
 import { ChoiceCardItem } from '@/components/form/ChoiceCard';
 import StatusBadge from '@/components/shared/StatusBadge';
 import LimitSyncModal from '@/components/sync/LimitSyncModal';
@@ -34,7 +35,11 @@ interface StartSyncModalProps {
   onRunNow: () => void;
   onLimitSyncStarted?: () => void;
   onLimitSyncDone: () => void;
-  onSyncAll: (range: { startDate?: string; endDate?: string }) => void;
+  onSyncAll: (range: {
+    startDate?: string;
+    endDate?: string;
+    direction?: SyncRunDirection;
+  }) => void;
   disabled?: boolean;
   /** Renders the same run workflow directly inside a parent surface. */
   embedded?: boolean;
@@ -67,6 +72,9 @@ function ManualSyncContent({
     'config' | 'running' | 'done'
   >('config');
   const [showIncrementalRun, setShowIncrementalRun] = useState(false);
+  // Two-way jobs: a manual run syncs one leg only, chosen here.
+  const isTwoWay = job?.syncDirection === 'two_way';
+  const [direction, setDirection] = useState<SyncRunDirection>('a_to_b');
 
   const isLimitRunningOrDone =
     runType === 'limited' && limitSyncStep !== 'config';
@@ -124,6 +132,38 @@ function ManualSyncContent({
         </div>
       )}
 
+      {isTwoWay && !isLimitRunningOrDone && (
+        <div className="space-y-1.5">
+          <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
+            Which direction?
+          </p>
+          <RadioGroup
+            value={direction}
+            onValueChange={(value) => setDirection(value as SyncRunDirection)}
+            className="grid gap-2 sm:grid-cols-2"
+          >
+            <ChoiceCardItem
+              value="a_to_b"
+              id="manual-run-a_to_b"
+              title={`${job.sourceObject} → ${job.destObject}`}
+              description="Source to destination"
+              disabled={disabled}
+            />
+            <ChoiceCardItem
+              value="b_to_a"
+              id="manual-run-b_to_a"
+              title={`${job.destObject} → ${job.sourceObject}`}
+              description="Destination back to source"
+              disabled={disabled}
+            />
+          </RadioGroup>
+          <p className="text-muted-foreground text-xs">
+            Manual runs only create and update records — they never delete or
+            deactivate anything.
+          </p>
+        </div>
+      )}
+
       <div className="min-w-0">
         {runType === 'all' ? (
           <div className="space-y-3">
@@ -131,7 +171,9 @@ function ManualSyncContent({
               projectId={projectId}
               jobId={jobId}
               job={job}
-              onConfirm={onSyncAll}
+              onConfirm={(range) =>
+                onSyncAll(isTwoWay ? { ...range, direction } : range)
+              }
               onClose={onClose}
               pipelineRequired={pipelineRequired}
               pipelineConfigured={pipelineConfigured}
@@ -158,6 +200,7 @@ function ManualSyncContent({
             onGoToPipeline={onGoToPipeline}
             disabled={disabled}
             onFooterChange={onFooterChange}
+            direction={isTwoWay ? direction : undefined}
           />
         )}
       </div>

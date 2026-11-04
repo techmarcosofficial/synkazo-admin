@@ -31,6 +31,18 @@ export const projectsApi = {
     apiClient.post('/projects', data).then(d),
   updateProject: (id: string, data: Partial<Project>): Promise<Project> =>
     apiClient.patch(`/projects/${id}`, data).then(d),
+  // Turning the policy on needs the typed confirmation; turning it off doesn't.
+  setRecordDeletionPolicy: (
+    id: string,
+    allow: boolean,
+    confirmText?: string,
+  ): Promise<Project> =>
+    apiClient
+      .patch(`/projects/${id}`, {
+        allowRecordDeletionAndDeactivation: allow,
+        ...(allow ? { confirmText } : {}),
+      })
+      .then(d),
   getArchiveImpact: (id: string): Promise<ProjectArchiveImpact> =>
     apiClient.get(`/projects/${id}/archive-impact`).then(d),
   deleteProject: (
