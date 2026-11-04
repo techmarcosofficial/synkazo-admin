@@ -25,12 +25,44 @@ export interface ObjectItem {
    * out with a "Reconnect HubSpot to unlock" hint (§3.3).
    */
   scopeGranted?: { read: boolean; write: boolean };
+  /**
+   * Set by the job wizard on a two-way job when this object can't be written
+   * back to (two-way capabilities endpoint) — greyed out with this reason.
+   */
+  twoWayBlockedReason?: string;
 }
 
 export function useConnectionsQuery() {
   return useQuery({
     queryKey: queryKeys.connections.all,
     queryFn: connectionsApi.listAllConnections,
+  });
+}
+
+// Only fetched for two-way jobs. Errors fail open (nothing greyed out) — the
+// API still rejects an unsupported object when the job is saved.
+export function useTwoWayCapabilitiesQuery(
+  projectId: string,
+  sourcePlatform: string,
+  destPlatform: string,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: [
+      'connections',
+      'twoWayCapabilities',
+      projectId,
+      sourcePlatform,
+      destPlatform,
+    ] as const,
+    queryFn: () =>
+      connectionsApi.getTwoWayCapabilities(
+        projectId,
+        sourcePlatform,
+        destPlatform,
+      ),
+    enabled: enabled && !!projectId && !!sourcePlatform && !!destPlatform,
+    staleTime: 5 * 60 * 1000,
   });
 }
 

@@ -4,6 +4,11 @@ import { toast } from 'sonner';
 import CreateJobDialogFrame from '@/features/jobs/components/create/CreateJobDialogFrame';
 import { PlatformObjectSelectorView, type PlatformObjectSelectorProps } from '@/features/jobs/components/create/PlatformObjectSelector';
 import JobDetailsStep from '@/features/jobs/components/create/steps/JobDetailsStep';
+import { conflictStrategyPayload } from '@/features/jobs/lib/conflictStrategy';
+import {
+  syncFromError,
+  syncFromPayload,
+} from '@/features/jobs/lib/syncFromCutoff';
 import type { JobConfig } from '@/features/jobs/types';
 import type { ObjectItem } from '@/queries/useConnections';
 import {
@@ -51,6 +56,8 @@ export default function OrganisationCreateJobDialog({
     syncDirection: project.syncMode || 'one_way',
     sourceOfTruth: '',
     deleteHandling: 'ignore',
+    syncFromMode: '',
+    syncFromDate: '',
     hubspotWebhookEnabled: false,
     syncTrigger: 'both',
     idMappingSourceField: '',
@@ -74,6 +81,11 @@ export default function OrganisationCreateJobDialog({
     if (config.sourcePlatform === config.destPlatform && config.sourceObject && config.sourceObject.toLowerCase() === config.destObject.toLowerCase()) {
       nextErrors.destObject = 'Destination object must differ from the source object when both are on the same platform';
     }
+    const cutoffError = syncFromError({
+      ...config,
+      syncDirection: project.syncMode === 'one_way' || project.syncMode === 'two_way' ? project.syncMode : config.syncDirection,
+    });
+    if (cutoffError) nextErrors.syncFromDate = cutoffError;
     if (Object.keys(nextErrors).length) { setErrors(nextErrors); return; }
     if (!connectionReady) { setFormError('Connected source and destination accounts are required.'); return; }
     setErrors({});
@@ -87,9 +99,10 @@ export default function OrganisationCreateJobDialog({
         syncDirection: syncDirection as 'one_way' | 'two_way',
         syncTrigger: config.syncTrigger as 'new' | 'updated' | 'both',
         ...(syncDirection === 'two_way' && {
-          sourceOfTruth: config.sourceOfTruth,
+          ...conflictStrategyPayload(config.sourceOfTruth),
           deleteHandling: config.deleteHandling as 'ignore' | 'soft_archive' | 'hard_delete',
           hubspotWebhookEnabled: config.hubspotWebhookEnabled,
+          ...syncFromPayload(config),
         }),
         idMappingSourceField: config.idMappingSourceField || undefined,
         idMappingDestField: config.idMappingDestField || undefined,

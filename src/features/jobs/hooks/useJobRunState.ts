@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 
 import type { ExtJob, ExtSyncRun, ScheduleTogglePayload } from './useJobDetail';
 
-import { jobsApi } from '@/api/jobs';
+import { jobsApi, type SyncRunDirection } from '@/api/jobs';
 import { notificationsApi } from '@/api/notificationsApi';
 import { syncLogsApi } from '@/api/syncLogs';
 import { sseClient } from '@/lib/sseClient';
@@ -186,7 +186,11 @@ export function useJobRunState({
 
   const handleSyncAll = async (
     onStarted?: () => void,
-    range?: { startDate?: string; endDate?: string },
+    range?: {
+      startDate?: string;
+      endDate?: string;
+      direction?: SyncRunDirection;
+    },
   ) => {
     setFullResyncing(true);
     try {
@@ -204,8 +208,11 @@ export function useJobRunState({
       // job.checkpointPage without a separate control. Only reuse the job's persisted range
       // when actually resuming (syncAllPage set) — otherwise a fresh trigger with no explicit
       // range must not silently inherit a stale range left over from a completed prior run.
+      // syncAllPage/range are the forward leg's — a reverse-direction run
+      // always starts fresh.
       const isResume =
         job?.syncAllPage != null &&
+        range?.direction !== 'b_to_a' &&
         range?.startDate === undefined &&
         range?.endDate === undefined;
       const resp = (await jobsApi.runJob(projectId, jobId, {
@@ -217,6 +224,7 @@ export function useJobRunState({
         endDate:
           range?.endDate ??
           (isResume ? (job?.syncAllRangeEnd ?? undefined) : undefined),
+        direction: range?.direction,
       })) as {
         alreadyRunning?: boolean;
       } | null;

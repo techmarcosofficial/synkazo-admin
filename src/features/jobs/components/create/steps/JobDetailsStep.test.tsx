@@ -11,6 +11,11 @@ vi.mock('@/lib/synkazoAuth', () => ({
   }),
 }));
 
+vi.mock('@/queries/useConnections', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/queries/useConnections')>()),
+  useTwoWayCapabilitiesQuery: () => ({ data: undefined }),
+}));
+
 vi.mock('@/queries/useEntitlements', () => ({
   useEntitlements: () => ({
     data: { plan: 'growth', isCustomAllowed: true },
@@ -31,6 +36,8 @@ describe('JobDetailsStep Recipes', () => {
       syncDirection: 'one_way',
       sourceOfTruth: 'source',
       deleteHandling: 'ignore',
+      syncFromMode: '' as const,
+      syncFromDate: '',
       hubspotWebhookEnabled: false,
       syncTrigger: 'manual',
       idMappingSourceField: '',

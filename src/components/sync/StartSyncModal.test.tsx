@@ -116,6 +116,64 @@ describe('StartSyncModal', () => {
     );
   });
 
+  it('offers no direction choice on a one-way job', () => {
+    render(
+      <StartSyncModal
+        projectId="project-1"
+        jobId="job-1"
+        job={{ id: 'job-1', syncDirection: 'one_way' } as ExtJob}
+        hasBaseline
+        onGoToPipeline={vi.fn()}
+        onClose={vi.fn()}
+        onRunNow={vi.fn()}
+        onLimitSyncDone={vi.fn()}
+        onSyncAll={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText(/which direction/i)).not.toBeInTheDocument();
+  });
+
+  it('sends the chosen reverse direction with a two-way limited run', async () => {
+    const limitSync = vi
+      .spyOn(jobsApi, 'limitSync')
+      .mockResolvedValue({ alreadyRunning: true });
+    render(
+      <StartSyncModal
+        projectId="project-1"
+        jobId="job-1"
+        job={
+          {
+            id: 'job-1',
+            syncDirection: 'two_way',
+            sourceObject: 'customers',
+            destObject: 'companies',
+            isEnabled: true,
+          } as ExtJob
+        }
+        hasBaseline={false}
+        onGoToPipeline={vi.fn()}
+        onClose={vi.fn()}
+        onRunNow={vi.fn()}
+        onLimitSyncDone={vi.fn()}
+        onSyncAll={vi.fn()}
+      />,
+    );
+
+    const reverse = document.getElementById('manual-run-b_to_a');
+    expect(reverse).not.toBeNull();
+    fireEvent.click(reverse!);
+    fireEvent.click(
+      screen.getByRole('button', { name: /start limited sync/i }),
+    );
+    await waitFor(() =>
+      expect(limitSync).toHaveBeenCalledWith(
+        'project-1',
+        'job-1',
+        expect.objectContaining({ direction: 'b_to_a' }),
+      ),
+    );
+  });
+
   it('leaves the date filter optional for other limited runs', () => {
     render(
       <StartSyncModal

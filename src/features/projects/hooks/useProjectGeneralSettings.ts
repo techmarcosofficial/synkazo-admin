@@ -7,5 +7,15 @@ export function useProjectGeneralSettings() {
       projectId: string,
       values: Pick<ProjectExt, 'name' | 'description'>,
     ) => projectsApi.updateProject(projectId, values) as Promise<ProjectExt>,
+    setRecordDeletionPolicy: (
+      projectId: string,
+      allow: boolean,
+      confirmText?: string,
+    ) =>
+      projectsApi.setRecordDeletionPolicy(
+        projectId,
+        allow,
+        confirmText,
+      ) as Promise<ProjectExt>,
   };
 }
