@@ -29,12 +29,22 @@ import { useEntitlements } from '@/queries/useEntitlements';
 function ObjectOption({ obj, allowed }: { obj: ObjectItem; allowed: boolean }) {
   const scopeMissing =
     obj.scopeGranted !== undefined && obj.scopeGranted.read === false;
-  const disabled = !allowed || scopeMissing;
+  const disabled = !allowed || scopeMissing || !!obj.twoWayBlockedReason;
   return (
     <SelectItem value={obj.id} disabled={disabled}>
       <span className="flex w-full items-center gap-2">
         {obj.label}
-        {scopeMissing ? (
+        {obj.twoWayBlockedReason ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Info
+                className="text-muted-foreground size-3"
+                aria-label={obj.twoWayBlockedReason}
+              />
+            </TooltipTrigger>
+            <TooltipContent>{obj.twoWayBlockedReason}</TooltipContent>
+          </Tooltip>
+        ) : scopeMissing ? (
           <Tooltip>
             <TooltipTrigger asChild>
               <KeyRound className="text-muted-foreground size-3" />

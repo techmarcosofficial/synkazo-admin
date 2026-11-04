@@ -210,11 +210,11 @@ export default function SettingsTab() {
   }
 
   return (
-    <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[250px_minmax(0,1fr)]">
-      <aside className="min-w-0" aria-label="Job settings">
+    <div className="grid min-w-0 grid-cols-1 items-start gap-4 lg:grid-cols-[250px_minmax(0,1fr)]">
+      <aside className="min-w-0 self-start" aria-label="Job settings">
         <Card
           size="sm"
-          className="top-[calc(var(--detail-sticky-top)+var(--detail-header-height)+(--spacing(4)))] gap-0 py-0 lg:sticky"
+          className="gap-0 py-0"
         >
           <CardHeader className="px-3.5 py-3">
             <CardTitle>
@@ -284,21 +284,19 @@ export default function SettingsTab() {
         </Card>
       </aside>
 
-      <Card
-        className="min-w-0 gap-0 py-0"
+      <div
+        className="min-w-0 space-y-4"
         aria-labelledby="job-settings-section-title"
       >
-        <CardHeader className="px-4 py-3">
+        <div className="px-1 py-1">
           <HeadingPair
             titleId="job-settings-section-title"
             title={activeSection.label}
             subtitle={activeSection.description}
           />
-        </CardHeader>
-        <CardContent className="px-3.5 pt-2.5 pb-3.5 sm:px-4 sm:pb-4">
-          {sectionBody}
-        </CardContent>
-      </Card>
+        </div>
+        <div>{sectionBody}</div>
+      </div>
     </div>
   );
 }

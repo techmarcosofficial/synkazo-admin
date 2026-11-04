@@ -6,6 +6,7 @@ import type {
   DestinationSkipCondition,
   ExcludeCondition,
 } from '@/types/conditions';
+import type { SyncFromMode } from '@/types/job';
 
 export interface MappingRow {
   sourceField: string;
@@ -57,6 +58,10 @@ export interface JobConfig {
   syncDirection: string;
   sourceOfTruth: string;
   deleteHandling: string;
+  /** Two-way only; '' until the user picks one (required before saving). */
+  syncFromMode: SyncFromMode | '';
+  /** datetime-local value, used when syncFromMode is 'date'. */
+  syncFromDate: string;
   hubspotWebhookEnabled: boolean;
   syncTrigger: string;
   idMappingSourceField: string;

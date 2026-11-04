@@ -355,6 +355,7 @@ export default function SyncRulesTab() {
       )}
 
       <SyncFlowPanel
+        asCard={false}
         hasFlows={jobs.length > 0}
         action={
           <ActionTooltip

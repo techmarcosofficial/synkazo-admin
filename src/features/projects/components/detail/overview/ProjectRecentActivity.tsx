@@ -9,7 +9,6 @@ import ListRow from '@/components/shared/list/ListRow';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import type { JobExt, ProjectActivityLog } from '@/features/projects/hooks';
 
 interface ProjectRecentActivityProps {
@@ -67,14 +66,14 @@ export default function ProjectRecentActivity({
   const rows = logs.slice(0, 6);
 
   return (
-    <Card className="h-full">
-      <CardContent className="flex h-full flex-col gap-4">
-        <div className="flex items-start justify-between gap-4">
+    <div className="flex h-full flex-col gap-4">
+      <div className="flex items-start justify-between gap-4">
           <HeadingPair
             visualLevel="card"
             level="h3"
             title="Recent Activity"
             subtitle="Latest sync runs and project events."
+            subtitleInTooltip
           />
           <Button
             variant="link"
@@ -188,7 +187,6 @@ export default function ProjectRecentActivity({
             })
           )}
         </ListPanel>
-      </CardContent>
-    </Card>
+    </div>
   );
 }

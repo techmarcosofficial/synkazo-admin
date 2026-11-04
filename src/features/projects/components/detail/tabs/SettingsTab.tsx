@@ -8,6 +8,7 @@ import {
   DangerZoneCard,
   GeneralSettingsCard,
   ProjectContextCard,
+  RecordDeletionPolicyCard,
 } from '../settings';
 
 import ConnectionEnvDropdown from '@/components/connections/ConnectionEnvToggle';
@@ -68,6 +69,9 @@ function GeneralSection({ environmentsHref }: { environmentsHref: string }) {
         />
       </div>
       <div className="min-w-0 xl:col-span-12">
+        <RecordDeletionPolicyCard project={project} onUpdated={patchProject} />
+      </div>
+      <div className="min-w-0 xl:col-span-12">
         <DangerZoneCard
           project={project}
           onDeleted={() => navigate('/projects')}
@@ -97,20 +101,16 @@ function LockedSection({ section }: { section: ProjectSettingsSectionView }) {
   const needsConnections = !hasBothConnections;
 
   return (
-    <Card size="sm">
-      <CardContent>
-        <EmptyState
-          icon={Lock}
-          title={`${section.label} is not ready yet`}
-          description={section.lockReason}
-          action={{
-            label: needsConnections ? 'Go to Connections' : 'Go to Sync Jobs',
-            onClick: () =>
-              handleTabChange(needsConnections ? 'connections' : 'sync-rules'),
-          }}
-        />
-      </CardContent>
-    </Card>
+    <EmptyState
+      icon={Lock}
+      title={`${section.label} is not ready yet`}
+      description={section.lockReason}
+      action={{
+        label: needsConnections ? 'Go to Connections' : 'Go to Sync Jobs',
+        onClick: () =>
+          handleTabChange(needsConnections ? 'connections' : 'sync-rules'),
+      }}
+    />
   );
 }
 
@@ -171,7 +171,7 @@ export default function SettingsTab() {
   );
 
   return (
-    <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[250px_minmax(0,1fr)]">
+    <div className="grid min-w-0 grid-cols-1 items-start gap-4 lg:grid-cols-[250px_minmax(0,1fr)]">
       <ProjectSettingsNavigation
         activeId={activeSection.id}
         items={sections.map((section) => ({
@@ -196,11 +196,11 @@ export default function SettingsTab() {
           {sectionBody}
         </section>
       ) : (
-        <Card
-          className="min-w-0 gap-0 py-0"
+        <div
+          className="min-w-0 space-y-4"
           aria-labelledby="project-settings-section-title"
         >
-          <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 py-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-1">
             <HeadingPair
               titleId="project-settings-section-title"
               title={activeSection.label}
@@ -218,12 +218,10 @@ export default function SettingsTab() {
                 />
               </div>
             )}
-          </CardHeader>
+          </div>
 
-          <CardContent className="px-3.5 pt-2.5 pb-3.5 sm:px-4 sm:pb-4">
-            {sectionBody}
-          </CardContent>
-        </Card>
+          <div>{sectionBody}</div>
+        </div>
       )}
     </div>
   );

@@ -1,7 +1,6 @@
 import { Check, Link2, RotateCcw, ShieldCheck, Sparkles } from 'lucide-react';
 
-import { IconLegend } from './FieldMappingCanvas';
-
+import HeadingPair from '@/components/shared/HeadingPair';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useSidebar } from '@/components/ui/sidebar';
@@ -9,6 +8,7 @@ import { Spinner } from '@/components/ui/spinner';
 
 export function FieldMappingWorkspaceHeader({
   mappedCount,
+  setToolbarContainer,
   dirty,
   filtersCount,
   defaultsCount,
@@ -17,36 +17,94 @@ export function FieldMappingWorkspaceHeader({
   onOpenFilters,
   onOpenDefaults,
   onOpenCrossObject,
-  setToolbarContainer,
+  hideActionButtons = false,
 }: {
   mappedCount: number;
-  dirty: boolean;
-  filtersCount: number;
-  defaultsCount: number;
-  crossObjectCount: number;
-  showCrossObject: boolean;
-  onOpenFilters: () => void;
-  onOpenDefaults: () => void;
-  onOpenCrossObject: () => void;
   setToolbarContainer: (element: HTMLDivElement | null) => void;
+  dirty?: boolean;
+  filtersCount?: number;
+  defaultsCount?: number;
+  crossObjectCount?: number;
+  showCrossObject?: boolean;
+  onOpenFilters?: () => void;
+  onOpenDefaults?: () => void;
+  onOpenCrossObject?: () => void;
+  hideActionButtons?: boolean;
 }) {
-  return <div className="bg-muted/30 dark:bg-card/90 border-border flex flex-col gap-4 border-b px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
-    <div className="flex min-w-0 flex-col gap-1">
+  return (
+    <div className="flex flex-col gap-3 pb-1 sm:flex-row sm:items-center sm:justify-between">
+      <HeadingPair
+        level="h2"
+        visualLevel="section"
+        title="Field Mappings"
+        trailing={
+          <Badge variant="secondary" className="text-xs font-medium">
+            {mappedCount} mapped
+          </Badge>
+        }
+        subtitle="Map fields between your connected platforms to synchronize record data accurately."
+        subtitleInTooltip
+      />
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="font-heading text-foreground text-base font-semibold tracking-tight">Field Mappings</h3>
-        <IconLegend size="icon-xs" variant="ghost" />
-        <Badge variant="secondary" className="text-xs font-medium">{mappedCount} mapped</Badge>
-        {dirty && <span className="text-muted-foreground hidden items-center gap-1.5 text-xs font-normal sm:inline-flex"><span className="bg-warning size-1.5 animate-pulse rounded-full" />Draft saved locally</span>}
+        {!hideActionButtons && (
+          <>
+            {onOpenFilters && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onOpenFilters}
+                className="h-8 gap-1.5 text-xs font-medium"
+              >
+                <ShieldCheck className="text-primary size-3.5" />
+                <span>Job Filters</span>
+                {filtersCount != null && filtersCount > 0 && (
+                  <Badge variant="secondary" size="xs" className="ml-1 text-[10px]">
+                    {filtersCount}
+                  </Badge>
+                )}
+              </Button>
+            )}
+            {showCrossObject && onOpenCrossObject && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onOpenCrossObject}
+                className="h-8 gap-1.5 text-xs font-medium"
+              >
+                <Link2 className="text-primary size-3.5" />
+                <span>Cross-Object</span>
+                {crossObjectCount != null && crossObjectCount > 0 && (
+                  <Badge variant="secondary" size="xs" className="ml-1 text-[10px]">
+                    {crossObjectCount}
+                  </Badge>
+                )}
+              </Button>
+            )}
+            {onOpenDefaults && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onOpenDefaults}
+                className="h-8 gap-1.5 text-xs font-medium"
+              >
+                <Sparkles className="text-primary size-3.5" />
+                <span>Default Values</span>
+                {defaultsCount != null && defaultsCount > 0 && (
+                  <Badge variant="secondary" size="xs" className="ml-1 text-[10px]">
+                    {defaultsCount}
+                  </Badge>
+                )}
+              </Button>
+            )}
+          </>
+        )}
+        <div ref={setToolbarContainer} className="flex flex-wrap items-center gap-2" />
       </div>
-      <p className="text-muted-foreground text-xs leading-relaxed">Map fields between your connected platforms to synchronize record data accurately.</p>
     </div>
-    <div className="flex flex-wrap items-center gap-2">
-      <Button type="button" variant="outline" size="sm" onClick={onOpenFilters} className="h-8 gap-1.5 text-xs font-medium"><ShieldCheck className="text-primary size-3.5" /><span>Job Filters</span>{filtersCount > 0 && <Badge variant="secondary" size="xs" className="ml-1 text-[10px]">{filtersCount}</Badge>}</Button>
-      {showCrossObject && <Button type="button" variant="outline" size="sm" onClick={onOpenCrossObject} className="h-8 gap-1.5 text-xs font-medium"><Link2 className="text-primary size-3.5" /><span>Cross-Object</span>{crossObjectCount > 0 && <Badge variant="secondary" size="xs" className="ml-1 text-[10px]">{crossObjectCount}</Badge>}</Button>}
-      <Button type="button" variant="outline" size="sm" onClick={onOpenDefaults} className="h-8 gap-1.5 text-xs font-medium"><Sparkles className="text-primary size-3.5" /><span>Default Values</span>{defaultsCount > 0 && <Badge variant="secondary" size="xs" className="ml-1 text-[10px]">{defaultsCount}</Badge>}</Button>
-      <div ref={setToolbarContainer} className="flex flex-wrap items-center gap-2" />
-    </div>
-  </div>;
+  );
 }
 
 export function FieldMappingDraftFooter({

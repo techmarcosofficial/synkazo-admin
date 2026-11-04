@@ -17,19 +17,11 @@ import type { ActivityLog } from '@/api/activity';
 import { PlatformPair } from '@/components/platform';
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
+import HeadingPair from '@/components/shared/HeadingPair';
 import PaginationBar from '@/components/shared/PaginationBar';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useProjectActivityQuery } from '@/queries/useActivity';
@@ -107,18 +99,14 @@ export default function ActivityTab() {
   }
 
   const renderHeader = () => (
-    <CardHeader
-      visualLevel="section"
-      className="flex flex-col gap-4 border-b pb-4 sm:flex-row sm:items-center sm:justify-between"
-    >
-      <div>
-        <CardTitle>Sync activity</CardTitle>
-        <CardDescription>
-          Complete history of sync executions, record outcomes, and timings
-          across this project.
-        </CardDescription>
-      </div>
-      <CardAction className="flex items-center gap-2.5">
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <HeadingPair
+        level="h2"
+        visualLevel="section"
+        title="Sync activity"
+        subtitle="Complete history of sync executions, record outcomes, and timings across this project."
+      />
+      <div className="flex items-center gap-2.5">
         <Badge variant="secondary" className="px-2.5 py-1 text-xs font-medium">
           {total.toLocaleString()} total event{total !== 1 ? 's' : ''}
         </Badge>
@@ -134,15 +122,15 @@ export default function ActivityTab() {
           />
           Refresh
         </Button>
-      </CardAction>
-    </CardHeader>
+      </div>
+    </div>
   );
 
   if (query.isLoading) {
     return (
-      <Card className="gap-0 overflow-hidden">
+      <div className="space-y-6">
         {renderHeader()}
-        <CardContent className="space-y-2 p-3 sm:p-4">
+        <div className="space-y-2">
           {Array.from({ length: 5 }).map((_, index) => (
             <div
               key={index}
@@ -158,44 +146,40 @@ export default function ActivityTab() {
               </div>
             </div>
           ))}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
   if (query.isError && !res) {
     return (
-      <Card className="gap-0 overflow-hidden">
+      <div className="space-y-6">
         {renderHeader()}
-        <CardContent className="p-5">
-          <ErrorState onRetry={() => query.refetch()} />
-        </CardContent>
-      </Card>
+        <ErrorState onRetry={() => query.refetch()} />
+      </div>
     );
   }
 
   if (logs.length === 0) {
     return (
-      <Card className="gap-0 overflow-hidden">
+      <div className="space-y-6">
         {renderHeader()}
-        <CardContent className="p-5">
-          <div className="rounded-3xl border">
-            <EmptyState
-              icon={Database}
-              title="No sync activity yet"
-              description="When a sync job runs, its status, record counts, and timing will appear here."
-            />
-          </div>
-        </CardContent>
-      </Card>
+        <div className="rounded-3xl border">
+          <EmptyState
+            icon={Database}
+            title="No sync activity yet"
+            description="When a sync job runs, its status, record counts, and timing will appear here."
+          />
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card className="gap-0 overflow-hidden">
+    <div className="space-y-6">
       {renderHeader()}
 
-      <CardContent className="space-y-2 p-3 sm:p-4">
+      <div className="space-y-2">
         {logs.map((log) => {
           const matchedJob = jobs.find((j) => j.id === log.jobId);
           const jobName =
@@ -360,9 +344,9 @@ export default function ActivityTab() {
             </div>
           );
         })}
-      </CardContent>
+      </div>
 
-      <CardFooter className="border-t p-3 sm:px-4 sm:py-3">
+      <div className="pt-2">
         <PaginationBar
           page={page}
           totalPages={totalPages}
@@ -372,7 +356,7 @@ export default function ActivityTab() {
           onPageSizeChange={handleLimitChange}
           pageSizeOptions={PAGE_SIZE_OPTIONS}
         />
-      </CardFooter>
-    </Card>
+      </div>
+    </div>
   );
 }

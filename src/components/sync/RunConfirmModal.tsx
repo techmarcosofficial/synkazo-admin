@@ -171,11 +171,11 @@ export default function RunConfirmModal({
       {environment && (
         <StatusBadge
           status={environment}
-          label={isSandbox ? 'Sandbox (Test Mode)' : 'Production (Live)'}
+          label={isSandbox ? 'Sandbox' : 'Production'}
           title={
             isSandbox
               ? 'Operating in Sandbox — Live customer data is not affected'
-              : 'Live Production Sync active'
+              : 'Production Sync active'
           }
           size="sm"
         />

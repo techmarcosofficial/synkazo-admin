@@ -91,7 +91,6 @@ export default function SyncAllTab({
   onFooterChange,
 }: SyncAllTabProps) {
   const pipelineBlocked = pipelineRequired && !pipelineConfigured;
-  const isTwoWay = job?.syncDirection === 'two_way';
 
   // An interrupted ranged Sync All — resume it with the same bounds instead of
   // letting the user pick a new range (changing the range requires resetting the
@@ -189,7 +188,7 @@ export default function SyncAllTab({
   );
 
   useEffect(() => {
-    if (onFooterChange && !isTwoWay) {
+    if (onFooterChange) {
       onFooterChange(footerNode);
     }
   }, [
@@ -198,54 +197,10 @@ export default function SyncAllTab({
     endDateTime,
     pipelineBlocked,
     disabled,
-    isTwoWay,
     syncTriggered,
     onFooterChange,
     onClose,
   ]);
-
-  if (isTwoWay) {
-    return (
-      <div className="space-y-4">
-        {syncTriggered && (
-          <Alert className="bg-primary/5 border-primary/20 py-2 px-3">
-            <Info className="text-primary size-4 shrink-0" />
-            <AlertDescription className="space-y-0.5 text-xs [&_p:not(:last-child)]:mb-0">
-              <p className="text-foreground font-semibold">
-                Sync started in background
-              </p>
-              <p>
-                The sync run has started. You can close this window to monitor progress live on the Overview dashboard.
-              </p>
-            </AlertDescription>
-          </Alert>
-        )}
-        <Alert>
-          <AlertTriangle />
-          <AlertDescription>
-            Date-bounded Sync All isn't available for two-way jobs yet — this
-            will sync all historical records from scratch, same as before.
-          </AlertDescription>
-        </Alert>
-        {syncTriggered ? (
-          <Button onClick={onClose} className="w-full sm:w-auto">
-            Close
-          </Button>
-        ) : (
-          <Button
-            onClick={() => {
-              setSyncTriggered(true);
-              onConfirm({});
-            }}
-            disabled={pipelineBlocked || disabled}
-            className="w-full sm:w-auto"
-          >
-            <RotateCcw /> Start Full Sync
-          </Button>
-        )}
-      </div>
-    );
-  }
 
   const countAvailable = estimate?.countAvailable;
 

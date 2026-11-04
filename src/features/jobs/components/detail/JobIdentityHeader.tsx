@@ -100,13 +100,13 @@ export default function JobIdentityHeader({
             status={activeEnvironment}
             label={
               activeEnvironment === 'sandbox'
-                ? 'Sandbox (Test Mode)'
-                : 'Production (Live)'
+                ? 'Sandbox'
+                : 'Production'
             }
             title={
               activeEnvironment === 'sandbox'
                 ? 'Operating in Sandbox — Live customer data is not affected'
-                : 'Live Production Sync active'
+                : 'Production Sync active'
             }
             size="sm"
           />

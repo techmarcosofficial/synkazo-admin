@@ -3,6 +3,9 @@ import type { DestinationSkipCondition, ExcludeCondition } from './conditions';
 export type JobStatus =
   'active' | 'paused' | 'error' | 'idle' | 'running' | 'draft';
 
+/** Where a two-way job's scheduled runs start: a chosen date, or from when it was saved. */
+export type SyncFromMode = 'date' | 'future_only';
+
 export interface DefaultValuesConfig {
   destination?: Record<string, unknown>;
   source?: Record<string, unknown>;
@@ -47,6 +50,9 @@ export interface Job {
   sourceOfTruth?: string | null;
   conflictResolutionStrategy?: string;
   deleteHandling?: string;
+  /** Two-way cutoff: scheduled runs never fetch records modified before syncFromDate. */
+  syncFromMode?: SyncFromMode | null;
+  syncFromDate?: string | null;
   hubspotWebhookEnabled?: boolean;
   syncTrigger?: string;
   idMappingSourceField?: string | null;
@@ -169,9 +175,27 @@ export interface SyncConflict {
   resolutionStrategy: string;
   resolvedValue: string | null;
   resolvedBy: 'system' | 'user';
-  status: 'auto_resolved' | 'pending_review' | 'resolved_manually';
+  status: SyncConflictStatus;
   createdAt: string;
   resolvedAt: string | null;
+  /** Record-level conflicts only, e.g. MISSING_PARENT_MAPPING. */
+  errorCode?: SyncConflictCode | null;
+  recordId?: string | null;
+  direction?: 'a_to_b' | 'b_to_a' | null;
+  parentObject?: string | null;
+  parentRecordId?: string | null;
+  parentSyncRequestedAt?: string | null;
+}
+
+export type SyncConflictStatus =
+  'auto_resolved' | 'pending_review' | 'resolved_manually';
+export type SyncConflictCode = 'MISSING_PARENT_MAPPING';
+
+export interface SyncConflictPage {
+  items: SyncConflict[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
 export interface PipelineStatus {

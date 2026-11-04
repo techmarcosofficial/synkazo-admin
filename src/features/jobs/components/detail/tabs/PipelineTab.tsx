@@ -236,96 +236,90 @@ export default function PipelineTab() {
 
   if (loading) {
     return (
-      <Card>
-        <CardContent className="text-muted-foreground flex items-center justify-center gap-3 py-20">
-          <Spinner />
-          <span className="text-sm">Loading pipeline configuration…</span>
-        </CardContent>
-      </Card>
+      <div className="text-muted-foreground flex items-center justify-center gap-3 py-20">
+        <Spinner />
+        <span className="text-sm">Loading pipeline configuration…</span>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Card className="border-destructive/30">
-        <CardContent className="flex flex-col items-center gap-3 py-12">
-          <AlertTriangle className="text-destructive size-5" />
-          <span className="text-destructive text-sm font-medium">{error}</span>
-          <Button variant="outline" size="sm" onClick={fetchData}>
-            <RefreshCw className="mr-1 size-3.5" /> Retry
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col items-center gap-3 py-12">
+        <AlertTriangle className="text-destructive size-5" />
+        <span className="text-destructive text-sm font-medium">{error}</span>
+        <Button variant="outline" size="sm" onClick={fetchData}>
+          <RefreshCw className="mr-1 size-3.5" /> Retry
+        </Button>
+      </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Overview Context Card */}
-      <Card>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
+      {/* Overview Context Header */}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Badge
+              variant="secondary"
+              size="xs"
+              className="bg-primary/10 text-primary gap-1 font-medium"
+            >
+              <ShieldCheck className="size-3 shrink-0" />
+              <span>Required for HubSpot {dstLabel}</span>
+            </Badge>
+            {pipelineId ? (
               <Badge
-                variant="secondary"
-                size="xs"
-                className="bg-primary/10 text-primary gap-1 font-medium"
-              >
-                <ShieldCheck className="size-3 shrink-0" />
-                <span>Required for HubSpot {dstLabel}</span>
-              </Badge>
-              {pipelineId ? (
-                <Badge
-                  variant="outline"
-                  size="xs"
-                  className="text-muted-foreground font-normal"
-                >
-                  Configured
-                </Badge>
-              ) : (
-                <Badge
-                  variant="destructive"
-                  size="xs"
-                  className="animate-pulse font-normal"
-                >
-                  Setup Required
-                </Badge>
-              )}
-            </div>
-            {pipelines.length > 0 && (
-              <Button
                 variant="outline"
                 size="xs"
-                onClick={fetchData}
-                className="text-muted-foreground hover:text-foreground h-7 cursor-pointer text-xs"
+                className="text-muted-foreground font-normal"
               >
-                <RefreshCw className="mr-1 size-3" /> Refresh Pipelines
-              </Button>
+                Configured
+              </Badge>
+            ) : (
+              <Badge
+                variant="destructive"
+                size="xs"
+                className="animate-pulse font-normal"
+              >
+                Setup Required
+              </Badge>
             )}
           </div>
+          {pipelines.length > 0 && (
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={fetchData}
+              className="text-muted-foreground hover:text-foreground h-7 cursor-pointer text-xs"
+            >
+              <RefreshCw className="mr-1 size-3" /> Refresh Pipelines
+            </Button>
+          )}
+        </div>
 
-          <HeadingPair
-            visualLevel="section"
-            level="h3"
-            title="HubSpot Pipeline & Stage Setup"
-            subtitle={
-              <>
-                HubSpot requires every{' '}
-                <strong className="text-foreground capitalize">
-                  {dstLabel}
-                </strong>{' '}
-                record to live in a sales/service pipeline with defined stages.
-                Choose where new records are placed and how their stages update
-                as work progresses in{' '}
-                <strong className="text-foreground capitalize">
-                  {srcLabel}
-                </strong>
-                .
-              </>
-            }
-          />
-        </CardContent>
-      </Card>
+        <HeadingPair
+          visualLevel="section"
+          level="h3"
+          title="HubSpot Pipeline & Stage Setup"
+          subtitle={
+            <>
+              HubSpot requires every{' '}
+              <strong className="text-foreground capitalize">
+                {dstLabel}
+              </strong>{' '}
+              record to live in a sales/service pipeline with defined stages.
+              Choose where new records are placed and how their stages update
+              as work progresses in{' '}
+              <strong className="text-foreground capitalize">
+                {srcLabel}
+              </strong>
+              .
+            </>
+          }
+        />
+      </div>
 
       {/* 1. Destination Pipeline Selector */}
       <Card>

@@ -4,12 +4,15 @@ import type { ReactNode } from 'react';
 import TwoWayAuthNotice from './TwoWayAuthNotice';
 
 import { ChoiceCardItem } from '@/components/form/ChoiceCard';
+import { MOST_RECENT } from '@/features/jobs/lib/conflictStrategy';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Field, FieldLabel } from '@/components/ui/field';
+import { Field, FieldError, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
 import { RadioGroup } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import type { Connection } from '@/types';
+import type { SyncFromMode } from '@/types/job';
 
 export interface SyncDirectionFieldsProps {
   syncDirection: string;
@@ -30,6 +33,15 @@ export interface SyncDirectionFieldsProps {
   onDeleteHandlingChange: (value: string) => void;
   onHubspotWebhookEnabledChange: (value: boolean) => void;
   onSyncTriggerChange: (value: string) => void;
+  /**
+   * Two-way "sync from" cutoff. Rendered only when the handlers are supplied
+   * (create flows); read-only views pass just the values to show them locked.
+   */
+  syncFromMode?: SyncFromMode | '' | null;
+  syncFromDate?: string | null;
+  onSyncFromModeChange?: (value: SyncFromMode) => void;
+  onSyncFromDateChange?: (value: string) => void;
+  syncFromError?: string;
   /** Where field-mapping direction is configured — differs by context (wizard step vs. a separate tab). */
   fieldMappingLocationLabel?: string;
   /**
@@ -47,6 +59,12 @@ export interface SyncDirectionFieldsProps {
    * `readOnly` (that branch already shows locked static text).
    */
   projectSyncMode?: 'one_way' | 'two_way' | null;
+  /**
+   * The project's record deletion/deactivation opt-in. When false, only
+   * "Don't propagate" can be chosen for deletes. Undefined (callers that don't
+   * load the project) leaves every option enabled; the API still enforces it.
+   */
+  deletionAllowed?: boolean;
   /** Reduces helper copy and spacing for the standalone create dialog. */
   compact?: boolean;
 }
@@ -100,11 +118,18 @@ export default function SyncDirectionFields({
   onDeleteHandlingChange,
   onHubspotWebhookEnabledChange,
   onSyncTriggerChange,
+  syncFromMode,
+  syncFromDate,
+  onSyncFromModeChange,
+  onSyncFromDateChange,
+  syncFromError,
   fieldMappingLocationLabel = 'the next step',
   readOnly = false,
   projectSyncMode = null,
+  deletionAllowed,
   compact = false,
 }: SyncDirectionFieldsProps) {
+  const deletesLocked = deletionAllowed === false;
   const platformLabel = (platformId: string) =>
     availablePlatforms.find((p) => p.platformId === platformId)?.label ??
     platformId;
@@ -211,17 +236,21 @@ export default function SyncDirectionFields({
             <FieldLabel>Primary System (Source of Truth)</FieldLabel>
             {!readOnly && (
               <p className="text-muted-foreground -mt-1 mb-2 text-xs">
-                When a record changes in both systems at the same time, this
-                system wins the conflict.
+                When a record changes in both systems, this decides whose values
+                win. Every conflict is logged on the Conflicts tab.
               </p>
             )}
             {readOnly ? (
-              <LockedValue>{platformLabel(sourceOfTruth)}</LockedValue>
+              <LockedValue>
+                {sourceOfTruth === MOST_RECENT
+                  ? 'Most recent change wins'
+                  : platformLabel(sourceOfTruth)}
+              </LockedValue>
             ) : (
               <RadioGroup
                 value={sourceOfTruth}
                 onValueChange={onSourceOfTruthChange}
-                className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+                className="grid grid-cols-1 gap-3 sm:grid-cols-3"
               >
                 {[sourcePlatform, destPlatform].map((platformId) => (
                   <ChoiceCardItem
@@ -231,9 +260,78 @@ export default function SyncDirectionFields({
                     title={platformLabel(platformId)}
                   />
                 ))}
+                <ChoiceCardItem
+                  value={MOST_RECENT}
+                  id="source-of-truth-most_recent"
+                  title="Most recent change"
+                  description={
+                    compact ? undefined : 'Whichever side was edited last wins'
+                  }
+                />
               </RadioGroup>
             )}
           </Field>
+
+          {(readOnly ? !!syncFromMode : !!onSyncFromModeChange) && (
+            <Field>
+              <FieldLabel>Start syncing from</FieldLabel>
+              {!readOnly && !compact && (
+                <p className="text-muted-foreground -mt-1 mb-2 text-xs">
+                  Scheduled syncs never pick up records changed before this
+                  point. To bring in older records, run Sync All with a date
+                  range.
+                </p>
+              )}
+              {readOnly ? (
+                <LockedValue>
+                  {syncFromMode === 'date' && syncFromDate
+                    ? new Date(syncFromDate).toLocaleString()
+                    : 'Future changes only'}
+                </LockedValue>
+              ) : (
+                <>
+                  <RadioGroup
+                    value={syncFromMode ?? ''}
+                    onValueChange={(v) =>
+                      onSyncFromModeChange?.(v as SyncFromMode)
+                    }
+                    className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+                  >
+                    <ChoiceCardItem
+                      value="future_only"
+                      id="sync-from-future_only"
+                      title="Future changes only"
+                      description={
+                        compact
+                          ? undefined
+                          : 'Only records changed after this job is saved'
+                      }
+                    />
+                    <ChoiceCardItem
+                      value="date"
+                      id="sync-from-date"
+                      title="From a date"
+                      description={
+                        compact
+                          ? undefined
+                          : 'Also records changed since a past date'
+                      }
+                    />
+                  </RadioGroup>
+                  {syncFromMode === 'date' && (
+                    <Input
+                      type="datetime-local"
+                      aria-label="Start syncing from date"
+                      value={syncFromDate ?? ''}
+                      onChange={(e) => onSyncFromDateChange?.(e.target.value)}
+                      className="mt-2 sm:max-w-xs"
+                    />
+                  )}
+                  {syncFromError && <FieldError>{syncFromError}</FieldError>}
+                </>
+              )}
+            </Field>
+          )}
 
           <Field>
             <FieldLabel>
@@ -259,13 +357,25 @@ export default function SyncDirectionFields({
                     value="soft_archive"
                     id="delete-handling-soft_archive"
                     title="Archive on other side"
+                    disabled={deletesLocked}
                   />
                   <ChoiceCardItem
                     value="hard_delete"
                     id="delete-handling-hard_delete"
                     title="Delete on other side"
+                    disabled={deletesLocked}
                   />
                 </RadioGroup>
+                {deletesLocked && (
+                  <p
+                    className="text-muted-foreground text-xs"
+                    data-testid="delete-handling-locked"
+                  >
+                    Record deletion is turned off for this project. To allow it,
+                    go to Project Settings → General → Record deletion and
+                    deactivation.
+                  </p>
+                )}
                 {!compact && (
                   <p className="text-muted-foreground text-xs">
                     ServiceTitan has no generic delete API — only a few object

@@ -12,7 +12,7 @@ interface StoredDisplayPreferences {
 
 const DEFAULT_PREFERENCES: StoredDisplayPreferences = {
   defaultView: 'table',
-  layoutStyle: 'contrast',
+  layoutStyle: 'shadow',
 };
 
 function readPreferences(): StoredDisplayPreferences {
@@ -21,7 +21,7 @@ function readPreferences(): StoredDisplayPreferences {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
     return {
       defaultView: stored.defaultView === 'card' ? 'card' : 'table',
-      layoutStyle: stored.layoutStyle === 'shadow' ? 'shadow' : 'contrast',
+      layoutStyle: stored.layoutStyle === 'contrast' ? 'contrast' : 'shadow',
     };
   } catch {
     return DEFAULT_PREFERENCES;

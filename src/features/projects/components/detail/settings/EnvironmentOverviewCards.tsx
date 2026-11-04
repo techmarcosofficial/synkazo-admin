@@ -175,8 +175,8 @@ export default function EnvironmentOverviewCards({
                   status={activeEnvironment}
                   label={
                     activeEnvironment === 'production'
-                      ? 'Production (Live)'
-                      : 'Sandbox (Test Mode)'
+                      ? 'Production'
+                      : 'Sandbox'
                   }
                   size="sm"
                 />

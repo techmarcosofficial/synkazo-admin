@@ -271,6 +271,6 @@ describe('selected organisation context header', () => {
     fixtures.project.activeEnvironment = 'sandbox';
     renderAt('/super-admin/organisations/org-1/projects/proj-1?tab=sync-rules');
     expect(screen.getByText('Two-way')).toBeInTheDocument();
-    expect(screen.getByText('Sandbox (Test Mode)')).toBeInTheDocument();
+    expect(screen.getByText('Sandbox')).toBeInTheDocument();
   });
 });

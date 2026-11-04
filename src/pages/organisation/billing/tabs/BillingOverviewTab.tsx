@@ -211,7 +211,7 @@ export default function BillingOverviewTab() {
 
   return (
     <div className="space-y-5">
-      <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
+      <div className="grid min-w-0 grid-cols-1 items-start gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
         {/* Sidebar Navigation (matching Project Details style) */}
         <BillingSubNavigation
           activeId={activeSection}

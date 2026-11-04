@@ -5,7 +5,6 @@ import {
   History,
   Play,
   RotateCcw,
-  Timer,
   X,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -15,22 +14,13 @@ import { formatDistanceToNow } from 'date-fns';
 import { useJobDetailContext } from '../context';
 import JobSummaryMetric from '../JobSummaryMetric';
 
-import StatusBadge from '@/components/shared/StatusBadge';
 import UpgradeRequiredDialog from '@/components/shared/UpgradeRequiredDialog';
+import HeadingPair from '@/components/shared/HeadingPair';
 import StartSyncModal from '@/components/sync/StartSyncModal';
 import SyncRunProgress from '@/components/sync/SyncRunProgress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import JobScheduleModal from '@/features/jobs/components/schedule/JobScheduleModal';
-import ScheduleEnableToggle from '@/features/jobs/components/schedule/ScheduleEnableToggle';
 import {
   capitalizeFirst,
   formatScheduledAt,
@@ -39,10 +29,7 @@ import {
 } from '@/features/jobs/lib/jobScheduleSettings';
 import { formatSchedule } from '@/features/jobs/utils';
 import { selectJobOnboardingState } from '@/features/onboarding';
-import {
-  deriveSyncJobSummary,
-  formatDurationMs,
-} from '@/features/projects/lib/syncJobSummary';
+import { deriveSyncJobSummary } from '@/features/projects/lib/syncJobSummary';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { BROWSER_TIMEZONE } from '@/lib/timezones';
 import { usePriorityQueueQuery } from '@/queries/usePriorityQueue';
@@ -161,7 +148,6 @@ export default function OverviewTab() {
     {
       label: 'Total records synced',
       value: (job.recordsSynced ?? 0).toLocaleString(),
-      description: 'Across all executions',
       icon: Database,
     },
     {
@@ -171,32 +157,19 @@ export default function OverviewTab() {
             addSuffix: true,
           })
         : 'Never',
-      description: performance.lastSyncAt
-        ? 'Previous sync execution'
-        : 'No runs recorded yet',
       icon: History,
     },
     {
       label: 'Next run',
       value: nextRunCard.value,
-      description: nextRunCard.description,
       icon: Play,
     },
     {
-      label: 'Schedule at',
+      label: 'Schedule',
       value: scheduleConfigured
         ? capitalizeFirst(scheduleSummary)
         : 'Not configured',
-      description: scheduleConfigured
-        ? 'Current active schedule'
-        : 'Configure a schedule',
       icon: CalendarClock,
-    },
-    {
-      label: 'Avg duration',
-      value: formatDurationMs(performance.averageDurationMs),
-      description: 'Based on recent runs',
-      icon: Timer,
     },
   ];
   const canActivate =
@@ -349,16 +322,16 @@ export default function OverviewTab() {
   return (
     <div className="space-y-5">
       {showFullOverview ? (
-        <Card size="sm" className="min-w-0 rounded-4xl">
-          <CardHeader visualLevel="section">
-            <div className="space-y-0.5">
-              <CardTitle>Sync overview</CardTitle>
-              <CardDescription>
-                Monitor sync activity and trigger fresh data syncs whenever you
-                need to.
-              </CardDescription>
-            </div>
-            <CardAction className="flex flex-wrap items-center gap-2">
+        <div className="min-w-0 space-y-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <HeadingPair
+              level="h2"
+              visualLevel="section"
+              title="Sync overview"
+              subtitle="Monitor sync activity and trigger fresh data syncs whenever you need to."
+              subtitleInTooltip
+            />
+            <div className="flex flex-wrap items-center gap-2">
               {runLogs[0]?.bullmqJobId && queued && !isSyncing && (
                 <Button
                   variant="ghost"
@@ -400,66 +373,14 @@ export default function OverviewTab() {
               >
                 <Play /> Sync now
               </Button>
-            </CardAction>
-          </CardHeader>
+            </div>
+          </div>
 
-          <CardContent className="space-y-5">
+          <div className="space-y-5">
             {/* Sync progress — appears right after header on sync */}
             {!manualDialogOpen && progress}
 
-            {/* Embedded Automated Schedule Card */}
-            <div className="bg-secondary/30 border-border/70 flex flex-col gap-3 rounded-2xl border p-3.5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <span className="bg-background text-muted-foreground border-border/50 flex size-8 shrink-0 items-center justify-center rounded-xl border">
-                  <CalendarClock className="size-4" aria-hidden="true" />
-                </span>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-foreground text-sm font-semibold">
-                      Automated Schedule
-                    </h4>
-                    <StatusBadge
-                      status={schedulePaused ? 'paused' : 'active'}
-                      label={schedulePaused ? 'Paused' : 'Active'}
-                    />
-                  </div>
-                  <p className="text-muted-foreground mt-0.5 text-xs">
-                    {scheduleConfigured
-                      ? `Runs ${capitalizeFirst(scheduleSummary)} (${effectiveTimezone})`
-                      : 'No automated schedule configured.'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                {!priorityModeActive && !isTwoWay && (
-                  <ScheduleEnableToggle
-                    projectId={projectId}
-                    jobId={job.id}
-                    job={job}
-                    scheduleToggling={scheduleToggling}
-                    pipelineRequired={pipelineRequired}
-                    pipelineConfigured={pipelineConfigured}
-                    onGoToPipeline={() => handleTabChange('pipeline')}
-                    onScheduleToggle={handleScheduleToggle}
-                    disabled={!canRunJob}
-                    className="w-auto"
-                  />
-                )}
-                {canEditJob && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setScheduleModalOpen(true)}
-                  >
-                    <CalendarClock className="size-3.5" />
-                    Configure schedule
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {summaryCards.map((card) => (
                 <JobSummaryMetric key={card.label} {...card} />
               ))}
@@ -477,8 +398,8 @@ export default function OverviewTab() {
                 </AlertDescription>
               </Alert>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       ) : (
         <section className="min-w-0 space-y-5 py-8" aria-label="Sync overview">
           {!manualDialogOpen && progress}

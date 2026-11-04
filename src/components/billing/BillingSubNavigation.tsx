@@ -35,10 +35,10 @@ export default function BillingSubNavigation({
   className?: string;
 }) {
   return (
-    <aside className={cn('min-w-0', className)} aria-label={title}>
+    <aside className={cn('min-w-0 self-start', className)} aria-label={title}>
       <Card
         size="sm"
-        className="top-[calc(var(--detail-sticky-top,4rem)+var(--detail-header-height,0px)+(--spacing(4)))] gap-0 py-0 lg:sticky"
+        className="gap-0 py-0"
       >
         <CardHeader className="px-3.5 py-3">
           <CardTitle className="text-sm font-semibold">{title}</CardTitle>

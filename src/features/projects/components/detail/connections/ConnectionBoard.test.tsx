@@ -303,4 +303,48 @@ describe('ConnectionBoard credential journey', () => {
     );
     expect(sourceCard()).toHaveClass('border-destructive/70');
   });
+
+  it('renders without an outer card wrapper when asCard is false', async () => {
+    const { container } = render(
+      <MemoryRouter initialEntries={['/projects/proj-1?tab=connections']}>
+        <ConnectionBoard
+          projectId="proj-1"
+          sourcePlatformId="servicetitan"
+          destPlatformId="hubspot"
+          projectActiveEnv="sandbox"
+          asCard={false}
+        />
+      </MemoryRouter>,
+    );
+
+    // Header and controls remain present after loading completes
+    expect(
+      await screen.findByRole('heading', { level: 2, name: /connections/i }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText('Sandbox').length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText(/test mode/i)).not.toBeInTheDocument();
+    expect(screen.getByText('Connect source')).toBeInTheDocument();
+    expect(screen.getByText('Connect destination')).toBeInTheDocument();
+
+    // No outer card surface exists; only step inner cards are present
+    const outerCards = container.querySelectorAll('[data-layout-surface="outer"]');
+    expect(outerCards.length).toBe(0);
+  });
+
+  it('renders an outer card wrapper by default when asCard is not specified', async () => {
+    const { container } = render(
+      <MemoryRouter initialEntries={['/projects/proj-1?tab=connections']}>
+        <ConnectionBoard
+          projectId="proj-1"
+          sourcePlatformId="servicetitan"
+          destPlatformId="hubspot"
+          projectActiveEnv="sandbox"
+        />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Connect source');
+    const outerCards = container.querySelectorAll('[data-layout-surface="outer"]');
+    expect(outerCards.length).toBe(1);
+  });
 });

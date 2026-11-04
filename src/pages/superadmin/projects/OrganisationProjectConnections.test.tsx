@@ -259,7 +259,7 @@ describe('Super Admin project Connections', () => {
         ),
       );
       expect(screen.getByTestId('search').textContent).toBe('?tab=connections');
-      expect(screen.getByText('Production (Live)')).toBeInTheDocument();
+      expect(screen.getAllByText('Production').length).toBeGreaterThanOrEqual(1);
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     },
   );

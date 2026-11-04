@@ -220,13 +220,13 @@ function GeneralSettings({
                 status={project.activeEnvironment}
                 label={
                   project.activeEnvironment === 'sandbox'
-                    ? 'Sandbox (Test Mode)'
-                    : 'Production (Live)'
+                    ? 'Sandbox'
+                    : 'Production'
                 }
                 title={
                   project.activeEnvironment === 'sandbox'
                     ? 'Operating in Sandbox — Live customer data is not affected'
-                    : 'Live Production Sync active'
+                    : 'Production Sync active'
                 }
                 size="sm"
               />
@@ -499,7 +499,7 @@ export default function OrganisationProjectSettings({
 
   return (
     <div
-      className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[250px_minmax(0,1fr)]"
+      className="grid min-w-0 grid-cols-1 items-start gap-4 lg:grid-cols-[250px_minmax(0,1fr)]"
       role="region"
       aria-label="Project settings"
     >

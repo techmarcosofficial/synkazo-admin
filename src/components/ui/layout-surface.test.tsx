@@ -12,31 +12,52 @@ afterEach(() => {
   cleanup();
   useDisplayPreferencesStore.setState({
     defaultView: 'table',
-    layoutStyle: 'contrast',
+    layoutStyle: 'shadow',
   });
-  document.documentElement.dataset.layoutStyle = 'contrast';
+  document.documentElement.dataset.layoutStyle = 'shadow';
   localStorage.clear();
 });
 
 describe('layout style preference', () => {
+  it('defaults to shadow and persists changes to outline (contrast)', () => {
+    localStorage.clear();
+    useDisplayPreferencesStore.setState({
+      defaultView: 'table',
+      layoutStyle: 'shadow',
+    });
+
+    useDisplayPreferencesStore.getState().setLayoutStyle('contrast');
+
+    expect(document.documentElement).toHaveAttribute(
+      'data-layout-style',
+      'contrast',
+    );
+    expect(
+      JSON.parse(localStorage.getItem('sb_display_prefs') || '{}'),
+    ).toEqual({
+      defaultView: 'table',
+      layoutStyle: 'contrast',
+    });
+  });
+
   it('persists the layout style without replacing the default view', () => {
     localStorage.clear();
     useDisplayPreferencesStore.setState({
       defaultView: 'card',
-      layoutStyle: 'contrast',
+      layoutStyle: 'shadow',
     });
 
-    useDisplayPreferencesStore.getState().setLayoutStyle('shadow');
+    useDisplayPreferencesStore.getState().setLayoutStyle('contrast');
 
     expect(document.documentElement).toHaveAttribute(
       'data-layout-style',
-      'shadow',
+      'contrast',
     );
     expect(
       JSON.parse(localStorage.getItem('sb_display_prefs') || '{}'),
     ).toEqual({
       defaultView: 'card',
-      layoutStyle: 'shadow',
+      layoutStyle: 'contrast',
     });
   });
 

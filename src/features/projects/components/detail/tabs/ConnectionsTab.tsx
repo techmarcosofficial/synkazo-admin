@@ -28,6 +28,7 @@ export default function ConnectionsTab() {
         onContinue={onCreateSyncRule}
         projectActiveEnv={projectActiveEnv}
         reloadKey={connReloadKey}
+        asCard={false}
       />
     </div>
   );

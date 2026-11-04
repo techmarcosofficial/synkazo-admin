@@ -503,13 +503,13 @@ export default function OrganisationContextHeader() {
                     status={project.activeEnvironment}
                     label={
                       project.activeEnvironment === 'sandbox'
-                        ? 'Sandbox (Test Mode)'
-                        : 'Production (Live)'
+                        ? 'Sandbox'
+                        : 'Production'
                     }
                     title={
                       project.activeEnvironment === 'sandbox'
                         ? 'Operating in Sandbox — Live customer data is not affected'
-                        : 'Live Production Sync active'
+                        : 'Production Sync active'
                     }
                     size="sm"
                   />

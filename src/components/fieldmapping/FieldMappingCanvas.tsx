@@ -15,7 +15,6 @@ import {
   GripVertical,
   ListFilter,
   MoreHorizontal,
-  MoreVertical,
   Pencil,
   KeyRound,
   Lock,
@@ -114,6 +113,10 @@ import {
 } from '@/lib/fieldMatching';
 import { suggestCastRule, type Rule } from '@/lib/ruleEngine';
 import { combineMappingName, type CombineConfig } from '@/lib/combineFields';
+import {
+  isReversibleTransform,
+  ONE_WAY_TRANSFORM_HINT,
+} from '@/lib/transformReversibility';
 import { cn } from '@/lib/utils';
 import { useEntitlements } from '@/queries/useEntitlements';
 
@@ -948,6 +951,8 @@ interface FieldMappingCanvasProps {
   targetSection?: TargetDrawerSection;
   /** Callback to clear deep link parameters after focus */
   onClearTarget?: () => void;
+  /** Additional items to render at the top of the mapping toolbar 3-dots dropdown menu */
+  extraDropdownItems?: ReactNode;
 }
 
 export default function FieldMappingCanvas({
@@ -980,6 +985,7 @@ export default function FieldMappingCanvas({
   targetField,
   targetSection,
   onClearTarget,
+  extraDropdownItems,
 }: FieldMappingCanvasProps) {
   const attentionSectionRef = useRef<HTMLDivElement>(null);
   const [showComposer, setShowComposer] = useState(false);
@@ -1036,8 +1042,6 @@ export default function FieldMappingCanvas({
   const [newlyAddedKeys, setNewlyAddedKeys] = useState<Set<string>>(new Set());
   // Single key that was JUST added to trigger smooth scroll and pulse highlight
   const [justAddedKey, setJustAddedKey] = useState<string | null>(null);
-  // Track open 3-dot dropdown menu to maintain smooth slide position while open
-  const [openDropdownPair, setOpenDropdownPair] = useState<string | null>(null);
 
   // Snapshot of mappings prior to the latest auto-map run, enabling 1-click rollback
   const [lastAutoMapSnapshot, setLastAutoMapSnapshot] = useState<
@@ -2284,41 +2288,6 @@ export default function FieldMappingCanvas({
         )}
       </InputGroup>
 
-      {readOnlyDestFields.length > 0 && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant={showReadOnlyFields ? 'secondary' : 'outline'}
-              size={toolbarControlSize}
-              onClick={() => setShowReadOnlyFields((prev) => !prev)}
-              aria-expanded={showReadOnlyFields}
-              className={cn(
-                'h-8 shrink-0 gap-1.5 text-xs transition-colors',
-                showReadOnlyFields
-                  ? 'bg-muted text-foreground border-border font-medium'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              <Lock className="size-3.5" />
-              <span>Read-only</span>
-              <Badge
-                variant="secondary"
-                size="xs"
-                className="ml-0.5 text-[10px]"
-              >
-                {readOnlyDestFields.length}
-              </Badge>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            {showReadOnlyFields
-              ? 'Hide unmappable destination fields'
-              : `Show the ${readOnlyDestFields.length} destination fields that can't be mapped to`}
-          </TooltipContent>
-        </Tooltip>
-      )}
-
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
@@ -2365,7 +2334,9 @@ export default function FieldMappingCanvas({
             <MoreHorizontal className="size-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-52">
+        <DropdownMenuContent align="end" className="w-56">
+          {extraDropdownItems}
+          {extraDropdownItems && <DropdownMenuSeparator />}
           <DropdownMenuItem
             onClick={() => {
               if (!canUseTransforms) {
@@ -2374,7 +2345,7 @@ export default function FieldMappingCanvas({
               }
               setShowCombineComposer(true);
             }}
-            className="gap-2 text-xs"
+            className="cursor-pointer gap-2 text-xs"
           >
             {!canUseTransforms ? (
               <Lock className="text-muted-foreground size-3.5" />
@@ -2386,7 +2357,7 @@ export default function FieldMappingCanvas({
           {readOnlyDestFields.length > 0 && (
             <DropdownMenuItem
               onClick={() => setShowReadOnlyFields((prev) => !prev)}
-              className="gap-2 text-xs"
+              className="cursor-pointer gap-2 text-xs"
             >
               <Lock className="text-muted-foreground size-3.5" />
               <span>
@@ -2408,7 +2379,7 @@ export default function FieldMappingCanvas({
                 onConfirm: () => onMappingsChange([]),
               })
             }
-            className="text-destructive focus:text-destructive focus:bg-destructive/10 gap-2 text-xs"
+            className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer gap-2 text-xs"
           >
             <Trash2 className="size-3.5" />
             <span>Clear all mappings</span>
@@ -3479,7 +3450,18 @@ export default function FieldMappingCanvas({
                         (n) => n.blocking,
                       );
                       const primaryIssue = rowAttentionIssues[0];
-                      const direction = m.direction ?? 'bidirectional';
+                      // Same per-destination transform the save payload uses.
+                      const rowReversible = isReversibleTransform(
+                        m.transformType,
+                        m.transformType !== 'combine' && m.destRules?.[dk]
+                          ? { rules: m.destRules[dk] }
+                          : m.transformConfig,
+                      );
+                      const direction: MappingDirection = rowReversible
+                        ? (m.direction ?? 'bidirectional')
+                        : m.direction === 'reverse_only'
+                          ? 'reverse_only'
+                          : 'forward_only';
                       const rowDirectionReadOnly =
                         m.transformType === 'combine' ||
                         m.sourceField.startsWith('__cross_object__:') ||
@@ -3771,15 +3753,26 @@ export default function FieldMappingCanvas({
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent align="start">
-                                    {DIRECTION_OPTIONS.map((o) => (
-                                      <SelectItem
-                                        key={o.value}
-                                        value={o.value}
-                                        className="text-xs"
-                                      >
-                                        {o.label}
-                                      </SelectItem>
-                                    ))}
+                                    {DIRECTION_OPTIONS.map((o) => {
+                                      const blocked =
+                                        o.value === 'bidirectional' &&
+                                        !rowReversible;
+                                      return (
+                                        <SelectItem
+                                          key={o.value}
+                                          value={o.value}
+                                          disabled={blocked}
+                                          title={
+                                            blocked
+                                              ? ONE_WAY_TRANSFORM_HINT
+                                              : undefined
+                                          }
+                                          className="text-xs"
+                                        >
+                                          {o.label}
+                                        </SelectItem>
+                                      );
+                                    })}
                                   </SelectContent>
                                 </Select>
                               )}
@@ -3868,150 +3861,8 @@ export default function FieldMappingCanvas({
                                 </Button>
                               </div>
                             ) : (
-                              <div className="relative flex items-center justify-end">
-                                {/* 3-dots Dropdown Trigger: anchored at far right, smoothly revealed when front buttons slide left */}
-                                <div className="absolute right-0 flex items-center justify-center">
-                                  <DropdownMenu
-                                    open={openDropdownPair === pairKey}
-                                    onOpenChange={(open) =>
-                                      setOpenDropdownPair(open ? pairKey : null)
-                                    }
-                                  >
-                                    <DropdownMenuTrigger asChild>
-                                      <button
-                                        type="button"
-                                        className={cn(
-                                          'text-muted-foreground hover:text-foreground hover:bg-muted/70 flex size-7 cursor-pointer items-center justify-center rounded-lg transition-all duration-200 ease-out outline-none',
-                                          'opacity-0 group-hover/row:opacity-100',
-                                          openDropdownPair === pairKey &&
-                                            'opacity-100',
-                                        )}
-                                        aria-label="More row options"
-                                      >
-                                        <MoreVertical className="size-4 shrink-0 transition-colors" />
-                                      </button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent
-                                      align="end"
-                                      className="w-52"
-                                    >
-                                      <DropdownMenuItem
-                                        onClick={() =>
-                                          openSettingsDrawer(
-                                            m.sourceField,
-                                            dk,
-                                            'all',
-                                          )
-                                        }
-                                        className="gap-2 text-xs"
-                                      >
-                                        <Settings2 className="text-primary size-3.5" />
-                                        <span>Field Settings</span>
-                                      </DropdownMenuItem>
-
-                                      <DropdownMenuItem
-                                        onClick={() =>
-                                          openSettingsDrawer(
-                                            m.sourceField,
-                                            dk,
-                                            'transforms',
-                                          )
-                                        }
-                                        className="gap-2 text-xs"
-                                      >
-                                        <Zap className="text-warning size-3.5" />
-                                        <span>Transform Rules</span>
-                                      </DropdownMenuItem>
-
-                                      <DropdownMenuItem
-                                        onClick={() =>
-                                          openSettingsDrawer(
-                                            m.sourceField,
-                                            dk,
-                                            'fallbacks',
-                                          )
-                                        }
-                                        className="gap-2 text-xs"
-                                      >
-                                        <Settings2 className="text-muted-foreground size-3.5" />
-                                        <span>Default Values</span>
-                                      </DropdownMenuItem>
-
-                                      <DropdownMenuItem
-                                        onClick={() =>
-                                          openSettingsDrawer(
-                                            m.sourceField,
-                                            dk,
-                                            'skips',
-                                          )
-                                        }
-                                        className="gap-2 text-xs"
-                                      >
-                                        <Filter className="text-primary size-3.5" />
-                                        <span>Skip Conditions</span>
-                                      </DropdownMenuItem>
-
-                                      <DropdownMenuSeparator />
-
-                                      <DropdownMenuItem
-                                        onClick={() =>
-                                          toggleMatch(m.sourceField, dk)
-                                        }
-                                        className="gap-2 text-xs"
-                                      >
-                                        <KeyRound className="text-primary size-3.5" />
-                                        <span>
-                                          {isMatch
-                                            ? 'Unset Identifier'
-                                            : 'Set as Identifier'}
-                                        </span>
-                                      </DropdownMenuItem>
-
-                                      <DropdownMenuItem
-                                        onClick={() =>
-                                          setUpdatePolicy(
-                                            m.sourceField,
-                                            dk,
-                                            updatePolicy === 'create_only'
-                                              ? 'always'
-                                              : 'create_only',
-                                          )
-                                        }
-                                        className="gap-2 text-xs"
-                                      >
-                                        <ArrowRight className="size-3.5" />
-                                        <span>
-                                          {updatePolicy === 'create_only'
-                                            ? 'Policy: Overwrite'
-                                            : 'Policy: Create Only'}
-                                        </span>
-                                      </DropdownMenuItem>
-
-                                      <DropdownMenuSeparator />
-
-                                      <DropdownMenuItem
-                                        className="text-destructive focus:text-destructive focus:bg-destructive/10 gap-2 text-xs"
-                                        onClick={() =>
-                                          remove(m.sourceField, dk)
-                                        }
-                                      >
-                                        <X className="size-3.5" />
-                                        <span>Remove Mapping</span>
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </div>
-
-                                {/* Front action buttons: smooth 28px slide-to-reveal on row hover */}
-                                <div
-                                  className={cn(
-                                    'flex items-center gap-1.5 transition-transform duration-200 ease-out',
-                                    'group-hover/row:-translate-x-7',
-                                    openDropdownPair === pairKey &&
-                                      '-translate-x-7',
-                                  )}
-                                >
-                                  {hasAttentionIssue && primaryIssue ? (
+                              <div className="flex items-center justify-end gap-1.5">
+                                {hasAttentionIssue && primaryIssue ? (
                                     <Button
                                       type="button"
                                       size="sm"
@@ -4234,7 +4085,6 @@ export default function FieldMappingCanvas({
                                     </TooltipContent>
                                   </Tooltip>
                                 </div>
-                              </div>
                             )}
                           </TableCell>
                         </TableRow>
