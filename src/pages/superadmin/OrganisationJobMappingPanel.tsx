@@ -1,4 +1,4 @@
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Link2, ShieldCheck, Sparkles } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -14,7 +14,9 @@ import { FieldMappingDraftFooter, FieldMappingWorkspaceHeader } from '@/componen
 import JobFiltersDialog from '@/components/fieldmapping/JobFiltersDialog';
 import ErrorState from '@/components/shared/ErrorState';
 import SkeletonList from '@/components/shared/skeletons/SkeletonList';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { toFieldMappingPayload } from '@/features/jobs/components/create/mappingPayload';
 import { supportsCrossObjectProperties } from '@/components/fieldmapping/supportsCrossObjectProperties';
 import type { ConsolidatedMapping } from '@/features/jobs/hooks';
@@ -299,9 +301,51 @@ export default function OrganisationJobMappingPanel({ organisationId, project, j
         onOpenCrossObject={() => setCrossObjectOpen(true)}
         setToolbarContainer={setToolbarContainer}
       />
-      <div className="space-y-4 p-5">
+      <div className="space-y-4">
         {crossObjectError && <p role="alert" className="text-destructive text-xs">Cross-object properties could not be loaded. Open Cross-Object to retry.</p>}
         <FieldMappingCanvas
+          extraDropdownItems={
+            <>
+              <DropdownMenuItem
+                onClick={() => setFiltersOpen(true)}
+                className="cursor-pointer gap-2 text-xs"
+              >
+                <ShieldCheck className="text-primary size-3.5" />
+                <span>Job Filters</span>
+                {sourceConditions.length + destinationConditions.length > 0 && (
+                  <Badge variant="secondary" size="xs" className="ml-auto text-[10px]">
+                    {sourceConditions.length + destinationConditions.length}
+                  </Badge>
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setDefaultsOpen(true)}
+                className="cursor-pointer gap-2 text-xs"
+              >
+                <Sparkles className="text-primary size-3.5" />
+                <span>Default Values</span>
+                {defaultValuesCount > 0 && (
+                  <Badge variant="secondary" size="xs" className="ml-auto text-[10px]">
+                    {defaultValuesCount}
+                  </Badge>
+                )}
+              </DropdownMenuItem>
+              {hasCrossObject && (
+                <DropdownMenuItem
+                  onClick={() => setCrossObjectOpen(true)}
+                  className="cursor-pointer gap-2 text-xs"
+                >
+                  <Link2 className="text-primary size-3.5" />
+                  <span>Cross-Object</span>
+                  {crossObjectProperties.length > 0 && (
+                    <Badge variant="secondary" size="xs" className="ml-auto text-[10px]">
+                      {crossObjectProperties.length}
+                    </Badge>
+                  )}
+                </DropdownMenuItem>
+              )}
+            </>
+          }
           sourceFields={effectiveSourceFields as unknown as FieldDef[]}
           destFields={destCanvasFields as unknown as FieldDef[]}
           mappings={rows}

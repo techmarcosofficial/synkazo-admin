@@ -499,7 +499,7 @@ export default function OrganisationProjectSettings({
 
   return (
     <div
-      className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[250px_minmax(0,1fr)]"
+      className="grid min-w-0 grid-cols-1 items-start gap-4 lg:grid-cols-[250px_minmax(0,1fr)]"
       role="region"
       aria-label="Project settings"
     >

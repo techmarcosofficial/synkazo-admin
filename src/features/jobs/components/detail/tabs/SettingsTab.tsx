@@ -210,11 +210,11 @@ export default function SettingsTab() {
   }
 
   return (
-    <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[250px_minmax(0,1fr)]">
-      <aside className="min-w-0" aria-label="Job settings">
+    <div className="grid min-w-0 grid-cols-1 items-start gap-4 lg:grid-cols-[250px_minmax(0,1fr)]">
+      <aside className="min-w-0 self-start" aria-label="Job settings">
         <Card
           size="sm"
-          className="top-[calc(var(--detail-sticky-top)+var(--detail-header-height)+(--spacing(4)))] gap-0 py-0 lg:sticky"
+          className="gap-0 py-0"
         >
           <CardHeader className="px-3.5 py-3">
             <CardTitle>

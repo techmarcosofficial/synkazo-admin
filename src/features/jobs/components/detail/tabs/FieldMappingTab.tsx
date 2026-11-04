@@ -4,6 +4,7 @@ import {
   Filter,
   Link2,
   ShieldCheck,
+  Sparkles,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -29,6 +30,7 @@ export { supportsCrossObjectProperties } from '@/components/fieldmapping/support
 import JobFiltersDialog from '@/components/fieldmapping/JobFiltersDialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   consolidateMappings,
@@ -104,7 +106,7 @@ function FieldMappingSkeleton() {
       role="status"
       aria-label="Loading field mappings"
     >
-      <div className="flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 pb-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex gap-2">
           <Skeleton className="h-8 w-28 rounded-xl" />
           <Skeleton className="h-8 w-32 rounded-xl" />
@@ -773,186 +775,221 @@ export default function FieldMappingTab() {
 
       <div className="space-y-4">
         <FieldMappingWorkspaceHeader
-            mappedCount={fieldMappings.length}
-            dirty={anyDirty}
-            filtersCount={totalFiltersCount}
-            defaultsCount={defaultValuesCount}
-            crossObjectCount={crossObjectProperties.length}
-            showCrossObject={supportsCrossObjectProperties(srcPlatform)}
-            onOpenFilters={() => setShowJobFiltersDialog(true)}
-            onOpenDefaults={() => setShowDefaultValuesDialog(true)}
-            onOpenCrossObject={() => setShowCrossObjectDialog(true)}
-            setToolbarContainer={setMappingToolbarContainer}
-          />
+          mappedCount={fieldMappings.length}
+          setToolbarContainer={setMappingToolbarContainer}
+          hideActionButtons
+        />
 
-          <div className="space-y-4 p-5">
-            {fieldMappings.length > 0 &&
-              !fieldMappings.some((mapping) => mapping.matchDestKey) && (
-                <div className="border-warning/30 bg-warning/10 flex items-start gap-3 rounded-3xl border px-4 py-3.5">
-                  <AlertTriangle className="text-warning mt-0.5 size-4 shrink-0" />
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-foreground text-xs font-semibold">
-                        How should we identify matching records?
-                      </p>
-                      <Badge
-                        size="xs"
-                        variant="secondary"
-                        className="bg-primary/10 text-primary border-primary/20 border"
-                      >
-                        Unique Identifier
-                      </Badge>
-                    </div>
-                    <p className="text-muted-foreground text-xs leading-relaxed">
-                      Set at least one mapped field (like{' '}
-                      <strong className="text-foreground">Email</strong> or{' '}
-                      <strong className="text-foreground">Record ID</strong>) as
-                      a unique identifier using the Set Identifier button or row
-                      options. Synkazo uses this to identify matching records
-                      and update them instead of creating duplicates.
+        <div className="space-y-4">
+          {fieldMappings.length > 0 &&
+            !fieldMappings.some((mapping) => mapping.matchDestKey) && (
+              <div className="border-warning/30 bg-warning/10 flex items-start gap-3 rounded-3xl border px-4 py-3.5">
+                <AlertTriangle className="text-warning mt-0.5 size-4 shrink-0" />
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <p className="text-foreground text-xs font-semibold">
+                      How should we identify matching records?
                     </p>
+                    <Badge
+                      size="xs"
+                      variant="secondary"
+                      className="bg-primary/10 text-primary border-primary/20 border"
+                    >
+                      Unique Identifier
+                    </Badge>
                   </div>
+                  <p className="text-muted-foreground text-xs leading-relaxed">
+                    Set at least one mapped field (like{' '}
+                    <strong className="text-foreground">Email</strong> or{' '}
+                    <strong className="text-foreground">Record ID</strong>) as
+                    a unique identifier using the Set Identifier button or row
+                    options. Synkazo uses this to identify matching records
+                    and update them instead of creating duplicates.
+                  </p>
                 </div>
-              )}
-
-            {/* Active Job-Level Record Filters Summary Banner */}
-            {totalFiltersCount > 0 && (
-              <div
-                className="bg-muted/40 border-border/70 flex flex-col gap-2.5 rounded-2xl border p-3.5 text-xs sm:flex-row sm:items-center sm:justify-between"
-                data-testid="job-filters-active-summary"
-              >
-                <div className="flex min-w-0 flex-1 items-start gap-2.5 sm:items-center">
-                  <div className="bg-primary/10 text-primary mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl sm:mt-0">
-                    <ShieldCheck className="size-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-foreground font-semibold">
-                        Active Job-Level Record Filters
-                      </span>
-                      {excludeConditions.length > 0 && (
-                        <Badge
-                          variant="secondary"
-                          className="bg-primary/10 text-primary border-primary/20 text-[11px] font-medium"
-                        >
-                          Source:{' '}
-                          {
-                            excludeConditions.filter((c) => c.enabled !== false)
-                              .length
-                          }{' '}
-                          Active ({excludeConditionLogic})
-                        </Badge>
-                      )}
-                      {destinationSkipConditions.length > 0 && (
-                        <Badge
-                          variant="secondary"
-                          className="bg-primary/10 text-primary border-primary/20 text-[11px] font-medium"
-                        >
-                          Destination:{' '}
-                          {
-                            destinationSkipConditions.filter(
-                              (c) => c.enabled !== false,
-                            ).length
-                          }{' '}
-                          Guards
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-muted-foreground mt-0.5 truncate text-xs">
-                      {excludeConditions.length > 0 &&
-                      destinationSkipConditions.length > 0
-                        ? 'Records will be skipped from sync if source conditions match, or destination guard matches.'
-                        : excludeConditions.length > 0
-                          ? 'Records matching source criteria will be skipped before syncing.'
-                          : 'Records will be skipped when destination guard criteria match.'}
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowJobFiltersDialog(true)}
-                  className="h-8 shrink-0 gap-1.5 self-end text-xs font-medium sm:self-center"
-                >
-                  <Filter className="size-3" />
-                  <span>Configure Filters</span>
-                </Button>
               </div>
             )}
 
-            <FieldMappingCanvas
-              isDirty={mappingDirty}
-              sourceFields={
-                effectiveSourceFields as unknown as CanvasFieldDef[]
-              }
-              destFields={destFields as unknown as CanvasFieldDef[]}
-              mappings={fieldMappings as unknown as CanvasMappingRow[]}
-              onMappingsChange={
-                handleMappingsChange as unknown as (
-                  mappings: CanvasMappingRow[],
-                ) => void
-              }
-              excludeConditions={excludeConditions}
-              onExcludeConditionsChange={(conditions) =>
-                handleExcludeConditionsChange(conditions, excludeConditionLogic)
-              }
-              sourcePlatform={srcPlatform}
-              destPlatform={dstPlatform}
-              sourceObject={fmtObject(job.sourceObject)}
-              destObject={fmtObject(job.destObject)}
-              onRefreshFields={() => loadFields(true)}
-              fieldsLoading={fieldsLoading}
-              projectId={projectId}
-              jobId={job.id}
-              onAddSourceField={null}
-              onAddDestField={null}
-              showDirectionToggle={job.syncDirection === 'two_way'}
-              showHeading={false}
-              toolbarContainer={mappingToolbarContainer}
-              toolbarControlSize="default"
-              directionReadOnly={(row) =>
-                mappingMode === 'edit' &&
-                persistedSourceFieldsRef.current.has(row.sourceField)
-              }
-              isFirstTime={isFirstTime}
-              scrollToAttentionSignal={attentionSignal}
-              targetField={targetField}
-              targetSection={targetSection}
-              onClearTarget={handleClearTarget}
-            />
-
-            <div className="border-border/60 bg-muted/40 mt-4 flex flex-col gap-3 rounded-2xl border p-3.5 text-xs sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-xl">
-                  <Link2 className="size-4" />
+          {/* Active Job-Level Record Filters Summary Banner */}
+          {totalFiltersCount > 0 && (
+            <div
+              className="bg-muted/40 border-border/70 flex flex-col gap-2.5 rounded-2xl border p-3.5 text-xs sm:flex-row sm:items-center sm:justify-between"
+              data-testid="job-filters-active-summary"
+            >
+              <div className="flex min-w-0 flex-1 items-start gap-2.5 sm:items-center">
+                <div className="bg-primary/10 text-primary mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl sm:mt-0">
+                  <ShieldCheck className="size-4" />
                 </div>
-                <div>
-                  <p className="text-foreground font-semibold">
-                    Need to link related records together?
-                  </p>
-                  <p className="text-muted-foreground text-xs">
-                    Configure Record Associations to automatically link synced
-                    records (e.g. Contacts to Companies or Jobs to Customers).
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-foreground font-semibold">
+                      Active Job-Level Record Filters
+                    </span>
+                    {excludeConditions.length > 0 && (
+                      <Badge
+                        variant="secondary"
+                        className="bg-primary/10 text-primary border-primary/20 text-[11px] font-medium"
+                      >
+                        Source:{' '}
+                        {
+                          excludeConditions.filter((c) => c.enabled !== false)
+                            .length
+                        }{' '}
+                        Active ({excludeConditionLogic})
+                      </Badge>
+                    )}
+                    {destinationSkipConditions.length > 0 && (
+                      <Badge
+                        variant="secondary"
+                        className="bg-primary/10 text-primary border-primary/20 text-[11px] font-medium"
+                      >
+                        Destination:{' '}
+                        {
+                          destinationSkipConditions.filter(
+                            (c) => c.enabled !== false,
+                          ).length
+                        }{' '}
+                        Guards
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-muted-foreground mt-0.5 truncate text-xs">
+                    {excludeConditions.length > 0 &&
+                    destinationSkipConditions.length > 0
+                      ? 'Records will be skipped from sync if source conditions match, or destination guard matches.'
+                      : excludeConditions.length > 0
+                        ? 'Records matching source criteria will be skipped before syncing.'
+                        : 'Records will be skipped when destination guard criteria match.'}
                   </p>
                 </div>
               </div>
               <Button
-                asChild
+                type="button"
                 variant="outline"
                 size="sm"
-                className="shrink-0 gap-1.5 text-xs font-medium"
+                onClick={() => setShowJobFiltersDialog(true)}
+                className="h-8 shrink-0 gap-1.5 self-end text-xs font-medium sm:self-center"
               >
-                <Link
-                  to={`/projects/${projectId}?tab=settings&section=associations`}
-                >
-                  <span>Configure Associations</span>
-                  <ExternalLink className="size-3.5" />
-                </Link>
+                <Filter className="size-3" />
+                <span>Configure Filters</span>
               </Button>
             </div>
+          )}
+
+          <FieldMappingCanvas
+            extraDropdownItems={
+              <>
+                <DropdownMenuItem
+                  onClick={() => setShowJobFiltersDialog(true)}
+                  className="cursor-pointer gap-2 text-xs"
+                >
+                  <ShieldCheck className="text-primary size-3.5" />
+                  <span>Job Filters</span>
+                  {totalFiltersCount > 0 && (
+                    <Badge variant="secondary" size="xs" className="ml-auto text-[10px]">
+                      {totalFiltersCount}
+                    </Badge>
+                  )}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setShowDefaultValuesDialog(true)}
+                  className="cursor-pointer gap-2 text-xs"
+                >
+                  <Sparkles className="text-primary size-3.5" />
+                  <span>Default Values</span>
+                  {defaultValuesCount > 0 && (
+                    <Badge variant="secondary" size="xs" className="ml-auto text-[10px]">
+                      {defaultValuesCount}
+                    </Badge>
+                  )}
+                </DropdownMenuItem>
+                {supportsCrossObjectProperties(srcPlatform) && (
+                  <DropdownMenuItem
+                    onClick={() => setShowCrossObjectDialog(true)}
+                    className="cursor-pointer gap-2 text-xs"
+                  >
+                    <Link2 className="text-primary size-3.5" />
+                    <span>Cross-Object</span>
+                    {crossObjectProperties.length > 0 && (
+                      <Badge variant="secondary" size="xs" className="ml-auto text-[10px]">
+                        {crossObjectProperties.length}
+                      </Badge>
+                    )}
+                  </DropdownMenuItem>
+                )}
+              </>
+            }
+            isDirty={mappingDirty}
+            sourceFields={
+              effectiveSourceFields as unknown as CanvasFieldDef[]
+            }
+            destFields={destFields as unknown as CanvasFieldDef[]}
+            mappings={fieldMappings as unknown as CanvasMappingRow[]}
+            onMappingsChange={
+              handleMappingsChange as unknown as (
+                mappings: CanvasMappingRow[],
+              ) => void
+            }
+            excludeConditions={excludeConditions}
+            onExcludeConditionsChange={(conditions) =>
+              handleExcludeConditionsChange(conditions, excludeConditionLogic)
+            }
+            sourcePlatform={srcPlatform}
+            destPlatform={dstPlatform}
+            sourceObject={fmtObject(job.sourceObject)}
+            destObject={fmtObject(job.destObject)}
+            onRefreshFields={() => loadFields(true)}
+            fieldsLoading={fieldsLoading}
+            projectId={projectId}
+            jobId={job.id}
+            onAddSourceField={null}
+            onAddDestField={null}
+            showDirectionToggle={job.syncDirection === 'two_way'}
+            showHeading={false}
+            toolbarContainer={mappingToolbarContainer}
+            toolbarControlSize="default"
+            directionReadOnly={(row) =>
+              mappingMode === 'edit' &&
+              persistedSourceFieldsRef.current.has(row.sourceField)
+            }
+            isFirstTime={isFirstTime}
+            scrollToAttentionSignal={attentionSignal}
+            targetField={targetField}
+            targetSection={targetSection}
+            onClearTarget={handleClearTarget}
+          />
+
+          <div className="border-border/60 bg-muted/40 flex flex-col gap-3 rounded-2xl border p-3.5 text-xs sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-xl">
+                <Link2 className="size-4" />
+              </div>
+              <div>
+                <p className="text-foreground font-semibold">
+                  Need to link related records together?
+                </p>
+                <p className="text-muted-foreground text-xs">
+                  Configure Record Associations to automatically link synced
+                  records (e.g. Contacts to Companies or Jobs to Customers).
+                </p>
+              </div>
+            </div>
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="shrink-0 gap-1.5 text-xs font-medium"
+            >
+              <Link
+                to={`/projects/${projectId}?tab=settings&section=associations`}
+              >
+                <span>Configure Associations</span>
+                <ExternalLink className="size-3.5" />
+              </Link>
+            </Button>
           </div>
         </div>
+      </div>
 
       <FieldMappingDraftFooter
         dirty={anyDirty}

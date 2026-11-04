@@ -34,10 +34,10 @@ export default function ProjectSettingsNavigation({
   selectId?: string;
 }) {
   return (
-    <aside className="min-w-0" aria-label={title}>
+    <aside className="min-w-0 self-start" aria-label={title}>
       <Card
         size="sm"
-        className="top-[calc(var(--detail-sticky-top)+var(--detail-header-height)+(--spacing(4)))] gap-0 py-0 lg:sticky"
+        className="gap-0 py-0"
       >
         <CardHeader className="px-3.5 py-3">
           <CardTitle>{title}</CardTitle>

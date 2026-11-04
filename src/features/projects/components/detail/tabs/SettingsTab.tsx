@@ -167,7 +167,7 @@ export default function SettingsTab() {
   );
 
   return (
-    <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[250px_minmax(0,1fr)]">
+    <div className="grid min-w-0 grid-cols-1 items-start gap-4 lg:grid-cols-[250px_minmax(0,1fr)]">
       <ProjectSettingsNavigation
         activeId={activeSection.id}
         items={sections.map((section) => ({

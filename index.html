@@ -1,7 +1,18 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-layout-style="shadow">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      (function () {
+        try {
+          var prefs = JSON.parse(localStorage.getItem('sb_display_prefs') || '{}');
+          var style = prefs.layoutStyle === 'contrast' ? 'contrast' : 'shadow';
+          document.documentElement.dataset.layoutStyle = style;
+        } catch (e) {
+          document.documentElement.dataset.layoutStyle = 'shadow';
+        }
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="manifest" href="/manifest.json" />
