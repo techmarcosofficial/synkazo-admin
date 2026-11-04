@@ -195,11 +195,18 @@ describe('Platform overview', () => {
     ).not.toBeInTheDocument();
     expect(
       screen.getByRole('link', { name: /Active paid organisations/ }),
-    ).toHaveAttribute('href', '/super-admin/overview#overview-customers');
+    ).toHaveAttribute(
+      'href',
+      '/super-admin/organisations?status=active&subscriptionStatus=confirmed_paid',
+    );
     expect(screen.getByText('Unassigned').closest('a')).toHaveAttribute(
       'href',
       '/super-admin/organisations?planId=unassigned',
     );
+    expect(
+      screen.getByText('Processing & Sync Reliability'),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Period data updated/)).not.toHaveTextContent('UTC');
   });
 
   it('renders clickable links for customer portfolio plan bars with relevant planId filter', async () => {

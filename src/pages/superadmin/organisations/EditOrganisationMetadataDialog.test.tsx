@@ -8,8 +8,6 @@ import EditOrganisationMetadataDialog, {
 const initialData: EditOrganisationMetadataInitial = {
   name: 'Acme Services',
   description: 'Original description',
-  logoUrl: 'https://example.com/logo.png',
-  defaultCurrency: 'USD',
 };
 
 function renderDialog(
@@ -40,8 +38,8 @@ describe('EditOrganisationMetadataDialog', () => {
 
     expect(screen.getByLabelText(/^Name/i)).toHaveValue('Acme Services');
     expect(screen.getByLabelText(/Description/i)).toHaveValue('Original description');
-    expect(screen.getByLabelText(/Logo URL/i)).toHaveValue('https://example.com/logo.png');
-    expect(screen.getByLabelText(/Default currency/i)).toHaveValue('USD');
+    expect(screen.queryByLabelText(/Logo URL/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Default currency/i)).not.toBeInTheDocument();
   });
 
   it('retains user modifications when props change (e.g. isSubmitting: true with new initial ref) without wiping them out', () => {
@@ -94,27 +92,10 @@ describe('EditOrganisationMetadataDialog', () => {
     });
   });
 
-  it('normalises currency to uppercase and packages into settings DTO', async () => {
-    const { onSubmit } = renderDialog();
-
-    fireEvent.change(screen.getByLabelText(/Default currency/i), {
-      target: { value: 'eur' },
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
-
-    await waitFor(() => {
-      expect(onSubmit).toHaveBeenCalledWith({
-        settings: { defaultCurrency: 'EUR' },
-      });
-    });
-  });
-
   it('keeps save button enabled and shows validation errors on click, clearing on change', async () => {
     const { onSubmit } = renderDialog();
 
     const nameInput = screen.getByLabelText(/^Name/i);
-    const currencyInput = screen.getByLabelText(/Default currency/i);
     const saveButton = screen.getByRole('button', { name: /save changes/i });
 
     // Button is always enabled (active submit pattern)
@@ -133,25 +114,6 @@ describe('EditOrganisationMetadataDialog', () => {
     fireEvent.change(nameInput, { target: { value: 'Valid Name' } });
     await waitFor(() => {
       expect(screen.queryByText('Organisation name is required')).not.toBeInTheDocument();
-    });
-
-    // Invalid currency (only 2 letters)
-    fireEvent.change(currencyInput, { target: { value: 'US' } });
-    fireEvent.click(saveButton);
-
-    await waitFor(() => {
-      expect(
-        screen.getByText('Must be a 3-letter currency code (e.g. USD, EUR)'),
-      ).toBeInTheDocument();
-    });
-    expect(onSubmit).not.toHaveBeenCalled();
-
-    // Correcting currency clears the error
-    fireEvent.change(currencyInput, { target: { value: 'USD' } });
-    await waitFor(() => {
-      expect(
-        screen.queryByText('Must be a 3-letter currency code (e.g. USD, EUR)'),
-      ).not.toBeInTheDocument();
     });
   });
 

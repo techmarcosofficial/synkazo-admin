@@ -162,6 +162,37 @@ describe('OrganisationsPage', () => {
     ).toBe('past_due');
   });
 
+  it('forwards subscriptionStatus=confirmed_paid and status=active URL params to the query', async () => {
+    renderAt(
+      '/super-admin/organisations?status=active&subscriptionStatus=confirmed_paid',
+    );
+    await screen.findByText('Northwind HVAC');
+    expect(
+      (
+        mocks.lastParams as {
+          status?: string;
+          subscriptionStatus?: string;
+        }
+      )?.status,
+    ).toBe('active');
+    expect(
+      (
+        mocks.lastParams as {
+          status?: string;
+          subscriptionStatus?: string;
+        }
+      )?.subscriptionStatus,
+    ).toBe('confirmed_paid');
+  });
+
+  it('forwards legacy billing=confirmed_paid query param alias to subscriptionStatus', async () => {
+    renderAt('/super-admin/organisations?billing=confirmed_paid');
+    await screen.findByText('Northwind HVAC');
+    expect(
+      (mocks.lastParams as { subscriptionStatus?: string })?.subscriptionStatus,
+    ).toBe('confirmed_paid');
+  });
+
   it('forwards planId URL params to the query', async () => {
     renderAt('/super-admin/organisations?planId=plan-pro');
     await screen.findByText('Northwind HVAC');

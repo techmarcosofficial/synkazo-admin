@@ -24,17 +24,15 @@ import { Textarea } from '@/components/ui/textarea';
 
 import type { SuperAdminUpdateOrganisationDto } from '@/types';
 
-// GAP-001 / SA-407 — allowlisted metadata edit dialog. Mirrors the API
-// DTO exactly: name / description / logoUrl / settings.defaultCurrency.
-// Every other field on the organisation entity has its own dedicated
-// route (lifecycle transitions, plan changes, payment holds), so those
-// are deliberately absent here.
+// Allowlisted metadata edit dialog. Name and description are editable here.
+// Lifecycle transitions, plan changes, payment holds have their own dedicated
+// routes.
 
 export interface EditOrganisationMetadataInitial {
   name: string;
   description: string | null;
-  logoUrl: string | null;
-  defaultCurrency: string | null;
+  logoUrl?: string | null;
+  defaultCurrency?: string | null;
 }
 
 interface EditOrganisationMetadataDialogProps {
@@ -46,12 +44,6 @@ interface EditOrganisationMetadataDialogProps {
   onSubmit: (dto: SuperAdminUpdateOrganisationDto) => void;
 }
 
-const URL_PATTERN = /^https?:\/\/[^\s]+$/i;
-
-function normaliseCurrency(value: string): string {
-  return value.trim().toUpperCase();
-}
-
 export const editOrganisationMetadataSchema = z.object({
   name: z
     .string()
@@ -61,20 +53,6 @@ export const editOrganisationMetadataSchema = z.object({
   description: z
     .string()
     .max(2000, 'Description must not exceed 2000 characters')
-    .optional(),
-  logoUrl: z
-    .string()
-    .trim()
-    .refine((val) => !val || URL_PATTERN.test(val), {
-      message: 'Must start with https:// (or http:// for local testing)',
-    })
-    .optional(),
-  defaultCurrency: z
-    .string()
-    .trim()
-    .refine((val) => !val || /^[A-Za-z]{3}$/.test(val), {
-      message: 'Must be a 3-letter currency code (e.g. USD, EUR)',
-    })
     .optional(),
 });
 
@@ -96,8 +74,6 @@ export default function EditOrganisationMetadataDialog({
     defaultValues: {
       name: initial.name,
       description: initial.description ?? '',
-      logoUrl: initial.logoUrl ?? '',
-      defaultCurrency: initial.defaultCurrency ?? '',
     },
   });
 
@@ -108,8 +84,6 @@ export default function EditOrganisationMetadataDialog({
       form.reset({
         name: initial.name,
         description: initial.description ?? '',
-        logoUrl: initial.logoUrl ?? '',
-        defaultCurrency: initial.defaultCurrency ?? '',
       });
     }
     prevOpenRef.current = open;
@@ -123,14 +97,6 @@ export default function EditOrganisationMetadataDialog({
     if (values.name.trim() !== initial.name) dto.name = values.name.trim();
     if ((values.description ?? '') !== (initial.description ?? '')) {
       dto.description = values.description ?? '';
-    }
-    if ((values.logoUrl?.trim() ?? '') !== (initial.logoUrl ?? '')) {
-      dto.logoUrl = values.logoUrl?.trim() ?? '';
-    }
-    const normalisedCurrency = normaliseCurrency(values.defaultCurrency ?? '');
-    if (normalisedCurrency !== (initial.defaultCurrency ?? '')) {
-      // Merge into settings so we never clobber other keys.
-      dto.settings = { defaultCurrency: normalisedCurrency || null };
     }
     onSubmit(dto);
   });
@@ -186,47 +152,6 @@ export default function EditOrganisationMetadataDialog({
                 {descriptionValue.length}/2000
               </div>
               <FieldError>{form.formState.errors.description?.message}</FieldError>
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="edit-org-logo">
-                Logo URL
-                <span className="text-muted-foreground ml-1 text-xs">
-                  (optional)
-                </span>
-              </FieldLabel>
-              <FieldContent>
-                <Input
-                  id="edit-org-logo"
-                  placeholder="https://cdn.example.com/logo.png"
-                  disabled={isSubmitting}
-                  aria-invalid={!!form.formState.errors.logoUrl}
-                  {...form.register('logoUrl')}
-                />
-              </FieldContent>
-              <FieldError>{form.formState.errors.logoUrl?.message}</FieldError>
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="edit-org-currency">
-                Default currency
-                <span className="text-muted-foreground ml-1 text-xs">
-                  (ISO 4217, e.g. USD, GBP)
-                </span>
-              </FieldLabel>
-              <FieldContent>
-                <Input
-                  id="edit-org-currency"
-                  maxLength={3}
-                  placeholder="USD"
-                  disabled={isSubmitting}
-                  aria-invalid={!!form.formState.errors.defaultCurrency}
-                  {...form.register('defaultCurrency')}
-                />
-              </FieldContent>
-              <FieldError>
-                {form.formState.errors.defaultCurrency?.message}
-              </FieldError>
             </Field>
 
             {errorMessage ? (

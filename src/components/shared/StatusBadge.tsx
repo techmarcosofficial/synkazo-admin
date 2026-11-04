@@ -129,6 +129,7 @@ const STATUS_CONFIG: Record<
   connected: { tone: 'success', label: 'Connected' },
   success: { tone: 'success', label: 'Success' },
   completed: { tone: 'success', label: 'Completed' },
+  confirmed_paid: { tone: 'success', label: 'Confirmed Paid' },
   associated: { tone: 'success', label: 'Associated' },
 
   pending: { tone: 'warning', label: 'Pending' },

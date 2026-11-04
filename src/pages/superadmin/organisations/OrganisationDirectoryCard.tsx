@@ -23,8 +23,11 @@ export const ORG_STATUS_LABELS: Record<OrgStatus | 'all', string> = {
   archived: 'Archived',
 };
 
-export const SUBSCRIPTION_LABELS: Record<SubscriptionStatus | 'all', string> = {
+export type BillingFilterOption = SubscriptionStatus | 'all' | 'confirmed_paid';
+
+export const SUBSCRIPTION_LABELS: Record<BillingFilterOption, string> = {
   all: 'All billing',
+  confirmed_paid: 'Confirmed paid',
   none: 'No subscription',
   trialing: 'Trialing',
   active: 'Active',
@@ -37,8 +40,9 @@ export const SUBSCRIPTION_LABELS: Record<SubscriptionStatus | 'all', string> = {
 };
 
 /** Active billing filter options — excludes obsolete/unused internal statuses (incomplete, unpaid, paused). */
-export const BILLING_FILTER_OPTIONS: Array<SubscriptionStatus | 'all'> = [
+export const BILLING_FILTER_OPTIONS: Array<BillingFilterOption> = [
   'all',
+  'confirmed_paid',
   'active',
   'past_due',
   'pending_cancel',

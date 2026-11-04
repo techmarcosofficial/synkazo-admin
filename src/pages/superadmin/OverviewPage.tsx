@@ -59,8 +59,6 @@ export default function OverviewPage() {
   return (
     <div className="flex min-w-0 flex-col gap-4 pb-4">
       <OverviewHeader
-        filters={filters}
-        update={update}
         refresh={() => {
           void analytics.refetch();
           void live.refetch();
@@ -73,6 +71,8 @@ export default function OverviewPage() {
         live={live}
         valid={valid}
         mainError={mainError}
+        filters={filters}
+        update={update}
       />
     </div>
   );

@@ -6,6 +6,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import ProvisionOrganisationDialog from './organisations/ProvisionOrganisationDialog';
 import OrganisationDirectoryCard, {
   BILLING_FILTER_OPTIONS,
+  type BillingFilterOption,
   ORG_STATUS_LABELS,
   OrganisationStatusBadge,
   SUBSCRIPTION_LABELS,
@@ -90,10 +91,11 @@ export default function OrganisationsPage() {
   )
     ? (rawStatus as OrgStatus | 'all')
     : 'all';
-  const rawSubscription = searchParams.get('subscriptionStatus') ?? 'all';
-  const subscriptionStatus: SubscriptionStatus | 'all' =
+  const rawSubscription =
+    searchParams.get('subscriptionStatus') ?? searchParams.get('billing') ?? 'all';
+  const subscriptionStatus: BillingFilterOption =
     Object.prototype.hasOwnProperty.call(SUBSCRIPTION_LABELS, rawSubscription)
-      ? (rawSubscription as SubscriptionStatus | 'all')
+      ? (rawSubscription as BillingFilterOption)
       : 'all';
   const planId = searchParams.get('planId') ?? 'all';
   const selectedPlan = plans.find((p) => p.id === planId);
@@ -153,6 +155,7 @@ export default function OrganisationsPage() {
         'search',
         'status',
         'subscriptionStatus',
+        'billing',
         'planId',
         'page',
       ]) {
@@ -257,7 +260,7 @@ export default function OrganisationsPage() {
 
                 <Select
                   value={subscriptionStatus}
-                  onValueChange={(value: SubscriptionStatus | 'all') =>
+                  onValueChange={(value: BillingFilterOption) =>
                     setParam('subscriptionStatus', value)
                   }
                 >

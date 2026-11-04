@@ -7,9 +7,11 @@ import {
 } from 'lucide-react';
 import type { usePlatformAnalytics } from '@/queries/usePlatformAnalytics';
 import type { useSuperAdminPlatformOverviewQuery } from '@/queries/useSuperAdmin';
+import type { AnalyticsFilters } from '@/types/platformAnalytics';
 import OverviewKpiCard from './OverviewKpiCard';
 import OverviewAttention from './OverviewAttention';
 import CustomerPortfolio from './CustomerPortfolio';
+import OverviewDateRangePicker from './OverviewDateRangePicker';
 import { OverviewProcessing, OverviewQueue } from './OverviewProcessing';
 import { fullNumber, percentage } from './analyticsDisplay';
 
@@ -18,11 +20,15 @@ export default function PlatformSummary({
   live,
   valid,
   mainError,
+  filters,
+  update,
 }: {
   analytics: ReturnType<typeof usePlatformAnalytics>;
   live: ReturnType<typeof useSuperAdminPlatformOverviewQuery>;
   valid: boolean;
   mainError?: string;
+  filters?: AnalyticsFilters;
+  update?: (next: Partial<AnalyticsFilters>) => void;
 }) {
   const data = analytics.data;
   const customers =
@@ -79,7 +85,7 @@ export default function PlatformSummary({
                   : 'No confirmed paid organisations'
               : 'Payment evidence unavailable'
           }
-          to="#overview-customers"
+          to="/super-admin/organisations?status=active&subscriptionStatus=confirmed_paid"
           loading={loading}
         />
         <OverviewKpiCard
@@ -138,6 +144,21 @@ export default function PlatformSummary({
           error={mainError ?? data?.errors.customers}
         />
       </div>
+      {filters && update ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+          <div>
+            <h2 className="text-base font-semibold">Processing & Sync Reliability</h2>
+            <p className="text-muted-foreground text-xs">
+              Records processed and run success rates for the selected period.
+            </p>
+          </div>
+          <OverviewDateRangePicker
+            filters={filters}
+            update={update}
+            valid={valid}
+          />
+        </div>
+      ) : null}
       <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3">
         <OverviewProcessing
           processing={processing}
@@ -159,8 +180,7 @@ export default function PlatformSummary({
         <span>
           {data
             ? `Period data updated ${new Date(data.generatedAt).toLocaleTimeString()}`
-            : 'Period data unavailable'}{' '}
-          · UTC
+            : 'Period data unavailable'}
         </span>
         <span>
           Customer, billing, alerts and queue status are current snapshots.

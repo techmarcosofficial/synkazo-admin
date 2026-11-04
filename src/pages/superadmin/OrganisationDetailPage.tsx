@@ -658,7 +658,7 @@ export default function OrganisationDetailPage() {
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Global Last Synced</span>
+                <span className="text-muted-foreground">Last Synced</span>
                 <span className="font-medium text-foreground">
                   {formatRelative(syncHealth?.lastSyncedAt)}
                 </span>
@@ -666,14 +666,7 @@ export default function OrganisationDetailPage() {
             </div>
           </CardContent>
 
-          <CardFooter className="flex items-center justify-between text-xs">
-            <Link
-              to="/super-admin/sync-operations"
-              className="text-primary hover:underline font-medium inline-flex items-center gap-1"
-            >
-              Queue Board &amp; Workers
-              <ArrowUpRight className="size-3.5" aria-hidden="true" />
-            </Link>
+          <CardFooter className="flex items-center justify-end text-xs">
             <Link
               to={basePath + '/activity'}
               className="text-primary hover:underline font-medium inline-flex items-center gap-1"

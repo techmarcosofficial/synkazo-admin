@@ -343,11 +343,11 @@ export default function PlatformAuditPage() {
               ) : (
                 <Card>
                   <CardContent className="space-y-6">
-                    <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
+                    <div className="space-y-4">
                       <HeadingPair
                         level="h3"
                         title="Review platform activity"
-                        subtitle="What happened across synkazo, and who did it"
+                        className="shrink-0 whitespace-nowrap"
                       />
                       <ManagementToolbar
                         searchValue={search}
@@ -464,7 +464,7 @@ export default function PlatformAuditPage() {
                                 setPage(1);
                               }}
                               placeholder="Date range"
-                              className="sm:w-44"
+                              className="sm:w-auto min-w-[11rem]"
                             />
                           </>
                         }

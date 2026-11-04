@@ -12,13 +12,6 @@ import {
 } from '@/components/ui/card';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { useSectionAccess } from '@/lib/sectionAccess';
@@ -29,8 +22,6 @@ import {
 } from '@/queries/useOrganisations';
 import type { Organisation } from '@/types';
 
-const CURRENCIES = ['USD', 'CAD', 'GBP', 'EUR', 'AUD', 'NZD'];
-
 type OrgExtended = Organisation & {
   logoUrl?: string;
   slug?: string;
@@ -40,15 +31,11 @@ type OrgExtended = Organisation & {
 type FormState = {
   name: string;
   description: string;
-  logoUrl: string;
-  defaultCurrency: string;
 };
 
 const EMPTY_FORM: FormState = {
   name: '',
   description: '',
-  logoUrl: '',
-  defaultCurrency: 'USD',
 };
 
 const formFor = (org: OrgExtended | undefined): FormState =>
@@ -56,8 +43,6 @@ const formFor = (org: OrgExtended | undefined): FormState =>
     ? {
         name: org.name || '',
         description: org.description || '',
-        logoUrl: org.logoUrl || '',
-        defaultCurrency: org.settings?.defaultCurrency || 'USD',
       }
     : EMPTY_FORM;
 
@@ -93,11 +78,6 @@ export default function OrgGeneralTab() {
         data: {
           name: form.name,
           description: form.description,
-          logoUrl: form.logoUrl,
-          settings: {
-            ...(org.settings || {}),
-            defaultCurrency: form.defaultCurrency,
-          },
         } as Partial<OrgExtended>,
       });
       showToast.success('Organisation updated.');
@@ -123,70 +103,23 @@ export default function OrgGeneralTab() {
           <div className="space-y-4">
             <Skeleton className="h-9 w-full" />
             <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-9 w-full" />
-            <Skeleton className="h-9 w-40" />
           </div>
         ) : orgQuery.isError ? (
           <ErrorState onRetry={() => orgQuery.refetch()} />
         ) : (
           <FieldGroup className="gap-3">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              <Field>
-                <FieldLabel htmlFor="org-name">Organization Name</FieldLabel>
-                <Input
-                  id="org-name"
-                  value={form.name}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, name: e.target.value }))
-                  }
-                  readOnly={!canEdit}
-                  disabled={!canEdit}
-                />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="org-logo">
-                  Logo URL{' '}
-                  <span className="text-muted-foreground font-normal">
-                    (optional)
-                  </span>
-                </FieldLabel>
-                <Input
-                  id="org-logo"
-                  value={form.logoUrl}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, logoUrl: e.target.value }))
-                  }
-                  placeholder="https://…"
-                  readOnly={!canEdit}
-                  disabled={!canEdit}
-                />
-              </Field>
-              <Field>
-                <FieldLabel>Default Currency</FieldLabel>
-                <Select
-                  value={form.defaultCurrency}
-                  onValueChange={(v) =>
-                    setForm((f) => ({ ...f, defaultCurrency: v }))
-                  }
-                  disabled={!canEdit}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CURRENCIES.map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {c}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-muted-foreground text-xs">
-                  Applied to financial sync objects when no per-job override is
-                  set.
-                </p>
-              </Field>
-            </div>
+            <Field>
+              <FieldLabel htmlFor="org-name">Organization Name</FieldLabel>
+              <Input
+                id="org-name"
+                value={form.name}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, name: e.target.value }))
+                }
+                readOnly={!canEdit}
+                disabled={!canEdit}
+              />
+            </Field>
             <Field>
               <FieldLabel htmlFor="org-desc">
                 Description{' '}

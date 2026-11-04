@@ -29,6 +29,7 @@ interface ManagementToolbarProps {
   directoryLayout?: boolean;
   filterCount?: 1 | 2 | 3;
   sort?: ReactNode;
+  className?: string;
 }
 
 export default function ManagementToolbar({
@@ -44,14 +45,16 @@ export default function ManagementToolbar({
   directoryLayout = false,
   filterCount = 1,
   sort,
+  className,
 }: ManagementToolbarProps) {
   const searchControl = (
     <InputGroup
       uiSize={directoryLayout ? 'sm' : 'default'}
       className={cn(
         'bg-muted',
-        directoryLayout &&
-          'border-border/80 bg-card hover:border-foreground/25 focus-within:border-ring focus-within:ring-ring/15 dark:bg-card w-full min-w-0 transition-colors focus-within:ring-2',
+        directoryLayout
+          ? 'border-border/80 bg-card hover:border-foreground/25 focus-within:border-ring focus-within:ring-ring/15 dark:bg-card w-full min-w-0 transition-colors focus-within:ring-2'
+          : 'w-full sm:w-64 shrink-0',
       )}
     >
       <InputGroupAddon>
@@ -179,7 +182,12 @@ export default function ManagementToolbar({
   }
 
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+    <div
+      className={cn(
+        'flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center',
+        className,
+      )}
+    >
       {searchControl}
 
       {filters}
