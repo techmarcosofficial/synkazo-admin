@@ -1,4 +1,4 @@
-import { ArrowRight, CircleAlert, Info } from 'lucide-react';
+import { AlertTriangle, ArrowRight, CircleAlert, Info } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import {
@@ -40,6 +40,7 @@ const REASON_SUMMARIES: Record<string, string> = {
   matched_no_update: 'Matched record left unchanged',
   record_level_conflict: 'Record-level conflict',
   destination_condition: 'Matched a destination skip rule',
+  source_record_not_found: 'Source record no longer exists',
   api_error: 'API error',
   rate_limited: 'Rate limit reached',
   transform_error: 'Transformation failed',
@@ -74,6 +75,62 @@ function formatErrorDetails(value: unknown): string | null {
     }
   }
   return typeof value === 'object' ? JSON.stringify(value, null, 2) : null;
+}
+
+/** Field-level warnings the API keeps on a created/updated row's destResponse. */
+function fieldWarnings(rec: SyncLogRecord): string[] {
+  if (rec.action !== 'created' && rec.action !== 'updated') return [];
+  let value: unknown = rec.destResponse;
+  if (typeof value === 'string') {
+    try {
+      value = JSON.parse(value);
+    } catch {
+      return [];
+    }
+  }
+  const warnings = (value as { warnings?: unknown } | null)?.warnings;
+  return Array.isArray(warnings)
+    ? warnings.filter((w): w is string => typeof w === 'string')
+    : [];
+}
+
+function FieldWarnings({ warnings }: { warnings: string[] }) {
+  const summary = `Synced with ${warnings.length} field warning${warnings.length === 1 ? '' : 's'}`;
+  return (
+    <Tooltip delayDuration={150}>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          className="group/reason flex max-w-full min-w-0 cursor-pointer items-center gap-1.5 text-left"
+          aria-label={`View field warnings: ${summary}`}
+        >
+          <AlertTriangle className="text-warning size-3.5 shrink-0" />
+          <span className="text-muted-foreground group-hover/reason:text-foreground group-focus-visible/reason:text-foreground min-w-0 truncate underline decoration-dotted underline-offset-2 transition-colors">
+            {summary}
+          </span>
+        </button>
+      </TooltipTrigger>
+      <TooltipContent
+        side="top"
+        align="start"
+        sideOffset={8}
+        collisionPadding={12}
+        className="bg-popover text-popover-foreground border-border [&>span>svg]:bg-popover [&>span>svg]:fill-popover pointer-events-auto max-h-[min(32rem,calc(100vh-1.5rem))] w-[min(28rem,calc(100vw-1.5rem))] max-w-none items-stretch overflow-y-auto rounded-2xl border p-0 shadow-xl"
+      >
+        <div className="space-y-2.5 p-4">
+          <h3 className="text-sm font-semibold">{summary}</h3>
+          <p className="text-muted-foreground text-xs">
+            The record was written, but these fields were left out.
+          </p>
+          <ul className="bg-muted/50 space-y-1 rounded-xl px-3 py-2 text-xs leading-relaxed break-words">
+            {warnings.map((warning) => (
+              <li key={warning}>{warning}</li>
+            ))}
+          </ul>
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  );
 }
 
 function getSummary(rec: SyncLogRecord, reason?: string | null): string {
@@ -157,6 +214,8 @@ export function RecordReason({
   );
 
   if (!reason && !detail) {
+    const warnings = fieldWarnings(rec);
+    if (warnings.length > 0) return <FieldWarnings warnings={warnings} />;
     return <span className="text-muted-foreground">—</span>;
   }
 

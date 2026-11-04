@@ -57,6 +57,54 @@ function renderReason(record: SyncLogRecord) {
 }
 
 describe('RecordReason', () => {
+  it('shows field warnings on a synced record and lists them on focus', async () => {
+    renderReason({
+      id: 'record-w',
+      action: 'updated',
+      sourceRecordId: 'source-1',
+      destRecordId: '42',
+      destResponse: JSON.stringify({
+        warnings: [
+          'Field "tier" not written: the value is not an option of this HubSpot dropdown',
+        ],
+      }),
+    });
+
+    const trigger = screen.getByRole('button', {
+      name: /view field warnings/i,
+    });
+    expect(trigger).toHaveTextContent('Synced with 1 field warning');
+
+    fireEvent.focus(trigger);
+    expect(
+      (await screen.findAllByText(/"tier" not written/i)).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it('shows a dash for a synced record without warnings', () => {
+    renderReason({
+      id: 'record-ok',
+      action: 'created',
+      sourceRecordId: 'source-1',
+      destResponse: null,
+    });
+    expect(screen.getByText('—')).toBeInTheDocument();
+  });
+
+  it('labels a retry id that no longer exists at the source', () => {
+    renderReason({
+      id: 'record-gone',
+      action: 'skipped',
+      sourceRecordId: 'source-9',
+      skipReason: 'source_record_not_found',
+      skipReasonDetail:
+        'jobs source-9 was not returned by servicetitan (deleted, merged, or no longer accessible); nothing was written',
+    });
+    expect(
+      screen.getByRole('button', { name: /view skipped reason details/i }),
+    ).toHaveTextContent('Skipped: Source record no longer exists');
+  });
+
   it('shows a concise conflict summary and opens complete details on keyboard focus', async () => {
     const fullReason =
       "One or more tracked fields conflict with the destination's current value — the whole record was left untouched";
