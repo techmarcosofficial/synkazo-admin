@@ -30,13 +30,13 @@ describe('ProjectOnboardingJourney', () => {
 
   afterEach(cleanup);
 
-  it('renders unified card when both platforms are connected and ready for first sync flow', () => {
+  it('shows only the current step (create first sync flow) with the progress ring on Overview', () => {
     vi.mocked(useProjectDetailContext).mockReturnValue({
       projectId: 'proj-1',
       jobs: [],
       hasBothConnections: true,
       hasJobs: false,
-      activeTab: 'connections',
+      activeTab: 'overview',
       handleTabChange: mockHandleTabChange,
       onCreateSyncRule: mockOnCreateSyncRule,
     } as any);
@@ -52,74 +52,65 @@ describe('ProjectOnboardingJourney', () => {
     expect(
       screen.getByRole('heading', {
         level: 2,
-        name: 'Your connections are ready!',
+        name: 'Set up your project',
       }),
     ).toBeInTheDocument();
+    // The info tooltip carries the full how-to plus the stage's next step.
     expect(
       screen.getByText(
-        'Both platforms are connected and verified. Next, choose what data you want to sync.',
+        /Finish these 3 steps to start syncing[\s\S]*Next: Both platforms are connected and verified/,
       ),
     ).toBeInTheDocument();
 
-    // Step 1: Connect Platforms - Complete with hover hint
-    const step1Btn = screen.getByRole('button', { name: /connect platforms/i });
-    expect(step1Btn).toBeInTheDocument();
-    expect(step1Btn).toHaveAttribute(
-      'data-step-hint',
-      'Connect both Source and Destination platforms below',
-    );
-    expect(step1Btn).not.toHaveAttribute('title');
-    expect(screen.getByText('Complete')).toBeInTheDocument();
-
-    // Step 2: Create First Sync Flow - Action needed with hover hint to go to Sync Flows tab
-    const step2Btn = screen.getByRole('button', {
-      name: /create first sync flow/i,
-    });
-    expect(step2Btn).toBeInTheDocument();
-    expect(step2Btn).toHaveAttribute('data-step-hint', 'Go to Sync Flows tab');
-    expect(step2Btn).not.toHaveAttribute('title');
-    expect(screen.getByText('Action needed')).toBeInTheDocument();
-
-    // Counter
-    expect(screen.getByText('Configure & Test')).toBeInTheDocument();
-    expect(screen.getByText('1/3 complete')).toBeInTheDocument();
-
-    // Redundant trailing button is removed; clicking Step 2 card triggers the action (One Click, One Action)
-    expect(
-      screen.queryByRole('button', { name: /^go to sync flows$/i }),
-    ).not.toBeInTheDocument();
-    fireEvent.click(step2Btn);
-    expect(mockHandleTabChange).toHaveBeenCalledWith('sync-rules');
-    expect(mockOnCreateSyncRule).not.toHaveBeenCalled();
-  });
-
-  it('triggers create modal from step 2 when on sync-rules tab', () => {
-    vi.mocked(useProjectDetailContext).mockReturnValue({
-      projectId: 'proj-1',
-      jobs: [],
-      hasBothConnections: true,
-      hasJobs: false,
-      activeTab: 'sync-rules',
-      handleTabChange: mockHandleTabChange,
-      onCreateSyncRule: mockOnCreateSyncRule,
-    } as any);
-
-    render(
-      <MemoryRouter>
-        <ProjectOnboardingJourney />
-      </MemoryRouter>,
-    );
-
+    // Only the unfinished step is shown: no finished or later steps, no step numbers
+    expect(screen.queryByText('Connect Platforms')).not.toBeInTheDocument();
+    expect(screen.queryByText('Configure & Test')).not.toBeInTheDocument();
     const step2Btn = screen.getByRole('button', {
       name: /create first sync flow/i,
     });
     expect(step2Btn).toHaveAttribute(
       'data-step-hint',
-      "Click '+ Create sync flow' to configure rules",
+      'Create your first sync flow',
     );
-    expect(step2Btn).not.toHaveAttribute('title');
+    expect(step2Btn).not.toHaveTextContent('2');
+    expect(screen.getByText('Action needed')).toBeInTheDocument();
+
+    // Progress ring still counts every step
+    expect(
+      screen.getByRole('img', { name: '1 of 3 steps complete' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('1/3 complete')).toBeInTheDocument();
+
+    // Clicking the step opens the create flow
     fireEvent.click(step2Btn);
     expect(mockOnCreateSyncRule).toHaveBeenCalledOnce();
+  });
+
+  it('renders nothing outside the Overview tab', () => {
+    for (const activeTab of [
+      'connections',
+      'sync-rules',
+      'activity',
+      'settings',
+    ]) {
+      vi.mocked(useProjectDetailContext).mockReturnValue({
+        projectId: 'proj-1',
+        jobs: [],
+        hasBothConnections: false,
+        hasJobs: false,
+        activeTab,
+        handleTabChange: mockHandleTabChange,
+        onCreateSyncRule: mockOnCreateSyncRule,
+      } as any);
+
+      const { container, unmount } = render(
+        <MemoryRouter>
+          <ProjectOnboardingJourney />
+        </MemoryRouter>,
+      );
+      expect(container).toBeEmptyDOMElement();
+      unmount();
+    }
   });
 
   it('displays draft resumption seamlessly within the unified card without competing banners', () => {
@@ -137,7 +128,7 @@ describe('ProjectOnboardingJourney', () => {
       jobs: [],
       hasBothConnections: true,
       hasJobs: false,
-      activeTab: 'sync-rules',
+      activeTab: 'overview',
       handleTabChange: mockHandleTabChange,
       onCreateSyncRule: mockOnCreateSyncRule,
     } as any);
@@ -149,7 +140,10 @@ describe('ProjectOnboardingJourney', () => {
     );
 
     expect(
-      screen.getByText('Unfinished sync flow in progress'),
+      screen.getByRole('heading', { level: 2, name: 'Set up your project' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Next: Your unfinished sync flow/),
     ).toBeInTheDocument();
     expect(screen.getByText(/Customer to Contact Sync/i)).toBeInTheDocument();
 
@@ -165,22 +159,19 @@ describe('ProjectOnboardingJourney', () => {
     expect(discardBtn).toBeInTheDocument();
     fireEvent.click(discardBtn);
 
-    // After discard, reverts back to "Your connections are ready!"
+    // After discard, the next step reverts to creating a sync flow
     expect(
-      screen.getByRole('heading', {
-        level: 2,
-        name: 'Your connections are ready!',
-      }),
+      screen.getByText(/Next: Both platforms are connected and verified/),
     ).toBeInTheDocument();
   });
 
-  it('guides a single unmapped flow to field mapping without claiming completion', () => {
+  it('sends a single unmapped flow to the Sync Flows tab without claiming completion', () => {
     vi.mocked(useProjectDetailContext).mockReturnValue({
       projectId: 'proj-1',
       jobs: [{ id: 'job-1', status: 'draft', name: 'Draft Job' }],
       hasBothConnections: true,
       hasJobs: true,
-      activeTab: 'connections',
+      activeTab: 'overview',
       handleTabChange: mockHandleTabChange,
       onCreateSyncRule: mockOnCreateSyncRule,
     } as any);
@@ -193,7 +184,7 @@ describe('ProjectOnboardingJourney', () => {
     );
 
     expect(
-      screen.getByText('Configure and test a sync flow'),
+      screen.getByText(/Next: Your flow has been created/),
     ).toBeInTheDocument();
     expect(screen.getByText('2/3 complete')).toBeInTheDocument();
     const nextStep = screen.getByRole('button', { name: /configure & test/i });
@@ -202,12 +193,10 @@ describe('ProjectOnboardingJourney', () => {
       screen.queryByRole('button', { name: /configure field mapping/i }),
     ).not.toBeInTheDocument();
     fireEvent.click(nextStep);
-    expect(screen.getByTestId('location')).toHaveTextContent(
-      '/projects/proj-1/jobs/job-1?tab=field-mapping',
-    );
+    expect(mockHandleTabChange).toHaveBeenCalledWith('sync-rules');
   });
 
-  it('opens the detail page for a single mapped flow that has not run', () => {
+  it('sends a single mapped flow that has not run to the Sync Flows tab', () => {
     vi.mocked(useProjectDetailContext).mockReturnValue({
       projectId: 'proj-1',
       jobs: [
@@ -234,15 +223,18 @@ describe('ProjectOnboardingJourney', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText('Run your first test sync')).toBeInTheDocument();
+    expect(
+      screen.queryByText('Run your first test sync'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/Next: Your flow has field mappings/),
+    ).toBeInTheDocument();
     expect(screen.getByText('2/3 complete')).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: /continue to test sync/i }),
     ).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /configure & test/i }));
-    expect(screen.getByTestId('location')).toHaveTextContent(
-      '/projects/proj-1/jobs/job-1',
-    );
+    expect(mockHandleTabChange).toHaveBeenCalledWith('sync-rules');
   });
 
   it('guides multiple unfinished flows through the list', () => {
@@ -275,7 +267,9 @@ describe('ProjectOnboardingJourney', () => {
   it('does not graduate from a partial run or a successful run on a removed flow', () => {
     vi.mocked(useProjectDetailContext).mockReturnValue({
       projectId: 'proj-1',
-      jobs: [{ id: 'job-1', status: 'error', lastSyncedAt: '2026-09-26T12:00:00Z' }],
+      jobs: [
+        { id: 'job-1', status: 'error', lastSyncedAt: '2026-09-26T12:00:00Z' },
+      ],
       logs: [
         { id: 'log-1', jobId: 'job-1', metadata: { status: 'partial' } },
         { id: 'log-2', jobId: 'removed-job', metadata: { status: 'success' } },
@@ -287,9 +281,15 @@ describe('ProjectOnboardingJourney', () => {
       onCreateSyncRule: mockOnCreateSyncRule,
     } as any);
 
-    render(<MemoryRouter><ProjectOnboardingJourney /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <ProjectOnboardingJourney />
+      </MemoryRouter>,
+    );
     expect(screen.getByText('2/3 complete')).toBeInTheDocument();
-    expect(screen.queryByText('Project setup complete')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Project setup complete'),
+    ).not.toBeInTheDocument();
   });
 
   it('hides on mount when any flow has already completed a run', () => {
@@ -314,7 +314,7 @@ describe('ProjectOnboardingJourney', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('shows the completion milestone when a flow finishes, then hides it on a later visit', () => {
+  it('hides the setup section as soon as a flow finishes its first run', () => {
     const context = {
       projectId: 'proj-1',
       jobs: [{ id: 'job-1', status: 'idle', lastSyncedAt: null }],
@@ -342,52 +342,18 @@ describe('ProjectOnboardingJourney', () => {
         <ProjectOnboardingJourney />
       </MemoryRouter>,
     );
-    expect(screen.getByText('Project setup complete')).toBeInTheDocument();
-    expect(screen.getByText('3/3 complete')).toBeInTheDocument();
-
+    expect(screen.queryByText('Project setup')).not.toBeInTheDocument();
+    expect(screen.queryByText('3/3 complete')).not.toBeInTheDocument();
     unmount();
-    const { container } = render(
-      <MemoryRouter>
-        <ProjectOnboardingJourney />
-      </MemoryRouter>,
-    );
-    expect(container).toBeEmptyDOMElement();
   });
 
-  it('suppresses the action button in the onboarding card when already on the sync-rules tab where native create buttons exist', () => {
-    vi.mocked(useProjectDetailContext).mockReturnValue({
-      projectId: 'proj-1',
-      jobs: [],
-      hasBothConnections: true,
-      hasJobs: false,
-      activeTab: 'sync-rules',
-      handleTabChange: mockHandleTabChange,
-      onCreateSyncRule: mockOnCreateSyncRule,
-    } as any);
-
-    render(
-      <MemoryRouter>
-        <ProjectOnboardingJourney />
-      </MemoryRouter>,
-    );
-
-    // Steps and counter are still visible
-    expect(screen.getByText('Your connections are ready!')).toBeInTheDocument();
-    expect(screen.getByText('1/3 complete')).toBeInTheDocument();
-
-    // But the redundant primary CTA button is suppressed
-    expect(
-      screen.queryByRole('button', { name: /^create first sync flow$/i }),
-    ).not.toBeInTheDocument();
-  });
-
-  it('marks Step 1 as Action needed and 0/3 complete when a connection has an issue, even if a job exists', () => {
+  it('shows only Connect Platforms (0/3) while a connection has an issue, even if a job exists', () => {
     vi.mocked(useProjectDetailContext).mockReturnValue({
       projectId: 'proj-1',
       jobs: [{ id: 'job-1', status: 'draft', name: 'Draft Job' }],
       hasBothConnections: false,
       hasJobs: true,
-      activeTab: 'connections',
+      activeTab: 'overview',
       handleTabChange: mockHandleTabChange,
       onCreateSyncRule: mockOnCreateSyncRule,
     } as any);
@@ -398,36 +364,29 @@ describe('ProjectOnboardingJourney', () => {
       </MemoryRouter>,
     );
 
-    // Card should tell the user to connect platforms
     expect(
       screen.getByRole('heading', {
         level: 2,
-        name: 'Connect your source and destination',
+        name: 'Set up your project',
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(
-        'Both connections must be verified before you can create or run a sync flow.',
-      ),
+      screen.getByText(/Next: Connect and verify both platforms/),
     ).toBeInTheDocument();
 
-    // Step 1: Connect Platforms - Action needed (NOT Complete!)
-    expect(screen.getByText('Connect Platforms')).toBeInTheDocument();
+    // Only the first unfinished step is shown
+    const step1Btn = screen.getByRole('button', { name: /connect platforms/i });
     expect(screen.getByText('Action needed')).toBeInTheDocument();
-    expect(screen.queryByText('Complete')).not.toBeInTheDocument();
-
-    // Step 2: First Sync Flow Created - upcoming
-    expect(screen.getByText('First Sync Flow Created')).toBeInTheDocument();
-
-    // Counter: 0/3 complete
+    expect(
+      screen.queryByText('First Sync Flow Created'),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('Configure & Test')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('img', { name: '0 of 3 steps complete' }),
+    ).toBeInTheDocument();
     expect(screen.getByText('0/3 complete')).toBeInTheDocument();
 
-    // On connections tab, redundant primary CTA button is suppressed so user focuses on the platform cards
-    expect(
-      screen.queryByRole('button', { name: /^connect platforms$/i }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: /activate flow/i }),
-    ).not.toBeInTheDocument();
+    fireEvent.click(step1Btn);
+    expect(mockHandleTabChange).toHaveBeenCalledWith('connections');
   });
 });

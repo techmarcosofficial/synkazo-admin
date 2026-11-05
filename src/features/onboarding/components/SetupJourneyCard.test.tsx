@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import SetupJourneyCard from './SetupJourneyCard';
@@ -96,16 +96,59 @@ describe('SetupJourneyCard', () => {
     const step2Btn = screen.getByRole('button', { name: /create sync flow/i });
     const step3Btn = screen.getByRole('button', { name: /configure & test/i });
 
-    // Step 1: on current tab -> has "Current tab" pill and solid border
+    // Step 1: on current tab -> has "Current tab" pill
     expect(step1Btn).toHaveAttribute('data-step-current-tab', 'true');
-    expect(step1Btn.className).toContain('border-solid');
+    expect(step1Btn).toHaveAttribute('data-step-status', 'current');
     expect(screen.getByText('Current tab')).toBeInTheDocument();
 
-    // Step 2: on different tab -> dashed border indicating navigation destination
+    // Step 2: on different tab -> no pill, still the highlighted current step
     expect(step2Btn).not.toHaveAttribute('data-step-current-tab');
-    expect(step2Btn.className).toContain('border-dashed');
+    expect(step2Btn).toHaveAttribute('data-step-status', 'current');
 
-    // Step 3: upcoming -> dashed muted border
-    expect(step3Btn.className).toContain('border-dashed');
+    // Steps are flat rows separated by dividers, not nested bordered cards
+    expect(step3Btn).toHaveAttribute('data-step-status', 'upcoming');
+    [step1Btn, step2Btn, step3Btn].forEach((btn) =>
+      expect(btn.className).not.toMatch(/\bborder-(solid|dashed)\b/),
+    );
+  });
+  it('shows only the first unfinished step without numbers when currentStepOnly is set', () => {
+    const { container } = render(
+      <SetupJourneyCard
+        compact
+        currentStepOnly
+        eyebrow="Project setup"
+        title="Set up your project"
+        description="How to set up"
+        steps={[
+          {
+            title: 'Connect Platforms',
+            description: 'Done.',
+            status: 'complete',
+          },
+          {
+            title: 'Create Sync Flow',
+            description: 'Next.',
+            status: 'current',
+            onSelect: vi.fn(),
+          },
+          {
+            title: 'Configure & Test',
+            description: 'Later.',
+            status: 'upcoming',
+          },
+        ]}
+      />,
+    );
+    // Earlier tests in this file don't unmount, so scope queries to this render.
+    const view = within(container);
+
+    const current = view.getByRole('button', { name: /create sync flow/i });
+    expect(current).not.toHaveTextContent('2');
+    expect(view.queryByText('Connect Platforms')).not.toBeInTheDocument();
+    expect(view.queryByText('Configure & Test')).not.toBeInTheDocument();
+    // The ring still counts every step, not just the visible one
+    expect(
+      view.getByRole('img', { name: '1 of 3 steps complete' }),
+    ).toBeInTheDocument();
   });
 });

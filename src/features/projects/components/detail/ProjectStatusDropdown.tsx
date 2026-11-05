@@ -18,6 +18,7 @@ interface ProjectStatusDropdownProps<Status extends string> {
   options: readonly Status[];
   onSelect: (status: Status) => void;
   disabled?: boolean;
+  align?: 'start' | 'end';
 }
 
 export default function ProjectStatusDropdown<Status extends string>({
@@ -25,6 +26,7 @@ export default function ProjectStatusDropdown<Status extends string>({
   options,
   onSelect,
   disabled = false,
+  align = 'start',
 }: ProjectStatusDropdownProps<Status>) {
   const tinted = useBadgeAppearance() === 'tinted';
   return (
@@ -48,7 +50,7 @@ export default function ProjectStatusDropdown<Status extends string>({
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="start">
+      <DropdownMenuContent align={align}>
         <DropdownMenuLabel>Change Project Status</DropdownMenuLabel>
 
         <DropdownMenuSeparator />

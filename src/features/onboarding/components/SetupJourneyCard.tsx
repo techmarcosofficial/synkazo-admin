@@ -1,4 +1,4 @@
-import { ArrowRight, Check } from 'lucide-react';
+import { ArrowRight, Check, CircleCheck, Info } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import HeadingPair from '@/components/shared/HeadingPair';
@@ -49,6 +49,71 @@ function StepButtonWithTooltip({
   );
 }
 
+/** Compact setup is a flat section closed by a divider; the full layout stays a card. */
+function SetupJourneyFrame({
+  compact,
+  children,
+}: {
+  compact: boolean;
+  children: React.ReactNode;
+}) {
+  if (compact) {
+    return (
+      <section className="border-border/70 border-b pb-4">{children}</section>
+    );
+  }
+  return (
+    <Card className="gap-0 overflow-hidden py-0">
+      <CardContent className="space-y-3 px-3 py-3 sm:px-4">
+        {children}
+      </CardContent>
+    </Card>
+  );
+}
+
+function SetupProgressRing({ done, total }: { done: number; total: number }) {
+  const percent = total === 0 ? 0 : Math.round((done / total) * 100);
+  const radius = 16;
+  const circumference = 2 * Math.PI * radius;
+  return (
+    <div
+      role="img"
+      aria-label={`${done} of ${total} steps complete`}
+      title={`${done} of ${total} steps complete · ${100 - percent}% pending`}
+      className="relative size-11 shrink-0"
+    >
+      <svg
+        viewBox="0 0 40 40"
+        className="size-full -rotate-90"
+        aria-hidden="true"
+      >
+        <circle
+          cx="20"
+          cy="20"
+          r={radius}
+          fill="none"
+          strokeWidth="4"
+          className="stroke-muted"
+        />
+        <circle
+          cx="20"
+          cy="20"
+          r={radius}
+          fill="none"
+          strokeWidth="4"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference * (1 - percent / 100)}
+          className="stroke-success transition-[stroke-dashoffset] duration-500"
+        />
+      </svg>
+      <span className="text-foreground absolute inset-0 flex items-center justify-center text-[11px] font-semibold tabular-nums">
+        {percent}%
+      </span>
+    </div>
+  );
+}
+
 const setupEyebrowStyles =
   'text-muted-foreground text-[10px] leading-4 font-semibold tracking-wider uppercase';
 
@@ -64,6 +129,8 @@ interface SetupJourneyCardProps {
     label: string;
     onClick: () => void;
   };
+  /** Show only the first unfinished step (no step numbers); the ring still counts every step. */
+  currentStepOnly?: boolean;
 }
 
 export default function SetupJourneyCard({
@@ -75,6 +142,7 @@ export default function SetupJourneyCard({
   actionLabel = 'Continue setup',
   onContinue,
   secondaryAction,
+  currentStepOnly = false,
 }: SetupJourneyCardProps) {
   const requiredSteps = steps.filter((step) => !step.optional);
   const completedCount = requiredSteps.filter(
@@ -83,48 +151,76 @@ export default function SetupJourneyCard({
 
   // Both project setup and job setup use this unified single-line compact layout
   const isCompact = compact !== false;
-  const isMultiStepCompact = isCompact && steps.length >= 3;
+  const visibleSteps =
+    isCompact && currentStepOnly
+      ? steps.filter((step) => step.status !== 'complete').slice(0, 1)
+      : steps;
+  const isMultiStepCompact = isCompact && visibleSteps.length >= 3;
 
   return (
-    <Card className="gap-0 overflow-hidden py-0">
-      <CardContent
-        className={cn('px-3 py-3 sm:px-4', !isCompact && 'space-y-3')}
-      >
+    <SetupJourneyFrame compact={isCompact}>
         {isCompact ? (
           /* ── Compact 3-zone layout (Project & Job Setup) ───────── */
           <div
             className={cn(
-              'flex flex-col gap-2',
+              'flex flex-col gap-3',
               isMultiStepCompact
-                ? 'xl:flex-row xl:items-center xl:gap-3'
-                : 'sm:flex-row sm:items-center sm:gap-3',
+                ? 'xl:flex-row xl:items-center xl:gap-0'
+                : 'sm:flex-row sm:items-center sm:gap-0',
             )}
           >
-            {/* Zone 1 — Intro */}
+            {/* Zone 1 — Intro; the description lives in an info tooltip */}
             <div
               className={cn(
                 'min-w-0',
-                steps.length >= 4
-                  ? 'xl:w-[19%] 2xl:w-[17%] xl:shrink-0'
-                  : steps.length === 3
-                    ? 'xl:w-[22%] 2xl:w-[20%] xl:shrink-0'
+                isMultiStepCompact ? 'xl:pr-4' : 'sm:pr-4',
+                visibleSteps.length >= 4
+                  ? 'xl:w-[19%] xl:shrink-0 2xl:w-[17%]'
+                  : visibleSteps.length === 3
+                    ? 'xl:w-[22%] xl:shrink-0 2xl:w-[20%]'
                     : 'sm:w-[26%] sm:shrink-0',
               )}
             >
               <div className={setupEyebrowStyles}>{eyebrow}</div>
-              <HeadingPair
-                title={title}
-                subtitle={description}
-                visualLevel="card"
-              />
+              <div className="flex min-w-0 items-center gap-1.5">
+                <h2 className={cn('truncate', headingTitleStyles.card)}>
+                  {title}
+                </h2>
+                <TooltipProvider delayDuration={150}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        aria-label={`About: ${title}`}
+                        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring shrink-0 cursor-help rounded-full outline-none focus-visible:ring-2"
+                      >
+                        <Info className="size-3.5" aria-hidden="true" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="bottom"
+                      align="start"
+                      className="max-w-sm text-xs leading-relaxed font-normal whitespace-pre-line"
+                    >
+                      {description}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <p className="sr-only">{description}</p>
             </div>
 
-            {/* Zone 2 — Step pills, single horizontal row each */}
+            {/* Zone 2 — Steps as one flat row, separated by dividers instead of nested cards */}
             <ol
               aria-label={`${eyebrow} progress`}
-              className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-row"
+              className={cn(
+                'border-border/70 flex min-w-0 flex-1 flex-col gap-1 border-t pt-3',
+                isMultiStepCompact
+                  ? 'xl:flex-row xl:gap-0 xl:border-t-0 xl:border-l xl:pt-0 xl:pl-2'
+                  : 'sm:flex-row sm:gap-0 sm:border-t-0 sm:border-l sm:pt-0 sm:pl-2',
+              )}
             >
-              {steps.map((step, index) => {
+              {visibleSteps.map((step, index) => {
                 const isComplete = step.status === 'complete';
                 const isCurrent = step.status === 'current';
                 const isUpcoming = step.status === 'upcoming';
@@ -140,141 +236,122 @@ export default function SetupJourneyCard({
                       ? 'Optional'
                       : 'Upcoming';
 
-                  return (
-                    <li
-                      key={step.title}
-                      aria-current={isCurrent ? 'step' : undefined}
-                      className={cn(
-                        'relative h-auto min-w-0 flex-1',
-                        isMultiStepCompact && 'flex flex-col',
-                      )}
-                    >
-                      <StepButtonWithTooltip hint={step.hoverHint}>
-                        <button
-                          type="button"
-                          disabled={!canSelect}
-                          onClick={step.onSelect}
-                          data-step-hint={step.hoverHint}
-                          data-step-current-tab={
-                            isCurrentTab ? 'true' : undefined
-                          }
-                          data-project-configure-step={
-                            step.guidesFlowAction ? 'true' : undefined
-                          }
-                          data-step-guides-action={
-                            step.guidesFlowAction ? 'true' : undefined
-                          }
-                          className={cn(
-                            'group flex w-full flex-col rounded-2xl border px-3 py-2 text-left transition-all',
-                            isMultiStepCompact && 'flex-1 justify-center',
-                            isComplete &&
-                              (isCurrentTab
-                                ? 'border-solid border-success/60 bg-success/10 ring-1 ring-success/30 hover:bg-success/15'
-                                : 'border-solid border-success/30 bg-success/5 hover:bg-success/10'),
-                            isCurrent &&
-                              (isCurrentTab
-                                ? 'border-solid border-primary bg-primary/10 ring-2 ring-primary/25 shadow-xs hover:border-primary hover:bg-primary/15'
-                                : 'border-dashed border-primary/60 bg-primary/[0.04] ring-1 ring-primary/10 hover:border-primary hover:bg-primary/10 hover:border-solid'),
-                            isUpcoming &&
-                              (isCurrentTab
-                                ? 'border-solid border-border/80 bg-muted/40 text-muted-foreground hover:bg-muted/50'
-                                : 'border-dashed border-border/70 bg-muted/20 text-muted-foreground hover:bg-muted/30'),
-                            canSelect && 'cursor-pointer',
+                return (
+                  <li
+                    key={step.title}
+                    aria-current={isCurrent ? 'step' : undefined}
+                    className={cn(
+                      'relative flex min-w-0 flex-1 items-stretch',
+                      index > 0 &&
+                        (isMultiStepCompact
+                          ? 'xl:before:bg-border/70 xl:before:my-2 xl:before:mr-2 xl:before:w-px xl:before:shrink-0 xl:before:content-[""]'
+                          : 'sm:before:bg-border/70 sm:before:my-2 sm:before:mr-2 sm:before:w-px sm:before:shrink-0 sm:before:content-[""]'),
+                    )}
+                  >
+                    <StepButtonWithTooltip hint={step.hoverHint}>
+                      <button
+                        type="button"
+                        disabled={!canSelect}
+                        onClick={step.onSelect}
+                        data-step-hint={step.hoverHint}
+                        data-step-status={step.status}
+                        data-step-current-tab={
+                          isCurrentTab ? 'true' : undefined
+                        }
+                        data-project-configure-step={
+                          step.guidesFlowAction ? 'true' : undefined
+                        }
+                        data-step-guides-action={
+                          step.guidesFlowAction ? 'true' : undefined
+                        }
+                        className={cn(
+                          'group relative flex w-full min-w-0 flex-1 flex-col justify-center rounded-xl px-3 py-2 text-left transition-colors',
+                          // The step for the open tab is underlined exactly like the active tab in the tab bar.
+                          isCurrentTab &&
+                            'after:bg-primary after:absolute after:inset-x-3 after:bottom-0 after:h-1 after:content-[""]',
+                          canSelect && 'hover:bg-muted/60',
+                          canSelect && 'cursor-pointer',
+                        )}
+                      >
+                        {/* Header row: circle · title · status */}
+                        <span className="flex items-center gap-2">
+                          {!currentStepOnly && (
+                            <span
+                              className={cn(
+                                // Step numbers look the same in every state; status shows on the right.
+                                'border-border text-foreground flex size-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-semibold',
+                              )}
+                            >
+                              {index + 1}
+                            </span>
                           )}
-                        >
-                          {/* Header row: circle · title · status badge */}
-                          <span className="flex items-center gap-2">
-                            <span
-                              className={cn(
-                                'flex size-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold transition-transform group-hover:scale-105',
-                                isComplete &&
-                                  'border-success bg-success text-white',
-                                isCurrent &&
-                                  'border-primary bg-primary text-primary-foreground shadow-xs',
-                                isUpcoming &&
-                                  'border-border bg-background text-muted-foreground',
-                              )}
-                            >
-                              {isComplete ? (
-                                <Check className="size-3" aria-hidden="true" />
-                              ) : (
-                                index + 1
-                              )}
-                            </span>
-                            <span
-                              className={cn(
-                                'min-w-0 flex-1 truncate',
-                                headingTitleStyles.item,
-                                isComplete || isCurrent
-                                  ? 'text-foreground'
-                                  : 'text-muted-foreground',
-                              )}
-                            >
-                              {step.title}
-                            </span>
-                            <span className="flex shrink-0 items-center gap-1.5 text-xs font-medium whitespace-nowrap">
-                              {isCurrentTab && (
-                                <span
-                                  className={cn(
-                                    'inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold border leading-none shrink-0',
-                                    isCurrent
-                                      ? 'border-primary/40 bg-primary/15 text-primary'
-                                      : isComplete
-                                        ? 'border-success/40 bg-success/15 text-success'
-                                        : 'border-border/80 bg-background/80 text-muted-foreground',
-                                  )}
-                                >
-                                  <span
-                                    className={cn(
-                                      'size-1.5 rounded-full',
-                                      isCurrent
-                                        ? 'bg-primary animate-pulse'
-                                        : isComplete
-                                          ? 'bg-success'
-                                          : 'bg-muted-foreground',
-                                    )}
-                                  />
-                                  Current tab
-                                </span>
-                              )}
-                              <span
-                                className={cn(
-                                  isMultiStepCompact && 'xl:sr-only 2xl:not-sr-only',
-                                  isComplete && 'text-success',
-                                  isCurrent && 'text-primary font-semibold',
-                                  isUpcoming && 'text-muted-foreground',
-                                )}
-                              >
-                                {statusLabel}
-                                {isCurrent && canSelect && !isCurrentTab && (
-                                  <ArrowRight className="inline-block size-3 ml-1 transition-transform group-hover:translate-x-0.5" />
-                                )}
-                              </span>
-                              {/* Visual indicator for active step when status label is hidden on xl */}
-                              {isCurrent && canSelect && !isCurrentTab && isMultiStepCompact && (
-                                <ArrowRight className="size-3 shrink-0 text-primary transition-transform group-hover:translate-x-0.5 hidden xl:block 2xl:hidden" />
-                              )}
-                            </span>
-                          </span>
-
-                          {/* Description — indented to align with title */}
                           <span
                             className={cn(
-                              'text-muted-foreground pl-7 line-clamp-1',
-                              headingSubtitleStyles.item,
+                              'min-w-0 flex-1 truncate',
+                              headingTitleStyles.item,
+                              isCurrentTab
+                                ? 'text-foreground font-bold'
+                                : currentStepOnly
+                                  ? 'text-foreground font-semibold'
+                                  : 'text-muted-foreground font-medium',
                             )}
                           >
-                            {step.description}
+                            {step.title}
                           </span>
-                        </button>
-                      </StepButtonWithTooltip>
-                    </li>
-                  );
+                          <span className="flex shrink-0 items-center gap-1.5 text-xs whitespace-nowrap">
+                            {isCurrentTab && (
+                              <span className="sr-only">Current tab</span>
+                            )}
+                            {isComplete && (
+                              <CircleCheck
+                                className="text-success size-4"
+                                aria-hidden="true"
+                              />
+                            )}
+                            <span
+                              className={cn(
+                                (isComplete ||
+                                  (isMultiStepCompact && !isCurrent)) &&
+                                  (isComplete
+                                    ? 'sr-only'
+                                    : 'xl:sr-only 2xl:not-sr-only'),
+                                isCurrent && 'font-semibold text-(--brand-orange)',
+                                isUpcoming && 'text-muted-foreground',
+                              )}
+                            >
+                              {statusLabel}
+                              {isCurrent && canSelect && !isCurrentTab && (
+                                <ArrowRight className="ml-1 inline-block size-3 transition-transform group-hover:translate-x-0.5" />
+                              )}
+                            </span>
+                          </span>
+                        </span>
+
+                        {/* Description — indented to align with title */}
+                        <span
+                          className={cn(
+                            'text-muted-foreground line-clamp-1',
+                            !currentStepOnly && 'pl-7',
+                            headingSubtitleStyles.item,
+                            !isCurrent && 'opacity-80',
+                          )}
+                        >
+                          {step.description}
+                        </span>
+                      </button>
+                    </StepButtonWithTooltip>
+                  </li>
+                );
               })}
             </ol>
 
             {/* Zone 3 — Progress counter + completion action */}
-            <div className="flex shrink-0 items-center gap-2 justify-end">
+            <div
+              className={cn(
+                'flex shrink-0 items-center justify-end gap-2',
+                isMultiStepCompact ? 'xl:pl-3' : 'sm:pl-3',
+              )}
+            >
               {secondaryAction && (
                 <Button
                   variant="ghost"
@@ -285,15 +362,25 @@ export default function SetupJourneyCard({
                   {secondaryAction.label}
                 </Button>
               )}
-              <span className="text-muted-foreground text-xs font-medium whitespace-nowrap rounded-full border border-border/60 bg-muted/30 px-2.5 py-1">
+              <SetupProgressRing
+                done={completedCount}
+                total={requiredSteps.length}
+              />
+              <span className="sr-only">
                 {completedCount}/{requiredSteps.length} complete
               </span>
-              {completedCount === requiredSteps.length && onContinue && actionLabel && (
-                <Button size="sm" className="h-8 text-xs font-medium" onClick={onContinue}>
-                  {actionLabel}
-                  <ArrowRight data-icon="inline-end" aria-hidden="true" />
-                </Button>
-              )}
+              {completedCount === requiredSteps.length &&
+                onContinue &&
+                actionLabel && (
+                  <Button
+                    size="sm"
+                    className="h-8 text-xs font-medium"
+                    onClick={onContinue}
+                  >
+                    {actionLabel}
+                    <ArrowRight data-icon="inline-end" aria-hidden="true" />
+                  </Button>
+                )}
             </div>
           </div>
         ) : (
@@ -477,7 +564,6 @@ export default function SetupJourneyCard({
             </div>
           </>
         )}
-      </CardContent>
-    </Card>
+    </SetupJourneyFrame>
   );
 }

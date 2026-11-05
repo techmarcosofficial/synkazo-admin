@@ -12,6 +12,7 @@ interface ProjectIdentityHeaderProps {
   syncMode?: string | null;
   activeEnvironment: string | null;
   subtitle: string;
+  syncStatus?: string;
   statusControl: ReactNode;
   action?: ReactNode;
 }
@@ -24,6 +25,7 @@ export default function ProjectIdentityHeader({
   syncMode,
   activeEnvironment,
   subtitle,
+  syncStatus,
   statusControl,
   action,
 }: ProjectIdentityHeaderProps) {
@@ -52,30 +54,35 @@ export default function ProjectIdentityHeader({
         <HeadingPair
           level="h1"
           title={<span className="block truncate">{name}</span>}
-          trailing={statusControl}
           subtitle={subtitle}
         />
       </div>
 
-      <div className="ml-auto flex flex-wrap items-center justify-end gap-2.5">
-        {syncMode && <StatusBadge status={syncMode} size="lg" />}
-        {activeEnvironment && (
-          <StatusBadge
-            status={activeEnvironment}
-            label={
-              activeEnvironment === 'sandbox'
-                ? 'Sandbox'
-                : 'Production'
-            }
-            title={
-              activeEnvironment === 'sandbox'
-                ? 'Operating in Sandbox — Live customer data is not affected'
-                : 'Production Sync active'
-            }
-            size="sm"
-          />
+      <div className="ml-auto flex flex-col items-end gap-1.5">
+        <div className="flex flex-wrap items-center justify-end gap-2.5">
+          {activeEnvironment && (
+            <StatusBadge
+              status={activeEnvironment}
+              label={
+                activeEnvironment === 'sandbox'
+                  ? 'Sandbox'
+                  : 'Production'
+              }
+              title={
+                activeEnvironment === 'sandbox'
+                  ? 'Operating in Sandbox — Live customer data is not affected'
+                  : 'Production Sync active'
+              }
+              size="md"
+              className="h-8 gap-2 px-3 text-sm font-medium"
+            />
+          )}
+          {statusControl}
+          {action}
+        </div>
+        {syncStatus && (
+          <p className="text-muted-foreground text-sm">{syncStatus}</p>
         )}
-        {action}
       </div>
     </div>
   );

@@ -20,7 +20,11 @@ export interface JobIdentityHeaderProps {
   activeEnvironment?: string | null;
   operationalStatus?: string | null;
   statusControl: ReactNode;
+  action?: ReactNode;
 }
+
+// Same height/size as the status dropdown so the header controls line up.
+const headerBadgeClassName = 'h-8 gap-2 px-3 text-sm font-medium';
 
 export default function JobIdentityHeader({
   name,
@@ -35,6 +39,7 @@ export default function JobIdentityHeader({
   activeEnvironment,
   operationalStatus,
   statusControl,
+  action,
 }: JobIdentityHeaderProps) {
   const twoWay = syncDirection === 'two_way';
   const DirectionIcon = twoWay ? ArrowLeftRight : ArrowRight;
@@ -66,7 +71,6 @@ export default function JobIdentityHeader({
         <HeadingPair
           level="h1"
           title={<span className="block truncate">{name}</span>}
-          trailing={statusControl}
           subtitle={
             <>
               {contextLabel && (
@@ -86,34 +90,44 @@ export default function JobIdentityHeader({
                   {formatEntityLabel(destObject)}
                 </span>
               </span>
-              <span aria-hidden="true"> · </span>
-              <span>{lastSyncedLabel}</span>
             </>
           }
         />
       </div>
 
-      <div className="ml-auto flex flex-wrap items-center justify-end gap-2.5">
-        <StatusBadge status={twoWay ? 'two_way' : 'one_way'} size="lg" />
-        {activeEnvironment && (
-          <StatusBadge
-            status={activeEnvironment}
-            label={
-              activeEnvironment === 'sandbox'
-                ? 'Sandbox'
-                : 'Production'
-            }
-            title={
-              activeEnvironment === 'sandbox'
-                ? 'Operating in Sandbox — Live customer data is not affected'
-                : 'Production Sync active'
-            }
-            size="sm"
-          />
-        )}
-        {operationalStatus && (
-          <StatusBadge status={operationalStatus} size="sm" />
-        )}
+      {/* Direction is already shown by the arrow between the platform icons. */}
+      <div className="ml-auto flex flex-col items-end gap-1.5">
+        <div className="flex flex-wrap items-center justify-end gap-2.5">
+          {operationalStatus && (
+            <StatusBadge
+              status={operationalStatus}
+              size="md"
+              className={headerBadgeClassName}
+            />
+          )}
+          {activeEnvironment && (
+            <StatusBadge
+              status={activeEnvironment}
+              label={
+                activeEnvironment === 'sandbox'
+                  ? 'Sandbox'
+                  : 'Production'
+              }
+              title={
+                activeEnvironment === 'sandbox'
+                  ? 'Operating in Sandbox — Live customer data is not affected'
+                  : 'Production Sync active'
+              }
+              size="md"
+              className={headerBadgeClassName}
+            />
+          )}
+          {statusControl}
+          {action}
+        </div>
+        <p className="text-muted-foreground text-sm">
+          {lastSyncedAt ? `Last synced ${lastSyncedLabel}` : 'Not synced yet'}
+        </p>
       </div>
     </div>
   );

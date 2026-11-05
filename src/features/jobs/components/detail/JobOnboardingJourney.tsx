@@ -38,6 +38,8 @@ export default function JobOnboardingJourney() {
       ?.activeEnvironment ?? project?.active_environment;
   const isSandbox = activeEnvironment === 'sandbox';
 
+  // Flow setup guidance lives on the Overview tab only.
+  if (activeTab !== 'overview') return null;
   if (state.stage === 'complete' && completeOnMount.current) {
     return null;
   }
@@ -64,16 +66,13 @@ export default function JobOnboardingJourney() {
   ): SetupJourneyStep['status'] =>
     complete ? 'complete' : state.stage === stage ? 'current' : 'upcoming';
 
+  // Rendered on the Overview tab only, showing just the next unfinished step.
   const steps: SetupJourneyStep[] = [
     {
       title: 'Field Mapping',
       description: 'Match source fields to their destination fields.',
       status: stepStatus(state.mappingReady, 'field_mapping'),
-      isCurrentTab: activeTab === 'field-mapping',
-      hoverHint:
-        activeTab !== 'field-mapping'
-          ? 'Go to Field Mapping tab'
-          : 'Map source and destination fields, and select a match field',
+      hoverHint: 'Go to the Field Mapping tab',
       onSelect: () => handleTabChange('field-mapping'),
     },
     ...(pipelineRequired
@@ -83,11 +82,7 @@ export default function JobOnboardingJourney() {
             description:
               'Choose the destination pipeline required by this job.',
             status: stepStatus(state.configurationReady, 'configure'),
-            isCurrentTab: activeTab === 'pipeline',
-            hoverHint:
-              activeTab !== 'pipeline'
-                ? 'Go to Pipeline tab'
-                : 'Select the destination pipeline',
+            hoverHint: 'Go to the Pipeline tab',
             onSelect: () => handleTabChange('pipeline'),
           },
         ]
@@ -98,19 +93,9 @@ export default function JobOnboardingJourney() {
         ? 'Run a limited sync in Sandbox and review the result before automating it.'
         : 'Run a limited sync and review the result before automating it.',
       status: stepStatus(state.testComplete, 'test'),
-      isCurrentTab: activeTab === 'overview',
       guidesFlowAction: state.stage === 'test',
-      hoverHint:
-        activeTab !== 'overview'
-          ? 'Go to Overview tab'
-          : "Click 'Sync now' below to test records",
-      onSelect: () => {
-        if (activeTab !== 'overview') {
-          handleTabChange('overview');
-        } else {
-          highlightSyncRunButton();
-        }
-      },
+      hoverHint: "Click 'Sync now' below to test records",
+      onSelect: highlightSyncRunButton,
     },
     {
       title: 'Automate (optional)',
@@ -118,28 +103,23 @@ export default function JobOnboardingJourney() {
         'Configure an automated schedule on Overview if this job should run automatically.',
       status: 'upcoming',
       optional: true,
-      isCurrentTab: activeTab === 'overview',
-      hoverHint:
-        activeTab !== 'overview'
-          ? 'Go to Overview tab to view schedule options'
-          : 'Configure an automated sync schedule',
-      onSelect: () => {
-        if (activeTab !== 'overview') {
-          handleTabChange('overview');
-        }
-      },
+      hoverHint: 'Configure an automated sync schedule',
     },
   ];
+
+  const requiredSteps = steps.filter((step) => !step.optional);
 
   if (state.stage === 'complete') {
     if (isSandbox) {
       if (!isProductionReady) {
         return (
           <SetupJourneyCard
+            compact
+            currentStepOnly
             eyebrow="Sandbox test complete"
             title="Ready to go live? Connect your Production platforms"
             description={`“${job.name}” verified cleanly in Sandbox without errors. To begin syncing live customer data, connect your live production platforms. Your field mappings and configurations will carry over seamlessly.`}
-            steps={steps}
+            steps={requiredSteps}
             actionLabel="Connect Production Platforms"
             onContinue={() =>
               navigate(`/projects/${projectId}?tab=connections&env=production`)
@@ -154,10 +134,12 @@ export default function JobOnboardingJourney() {
 
       return (
         <SetupJourneyCard
+          compact
+          currentStepOnly
           eyebrow="Sandbox test complete"
           title="Ready to activate live Production sync?"
           description={`“${job.name}” verified cleanly in Sandbox and your live Production connections are connected. Switch to Production in Environment Settings to begin syncing live data without re-mapping from scratch.`}
-          steps={steps}
+          steps={requiredSteps}
           actionLabel="Promote to Production"
           onContinue={() =>
             navigate(`/projects/${projectId}?tab=settings&section=environments`)
@@ -170,82 +152,40 @@ export default function JobOnboardingJourney() {
       );
     }
 
-    return (
-      <SetupJourneyCard
-        eyebrow="Job setup complete"
-        title="Your sync job is ready"
-        description={`“${job.name}” has valid mapping and configuration, and its first run completed successfully.`}
-        steps={steps}
-        actionLabel="Go to project overview"
-        onContinue={() => navigate(`/projects/${projectId}?tab=overview`)}
-      />
-    );
+    return null;
   }
 
-  const content =
+  const nextStep =
     state.stage === 'field_mapping'
-      ? {
-          eyebrow: 'Job setup',
-          title: 'Map the fields for this sync job',
-          description:
-            'Map source and destination fields, then choose at least one Match Field.',
-        }
+      ? 'Map source and destination fields on the Field Mapping tab, then choose at least one Match Field.'
       : state.stage === 'configure'
-        ? {
-            eyebrow: 'Job setup',
-            title: 'Finish the required sync configuration',
-            description:
-              'Choose the destination pipeline required before running this job.',
-          }
+        ? 'Choose the destination pipeline on the Pipeline tab.'
         : isJobActive
-          ? {
-              eyebrow: 'Job active',
-              title: isSandbox
-                ? 'Job is active — Ready for test sync'
-                : 'Job is active — Ready for limited sync',
-              description: isSandbox
-                ? 'This job is now active. Run a limited sync in Sandbox to verify records move cleanly between platforms.'
-                : 'This job is now active. Run a limited sync to review how records move between platforms.',
-            }
-          : {
-              eyebrow: 'Job setup',
-              title: isSandbox
-                ? 'Run your first test sync'
-                : 'Run your first sync',
-              description: isSandbox
-                ? 'Field mapping is configured. Run a test sync in Sandbox to verify records move cleanly between platforms.'
-                : 'Field mapping is configured. Run a sync to verify records move cleanly between platforms.',
-            };
-
-  let actionLabel: string | undefined;
-  let onContinue: (() => void) | undefined;
-
-  if (state.stage === 'test') {
-    if (activeTab !== 'overview') {
-      actionLabel = 'Go to Overview';
-      onContinue = () => handleTabChange('overview');
-    }
-  } else if (state.stage === 'field_mapping') {
-    if (activeTab !== 'field-mapping') {
-      actionLabel = 'Go to Field Mapping';
-      onContinue = () => handleTabChange('field-mapping');
-    }
-  } else if (state.stage === 'configure') {
-    if (activeTab !== 'pipeline') {
-      actionLabel = 'Configure Pipeline';
-      onContinue = () => handleTabChange('pipeline');
-    }
-  }
+          ? isSandbox
+            ? 'The flow is active. Run a limited sync in Sandbox with “Sync now” below and review the result.'
+            : 'The flow is active. Run a limited sync with “Sync now” below and review the result.'
+          : isSandbox
+            ? 'Field mapping is configured. Run a test sync in Sandbox with “Sync now” below to check records move cleanly.'
+            : 'Field mapping is configured. Run a sync with “Sync now” below to check records move cleanly.';
 
   return (
     <SetupJourneyCard
       compact
-      eyebrow={content.eyebrow}
-      title={content.title}
-      description={content.description}
+      currentStepOnly
+      eyebrow="Flow setup"
+      title="Set up your flow"
+      description={[
+        'Finish these steps to start syncing:',
+        `1. Field Mapping: match source fields to destination fields and choose a Match Field.`,
+        ...(pipelineRequired
+          ? ['2. Configure Pipeline: choose the destination pipeline.']
+          : []),
+        `${pipelineRequired ? 3 : 2}. ${isSandbox ? 'Test & Review' : 'Run & Review'}: run a limited sync and review the result.`,
+        `${pipelineRequired ? 4 : 3}. Automate (optional): set a schedule if the flow should run automatically.`,
+        '',
+        `Next: ${nextStep}`,
+      ].join('\n')}
       steps={steps}
-      actionLabel={actionLabel}
-      onContinue={onContinue}
     />
   );
 }

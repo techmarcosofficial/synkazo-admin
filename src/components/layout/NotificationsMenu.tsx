@@ -155,7 +155,7 @@ function NotificationItem({
           notification.data?.jobId && notification.data?.projectId
             ? {
                 jobBackTo: `/projects/${notification.data.projectId}?tab=sync-rules`,
-                jobBackLabel: 'Back to Sync Jobs',
+                jobBackLabel: 'Back to Sync Flows',
               }
             : undefined
         }

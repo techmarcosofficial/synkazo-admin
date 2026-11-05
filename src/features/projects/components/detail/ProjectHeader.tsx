@@ -1,4 +1,5 @@
 import { format, formatDistanceToNow } from 'date-fns';
+import { Settings } from 'lucide-react';
 import { toast } from 'sonner';
 
 import ProjectIdentityHeader from './ProjectIdentityHeader';
@@ -7,14 +8,23 @@ import ProjectStatusDropdown from './ProjectStatusDropdown';
 
 import { projectsApi } from '@/api/projects';
 import HeaderPrimaryActionButton from '@/components/shared/HeaderPrimaryActionButton';
+import { Button } from '@/components/ui/button';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import type { ProjectStatus } from '@/types';
 
 const PROJECT_STATUSES = ['draft', 'active', 'paused', 'error'];
 
 export default function ProjectHeader() {
-  const { project, connections, jobs, patchProject, projectActiveEnv } =
-    useProjectDetailContext();
+  const {
+    project,
+    connections,
+    jobs,
+    patchProject,
+    projectActiveEnv,
+    activeTab,
+    handleTabChange,
+  } = useProjectDetailContext();
+  const isSettingsOpen = activeTab === 'settings';
   const { hasPermission } = useSynkazoAuth();
   const canViewJobs = hasPermission('job.view');
 
@@ -51,16 +61,41 @@ export default function ProjectHeader() {
       destPlatformId={project.destPlatformId}
       syncMode={project.syncMode}
       activeEnvironment={projectActiveEnv}
-      subtitle={`${project.createdAt ? `Created ${format(new Date(project.createdAt), 'MMM d, yyyy')}` : ''}${project.lastSyncedAt ? ` · Last synced ${formatDistanceToNow(new Date(project.lastSyncedAt), { addSuffix: true })}` : ' · Not synced yet'}`}
+      subtitle={
+        project.createdAt
+          ? `Created ${format(new Date(project.createdAt), 'MMM d, yyyy')}`
+          : ''
+      }
+      syncStatus={
+        project.lastSyncedAt
+          ? `Last synced ${formatDistanceToNow(new Date(project.lastSyncedAt), { addSuffix: true })}`
+          : 'Not synced yet'
+      }
       statusControl={
         <ProjectStatusDropdown
           current={project.status}
           options={PROJECT_STATUSES}
           onSelect={handleStatusSelect}
           disabled={!hasPermission('project.edit')}
+          align="end"
         />
       }
-      action={<HeaderPrimaryActionButton />}
+      action={
+        <>
+          <HeaderPrimaryActionButton />
+          <Button
+            variant={isSettingsOpen ? 'default' : 'outline'}
+            size="icon-sm"
+            shape="pill"
+            aria-label="Project settings"
+            title="Project settings"
+            aria-pressed={isSettingsOpen}
+            onClick={() => handleTabChange('settings')}
+          >
+            <Settings aria-hidden="true" />
+          </Button>
+        </>
+      }
     />
   );
 }

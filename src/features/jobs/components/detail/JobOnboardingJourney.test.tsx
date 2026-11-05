@@ -234,13 +234,10 @@ describe('JobOnboardingJourney - Environment Awareness & Production Graduation',
     );
   });
 
-  it('renders standard "Your sync job is ready" card when completed in Production', () => {
-    // Initial mount in 'test' stage (not complete yet)
-    vi.mocked(useJobDetailContext).mockReturnValue({
+  it('hides the setup section once the flow completes in Production', () => {
+    const base = {
       projectId: 'proj-123',
-      job: { ...mockJob, lastSyncedAt: null },
       project: mockProjectProduction,
-      runLogs: [],
       jobFieldMappings: [
         {
           id: 'map-1',
@@ -257,60 +254,33 @@ describe('JobOnboardingJourney - Environment Awareness & Production Graduation',
       setManualDialogOpen: vi.fn(),
       handleToggle: vi.fn(),
       toggling: false,
+    };
+    vi.mocked(useJobDetailContext).mockReturnValue({
+      ...base,
+      job: { ...mockJob, lastSyncedAt: null },
+      runLogs: [],
     } as any);
 
-    const { rerender } = render(
+    const { rerender, container } = render(
       <MemoryRouter>
         <JobOnboardingJourney />
       </MemoryRouter>,
     );
+    expect(screen.getByText('Flow setup')).toBeInTheDocument();
 
-    // Now test run completes
+    // The test run completes
     vi.mocked(useJobDetailContext).mockReturnValue({
-      projectId: 'proj-123',
+      ...base,
       job: mockJob,
-      project: mockProjectProduction,
       runLogs: [{ id: 'run-1', jobId: 'job-101', status: 'completed' } as any],
-      jobFieldMappings: [
-        {
-          id: 'map-1',
-          jobId: 'job-101',
-          sourceField: 'email',
-          destFieldKey: 'email',
-          matchDestKey: true,
-        } as any,
-      ],
-      pipelineRequired: false,
-      pipelineConfigured: true,
-      activeTab: 'overview',
-      handleTabChange: vi.fn(),
-      setManualDialogOpen: vi.fn(),
-      handleToggle: vi.fn(),
-      toggling: false,
     } as any);
-
     rerender(
       <MemoryRouter>
         <JobOnboardingJourney />
       </MemoryRouter>,
     );
 
-    expect(screen.getByText('Job setup complete')).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', {
-        level: 2,
-        name: 'Your sync job is ready',
-      }),
-    ).toBeInTheDocument();
-
-    const overviewBtn = screen.getByRole('button', {
-      name: /^go to project overview/i,
-    });
-    expect(overviewBtn).toBeInTheDocument();
-    fireEvent.click(overviewBtn);
-    expect(mockNavigate).toHaveBeenCalledWith(
-      '/projects/proj-123?tab=overview',
-    );
+    expect(container).toBeEmptyDOMElement();
   });
 });
 
@@ -345,262 +315,131 @@ describe('JobOnboardingJourney - Step Gating & Activation Flow', () => {
     } as any,
   ];
 
-  it('omits the Configure Pipeline step when pipelineRequired is false', () => {
-    vi.mocked(useJobDetailContext).mockReturnValue({
+  const contextWith = (overrides: Record<string, unknown>) =>
+    ({
       projectId: 'proj-123',
       job: mockJob,
-      project: mockProject,
-      runLogs: [],
-      jobFieldMappings: mappingWithMatch,
-      pipelineRequired: false,
-      pipelineConfigured: true,
-      activeTab: 'field-mapping',
-      handleTabChange: vi.fn(),
-      setManualDialogOpen: vi.fn(),
-      handleToggle: vi.fn(),
-      toggling: false,
-    } as any);
-
-    render(
-      <MemoryRouter>
-        <JobOnboardingJourney />
-      </MemoryRouter>,
-    );
-
-    // Verify steps: Field Mapping, Test & Review, Automate (optional)
-    expect(screen.getByText('Field Mapping')).toBeInTheDocument();
-    expect(screen.getByText('Test & Review')).toBeInTheDocument();
-    expect(screen.getByText('Automate (optional)')).toBeInTheDocument();
-
-    // Verify Configure / Pipeline is completely absent
-    expect(screen.queryByText('Configure Pipeline')).not.toBeInTheDocument();
-    expect(screen.queryByText('Configure')).not.toBeInTheDocument();
-  });
-
-  it('includes the Configure Pipeline step when pipelineRequired is true', () => {
-    vi.mocked(useJobDetailContext).mockReturnValue({
-      projectId: 'proj-123',
-      job: mockJob,
-      project: mockProject,
-      runLogs: [],
-      jobFieldMappings: mappingWithMatch,
-      pipelineRequired: true,
-      pipelineConfigured: false,
-      activeTab: 'field-mapping',
-      handleTabChange: vi.fn(),
-      setManualDialogOpen: vi.fn(),
-      handleToggle: vi.fn(),
-      toggling: false,
-    } as any);
-
-    render(
-      <MemoryRouter>
-        <JobOnboardingJourney />
-      </MemoryRouter>,
-    );
-
-    expect(screen.getByText('Field Mapping')).toBeInTheDocument();
-    expect(screen.getByText('Configure Pipeline')).toBeInTheDocument();
-    expect(screen.getByText('Test & Review')).toBeInTheDocument();
-    expect(screen.getByText('Automate (optional)')).toBeInTheDocument();
-  });
-
-  it('guides user to sync run button when on overview tab without opening the dialog directly', () => {
-    const setManualDialogOpen = vi.fn();
-    const handleTabChange = vi.fn();
-
-    vi.mocked(useJobDetailContext).mockReturnValue({
-      projectId: 'proj-123',
-      job: { ...mockJob, isEnabled: false },
       project: mockProject,
       runLogs: [],
       jobFieldMappings: mappingWithMatch,
       pipelineRequired: false,
       pipelineConfigured: true,
       activeTab: 'overview',
-      handleTabChange,
-      setManualDialogOpen,
+      handleTabChange: vi.fn(),
+      setManualDialogOpen: vi.fn(),
       handleToggle: vi.fn(),
       toggling: false,
-    } as any);
+      ...overrides,
+    }) as any;
 
+  const renderJourney = () =>
     render(
       <MemoryRouter>
         <JobOnboardingJourney />
       </MemoryRouter>,
     );
 
-    // Shows informative title encouraging first test sync
+  it('renders nothing outside the Overview tab', () => {
+    vi.mocked(useJobDetailContext).mockReturnValue(
+      contextWith({ activeTab: 'field-mapping' }),
+    );
+    const { container } = renderJourney();
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it('shows only the Field Mapping step until fields are mapped', () => {
+    const handleTabChange = vi.fn();
+    vi.mocked(useJobDetailContext).mockReturnValue(
+      contextWith({ jobFieldMappings: [], handleTabChange }),
+    );
+    renderJourney();
+
     expect(
-      screen.getByRole('heading', { name: 'Run your first test sync' }),
+      screen.getByRole('heading', { name: 'Set up your flow' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Next: Map source and destination fields/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Test & Review')).not.toBeInTheDocument();
+    expect(screen.queryByText('Automate (optional)')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /field mapping/i }));
+    expect(handleTabChange).toHaveBeenCalledWith('field-mapping');
+  });
+
+  it('shows only the Configure Pipeline step when a pipeline is still required', () => {
+    vi.mocked(useJobDetailContext).mockReturnValue(
+      contextWith({ pipelineRequired: true, pipelineConfigured: false }),
+    );
+    renderJourney();
+
+    expect(screen.getByText('Configure Pipeline')).toBeInTheDocument();
+    expect(screen.queryByText('Field Mapping')).not.toBeInTheDocument();
+    expect(screen.queryByText('Test & Review')).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/Next: Choose the destination pipeline/),
+    ).toBeInTheDocument();
+  });
+
+  it('omits the pipeline step entirely when no pipeline is required', () => {
+    vi.mocked(useJobDetailContext).mockReturnValue(contextWith({}));
+    renderJourney();
+
+    expect(screen.queryByText('Configure Pipeline')).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /1\. Field Mapping[\s\S]*2\. Test & Review[\s\S]*3\. Automate/,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('guides an inactive flow to the sync button without opening the dialog', () => {
+    const setManualDialogOpen = vi.fn();
+    const handleTabChange = vi.fn();
+    vi.mocked(useJobDetailContext).mockReturnValue(
+      contextWith({ setManualDialogOpen, handleTabChange }),
+    );
+    renderJourney();
+
+    expect(screen.getByText('Flow setup')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Set up your flow' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Next: Field mapping is configured\. Run a test sync in Sandbox/,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Field Mapping')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('img', { name: '1 of 2 steps complete' }),
     ).toBeInTheDocument();
 
-    // Verify hover hint and flow guide on Test & Review step
     const testStep = screen.getByRole('button', { name: /test & review/i });
     expect(testStep).toHaveAttribute(
       'data-step-hint',
       "Click 'Sync now' below to test records",
     );
     expect(testStep).toHaveAttribute('data-step-guides-action', 'true');
-    expect(testStep).not.toHaveAttribute('title');
 
-    // Clicking step card highlights the sync button without opening the modal
     fireEvent.click(testStep);
     expect(setManualDialogOpen).not.toHaveBeenCalled();
     expect(handleTabChange).not.toHaveBeenCalled();
   });
 
-  it('displays active state and guides to sync button without opening dialog directly when job is active on overview tab', () => {
-    const setManualDialogOpen = vi.fn();
-    const handleTabChange = vi.fn();
-
-    vi.mocked(useJobDetailContext).mockReturnValue({
-      projectId: 'proj-123',
-      job: { ...mockJob, isEnabled: true },
-      project: mockProject,
-      runLogs: [],
-      jobFieldMappings: mappingWithMatch,
-      pipelineRequired: false,
-      pipelineConfigured: true,
-      activeTab: 'overview',
-      handleTabChange,
-      setManualDialogOpen,
-      handleToggle: vi.fn(),
-      toggling: false,
-    } as any);
-
-    render(
-      <MemoryRouter>
-        <JobOnboardingJourney />
-      </MemoryRouter>,
+  it('tells an active flow to run its limited sync', () => {
+    vi.mocked(useJobDetailContext).mockReturnValue(
+      contextWith({ job: { ...mockJob, isEnabled: true } }),
     );
+    renderJourney();
 
-    // Eyebrow and heading confirm active state
-    expect(screen.getByText('Job active')).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', {
-        name: 'Job is active — Ready for test sync',
-      }),
+      screen.getByText(
+        /Next: The flow is active\. Run a limited sync in Sandbox/,
+      ),
     ).toBeInTheDocument();
-
-    // Verify hover hint on Test & Review step when active
-    const testStep = screen.getByRole('button', { name: /test & review/i });
-    expect(testStep).toHaveAttribute(
-      'data-step-hint',
-      "Click 'Sync now' below to test records",
-    );
-    expect(testStep).toHaveAttribute('data-step-guides-action', 'true');
-    expect(testStep).not.toHaveAttribute('title');
-
-    // Clicking step card does not open dialog directly
-    fireEvent.click(testStep);
-    expect(setManualDialogOpen).not.toHaveBeenCalled();
-  });
-
-  it('guides step navigation with hover hints and one-click tab switching when on a different tab', () => {
-    const handleTabChange = vi.fn();
-
-    vi.mocked(useJobDetailContext).mockReturnValue({
-      projectId: 'proj-123',
-      job: { ...mockJob, isEnabled: true },
-      project: mockProject,
-      runLogs: [],
-      jobFieldMappings: mappingWithMatch,
-      pipelineRequired: false,
-      pipelineConfigured: true,
-      activeTab: 'field-mapping',
-      handleTabChange,
-      setManualDialogOpen: vi.fn(),
-      handleToggle: vi.fn(),
-      toggling: false,
-    } as any);
-
-    render(
-      <MemoryRouter>
-        <JobOnboardingJourney />
-      </MemoryRouter>,
-    );
-
-    // Step 1: Field Mapping (current tab)
-    const step1 = screen.getByRole('button', { name: /field mapping/i });
-    expect(step1).toHaveAttribute(
-      'data-step-hint',
-      'Map source and destination fields, and select a match field',
-    );
-    expect(step1).not.toHaveAttribute('title');
-
-    // Step 2: Test & Review (different tab -> Go to Overview tab)
-    const step2 = screen.getByRole('button', { name: /test & review/i });
-    expect(step2).toHaveAttribute('data-step-hint', 'Go to Overview tab');
-    expect(step2).not.toHaveAttribute('title');
-
-    // Clicking step 2 strictly switches to overview tab without dialog
-    fireEvent.click(step2);
-    expect(handleTabChange).toHaveBeenCalledWith('overview');
-
-    // Step 3: Automate (different tab -> Go to Overview tab to view schedule options)
-    const step3 = screen.getByRole('button', { name: /automate/i });
-    expect(step3).toHaveAttribute(
-      'data-step-hint',
-      'Go to Overview tab to view schedule options',
-    );
-    expect(step3).not.toHaveAttribute('title');
-  });
-
-  it('selects the Overview tab when clicking the Automate step pill', () => {
-    const handleTabChange = vi.fn();
-
-    vi.mocked(useJobDetailContext).mockReturnValue({
-      projectId: 'proj-123',
-      job: { ...mockJob, isEnabled: true },
-      project: mockProject,
-      runLogs: [],
-      jobFieldMappings: mappingWithMatch,
-      pipelineRequired: false,
-      pipelineConfigured: true,
-      activeTab: 'field-mapping',
-      handleTabChange,
-      setManualDialogOpen: vi.fn(),
-      handleToggle: vi.fn(),
-      toggling: false,
-    } as any);
-
-    render(
-      <MemoryRouter>
-        <JobOnboardingJourney />
-      </MemoryRouter>,
-    );
-
-    const automateBtn = screen.getByRole('button', {
-      name: /automate \(optional\)/i,
-    });
-    expect(automateBtn).toBeInTheDocument();
-
-    fireEvent.click(automateBtn);
-
-    expect(handleTabChange).toHaveBeenCalledWith('overview');
-  });
-
-  it('keeps setup steps visible on Overview before the first run', () => {
-    vi.mocked(useJobDetailContext).mockReturnValue({
-      projectId: 'proj-123',
-      job: { ...mockJob, isEnabled: false },
-      project: mockProject,
-      runLogs: [],
-      jobFieldMappings: [],
-      pipelineRequired: false,
-      pipelineConfigured: true,
-      activeTab: 'overview',
-    } as any);
-
-    render(
-      <MemoryRouter>
-        <JobOnboardingJourney />
-      </MemoryRouter>,
-    );
-
     expect(
-      screen.getByRole('heading', { name: 'Map the fields for this sync job' }),
+      screen.getByRole('button', { name: /test & review/i }),
     ).toBeInTheDocument();
   });
 });

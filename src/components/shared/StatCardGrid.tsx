@@ -48,18 +48,21 @@ export default function StatCardGrid({
             {dashboardAppearance &&
               (stat.icon || stat.delta || stat.direction) && (
                 <div className="flex items-center justify-between gap-3">
-                  {stat.icon ? (
-                    <div
-                      className={cn(
-                        'flex size-10 items-center justify-center rounded-xl',
-                        stat.tone,
-                      )}
-                    >
-                      <stat.icon className="size-5" />
-                    </div>
-                  ) : (
-                    <span />
-                  )}
+                  <div className="flex min-w-0 items-center gap-3">
+                    {stat.icon && (
+                      <div
+                        className={cn(
+                          'flex size-10 shrink-0 items-center justify-center rounded-xl',
+                          stat.tone,
+                        )}
+                      >
+                        <stat.icon className="size-5" aria-hidden="true" />
+                      </div>
+                    )}
+                    <h3 className="text-foreground truncate text-sm font-semibold">
+                      {stat.label}
+                    </h3>
+                  </div>
 
                   {stat.delta ? (
                     <div
@@ -115,9 +118,11 @@ export default function StatCardGrid({
               <div className="text-2xl font-extrabold tracking-tight">
                 {stat.value}
               </div>
-              <div className="text-muted-foreground text-xs font-medium">
-                {stat.label}
-              </div>
+              {!dashboardAppearance && (
+                <div className="text-muted-foreground text-xs font-medium">
+                  {stat.label}
+                </div>
+              )}
             </div>
             {!dashboardAppearance && stat.delta && (
               <div

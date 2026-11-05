@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 
 import { useProjectDetailContext } from './context';
 
@@ -13,8 +12,20 @@ import {
   type DraftSyncJob,
 } from '@/features/journey/draftSyncJob';
 
+const SETUP_TITLE = 'Set up your project';
+
+function setupInstructions(nextStep: string) {
+  return [
+    'Finish these 3 steps to start syncing:',
+    '1. Connect Platforms: connect and verify your source and destination on the Connections tab.',
+    '2. Create a sync flow: on the Sync Flows tab, choose which records move between the platforms.',
+    '3. Configure & Test: map the fields, then run a successful test sync.',
+    '',
+    `Next: ${nextStep}`,
+  ].join('\n');
+}
+
 export default function ProjectOnboardingJourney() {
-  const navigate = useNavigate();
   const {
     projectId,
     jobs,
@@ -48,9 +59,8 @@ export default function ProjectOnboardingJourney() {
       .map((log) => log.metadata?.status),
   });
 
-  const completeOnMount = useRef(stage === 'complete');
-
-  if (stage === 'complete' && completeOnMount.current) return null;
+  // Setup guidance lives on the Overview tab only, and only until the project is 100% set up.
+  if (activeTab !== 'overview' || stage === 'complete') return null;
 
   const isConnecting = stage === 'connect_platforms' || !hasBothConnections;
   const hasDraft = Boolean(draftState);
@@ -59,15 +69,6 @@ export default function ProjectOnboardingJourney() {
     onlyJob?.fieldMappings?.length &&
     onlyJob.fieldMappings.some((mapping) => mapping.isMatchField),
   );
-  const goToNextFlowStep = () => {
-    if (!onlyJob) {
-      handleTabChange('sync-rules');
-      return;
-    }
-    navigate(
-      `/projects/${projectId}/jobs/${onlyJob.id}${mappingReady ? '' : '?tab=field-mapping'}`,
-    );
-  };
 
   // Draft resolution helpers
   const draftStepNumber = Number(draftState?.step ?? 0) + 1;
@@ -115,7 +116,7 @@ export default function ProjectOnboardingJourney() {
 
   if (!hasBothConnections) {
     step2Status = 'upcoming';
-  } else if (hasJobs || stage === 'complete' || stage === 'configure_job') {
+  } else if (hasJobs || stage === 'configure_job') {
     step2Status = 'complete';
   } else if (hasDraft) {
     step2Status = 'current';
@@ -124,61 +125,40 @@ export default function ProjectOnboardingJourney() {
     step2Status = 'current';
   }
 
+  // Only the first unfinished step is shown (currentStepOnly), always on the Overview tab.
   const steps: SetupJourneyStep[] = [
     {
       title: 'Connect Platforms',
       description: step1Desc,
       status: step1Status,
-      isCurrentTab: activeTab === 'connections',
-      hoverHint:
-        activeTab !== 'connections'
-          ? 'Go to Connections tab'
-          : 'Connect both Source and Destination platforms below',
-      guidesFlowAction: activeTab === 'connections' && !hasBothConnections,
+      hoverHint: 'Go to the Connections tab',
       onSelect: () => handleTabChange('connections'),
     },
     {
       title: step2Title,
       description: step2Desc,
       status: step2Status,
-      isCurrentTab: activeTab === 'sync-rules',
-      hoverHint:
-        activeTab !== 'sync-rules'
-          ? 'Go to Sync Flows tab'
-          : hasDraft
-            ? 'Click to resume sync flow configuration'
-            : "Click '+ Create sync flow' to configure rules",
-      guidesFlowAction:
-        activeTab === 'sync-rules' &&
-        (stage === 'create_first_job' || hasDraft),
+      hoverHint: hasDraft
+        ? 'Resume your unfinished sync flow'
+        : 'Create your first sync flow',
       onSelect: !hasBothConnections
         ? undefined
-        : activeTab !== 'sync-rules'
-          ? () => handleTabChange('sync-rules')
-          : hasDraft || stage === 'create_first_job'
-            ? onCreateSyncRule
-            : () => handleTabChange('sync-rules'),
+        : hasDraft || stage === 'create_first_job'
+          ? onCreateSyncRule
+          : () => handleTabChange('sync-rules'),
     },
     {
       title: 'Configure & Test',
       guidesFlowAction: stage === 'configure_job',
-      isCurrentTab: false,
-      hoverHint: 'Open sync flow to configure & test',
-      description:
-        stage === 'complete'
-          ? 'A sync flow has completed its first run.'
-          : hasJobs
-            ? 'Finish setup and run a successful test sync.'
-            : 'Available after you create a sync flow.',
-      status:
-        stage === 'complete'
-          ? 'complete'
-          : hasBothConnections && hasJobs
-            ? 'current'
-            : 'upcoming',
+      hoverHint: 'Go to Sync Flows to configure, test and activate',
+      description: hasJobs
+        ? 'Finish setup and run a successful test sync.'
+        : 'Available after you create a sync flow.',
+      status: hasBothConnections && hasJobs ? 'current' : 'upcoming',
+      // Flows are configured, tested and activated from the Sync Flows tab.
       onSelect:
-        hasBothConnections && hasJobs && stage !== 'complete'
-          ? goToNextFlowStep
+        hasBothConnections && hasJobs
+          ? () => handleTabChange('sync-rules')
           : undefined,
     },
   ];
@@ -188,38 +168,13 @@ export default function ProjectOnboardingJourney() {
     return (
       <SetupJourneyCard
         compact
+        currentStepOnly
         eyebrow="Project setup"
-        title="Connect your source and destination"
-        description="Both connections must be verified before you can create or run a sync flow."
+        title={SETUP_TITLE}
+        description={setupInstructions(
+          'Connect and verify both platforms on the Connections tab. You can\'t create or run a sync flow until both are verified.',
+        )}
         steps={steps}
-        actionLabel={
-          activeTab === 'connections' ? undefined : 'Connect Platforms'
-        }
-        onContinue={
-          activeTab === 'connections'
-            ? undefined
-            : () => handleTabChange('connections')
-        }
-      />
-    );
-  }
-
-  if (stage === 'complete') {
-    return (
-      <SetupJourneyCard
-        compact
-        eyebrow="Project setup"
-        title="Project setup complete"
-        description="Your first sync flow completed a successful run. Manage other flows in Sync Flows."
-        steps={steps}
-        actionLabel={
-          activeTab === 'sync-rules' ? undefined : 'Go to Sync Flows'
-        }
-        onContinue={
-          activeTab === 'sync-rules'
-            ? undefined
-            : () => handleTabChange('sync-rules')
-        }
       />
     );
   }
@@ -228,28 +183,17 @@ export default function ProjectOnboardingJourney() {
     return (
       <SetupJourneyCard
         compact
+        currentStepOnly
         eyebrow="Project setup"
-        title={
-          mappingReady
-            ? 'Run your first test sync'
-            : 'Configure and test a sync flow'
-        }
-        description={
+        title={SETUP_TITLE}
+        description={setupInstructions(
           onlyJob
             ? mappingReady
               ? 'Your flow has field mappings. Open it to finish setup and run a test sync.'
               : 'Your flow has been created. Configure its field mappings, then run a test sync.'
-            : 'Choose a flow in Sync Flows to finish its setup and run a test sync.'
-        }
+            : 'Choose a flow in Sync Flows to finish its setup and run a test sync.',
+        )}
         steps={steps}
-        actionLabel={
-          activeTab === 'sync-rules' ? undefined : 'Go to Sync Flows'
-        }
-        onContinue={
-          activeTab === 'sync-rules'
-            ? undefined
-            : () => handleTabChange('sync-rules')
-        }
       />
     );
   }
@@ -259,18 +203,13 @@ export default function ProjectOnboardingJourney() {
     return (
       <SetupJourneyCard
         compact
+        currentStepOnly
         eyebrow="Project setup"
-        title="Unfinished sync flow in progress"
-        description={`Your configuration for "${draftFlowName}" (${draftStepLabel}) was safely preserved. Continue setup to finish creating your sync flow.`}
+        title={SETUP_TITLE}
+        description={setupInstructions(
+          `Your unfinished sync flow "${draftFlowName}" (${draftStepLabel}) was saved. Resume it to finish creating the flow.`,
+        )}
         steps={steps}
-        actionLabel={
-          activeTab === 'sync-rules' ? 'Resume Setup' : 'Go to Sync Flows'
-        }
-        onContinue={
-          activeTab === 'sync-rules'
-            ? onCreateSyncRule
-            : () => handleTabChange('sync-rules')
-        }
         secondaryAction={{
           label: 'Discard',
           onClick: handleDiscardDraft,
@@ -283,18 +222,13 @@ export default function ProjectOnboardingJourney() {
   return (
     <SetupJourneyCard
       compact
+      currentStepOnly
       eyebrow="Project setup"
-      title="Your connections are ready!"
-      description="Both platforms are connected and verified. Next, choose what data you want to sync."
+      title={SETUP_TITLE}
+      description={setupInstructions(
+        'Both platforms are connected and verified. Create a sync flow on the Sync Flows tab to choose what data you want to sync.',
+      )}
       steps={steps}
-      actionLabel={
-        activeTab === 'sync-rules' ? undefined : 'Go to Sync Flows'
-      }
-      onContinue={
-        activeTab === 'sync-rules'
-          ? undefined
-          : () => handleTabChange('sync-rules')
-      }
     />
   );
 }

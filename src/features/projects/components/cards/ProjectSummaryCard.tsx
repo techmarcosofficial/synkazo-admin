@@ -49,7 +49,7 @@ export default function ProjectSummaryCard({
   return (
     <Card
       size="sm"
-      className="hover:border-foreground/20 focus-within:border-foreground/20 h-full transition-all duration-200 ease-out focus-within:-translate-y-1 hover:-translate-y-1"
+      className="hover:border-foreground/20 focus-within:border-foreground/20 relative h-full transition-all duration-200 ease-out focus-within:-translate-y-1 hover:-translate-y-1"
     >
       <CardContent className="flex flex-1 flex-col gap-5">
         <div className="flex items-start justify-between gap-3">
@@ -70,7 +70,8 @@ export default function ProjectSummaryCard({
             <Link
               to={to}
               className={cn(
-                'hover:text-primary focus-visible:ring-ring block truncate rounded-sm transition-colors outline-none focus-visible:ring-2',
+                // Stretched link: its ::after covers the whole card so any click opens the project.
+                'group-hover/card:text-primary focus-visible:after:ring-ring block truncate rounded-sm transition-colors outline-none after:absolute after:inset-0 after:rounded-[inherit] after:content-[""] focus-visible:after:ring-2',
                 headingTitleStyles.section,
               )}
             >
@@ -93,13 +94,13 @@ export default function ProjectSummaryCard({
           )}
         </div>
 
-        <dl className="bg-secondary/40 border-border/60 mt-auto grid grid-cols-2 gap-3 rounded-2xl border p-3.5">
+        <dl className="divide-border/60 mt-auto grid grid-cols-2 divide-x">
           {metrics.map((metric) => (
-            <div key={metric.label}>
-              <dt className="text-muted-foreground text-xs font-medium">
+            <div key={metric.label} className="space-y-1.5 px-4 first:pl-0">
+              <dt className="text-muted-foreground text-[11px] leading-4 font-semibold tracking-wider uppercase">
                 {metric.label}
               </dt>
-              <dd className="text-foreground mt-1 text-lg font-bold tracking-tight tabular-nums">
+              <dd className="text-foreground text-2xl leading-7 font-semibold tracking-tight tabular-nums">
                 {metric.value}
               </dd>
             </div>
@@ -107,21 +108,22 @@ export default function ProjectSummaryCard({
         </dl>
       </CardContent>
 
-      <CardFooter className="justify-between gap-3">
-        <span className="text-muted-foreground flex min-w-0 items-center gap-1 text-xs">
-          <Clock className="size-3 shrink-0" aria-hidden="true" />
+      <CardFooter className="border-border/60 justify-between gap-3 border-t">
+        <span className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs">
+          <Clock className="size-3.5 shrink-0" aria-hidden="true" />
           <span className="truncate">{activityLabel}</span>
         </span>
-        {footerAction ??
-          (to ? (
-            <Link
-              to={to}
-              className="text-primary focus-visible:ring-ring inline-flex shrink-0 items-center gap-1 rounded-sm text-sm font-medium outline-none hover:underline focus-visible:ring-2"
-            >
-              View project
-              <ArrowRight className="size-3.5" aria-hidden="true" />
-            </Link>
-          ) : null)}
+        {footerAction ? (
+          <div className="relative z-10">{footerAction}</div>
+        ) : to ? (
+          <span
+            aria-hidden="true"
+            className="text-primary inline-flex shrink-0 items-center gap-1 text-sm font-medium group-hover/card:underline"
+          >
+            View project
+            <ArrowRight className="size-3.5 transition-transform group-hover/card:translate-x-0.5" />
+          </span>
+        ) : null}
       </CardFooter>
     </Card>
   );

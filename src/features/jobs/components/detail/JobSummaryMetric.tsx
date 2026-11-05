@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 
+// Same order as the project Overview stat cards: icon, then label, then the value underneath.
 export default function JobSummaryMetric({
   icon: Icon,
   label,
@@ -12,13 +13,17 @@ export default function JobSummaryMetric({
   description?: string;
 }) {
   return (
-    <div className="bg-secondary/30 border-border/60 min-w-0 space-y-1.5 rounded-2xl border p-4 transition-colors">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-muted-foreground text-xs font-medium">{label}</span>
-        <Icon className="text-muted-foreground/60 size-4 shrink-0" aria-hidden="true" />
+    <div className="bg-secondary/30 border-border/60 min-w-0 space-y-4 rounded-2xl border p-4 transition-colors">
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="bg-muted text-muted-foreground flex size-10 shrink-0 items-center justify-center rounded-xl">
+          <Icon className="size-5" aria-hidden="true" />
+        </div>
+        <h3 className="text-foreground truncate text-sm font-semibold">
+          {label}
+        </h3>
       </div>
       <div>
-        <p className="text-foreground text-lg sm:text-xl font-bold tracking-tight tabular-nums">
+        <p className="text-foreground text-2xl font-extrabold tracking-tight tabular-nums">
           {value}
         </p>
         {description && (

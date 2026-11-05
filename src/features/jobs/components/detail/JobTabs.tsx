@@ -1,21 +1,72 @@
+import { useEffect } from 'react';
+
 import JobTabBar from './JobTabBar';
 
 import { useJobDetailContext } from '@/features/jobs/components/detail/context';
 import type { JobDetailTabView } from '@/features/jobs/hooks';
 import { useFieldMappingDraftStore } from '@/features/jobs/store/useFieldMappingDraftStore';
+import { selectJobOnboardingState } from '@/features/onboarding';
+
+// Tabs that only have content once the flow has run at least once.
+const RUN_DEPENDENT_TABS = new Set([
+  'run-history',
+  'conflicts',
+  'webhook-events',
+]);
 
 export default function JobTabs({ tabs }: { tabs: JobDetailTabView[] }) {
-  const { job } = useJobDetailContext();
+  const {
+    job,
+    jobFieldMappings,
+    pipelineRequired,
+    pipelineConfigured,
+    runLogs,
+    activeTab,
+    handleTabChange,
+  } = useJobDetailContext();
   const hasMappingDraft = useFieldMappingDraftStore((state) =>
     job?.id ? state.hasDraft(job.id) : false,
   );
 
-  return (
-    <JobTabBar
-      tabs={tabs.map((tab) => ({
+  const { mappingReady } = selectJobOnboardingState({
+    mappings: jobFieldMappings,
+    pipelineRequired,
+    pipelineConfigured,
+    runLogs,
+    lastSyncedAt: job.lastSyncedAt,
+  });
+  const hasRun = runLogs.length > 0 || Boolean(job.lastSyncedAt);
+
+  const lockReasonFor = (id: string) => {
+    if (id === 'pipeline' && !mappingReady) {
+      return 'Map your fields and choose a match field first';
+    }
+    if (RUN_DEPENDENT_TABS.has(id) && !hasRun) {
+      return 'Available after the first sync run';
+    }
+    return '';
+  };
+
+  // Settings opens from the header's gear button instead of the tab row.
+  const barTabs = tabs
+    .filter((tab) => tab.id !== 'settings')
+    .map((tab) => {
+      const lockReason = lockReasonFor(tab.id);
+      return {
         ...tab,
         hasUnsavedDraft: tab.id === 'field-mapping' && hasMappingDraft,
-      }))}
-    />
+        locked: Boolean(lockReason),
+        lockReason,
+      };
+    });
+
+  // A locked tab reached by URL falls back to Overview.
+  const activeTabLocked = barTabs.some(
+    (tab) => tab.id === activeTab && tab.locked,
   );
+  useEffect(() => {
+    if (activeTabLocked) handleTabChange('overview', { replace: true });
+  }, [activeTabLocked]);
+
+  return <JobTabBar tabs={barTabs} />;
 }

@@ -34,13 +34,13 @@ describe('ProjectCard', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('1.2K')).toBeInTheDocument();
 
-    const projectLinks = screen.getAllByRole('link');
-    expect(projectLinks).toHaveLength(2);
-    projectLinks.forEach((link) =>
-      expect(link).toHaveAttribute('href', '/projects/project-1'),
-    );
+    // One stretched link covers the whole card; "View project" is a visual cue only.
+    const projectLink = screen.getByRole('link', { name: 'Customer sync' });
+    expect(screen.getAllByRole('link')).toHaveLength(1);
+    expect(projectLink).toHaveAttribute('href', '/projects/project-1');
+    expect(projectLink).toHaveClass('after:inset-0');
 
-    expect(projectLinks[0].closest('[data-slot="card"]')).toHaveClass(
+    expect(projectLink.closest('[data-slot="card"]')).toHaveClass(
       'hover:-translate-y-1',
     );
   });
@@ -103,4 +103,3 @@ describe('ProjectCard', () => {
     );
   });
 });
-

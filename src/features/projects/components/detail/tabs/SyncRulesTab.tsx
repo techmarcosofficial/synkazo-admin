@@ -55,6 +55,8 @@ export interface JobLifecycle {
   scheduleText: string;
   actionLabel: string;
   actionVariant: 'default' | 'outline' | 'ghost';
+  /** Setup step of a not-yet-activated flow: rendered in the brand orange to draw focus. */
+  highlight?: boolean;
   targetUrl: string;
   isActionable: boolean;
 }
@@ -76,6 +78,7 @@ export function getJobLifecycle(
       scheduleText: 'Setup required',
       actionLabel: 'Configure Mapping',
       actionVariant: 'default',
+      highlight: true,
       targetUrl: `/projects/${projectId}/jobs/${job.id}?tab=field-mapping`,
       isActionable: true,
     };
@@ -86,7 +89,8 @@ export function getJobLifecycle(
       statusKey: 'ready_to_test',
       scheduleText: 'Test pending',
       actionLabel: 'Test & Activate',
-      actionVariant: 'outline',
+      actionVariant: 'default',
+      highlight: true,
       targetUrl: `/projects/${projectId}/jobs/${job.id}`,
       isActionable: true,
     };
@@ -165,7 +169,7 @@ function SyncJobCard({
   const lifecycle = getJobLifecycle(job, detailQuery.data, projectId);
   const isNeedsMapping = lifecycle.statusKey === 'needs_mapping';
   const backTo = '/projects/' + projectId + '?tab=sync-rules';
-  const linkState = { jobBackTo: backTo, jobBackLabel: 'Back to Sync Jobs' };
+  const linkState = { jobBackTo: backTo, jobBackLabel: 'Back to Sync Flows' };
 
   const metrics = [
     {
@@ -258,13 +262,24 @@ function SyncJobCard({
       onOpenChange={setOpen}
       hasMetrics={hasAnyRun}
       titleLink={
-        <Link
-          to={lifecycle.targetUrl}
-          state={linkState}
-          className="hover:text-primary text-foreground block truncate text-sm font-semibold transition-colors hover:underline"
-        >
-          {job.name}
-        </Link>
+        <span className="flex min-w-0 items-center gap-1.5">
+          <Link
+            to={lifecycle.targetUrl}
+            state={linkState}
+            className="hover:text-primary text-foreground block truncate text-sm font-semibold transition-colors hover:underline"
+          >
+            {job.name}
+          </Link>
+          {job.isEnabled && (
+            <CheckCircle2
+              className="text-success size-4 shrink-0"
+              role="img"
+              aria-label="Flow activated"
+            >
+              <title>Flow activated</title>
+            </CheckCircle2>
+          )}
+        </span>
       }
       subtitle={
         <>
@@ -283,6 +298,8 @@ function SyncJobCard({
           data-flow-next-action={lifecycle.isActionable ? 'true' : undefined}
           className={cn(
             lifecycle.actionVariant === 'default' && 'font-medium shadow-xs',
+            lifecycle.highlight &&
+              'bg-(--brand-orange) text-white hover:bg-(--brand-orange)/90',
             lifecycle.actionVariant === 'outline' &&
               lifecycle.isActionable &&
               'border-primary/30 text-primary hover:bg-primary/5 font-medium',

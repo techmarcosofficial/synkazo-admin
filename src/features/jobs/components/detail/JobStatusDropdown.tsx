@@ -36,6 +36,7 @@ export default function JobStatusDropdown({
   onStop,
   highlighted = false,
   canDeactivate = true,
+  align = 'start',
 }: {
   isActive: boolean;
   canActivate: boolean;
@@ -47,6 +48,7 @@ export default function JobStatusDropdown({
   onStop?: () => void | Promise<void>;
   highlighted?: boolean;
   canDeactivate?: boolean;
+  align?: 'start' | 'end';
 }) {
   const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false);
   const tinted = useBadgeAppearance() === 'tinted';
@@ -91,7 +93,7 @@ export default function JobStatusDropdown({
             </Button>
           </DropdownMenuTrigger>
 
-          <DropdownMenuContent className="w-72" align="start">
+          <DropdownMenuContent className="w-72" align={align}>
             <DropdownMenuLabel>Change Job Status</DropdownMenuLabel>
 
             <DropdownMenuSeparator />

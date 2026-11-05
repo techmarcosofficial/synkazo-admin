@@ -62,7 +62,7 @@ export function NavUser({
         <DropdownMenu>
           <DropdownMenuTrigger
             asChild
-            className="hover:bg-accent rounded-3xl px-2 py-1.5"
+            className="hover:bg-accent cursor-pointer rounded-3xl px-2 py-1.5"
           >
             {isAvatarOnly ? (
               <div className="flex items-center gap-2">

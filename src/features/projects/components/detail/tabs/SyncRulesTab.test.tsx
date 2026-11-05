@@ -61,6 +61,7 @@ describe('getJobLifecycle', () => {
     expect(lifecycle.scheduleText).toBe('Setup required');
     expect(lifecycle.actionLabel).toBe('Configure Mapping');
     expect(lifecycle.actionVariant).toBe('default');
+    expect(lifecycle.highlight).toBe(true);
     expect(lifecycle.targetUrl).toBe(
       '/projects/proj-1/jobs/job-1?tab=field-mapping',
     );
@@ -123,7 +124,8 @@ describe('getJobLifecycle', () => {
     expect(lifecycle.statusKey).toBe('ready_to_test');
     expect(lifecycle.scheduleText).toBe('Test pending');
     expect(lifecycle.actionLabel).toBe('Test & Activate');
-    expect(lifecycle.actionVariant).toBe('outline');
+    expect(lifecycle.highlight).toBe(true);
+    expect(lifecycle.actionVariant).toBe('default');
     expect(lifecycle.targetUrl).toBe('/projects/proj-1/jobs/job-2');
     expect(lifecycle.isActionable).toBe(true);
   });
@@ -211,6 +213,7 @@ describe('getJobLifecycle', () => {
     expect(lifecycle.statusKey).toBe('active');
     expect(lifecycle.actionLabel).toBe('View Details');
     expect(lifecycle.actionVariant).toBe('outline');
+    expect(lifecycle.highlight).toBeFalsy();
     expect(lifecycle.isActionable).toBe(false);
   });
 });
@@ -266,6 +269,52 @@ describe('SyncRulesTab UI', () => {
       'href',
       '/projects/proj-1/jobs/job-unmapped?tab=field-mapping',
     );
+    // Not activated yet: orange setup action, no activated tick
+    expect(configureBtn.className).toContain('bg-(--brand-orange)');
+    expect(
+      screen.queryByRole('img', { name: 'Flow activated' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('marks an activated flow with a green tick', () => {
+    vi.mocked(useProjectDetailContext).mockReturnValue({
+      project: { id: 'proj-1', name: 'My Project' },
+      jobs: [
+        {
+          id: 'job-live',
+          projectId: 'proj-1',
+          name: 'Invoices → Deals',
+          sourceObject: 'invoices',
+          destObject: 'deals',
+          status: 'active',
+          fieldMappings: [
+            {
+              id: 'm-1',
+              jobId: 'job-live',
+              sourceField: 'id',
+              destField: 'id',
+              direction: 'forward_only',
+            },
+          ],
+          isEnabled: true,
+          lastSyncedAt: '2026-09-26T10:00:00Z',
+          syncDirection: 'one_way',
+        } as unknown as JobExt,
+      ],
+      connections: [],
+      hasBothConnections: true,
+      refetch: vi.fn(),
+    } as any);
+
+    render(
+      <MemoryRouter>
+        <SyncRulesTab />
+      </MemoryRouter>,
+    );
+
+    expect(
+      screen.getByRole('img', { name: 'Flow activated' }),
+    ).toBeInTheDocument();
   });
 
   it('does not render warning/amber border on unmapped job cards', () => {

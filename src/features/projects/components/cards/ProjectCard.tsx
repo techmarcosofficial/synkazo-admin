@@ -52,7 +52,7 @@ export default function ProjectCard({ project, jobCount }: ProjectCardProps) {
         activeEnv ? (
           <Link
             to={`/projects/${project.id}?tab=settings&section=environments`}
-            className="focus-visible:ring-ring inline-flex rounded-full transition-opacity hover:opacity-85 focus-visible:ring-2 focus-visible:outline-none"
+            className="focus-visible:ring-ring relative z-10 inline-flex rounded-full transition-opacity hover:opacity-85 focus-visible:ring-2 focus-visible:outline-none"
             title={
               isSandbox
                 ? 'Operating in Sandbox — Click to open Environment Settings'

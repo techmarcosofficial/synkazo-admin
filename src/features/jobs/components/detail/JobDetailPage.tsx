@@ -66,7 +66,7 @@ export default function JobDetailPage() {
     typeof navigationState?.jobBackLabel === 'string'
       ? navigationState.jobBackLabel
       : navigationState?.fromLabel ||
-        (isFromDashboard ? 'Back to Dashboard' : 'Back to Sync Jobs');
+        (isFromDashboard ? 'Back to Dashboard' : 'Back to Sync Flows');
 
   const detailQuery = useJobDetailQuery(projectId, jobId);
   const { patchJob } = useJobDetailCacheHelpers(projectId, jobId);
