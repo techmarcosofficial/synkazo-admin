@@ -41,6 +41,14 @@ export const queryKeys = {
       limit: number,
     ) =>
       ['connections', 'webhookEvents', projectId, connId, page, limit] as const,
+    webhookEventChanges: (projectId: string, connId: string, eventId: string) =>
+      [
+        'connections',
+        'webhookEventChanges',
+        projectId,
+        connId,
+        eventId,
+      ] as const,
   },
   dashboard: {
     summary: ['dashboard', 'summary'] as const,

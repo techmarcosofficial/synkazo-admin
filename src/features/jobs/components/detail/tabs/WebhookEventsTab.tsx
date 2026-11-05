@@ -39,6 +39,7 @@ import { showToast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
 import {
   useProjectConnectionsQuery,
+  useWebhookEventChangesQuery,
   useWebhookEventsQuery,
 } from '@/queries/useConnections';
 import type {
@@ -47,6 +48,7 @@ import type {
   WebhookEvent,
   WebhookEventStatus,
   WebhookPropertyChange,
+  WebhookValueChange,
 } from '@/types';
 
 const STATUS_CONFIG: Record<
@@ -102,8 +104,10 @@ function formatPayload(
 // HubSpot records attribution as a source type plus an opaque source id
 // ('userId:82913505' for a person, an app id for an integration). Render the
 // part a human can act on.
-function describeSource(change: WebhookPropertyChange): string {
-  if (change.isOwnWrite) return 'synkazo';
+function describeSource(
+  change: Pick<WebhookPropertyChange, 'isOwnWrite' | 'sourceType' | 'sourceId'>,
+): string {
+  if (change.isOwnWrite) return 'Synkazo';
   switch (change.sourceType) {
     case 'CRM_UI':
       return change.sourceId?.startsWith('userId:')
@@ -123,44 +127,100 @@ function describeSource(change: WebhookPropertyChange): string {
   }
 }
 
-function ChangedProperties({ changes }: { changes: WebhookPropertyChange[] }) {
+// null and '' are empty; "0" and "false" are real values and show as-is.
+function ChangeValue({ value }: { value: string | null }) {
+  return value === null || value === '' ? (
+    <span className="text-muted-foreground italic">Empty</span>
+  ) : (
+    <>{value}</>
+  );
+}
+
+// One line under the table: who made the change and when. Every row of one
+// burst usually shares this, so it isn't repeated per property.
+function changeAttribution(changes: WebhookValueChange[]): string {
+  const sources = [...new Set(changes.map(describeSource))];
+  const times = changes
+    .map((c) => (c.changedAt ? new Date(c.changedAt).getTime() : NaN))
+    .filter(Number.isFinite);
+  const when =
+    times.length > 0
+      ? ` · ${format(Math.max(...times), 'MMM d, HH:mm:ss')}`
+      : '';
+  return `Changed by ${sources.join(', ')}${when}`;
+}
+
+// What changed, read live from HubSpot's property history when the event is
+// opened: property, previous value, new value. Nothing else.
+function ValueChanges({
+  projectId,
+  connId,
+  eventId,
+}: {
+  projectId: string;
+  connId: string;
+  eventId: string;
+}) {
+  const query = useWebhookEventChangesQuery(projectId, connId, eventId, true);
+
+  if (query.isLoading) {
+    return (
+      <div className="space-y-2" aria-label="Loading changed values">
+        <Skeleton className="h-4 w-1/2" />
+        <Skeleton className="h-4 w-2/3" />
+        <Skeleton className="h-4 w-1/3" />
+      </div>
+    );
+  }
+  if (query.isError) {
+    return (
+      <p className="text-muted-foreground">
+        Values could not be loaded from HubSpot right now.
+      </p>
+    );
+  }
+  const changes = query.data?.changes ?? [];
+  if (query.data?.unavailableReason) {
+    return (
+      <p className="text-muted-foreground">{query.data.unavailableReason}</p>
+    );
+  }
+  if (changes.length === 0) {
+    return <p className="text-muted-foreground">No property values changed.</p>;
+  }
+
   return (
-    <div className="overflow-x-auto">
-      <Table className="w-full text-left text-xs">
-        <TableHeader>
-          <TableRow>
-            <TableHead className="px-2 py-1.5">Property</TableHead>
-            <TableHead className="px-2 py-1.5">Previous</TableHead>
-            <TableHead className="px-2 py-1.5">New</TableHead>
-            <TableHead className="px-2 py-1.5">Changed by</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {changes.map((c) => (
-            <TableRow key={c.property} className="align-top">
-              <TableCell className="px-2 py-1.5 font-mono break-words whitespace-normal">
-                {c.property}
-              </TableCell>
-              <TableCell className="text-muted-foreground px-2 py-1.5 font-mono break-words whitespace-normal">
-                {c.oldValue ?? <span className="italic">empty</span>}
-              </TableCell>
-              <TableCell className="px-2 py-1.5 font-mono break-words whitespace-normal">
-                {c.newValue ?? <span className="italic">empty</span>}
-              </TableCell>
-              <TableCell className="px-2 py-1.5 whitespace-normal">
-                <span className={cn(c.isOwnWrite && 'text-muted-foreground')}>
-                  {describeSource(c)}
-                </span>
-                {c.changedAt && (
-                  <span className="text-muted-foreground block">
-                    {format(new Date(c.changedAt), 'MMM d, HH:mm:ss')}
-                  </span>
-                )}
-              </TableCell>
+    <div className="space-y-1.5">
+      <div className="overflow-x-auto">
+        <Table className="w-full text-left text-xs">
+          <TableHeader>
+            <TableRow>
+              <TableHead className="px-2 py-1.5">Property</TableHead>
+              <TableHead className="px-2 py-1.5">Previous value</TableHead>
+              <TableHead className="px-2 py-1.5">New value</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {changes.map((c) => (
+              <TableRow key={c.property} className="align-top">
+                <TableCell
+                  className="px-2 py-1.5 font-medium break-words whitespace-normal"
+                  title={c.property}
+                >
+                  {c.label}
+                </TableCell>
+                <TableCell className="text-muted-foreground px-2 py-1.5 break-words whitespace-normal">
+                  <ChangeValue value={c.oldValue} />
+                </TableCell>
+                <TableCell className="px-2 py-1.5 break-words whitespace-normal">
+                  <ChangeValue value={c.newValue} />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+      <p className="text-muted-foreground">{changeAttribution(changes)}</p>
     </div>
   );
 }
@@ -180,14 +240,20 @@ function statusLabel(event: WebhookEvent, fallback: string): string {
   return 'Already in sync';
 }
 
-function EventRow({ event }: { event: WebhookEvent }) {
+function EventRow({
+  event,
+  projectId,
+  connId,
+}: {
+  event: WebhookEvent;
+  projectId: string;
+  connId: string;
+}) {
   const [open, setOpen] = useState(false);
   const cfg = STATUS_CONFIG[event.status] ?? STATUS_CONFIG.pending;
   const Icon = cfg.icon;
   const label = statusLabel(event, cfg.label);
 
-  const hubspotPayloadText = formatPayload(event.payload);
-  const mappedPayloadText = formatPayload(event.mappedPayload);
   const destResponseText = formatPayload(event.destResponse);
   // A merged event carries the same outcome as the event it merged into
   // (including a failure) — treat it like the real underlying result rather
@@ -195,17 +261,19 @@ function EventRow({ event }: { event: WebhookEvent }) {
   const isFailedLike =
     event.status === 'failed' ||
     (event.status === 'coalesced' && !!event.failReason);
-  const changes = event.propertyChanges ?? [];
   const related = event.relatedEvents ?? [];
+  // Values are only worth fetching when the event reported property changes;
+  // a deletion has none.
+  const hasPropertyChanges =
+    (event.propertyChanges?.length ?? 0) > 0 ||
+    !!event.propertyName ||
+    related.some((r) => !!r.propertyName);
+  // The destination's response only explains something when the write failed
+  // or is being retried.
+  const showDestResponse =
+    !!destResponseText && (isFailedLike || event.status === 'pending');
   const hasDetail =
-    changes.length > 0 ||
-    related.length > 0 ||
-    !!event.stObjectType ||
-    !!hubspotPayloadText ||
-    !!mappedPayloadText ||
-    !!destResponseText ||
-    !!event.errorMessage ||
-    event.attempts > 0;
+    hasPropertyChanges || !!event.errorMessage || showDestResponse;
 
   return (
     <Collapsible
@@ -246,7 +314,7 @@ function EventRow({ event }: { event: WebhookEvent }) {
             Object: <span className="font-mono">{event.objectType}</span> #
             {event.objectId}
           </span>
-          {event.propertyName && (
+          {event.propertyName && related.length === 0 && (
             <span>
               Property: <span className="font-mono">{event.propertyName}</span>
             </span>
@@ -302,61 +370,14 @@ function EventRow({ event }: { event: WebhookEvent }) {
               </p>
             </div>
           )}
-          {changes.length > 0 && (
-            <div>
-              <div className="text-muted-foreground mb-1 font-medium">
-                What changed in HubSpot
-              </div>
-              <ChangedProperties changes={changes} />
-            </div>
+          {hasPropertyChanges && open && (
+            <ValueChanges
+              projectId={projectId}
+              connId={connId}
+              eventId={event.id}
+            />
           )}
-          {related.length > 0 && (
-            <div>
-              <div className="text-muted-foreground mb-1 font-medium">
-                Other events HubSpot sent for this change ({related.length})
-              </div>
-              <ul className="space-y-1">
-                {related.map((r) => (
-                  <li
-                    key={r.id}
-                    className="text-muted-foreground flex flex-wrap gap-x-2"
-                  >
-                    <span className="font-mono">{r.eventType}</span>
-                    {r.propertyName && (
-                      <span className="font-mono">· {r.propertyName}</span>
-                    )}
-                    <span>
-                      ·{' '}
-                      {r.receivedAt
-                        ? format(new Date(r.receivedAt), 'HH:mm:ss')
-                        : '—'}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {hubspotPayloadText && (
-            <div>
-              <div className="text-muted-foreground mb-1 font-medium">
-                Raw HubSpot notification
-              </div>
-              <pre className="bg-muted/50 overflow-x-auto rounded-4xl border p-2 font-mono">
-                {hubspotPayloadText}
-              </pre>
-            </div>
-          )}
-          {mappedPayloadText && (
-            <div>
-              <div className="text-muted-foreground mb-1 font-medium">
-                Payload sent
-              </div>
-              <pre className="bg-muted/50 overflow-x-auto rounded-4xl border p-2 font-mono">
-                {mappedPayloadText}
-              </pre>
-            </div>
-          )}
-          {destResponseText && (
+          {showDestResponse && (
             <div>
               <div className="text-muted-foreground mb-1 font-medium">
                 Destination response
@@ -558,7 +579,12 @@ export default function WebhookEventsTab() {
           listed inside.
         </p>
         {events.map((e) => (
-          <EventRow key={e.id} event={e} />
+          <EventRow
+            key={e.id}
+            event={e}
+            projectId={projectId}
+            connId={hubspotConnection.id}
+          />
         ))}
         <PaginationBar
           page={page}

@@ -97,6 +97,27 @@ export function useWebhookEventsQuery(
   });
 }
 
+// Fetched only while an event is expanded: each call reads HubSpot's live
+// property history for that record.
+export function useWebhookEventChangesQuery(
+  projectId: string,
+  connId: string,
+  eventId: string,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: queryKeys.connections.webhookEventChanges(
+      projectId,
+      connId,
+      eventId,
+    ),
+    queryFn: () =>
+      connectionsApi.getWebhookEventChanges(projectId, connId, eventId),
+    enabled: enabled && !!projectId && !!connId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 function objectsByPlatformKey(projectId: string, platformIds: string[]) {
   return [
     'connections',
