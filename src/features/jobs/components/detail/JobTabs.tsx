@@ -35,18 +35,16 @@ export default function JobTabs({ tabs }: { tabs: JobDetailTabView[] }) {
     return '';
   };
 
-  // Settings opens from the header's gear button instead of the tab row.
-  const barTabs = tabs
-    .filter((tab) => tab.id !== 'settings')
-    .map((tab) => {
-      const lockReason = lockReasonFor(tab.id);
-      return {
-        ...tab,
-        hasUnsavedDraft: tab.id === 'field-mapping' && hasMappingDraft,
-        locked: Boolean(lockReason),
-        lockReason,
-      };
-    });
+  // Settings is a regular tab and is never locked.
+  const barTabs = tabs.map((tab) => {
+    const lockReason = lockReasonFor(tab.id);
+    return {
+      ...tab,
+      hasUnsavedDraft: tab.id === 'field-mapping' && hasMappingDraft,
+      locked: Boolean(lockReason),
+      lockReason,
+    };
+  });
 
   // A locked tab reached by URL falls back to Overview.
   const activeTabLocked = barTabs.some(

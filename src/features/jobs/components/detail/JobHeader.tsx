@@ -1,10 +1,7 @@
-import { Settings } from 'lucide-react';
-
 import { useJobDetailContext } from './context';
 import JobIdentityHeader from './JobIdentityHeader';
 import JobStatusDropdown from './JobStatusDropdown';
 
-import { Button } from '@/components/ui/button';
 import type { Project, ProjectEnvironment } from '@/types';
 
 export default function JobHeader() {
@@ -18,10 +15,7 @@ export default function JobHeader() {
     handleToggle,
     handleStop,
     highlightStatusGuide,
-    activeTab,
-    handleTabChange,
   } = useJobDetailContext();
-  const isSettingsOpen = activeTab === 'settings';
 
   const hasMatchField = jobFieldMappings.some((m) => m.matchDestKey);
   const canActivate =
@@ -67,19 +61,6 @@ export default function JobHeader() {
           highlighted={highlightStatusGuide}
           align="end"
         />
-      }
-      action={
-        <Button
-          variant={isSettingsOpen ? 'default' : 'outline'}
-          size="icon-sm"
-          shape="pill"
-          aria-label="Flow settings"
-          title="Flow settings"
-          aria-pressed={isSettingsOpen}
-          onClick={() => handleTabChange('settings')}
-        >
-          <Settings aria-hidden="true" />
-        </Button>
       }
     />
   );

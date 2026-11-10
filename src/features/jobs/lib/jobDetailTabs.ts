@@ -35,10 +35,10 @@ export const TAB_DEFS: JobDetailTabDef[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'field-mapping', label: 'Field Mapping' },
   { id: 'run-sync', label: 'Run Sync' },
+  { id: 'settings', label: 'Settings' },
   {
     id: 'pipeline',
     label: 'Pipeline',
     visible: ({ pipelineRequired }) => pipelineRequired,
   },
-  { id: 'settings', label: 'Settings' },
 ];

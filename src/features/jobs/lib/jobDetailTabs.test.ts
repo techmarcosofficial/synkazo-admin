@@ -30,8 +30,8 @@ describe('job detail tabs', () => {
       'overview',
       'field-mapping',
       'run-sync',
-      'pipeline',
       'settings',
+      'pipeline',
     ]);
   });
 });

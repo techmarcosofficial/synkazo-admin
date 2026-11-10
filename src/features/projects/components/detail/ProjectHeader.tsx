@@ -1,5 +1,4 @@
 import { format, formatDistanceToNow } from 'date-fns';
-import { Settings } from 'lucide-react';
 import { toast } from 'sonner';
 
 import ProjectIdentityHeader from './ProjectIdentityHeader';
@@ -8,7 +7,6 @@ import ProjectStatusDropdown from './ProjectStatusDropdown';
 
 import { projectsApi } from '@/api/projects';
 import HeaderPrimaryActionButton from '@/components/shared/HeaderPrimaryActionButton';
-import { Button } from '@/components/ui/button';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import type { ProjectStatus } from '@/types';
 
@@ -21,10 +19,7 @@ export default function ProjectHeader() {
     jobs,
     patchProject,
     projectActiveEnv,
-    activeTab,
-    handleTabChange,
   } = useProjectDetailContext();
-  const isSettingsOpen = activeTab === 'settings';
   const { hasPermission } = useSynkazoAuth();
   const canViewJobs = hasPermission('job.view');
 
@@ -80,22 +75,7 @@ export default function ProjectHeader() {
           align="end"
         />
       }
-      action={
-        <>
-          <HeaderPrimaryActionButton />
-          <Button
-            variant={isSettingsOpen ? 'default' : 'outline'}
-            size="icon-sm"
-            shape="pill"
-            aria-label="Project settings"
-            title="Project settings"
-            aria-pressed={isSettingsOpen}
-            onClick={() => handleTabChange('settings')}
-          >
-            <Settings aria-hidden="true" />
-          </Button>
-        </>
-      }
+      action={<HeaderPrimaryActionButton />}
     />
   );
 }

@@ -3074,8 +3074,8 @@ export default function FieldMappingCanvas({
             }}
           />
           <div className="bg-card overflow-hidden">
-            <div className="bg-muted/40 dark:bg-muted/20 border-border flex items-center gap-2 border-b px-4 py-2.5">
-              <div className="text-foreground/85 dark:text-foreground/80 flex min-w-0 flex-1 items-center gap-2 text-[11px] font-bold tracking-wide">
+            <div className="bg-muted/40 dark:bg-muted/20 border-border flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-4 py-2.5">
+              <div className="text-foreground/85 dark:text-foreground/80 flex min-w-0 items-center gap-2 text-[11px] font-bold tracking-wide">
                 <PlatformTile platformId={sourcePlatform} size={18} />
                 {(
                   PLATFORM_LABEL[sourcePlatform] ?? sourcePlatform
@@ -3095,7 +3095,7 @@ export default function FieldMappingCanvas({
                 )}
               </div>
               <ArrowRight className="text-muted-foreground size-4 shrink-0" />
-              <div className="text-foreground/85 dark:text-foreground/80 flex min-w-0 flex-1 items-center gap-2 text-[11px] font-bold tracking-wide">
+              <div className="text-foreground/85 dark:text-foreground/80 flex min-w-0 items-center gap-2 text-[11px] font-bold tracking-wide">
                 <PlatformTile platformId={destPlatform} size={18} />
                 {(PLATFORM_LABEL[destPlatform] ?? destPlatform).toUpperCase()}
                 {destObject && (

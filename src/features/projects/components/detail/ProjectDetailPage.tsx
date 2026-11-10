@@ -277,10 +277,8 @@ export default function ProjectDetailPage() {
             <Card className="gap-0 space-y-2 overflow-hidden py-0">
               <ProjectHeader />
               <div className="overflow-x-auto px-4">
-                {/* Settings is project-wide, so it lives in the header's top-right instead of the tab row. */}
-                <ProjectTabs
-                  tabs={tabs.filter((tab) => tab.id !== 'settings')}
-                />
+                {/* Settings is a regular tab and is never locked. */}
+                <ProjectTabs tabs={tabs} />
               </div>
             </Card>
           }
