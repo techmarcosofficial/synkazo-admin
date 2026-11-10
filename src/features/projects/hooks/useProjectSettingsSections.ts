@@ -17,6 +17,7 @@ export interface ProjectSettingsSectionView {
   id: ProjectSettingsSectionId;
   label: string;
   description: string;
+  group?: 'activity';
   locked: boolean;
   lockReason: string;
 }

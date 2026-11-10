@@ -16,7 +16,6 @@ import JobSummaryMetric from '../JobSummaryMetric';
 
 import UpgradeRequiredDialog from '@/components/shared/UpgradeRequiredDialog';
 import HeadingPair from '@/components/shared/HeadingPair';
-import StartSyncModal from '@/components/sync/StartSyncModal';
 import SyncRunProgress from '@/components/sync/SyncRunProgress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -30,6 +29,7 @@ import {
 import { formatSchedule } from '@/features/jobs/utils';
 import { selectJobOnboardingState } from '@/features/onboarding';
 import { deriveSyncJobSummary } from '@/features/projects/lib/syncJobSummary';
+import { useManualSyncAvailability } from '@/features/jobs/hooks/useManualSyncAvailability';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { BROWSER_TIMEZONE } from '@/lib/timezones';
 import { usePriorityQueueQuery } from '@/queries/usePriorityQueue';
@@ -61,8 +61,6 @@ export default function OverviewTab() {
     handleCancelQueue,
     handleRetryQueue,
     handleTabChange,
-    manualDialogOpen,
-    setManualDialogOpen,
     scheduleToggling,
     handleScheduleToggle,
   } = useJobDetailContext();
@@ -171,27 +169,9 @@ export default function OverviewTab() {
       icon: CalendarClock,
     },
   ];
-  const canActivate =
-    project?.status === 'active' &&
-    hasConnection &&
-    jobFieldMappings.length > 0 &&
-    jobFieldMappings.some((mapping) => mapping.matchDestKey);
-
-  const onboarding = selectJobOnboardingState({
-    mappings: jobFieldMappings,
-    pipelineRequired,
-    pipelineConfigured,
-    runLogs,
-    lastSyncedAt: job.lastSyncedAt,
-  });
-  const hasRunHistory = onboarding.testComplete;
+  const { canActivate, onboarding, hasRunHistory, canStartSync, syncBlocked } =
+    useManualSyncAvailability();
   const showFullOverview = hasRunHistory || onboarding.configurationReady;
-  const canStartSync =
-    canActivate &&
-    onboarding.configurationReady &&
-    (job.isEnabled || !hasRunHistory);
-
-  const syncBlocked = queued || isSyncing || !canStartSync;
   const summaryRun =
     activeRunLog?.status === 'running' || activeRunLog?.id
       ? activeRunLog
@@ -279,14 +259,17 @@ export default function OverviewTab() {
           summaryRunning && canRunJob ? () => void handleStop() : undefined
         }
         onViewHistory={() =>
-          handleTabChange('run-history', {
-            searchParams: summaryRun?.id ? { runId: summaryRun.id } : undefined,
+          handleTabChange('settings', {
+            searchParams: {
+              section: 'sync-history',
+              runId: summaryRun?.id,
+            },
           })
         }
         onViewRun={(targetRunId) => {
           const runIdToView = targetRunId || summaryRun?.id;
-          handleTabChange('run-history', {
-            searchParams: runIdToView ? { runId: runIdToView } : undefined,
+          handleTabChange('settings', {
+            searchParams: { section: 'sync-history', runId: runIdToView },
           });
         }}
         stopping={stopping}
@@ -367,7 +350,11 @@ export default function OverviewTab() {
                 data-flow-next-action={
                   !hasRunHistory && canStartSync ? 'true' : undefined
                 }
-                onClick={() => setManualDialogOpen(true)}
+                data-attention={
+                  !hasRunHistory && canStartSync ? 'true' : undefined
+                }
+                className="bg-(--brand-orange) font-medium text-white shadow-xs hover:bg-(--brand-orange)/90"
+                onClick={() => handleTabChange('run-sync')}
                 disabled={!canRunJob || syncBlocked}
               >
                 <Play /> Sync now
@@ -377,7 +364,7 @@ export default function OverviewTab() {
 
           <div className="space-y-5">
             {/* Sync progress — appears right after header on sync */}
-            {!manualDialogOpen && progress}
+            {progress}
 
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {summaryCards.map((card) => (
@@ -401,7 +388,7 @@ export default function OverviewTab() {
         </div>
       ) : (
         <section className="min-w-0 space-y-5 py-8" aria-label="Sync overview">
-          {!manualDialogOpen && progress}
+          {progress}
           <div className="mx-auto max-w-xl space-y-2 text-center">
             <h2 className="font-heading text-foreground text-lg font-semibold">
               {overviewMessage.title}
@@ -435,43 +422,6 @@ export default function OverviewTab() {
             </div>
           )}
         </section>
-      )}
-
-      {manualDialogOpen && canRunJob && (
-        <StartSyncModal
-          projectId={projectId}
-          jobId={job.id}
-          job={job}
-          environment={activeEnvironment}
-          sourcePlatformId={project?.sourcePlatformId}
-          hasBaseline={Boolean(
-            job.lastSyncedAt ||
-            runLogs.some(
-              (r) => r.status === 'completed' || r.status === 'success',
-            ),
-          )}
-          pipelineRequired={pipelineRequired}
-          pipelineConfigured={pipelineConfigured}
-          disabled={!canRunJob || syncBlocked}
-          onGoToPipeline={() => {
-            setManualDialogOpen(false);
-            handleTabChange('pipeline');
-          }}
-          onClose={() => setManualDialogOpen(false)}
-          onRunNow={() => {
-            setManualDialogOpen(false);
-            void handleRunNow();
-          }}
-          onLimitSyncStarted={() => {
-            void beginTracking();
-          }}
-          onLimitSyncDone={() => {
-            void refetch();
-          }}
-          onSyncAll={(range) => {
-            void handleSyncAll(undefined, range);
-          }}
-        />
       )}
 
       {scheduleModalOpen && canEditJob && (

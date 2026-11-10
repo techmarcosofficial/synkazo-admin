@@ -91,7 +91,9 @@ export function NavMain({
                           }
                         >
                           <item.icon />
-                          <span>{item.title}</span>
+                          <span className="truncate" title={item.title}>
+                            {item.title}
+                          </span>
                           {item.badge && (
                             <Badge
                               size="xs"

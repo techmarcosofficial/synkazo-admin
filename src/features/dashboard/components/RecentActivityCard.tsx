@@ -159,7 +159,7 @@ function ActivityRow({ log }: { log: OrgSyncLog }) {
 
   const runHref =
     log.projectId && log.jobId
-      ? `/projects/${log.projectId}/jobs/${log.jobId}?tab=run-history`
+      ? `/projects/${log.projectId}/jobs/${log.jobId}?tab=settings&section=sync-history`
       : undefined;
 
   const content = (

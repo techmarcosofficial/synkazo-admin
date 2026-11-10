@@ -76,7 +76,6 @@ describe('JobOnboardingJourney - Environment Awareness & Production Graduation',
       isProductionReady: false,
       activeTab: 'overview',
       handleTabChange: vi.fn(),
-      setManualDialogOpen: vi.fn(),
       handleToggle: vi.fn(),
       toggling: false,
     } as any);
@@ -107,7 +106,6 @@ describe('JobOnboardingJourney - Environment Awareness & Production Graduation',
       isProductionReady: false,
       activeTab: 'overview',
       handleTabChange: vi.fn(),
-      setManualDialogOpen: vi.fn(),
       handleToggle: vi.fn(),
       toggling: false,
     } as any);
@@ -172,7 +170,6 @@ describe('JobOnboardingJourney - Environment Awareness & Production Graduation',
       isProductionReady: true,
       activeTab: 'overview',
       handleTabChange: vi.fn(),
-      setManualDialogOpen: vi.fn(),
       handleToggle: vi.fn(),
       toggling: false,
     } as any);
@@ -203,7 +200,6 @@ describe('JobOnboardingJourney - Environment Awareness & Production Graduation',
       isProductionReady: true,
       activeTab: 'overview',
       handleTabChange: vi.fn(),
-      setManualDialogOpen: vi.fn(),
       handleToggle: vi.fn(),
       toggling: false,
     } as any);
@@ -251,7 +247,6 @@ describe('JobOnboardingJourney - Environment Awareness & Production Graduation',
       pipelineConfigured: true,
       activeTab: 'overview',
       handleTabChange: vi.fn(),
-      setManualDialogOpen: vi.fn(),
       handleToggle: vi.fn(),
       toggling: false,
     };
@@ -326,7 +321,6 @@ describe('JobOnboardingJourney - Step Gating & Activation Flow', () => {
       pipelineConfigured: true,
       activeTab: 'overview',
       handleTabChange: vi.fn(),
-      setManualDialogOpen: vi.fn(),
       handleToggle: vi.fn(),
       toggling: false,
       ...overrides,
@@ -393,11 +387,10 @@ describe('JobOnboardingJourney - Step Gating & Activation Flow', () => {
     ).toBeInTheDocument();
   });
 
-  it('guides an inactive flow to the sync button without opening the dialog', () => {
-    const setManualDialogOpen = vi.fn();
+  it("opens the Run Sync tab from an inactive flow's test step", () => {
     const handleTabChange = vi.fn();
     vi.mocked(useJobDetailContext).mockReturnValue(
-      contextWith({ setManualDialogOpen, handleTabChange }),
+      contextWith({ handleTabChange }),
     );
     renderJourney();
 
@@ -418,13 +411,30 @@ describe('JobOnboardingJourney - Step Gating & Activation Flow', () => {
     const testStep = screen.getByRole('button', { name: /test & review/i });
     expect(testStep).toHaveAttribute(
       'data-step-hint',
-      "Click 'Sync now' below to test records",
+      'Open Run Sync to test records',
     );
     expect(testStep).toHaveAttribute('data-step-guides-action', 'true');
 
+    const syncButton = document.createElement('button');
+    syncButton.id = 'sync-now-button';
+    syncButton.scrollIntoView = vi.fn();
+    document.body.appendChild(syncButton);
+
     fireEvent.click(testStep);
-    expect(setManualDialogOpen).not.toHaveBeenCalled();
+    expect(handleTabChange).toHaveBeenCalledWith('run-sync');
+    expect(syncButton.scrollIntoView).not.toHaveBeenCalled();
+
+    // Sync now unavailable (e.g. a run is queued): point at it instead.
+    handleTabChange.mockClear();
+    syncButton.disabled = true;
+    fireEvent.click(testStep);
     expect(handleTabChange).not.toHaveBeenCalled();
+    expect(syncButton.scrollIntoView).toHaveBeenCalledWith({
+      behavior: 'smooth',
+      block: 'center',
+    });
+    expect(syncButton).toHaveAttribute('data-attention-flash', 'true');
+    syncButton.remove();
   });
 
   it('tells an active flow to run its limited sync', () => {

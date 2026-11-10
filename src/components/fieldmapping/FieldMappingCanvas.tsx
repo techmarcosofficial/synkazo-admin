@@ -36,6 +36,9 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -570,14 +573,83 @@ interface NeedsAttentionItem {
   actionType?: 'value_map' | 'cast' | 'open_drawer' | 'identifier';
 }
 
-function DirectionArrow({ direction }: { direction: MappingDirection }) {
-  const Icon =
-    direction === 'reverse_only'
-      ? ArrowLeft
-      : direction === 'forward_only'
-        ? ArrowRight
-        : ArrowLeftRight;
-  return <Icon className="text-muted-foreground size-4" />;
+function directionIcon(direction: MappingDirection) {
+  return direction === 'reverse_only'
+    ? ArrowLeft
+    : direction === 'forward_only'
+      ? ArrowRight
+      : ArrowLeftRight;
+}
+
+/** The arrow between source and destination. On two-way flows it is also
+ *  the control that changes the row's direction. */
+function DirectionControl({
+  direction,
+  editable,
+  reversible,
+  onChange,
+}: {
+  direction: MappingDirection;
+  editable: boolean;
+  reversible: boolean;
+  onChange: (direction: MappingDirection) => void;
+}) {
+  const Icon = directionIcon(direction);
+  const label =
+    DIRECTION_OPTIONS.find((o) => o.value === direction)?.label ?? '';
+  if (!editable) {
+    return (
+      <span
+        className="text-muted-foreground inline-flex size-8 items-center justify-center"
+        title={label ? `Syncs ${label.toLowerCase()}` : undefined}
+      >
+        <Icon className="size-4" aria-hidden="true" />
+        {label && <span className="sr-only">{label}</span>}
+      </span>
+    );
+  }
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          className="text-muted-foreground hover:text-primary hover:bg-primary/10 data-[state=open]:bg-primary/10 data-[state=open]:text-primary rounded-full"
+          aria-label={`Direction: ${label}. Change direction`}
+          title={`Syncs ${label.toLowerCase()} — click to change`}
+        >
+          <Icon className="size-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="center" className="w-44">
+        <DropdownMenuLabel className="text-muted-foreground text-xs font-medium">
+          Sync direction
+        </DropdownMenuLabel>
+        <DropdownMenuRadioGroup
+          value={direction}
+          onValueChange={(v) => onChange(v as MappingDirection)}
+        >
+          {DIRECTION_OPTIONS.map((o) => {
+            const OptionIcon = directionIcon(o.value);
+            const blocked = o.value === 'bidirectional' && !reversible;
+            return (
+              <DropdownMenuRadioItem
+                key={o.value}
+                value={o.value}
+                disabled={blocked}
+                title={blocked ? ONE_WAY_TRANSFORM_HINT : undefined}
+                className="gap-2 text-xs"
+              >
+                <OptionIcon className="text-muted-foreground size-3.5" />
+                {o.label}
+              </DropdownMenuRadioItem>
+            );
+          })}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
 function TypeChip({ type }: { type?: string }) {
@@ -3411,14 +3483,12 @@ export default function FieldMappingCanvas({
                       <TableHead className="text-foreground/80 dark:text-foreground/75 w-[34%] py-3 pr-2 pl-4 text-xs font-semibold">
                         Source field
                       </TableHead>
+                      <TableHead className="w-14 px-1 py-3">
+                        <span className="sr-only">Direction</span>
+                      </TableHead>
                       <TableHead className="text-foreground/80 dark:text-foreground/75 w-[34%] px-2 py-3 text-xs font-semibold">
                         Destination field
                       </TableHead>
-                      {showDirectionToggle && (
-                        <TableHead className="text-foreground/80 dark:text-foreground/75 w-28 px-2 py-3 text-xs font-semibold">
-                          Direction
-                        </TableHead>
-                      )}
                       <TableHead className="text-foreground/80 dark:text-foreground/75 w-32 px-2 py-3 text-xs font-semibold">
                         Identifier
                       </TableHead>
@@ -3610,17 +3680,24 @@ export default function FieldMappingCanvas({
                                   </>
                                 )}
                               </div>
-                              <DirectionArrow
-                                direction={
-                                  showDirectionToggle
-                                    ? direction
-                                    : 'forward_only'
-                                }
-                              />
                             </div>
                           </TableCell>
 
-                          {/* Column 2: Destination Field */}
+                          {/* Column 2: Direction, centred between the two fields */}
+                          <TableCell className="w-14 px-1 py-2 text-center align-middle">
+                            <DirectionControl
+                              direction={
+                                showDirectionToggle ? direction : 'forward_only'
+                              }
+                              editable={
+                                showDirectionToggle && !rowDirectionReadOnly
+                              }
+                              reversible={rowReversible}
+                              onChange={(v) => setDirection(m.sourceField, v)}
+                            />
+                          </TableCell>
+
+                          {/* Column 3: Destination Field */}
                           <TableCell className="min-w-0 px-2 py-2 align-middle">
                             {isEditing ? (
                               <FieldSelect
@@ -3694,7 +3771,7 @@ export default function FieldMappingCanvas({
                                     <Badge
                                       variant="secondary"
                                       size="xs"
-                                            tone="warning"
+                                      tone="warning"
                                       className="bg-warning/15 text-warning-foreground hover:bg-warning/25 shrink-0 cursor-pointer gap-1 border-0 font-normal"
                                       onClick={() =>
                                         openSettingsDrawer(
@@ -3717,67 +3794,6 @@ export default function FieldMappingCanvas({
                               </div>
                             )}
                           </TableCell>
-
-                          {/* Column 3: Direction (if bidirectional) */}
-                          {showDirectionToggle && (
-                            <TableCell className="w-28 px-2 py-2 align-middle">
-                              {rowDirectionReadOnly ? (
-                                <Badge
-                                  variant="secondary"
-                                  size="xs"
-                                  className="bg-muted/60 text-muted-foreground gap-1 border-0 whitespace-nowrap"
-                                >
-                                  <ArrowLeftRight className="text-muted-foreground size-3" />
-                                  <span>
-                                    {
-                                      DIRECTION_OPTIONS.find(
-                                        (o) => o.value === direction,
-                                      )?.label
-                                    }
-                                  </span>
-                                </Badge>
-                              ) : (
-                                <Select
-                                  value={direction}
-                                  onValueChange={(v) =>
-                                    setDirection(
-                                      m.sourceField,
-                                      v as MappingDirection,
-                                    )
-                                  }
-                                >
-                                  <SelectTrigger
-                                    size="sm"
-                                    className="bg-muted/20 border-border/40 hover:bg-muted/30 h-8 w-full text-xs"
-                                  >
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent align="start">
-                                    {DIRECTION_OPTIONS.map((o) => {
-                                      const blocked =
-                                        o.value === 'bidirectional' &&
-                                        !rowReversible;
-                                      return (
-                                        <SelectItem
-                                          key={o.value}
-                                          value={o.value}
-                                          disabled={blocked}
-                                          title={
-                                            blocked
-                                              ? ONE_WAY_TRANSFORM_HINT
-                                              : undefined
-                                          }
-                                          className="text-xs"
-                                        >
-                                          {o.label}
-                                        </SelectItem>
-                                      );
-                                    })}
-                                  </SelectContent>
-                                </Select>
-                              )}
-                            </TableCell>
-                          )}
 
                           {/* Column 4: Identifier */}
                           <TableCell className="w-32 px-2 py-2 align-middle">
@@ -3863,228 +3879,224 @@ export default function FieldMappingCanvas({
                             ) : (
                               <div className="flex items-center justify-end gap-1.5">
                                 {hasAttentionIssue && primaryIssue ? (
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant={
-                                        hasBlockingIssue
-                                          ? 'destructive'
-                                          : 'secondary'
-                                      }
-                                      className="gap-1.5 border-0"
-                                      onClick={() => {
-                                        if (
-                                          primaryIssue.actionType ===
-                                          'value_map'
-                                        ) {
-                                          if (canUseTransforms) {
-                                            const existingRules = (m
-                                              .destRules?.[dk] ?? []) as Rule[];
-                                            if (
-                                              !existingRules.some(
-                                                (r) =>
-                                                  r.type === 'value_map' ||
-                                                  r.type === 'value_mapping',
-                                              )
-                                            ) {
-                                              saveRules(m.sourceField, dk, [
-                                                ...existingRules,
-                                                {
-                                                  type: 'value_map',
-                                                  enabled: true,
-                                                  map: {},
-                                                  fallback: '',
-                                                },
-                                              ]);
-                                            }
-                                            openSettingsDrawer(
-                                              m.sourceField,
-                                              dk,
-                                              'transforms',
-                                            );
-                                          } else {
-                                            promptUpgrade(
-                                              TRANSFORM_UPGRADE_MESSAGE,
-                                            );
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={
+                                      hasBlockingIssue
+                                        ? 'destructive'
+                                        : 'secondary'
+                                    }
+                                    className="gap-1.5 border-0"
+                                    onClick={() => {
+                                      if (
+                                        primaryIssue.actionType === 'value_map'
+                                      ) {
+                                        if (canUseTransforms) {
+                                          const existingRules = (m.destRules?.[
+                                            dk
+                                          ] ?? []) as Rule[];
+                                          if (
+                                            !existingRules.some(
+                                              (r) =>
+                                                r.type === 'value_map' ||
+                                                r.type === 'value_mapping',
+                                            )
+                                          ) {
+                                            saveRules(m.sourceField, dk, [
+                                              ...existingRules,
+                                              {
+                                                type: 'value_map',
+                                                enabled: true,
+                                                map: {},
+                                                fallback: '',
+                                              },
+                                            ]);
                                           }
-                                        } else if (
-                                          primaryIssue.actionType === 'cast'
-                                        ) {
-                                          if (canUseTransforms) {
-                                            openSettingsDrawer(
-                                              m.sourceField,
-                                              dk,
-                                              'transforms',
-                                            );
-                                          } else {
-                                            promptUpgrade(
-                                              TRANSFORM_UPGRADE_MESSAGE,
-                                            );
-                                          }
-                                        } else {
                                           openSettingsDrawer(
                                             m.sourceField,
                                             dk,
-                                            primaryIssue.actionType ===
-                                              'open_drawer'
-                                              ? 'fallbacks'
-                                              : 'transforms',
+                                            'transforms',
+                                          );
+                                        } else {
+                                          promptUpgrade(
+                                            TRANSFORM_UPGRADE_MESSAGE,
                                           );
                                         }
-                                      }}
-                                      title={
-                                        primaryIssue.why || primaryIssue.note
-                                      }
-                                    >
-                                      <AlertTriangle
-                                        className={cn(
-                                          'size-4 shrink-0',
-                                          hasBlockingIssue
-                                            ? 'text-destructive-foreground'
-                                            : 'text-warning',
-                                        )}
-                                      />
-                                      <span>
-                                        {primaryIssue.actionType === 'value_map'
-                                          ? 'Map values'
-                                          : primaryIssue.actionType ===
-                                              'open_drawer'
-                                            ? 'Set default'
-                                            : 'Action required'}
-                                      </span>
-                                    </Button>
-                                  ) : ruleCount > 0 ? (
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          type="button"
-                                          variant="secondary"
-                                          size="sm"
-                                          className={cn(
-                                            'h-8 gap-1.5 border-0 text-xs font-medium',
-                                            glowing === 'rule' && GLOW_CLASS,
-                                          )}
-                                          onClick={() => {
-                                            if (glowing === 'rule')
-                                              setGlow(null);
-                                            openSettingsDrawer(
-                                              m.sourceField,
-                                              dk,
-                                              'transforms',
-                                            );
-                                          }}
-                                          title="Edit field settings and rules"
-                                        >
-                                          {!canUseTransforms ? (
-                                            <Lock className="text-muted-foreground size-3.5" />
-                                          ) : (
-                                            <Zap className="text-warning size-3.5" />
-                                          )}
-                                          <span>{`Rule${ruleCount > 1 ? ` (${ruleCount})` : ''}`}</span>
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent side="bottom">
-                                        {!canUseTransforms
-                                          ? "Field transform rules aren't available on your plan."
-                                          : glowing === 'rule'
-                                            ? 'This mapping just changed — check the rule still fits.'
-                                            : 'Edit the transform rule applied before this field syncs.'}
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  ) : (
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          type="button"
-                                          variant="outline"
-                                          size="sm"
-                                          className={cn(
-                                            'h-8 gap-1.5 text-xs font-medium',
-                                            glowing === 'rule' && GLOW_CLASS,
-                                          )}
-                                          onClick={() => {
-                                            if (glowing === 'rule')
-                                              setGlow(null);
-                                            openSettingsDrawer(
-                                              m.sourceField,
-                                              dk,
-                                              'transforms',
-                                            );
-                                          }}
-                                          title="Add field transform rule"
-                                        >
-                                          {!canUseTransforms ? (
-                                            <Lock className="text-muted-foreground size-3.5" />
-                                          ) : (
-                                            <Plus className="size-3.5" />
-                                          )}
-                                          <span>Add Rule</span>
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent side="bottom">
-                                        {!canUseTransforms
-                                          ? "Field transform rules aren't available on your plan."
-                                          : 'Add a rule to transform the value before it syncs.'}
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  )}
-
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="icon-xs"
-                                        className="border-border/80 bg-background text-muted-foreground hover:border-foreground/50 hover:text-foreground hover:bg-muted/30 size-7 cursor-pointer rounded-lg border-dashed shadow-xs transition-all"
-                                        onClick={() => {
-                                          if (m.transformType === 'combine') {
-                                            setEditingCombineSource(
-                                              m.sourceField,
-                                            );
-                                            setShowCombineComposer(true);
-                                            return;
-                                          }
-                                          setEditingPair({
-                                            sourceField: m.sourceField,
-                                            destKey: dk,
-                                          });
-                                          setEditDraft({
-                                            sourceField: m.sourceField,
-                                            destKey: dk,
-                                          });
-                                        }}
-                                        aria-label="Change fields"
-                                        title="Change fields"
-                                      >
-                                        <Pencil className="size-3.5" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="bottom">
-                                      Change fields
-                                    </TooltipContent>
-                                  </Tooltip>
-
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="icon-xs"
-                                        className="border-destructive/40 bg-background text-destructive hover:border-destructive hover:bg-destructive/10 size-7 cursor-pointer rounded-lg border-dashed shadow-xs transition-all"
-                                        onClick={() =>
-                                          remove(m.sourceField, dk)
+                                      } else if (
+                                        primaryIssue.actionType === 'cast'
+                                      ) {
+                                        if (canUseTransforms) {
+                                          openSettingsDrawer(
+                                            m.sourceField,
+                                            dk,
+                                            'transforms',
+                                          );
+                                        } else {
+                                          promptUpgrade(
+                                            TRANSFORM_UPGRADE_MESSAGE,
+                                          );
                                         }
-                                        aria-label="Remove mapping"
-                                        title="Remove mapping"
+                                      } else {
+                                        openSettingsDrawer(
+                                          m.sourceField,
+                                          dk,
+                                          primaryIssue.actionType ===
+                                            'open_drawer'
+                                            ? 'fallbacks'
+                                            : 'transforms',
+                                        );
+                                      }
+                                    }}
+                                    title={
+                                      primaryIssue.why || primaryIssue.note
+                                    }
+                                  >
+                                    <AlertTriangle
+                                      className={cn(
+                                        'size-4 shrink-0',
+                                        hasBlockingIssue
+                                          ? 'text-destructive-foreground'
+                                          : 'text-warning',
+                                      )}
+                                    />
+                                    <span>
+                                      {primaryIssue.actionType === 'value_map'
+                                        ? 'Map values'
+                                        : primaryIssue.actionType ===
+                                            'open_drawer'
+                                          ? 'Set default'
+                                          : 'Action required'}
+                                    </span>
+                                  </Button>
+                                ) : ruleCount > 0 ? (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        type="button"
+                                        variant="secondary"
+                                        size="sm"
+                                        className={cn(
+                                          'h-8 gap-1.5 border-0 text-xs font-medium',
+                                          glowing === 'rule' && GLOW_CLASS,
+                                        )}
+                                        onClick={() => {
+                                          if (glowing === 'rule') setGlow(null);
+                                          openSettingsDrawer(
+                                            m.sourceField,
+                                            dk,
+                                            'transforms',
+                                          );
+                                        }}
+                                        title="Edit field settings and rules"
                                       >
-                                        <X className="size-3.5" />
+                                        {!canUseTransforms ? (
+                                          <Lock className="text-muted-foreground size-3.5" />
+                                        ) : (
+                                          <Zap className="text-warning size-3.5" />
+                                        )}
+                                        <span>{`Rule${ruleCount > 1 ? ` (${ruleCount})` : ''}`}</span>
                                       </Button>
                                     </TooltipTrigger>
                                     <TooltipContent side="bottom">
-                                      Remove mapping
+                                      {!canUseTransforms
+                                        ? "Field transform rules aren't available on your plan."
+                                        : glowing === 'rule'
+                                          ? 'This mapping just changed — check the rule still fits.'
+                                          : 'Edit the transform rule applied before this field syncs.'}
                                     </TooltipContent>
                                   </Tooltip>
-                                </div>
+                                ) : (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className={cn(
+                                          'h-8 gap-1.5 text-xs font-medium',
+                                          glowing === 'rule' && GLOW_CLASS,
+                                        )}
+                                        onClick={() => {
+                                          if (glowing === 'rule') setGlow(null);
+                                          openSettingsDrawer(
+                                            m.sourceField,
+                                            dk,
+                                            'transforms',
+                                          );
+                                        }}
+                                        title="Add field transform rule"
+                                      >
+                                        {!canUseTransforms ? (
+                                          <Lock className="text-muted-foreground size-3.5" />
+                                        ) : (
+                                          <Plus className="size-3.5" />
+                                        )}
+                                        <span>Add Rule</span>
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom">
+                                      {!canUseTransforms
+                                        ? "Field transform rules aren't available on your plan."
+                                        : 'Add a rule to transform the value before it syncs.'}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
+
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="icon-xs"
+                                      className="border-border/80 bg-background text-muted-foreground hover:border-foreground/50 hover:text-foreground hover:bg-muted/30 size-7 cursor-pointer rounded-lg border-dashed shadow-xs transition-all"
+                                      onClick={() => {
+                                        if (m.transformType === 'combine') {
+                                          setEditingCombineSource(
+                                            m.sourceField,
+                                          );
+                                          setShowCombineComposer(true);
+                                          return;
+                                        }
+                                        setEditingPair({
+                                          sourceField: m.sourceField,
+                                          destKey: dk,
+                                        });
+                                        setEditDraft({
+                                          sourceField: m.sourceField,
+                                          destKey: dk,
+                                        });
+                                      }}
+                                      aria-label="Change fields"
+                                      title="Change fields"
+                                    >
+                                      <Pencil className="size-3.5" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="bottom">
+                                    Change fields
+                                  </TooltipContent>
+                                </Tooltip>
+
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="icon-xs"
+                                      className="border-destructive/40 bg-background text-destructive hover:border-destructive hover:bg-destructive/10 size-7 cursor-pointer rounded-lg border-dashed shadow-xs transition-all"
+                                      onClick={() => remove(m.sourceField, dk)}
+                                      aria-label="Remove mapping"
+                                      title="Remove mapping"
+                                    >
+                                      <X className="size-3.5" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="bottom">
+                                    Remove mapping
+                                  </TooltipContent>
+                                </Tooltip>
+                              </div>
                             )}
                           </TableCell>
                         </TableRow>

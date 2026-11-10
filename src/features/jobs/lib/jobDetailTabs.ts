@@ -1,12 +1,21 @@
 export type JobDetailTabId =
   | 'overview'
   | 'field-mapping'
+  | 'run-sync'
   | 'pipeline'
   | 'schedule'
-  | 'run-history'
-  | 'conflicts'
-  | 'webhook-events'
   | 'settings';
+
+/**
+ * Sync History, Conflicts and Webhook Events used to be tabs and are now
+ * sections of the Settings page. Old `?tab=` links land on their section.
+ */
+export const LEGACY_SETTINGS_SECTION_TABS: Record<string, string> = {
+  'run-history': 'sync-history',
+  'sync-history': 'sync-history',
+  conflicts: 'conflicts',
+  'webhook-events': 'webhook-events',
+};
 
 export interface JobDetailTabContext {
   pipelineRequired: boolean;
@@ -25,17 +34,11 @@ export const DEFAULT_TAB_ID: JobDetailTabId = 'overview';
 export const TAB_DEFS: JobDetailTabDef[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'field-mapping', label: 'Field Mapping' },
+  { id: 'run-sync', label: 'Run Sync' },
   {
     id: 'pipeline',
     label: 'Pipeline',
     visible: ({ pipelineRequired }) => pipelineRequired,
-  },
-  { id: 'run-history', label: 'Sync History' },
-  { id: 'conflicts', label: 'Conflicts', visible: ({ isTwoWay }) => isTwoWay },
-  {
-    id: 'webhook-events',
-    label: 'Webhook Events',
-    visible: ({ isTwoWay }) => isTwoWay,
   },
   { id: 'settings', label: 'Settings' },
 ];

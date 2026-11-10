@@ -711,6 +711,122 @@ html:has([data-admin-shell]) {
   }
 }
 
+/* "Action needed" cue on a sync flow's next step (Configure Mapping,
+   Test & Activate): one 3.2s beat of ring ripple → sheen sweep → arrow nudge.
+   Pauses on hover/focus; rests as a static ring under reduced motion. */
+[data-attention='true'] {
+  position: relative;
+  isolation: isolate;
+}
+
+[data-attention='true']::before,
+[data-attention='true']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+[data-attention='true']::before {
+  animation: attention-ring 3.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+[data-attention='true']::after {
+  background: linear-gradient(
+      110deg,
+      transparent 35%,
+      rgb(255 255 255 / 35%) 50%,
+      transparent 65%
+    )
+    no-repeat;
+  background-size: 250% 100%;
+  background-position: 110% 0;
+  animation: attention-sheen 3.2s ease-in-out infinite;
+}
+
+[data-attention='true'] [data-icon='inline-end'] {
+  animation: attention-arrow 3.2s ease-in-out infinite;
+}
+
+[data-attention='true']:is(:hover, :focus-visible)::before,
+[data-attention='true']:is(:hover, :focus-visible)::after,
+[data-attention='true']:is(:hover, :focus-visible) [data-icon='inline-end'] {
+  animation: none;
+}
+
+[data-attention='true']:is(:hover, :focus-visible) [data-icon='inline-end'] {
+  transform: translateX(3px);
+}
+
+@keyframes attention-ring {
+  0% {
+    box-shadow: 0 0 0 0
+      color-mix(in oklch, var(--brand-orange) 55%, transparent);
+  }
+  45%,
+  100% {
+    box-shadow: 0 0 0 9px transparent;
+  }
+}
+
+@keyframes attention-sheen {
+  0%,
+  40% {
+    background-position: 110% 0;
+  }
+  70%,
+  100% {
+    background-position: -10% 0;
+  }
+}
+
+@keyframes attention-arrow {
+  0%,
+  65%,
+  85%,
+  100% {
+    transform: translateX(0);
+  }
+  75% {
+    transform: translateX(3px);
+  }
+}
+
+/* One-off flash when a setup step points at its button ("Action needed"). */
+[data-attention-flash='true'] {
+  animation: attention-flash 0.65s ease-out 2;
+}
+
+@keyframes attention-flash {
+  0% {
+    box-shadow: 0 0 0 0
+      color-mix(in oklch, var(--brand-orange) 70%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 10px transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-attention-flash='true'] {
+    animation: none;
+    box-shadow: 0 0 0 3px var(--brand-orange);
+  }
+
+  [data-attention='true']::before,
+  [data-attention='true']::after,
+  [data-attention='true'] [data-icon='inline-end'] {
+    animation: none;
+  }
+
+  [data-attention='true']::before {
+    box-shadow: 0 0 0 3px
+      color-mix(in oklch, var(--brand-orange) 25%, transparent);
+  }
+}
+
 /* Elevate Stripe.js Testing Assistant & test autofill widgets above modal dialog overlays */
 body > iframe[src*="stripe" i],
 body > iframe[name*="stripe" i],

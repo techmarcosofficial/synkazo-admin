@@ -46,18 +46,27 @@ export default function JobOnboardingJourney() {
 
   const isJobActive = Boolean(job.isEnabled);
 
+  // Opens the Run Sync tab, like "Sync now". When "Sync now" can't be used
+  // right now (no permission, a run already queued), points at it instead:
+  // scrolls it to the middle, focuses it and flashes it twice.
   const highlightSyncRunButton = () => {
-    const syncBtn = document.querySelector<HTMLButtonElement>(
-      '[data-flow-next-action="true"], #sync-now-button',
-    );
-    if (syncBtn) {
-      syncBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      syncBtn.focus();
-      syncBtn.classList.add('ring-4', 'ring-primary/40');
-      setTimeout(() => {
-        syncBtn.classList.remove('ring-4', 'ring-primary/40');
-      }, 2000);
+    const syncBtn =
+      document.querySelector<HTMLButtonElement>('#sync-now-button');
+    if (!syncBtn) return;
+    if (!syncBtn.disabled) {
+      handleTabChange('run-sync');
+      return;
     }
+    syncBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    syncBtn.focus({ preventScroll: true });
+    syncBtn.removeAttribute('data-attention-flash');
+    // Re-trigger the flash on repeated clicks.
+    void syncBtn.offsetWidth;
+    syncBtn.setAttribute('data-attention-flash', 'true');
+    window.setTimeout(
+      () => syncBtn.removeAttribute('data-attention-flash'),
+      1400,
+    );
   };
 
   const stepStatus = (
@@ -94,7 +103,7 @@ export default function JobOnboardingJourney() {
         : 'Run a limited sync and review the result before automating it.',
       status: stepStatus(state.testComplete, 'test'),
       guidesFlowAction: state.stage === 'test',
-      hoverHint: "Click 'Sync now' below to test records",
+      hoverHint: 'Open Run Sync to test records',
       onSelect: highlightSyncRunButton,
     },
     {

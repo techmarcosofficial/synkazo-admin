@@ -59,7 +59,7 @@ export default function StatCardGrid({
                         <stat.icon className="size-5" aria-hidden="true" />
                       </div>
                     )}
-                    <h3 className="text-foreground truncate text-sm font-semibold">
+                    <h3 className="text-muted-foreground truncate text-sm font-medium">
                       {stat.label}
                     </h3>
                   </div>
@@ -115,7 +115,7 @@ export default function StatCardGrid({
               </div>
             )}
             <div className="space-y-1">
-              <div className="text-2xl font-extrabold tracking-tight">
+              <div className="text-foreground text-xl font-semibold tracking-tight tabular-nums">
                 {stat.value}
               </div>
               {!dashboardAppearance && (

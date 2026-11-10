@@ -7,20 +7,13 @@ import { useSynkazoAuth } from '@/lib/synkazoAuth';
 const TAB_COMPONENTS = {
   overview: lazy(() => import('./tabs/OverviewTab')),
   'field-mapping': lazy(() => import('./tabs/FieldMappingTab')),
+  'run-sync': lazy(() => import('./tabs/RunSyncTab')),
   pipeline: lazy(() => import('./tabs/PipelineTab')),
   schedule: lazy(() => import('./tabs/ScheduleTab')),
-  'run-history': lazy(() => import('./tabs/RunHistoryTab')),
-  conflicts: lazy(() => import('./tabs/ConflictsTab')),
-  'webhook-events': lazy(() => import('./tabs/WebhookEventsTab')),
   settings: lazy(() => import('./tabs/SettingsTab')),
 } as const;
 
-const EDIT_TABS = new Set([
-  'field-mapping',
-  'pipeline',
-  'schedule',
-  'settings',
-]);
+const EDIT_TABS = new Set(['field-mapping', 'pipeline', 'schedule']);
 
 function TabSkeleton() {
   return (

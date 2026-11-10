@@ -296,6 +296,7 @@ function SyncJobCard({
           variant={lifecycle.actionVariant}
           size="sm"
           data-flow-next-action={lifecycle.isActionable ? 'true' : undefined}
+          data-attention={lifecycle.highlight ? 'true' : undefined}
           className={cn(
             lifecycle.actionVariant === 'default' && 'font-medium shadow-xs',
             lifecycle.highlight &&

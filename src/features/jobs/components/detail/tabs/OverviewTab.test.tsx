@@ -109,8 +109,6 @@ function buildContext(
 
     highlightStatusGuide: false,
     triggerInactiveGuide: vi.fn(),
-    manualDialogOpen: false,
-    setManualDialogOpen: vi.fn(),
     ...overrides,
   };
 }
@@ -145,7 +143,7 @@ describe('OverviewTab sync prerequisite guidance', () => {
     expect(
       screen.queryByRole('button', { name: /activate job/i }),
     ).not.toBeInTheDocument();
-    expect(mockContext.setManualDialogOpen).not.toHaveBeenCalled();
+    expect(mockContext.handleTabChange).not.toHaveBeenCalled();
   });
 
   it('shows full sync overview content once field setup is complete even before first run', () => {
@@ -169,7 +167,7 @@ describe('OverviewTab sync prerequisite guidance', () => {
     expect(screen.queryByText('Job is inactive')).not.toBeInTheDocument();
   });
 
-  it('opens the sync dialog for an active job', () => {
+  it('opens the Run Sync tab for an active job', () => {
     mockContext = buildContext({
       job: {
         ...buildContext().job,
@@ -186,7 +184,7 @@ describe('OverviewTab sync prerequisite guidance', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /sync now/i }));
 
-    expect(mockContext.setManualDialogOpen).toHaveBeenCalledWith(true);
+    expect(mockContext.handleTabChange).toHaveBeenCalledWith('run-sync');
     expect(mockContext.triggerInactiveGuide).not.toHaveBeenCalled();
   });
 
@@ -218,13 +216,10 @@ describe('OverviewTab sync prerequisite guidance', () => {
     expect(screen.getByRole('button', { name: /sync now/i })).toBeDisabled();
   });
 
-  it('renders StartSyncModal when manualDialogOpen is true', () => {
-    mockContext = buildContext({
-      manualDialogOpen: true,
-    });
+  it('no longer opens a sync dialog from Overview', () => {
     renderOverview();
 
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('renders run queued alert when a run is queued', () => {

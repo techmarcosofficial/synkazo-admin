@@ -201,7 +201,7 @@ export default function ActivityTab() {
           const runType = triggerLabel(log.metadata?.triggeredBy);
           const linkHref =
             log.jobId && matchedJob
-              ? `/projects/${projectId}/jobs/${log.jobId}?tab=run-history`
+              ? `/projects/${projectId}/jobs/${log.jobId}?tab=settings&section=sync-history`
               : null;
 
           return (
@@ -310,7 +310,7 @@ export default function ActivityTab() {
                         <Link
                           to={linkHref}
                           state={{
-                            jobBackTo: `/projects/${projectId}?tab=activity`,
+                            jobBackTo: `/projects/${projectId}?tab=settings&section=activity`,
                             jobBackLabel: 'Back to Project Activity',
                           }}
                         >
@@ -328,7 +328,7 @@ export default function ActivityTab() {
                       <Link
                         to={linkHref}
                         state={{
-                          jobBackTo: `/projects/${projectId}?tab=activity`,
+                          jobBackTo: `/projects/${projectId}?tab=settings&section=activity`,
                           jobBackLabel: 'Back to Project Activity',
                         }}
                       >

@@ -68,125 +68,125 @@ export default function ProjectRecentActivity({
   return (
     <div className="flex h-full flex-col gap-4">
       <div className="flex items-start justify-between gap-4">
-          <HeadingPair
-            visualLevel="card"
-            level="h3"
-            title="Recent Activity"
-            subtitle="Latest sync runs and project events."
-            subtitleInTooltip
+        <HeadingPair
+          visualLevel="card"
+          level="h3"
+          title="Recent Activity"
+          subtitle="Latest sync runs and project events."
+          subtitleInTooltip
+        />
+        <Button
+          variant="link"
+          size="sm"
+          className="h-auto shrink-0 p-0"
+          onClick={onViewAll}
+        >
+          View all
+        </Button>
+      </div>
+
+      <ListPanel className="flex-1 border">
+        {rows.length === 0 ? (
+          <EmptyState
+            icon={Clock3}
+            title="No activity yet"
+            description="Sync activity will appear here once a sync job runs."
           />
-          <Button
-            variant="link"
-            size="sm"
-            className="h-auto shrink-0 p-0"
-            onClick={onViewAll}
-          >
-            View all
-          </Button>
-        </div>
+        ) : (
+          rows.map((log) => {
+            const job = jobs.find((candidate) => candidate.id === log.jobId);
+            const jobName = log.metadata?.jobName ?? job?.name;
+            const sourceObject =
+              log.metadata?.sourceObject ?? job?.sourceObject;
+            const destinationObject =
+              log.metadata?.destObject ?? job?.destObject;
+            const mapping =
+              sourceObject && destinationObject
+                ? `${titleCase(sourceObject)} → ${titleCase(destinationObject)}`
+                : (jobName ?? log.message);
+            const runType = triggerLabel(log.metadata?.triggeredBy);
+            const failedRecords = log.metadata?.recordsFailed ?? 0;
+            const createdAt = log.createdAt ? new Date(log.createdAt) : null;
+            const hasValidDate =
+              createdAt && !Number.isNaN(createdAt.getTime());
+            const activityHref =
+              log.jobId && job
+                ? `/projects/${projectId}/jobs/${log.jobId}?tab=settings&section=sync-history`
+                : `/projects/${projectId}?tab=settings&section=activity`;
 
-        <ListPanel className="flex-1 border">
-          {rows.length === 0 ? (
-            <EmptyState
-              icon={Clock3}
-              title="No activity yet"
-              description="Sync activity will appear here once a sync job runs."
-            />
-          ) : (
-            rows.map((log) => {
-              const job = jobs.find((candidate) => candidate.id === log.jobId);
-              const jobName = log.metadata?.jobName ?? job?.name;
-              const sourceObject =
-                log.metadata?.sourceObject ?? job?.sourceObject;
-              const destinationObject =
-                log.metadata?.destObject ?? job?.destObject;
-              const mapping =
-                sourceObject && destinationObject
-                  ? `${titleCase(sourceObject)} → ${titleCase(destinationObject)}`
-                  : (jobName ?? log.message);
-              const runType = triggerLabel(log.metadata?.triggeredBy);
-              const failedRecords = log.metadata?.recordsFailed ?? 0;
-              const createdAt = log.createdAt ? new Date(log.createdAt) : null;
-              const hasValidDate =
-                createdAt && !Number.isNaN(createdAt.getTime());
-              const activityHref =
-                log.jobId && job
-                  ? `/projects/${projectId}/jobs/${log.jobId}?tab=run-history`
-                  : `/projects/${projectId}?tab=activity`;
-
-              return (
-                <ListRow key={log.id} asChild className="px-4 py-1.5">
-                  <Link
-                    to={activityHref}
-                    state={
-                      log.jobId && job
-                        ? {
-                            jobBackTo: `/projects/${projectId}?tab=overview`,
-                            jobBackLabel: 'Back to Project Overview',
-                          }
-                        : undefined
-                    }
-                    className="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 text-left xl:grid-cols-[6.75rem_minmax(0,1fr)_auto_auto]"
-                    aria-label={`Open activity details for ${mapping}`}
-                  >
-                    <StatusBadge status={statusFor(log)} size="sm" />
-                    <div className="col-start-2 row-start-1 min-w-0 space-y-1 xl:col-auto xl:row-auto">
-                      <p
-                        className="truncate text-sm font-semibold"
-                        title={mapping}
-                      >
-                        {mapping}
-                      </p>
-                      <div className="text-muted-foreground flex min-w-0 flex-wrap items-center gap-1.5 text-xs">
-                        {jobName && jobName !== mapping && (
-                          <span className="max-w-48 truncate">{jobName}</span>
-                        )}
-                        {jobName && jobName !== mapping && runType && (
-                          <span aria-hidden="true">·</span>
-                        )}
-                        {runType && <span>{runType}</span>}
-                      </div>
-                    </div>
-                    <div className="col-start-2 row-start-2 flex flex-wrap items-center gap-x-3 gap-y-1 xl:col-auto xl:row-auto xl:block xl:text-right">
-                      <p className="text-sm font-semibold whitespace-nowrap">
-                        {(log.recordsProcessed ?? 0).toLocaleString()}
-                        <span className="text-muted-foreground ml-1 font-normal">
-                          synced
-                        </span>
-                      </p>
-                      <div className="text-muted-foreground flex items-center gap-2 text-xs xl:mt-1 xl:justify-end">
-                        <span className="inline-flex items-center gap-1">
-                          <Clock3 className="size-3" aria-hidden="true" />
-                          {hasValidDate
-                            ? formatDistanceToNow(createdAt, {
-                                addSuffix: true,
-                              })
-                            : 'Time unavailable'}
-                        </span>
-                        <span className="inline-flex items-center gap-1">
-                          <Timer className="size-3" aria-hidden="true" />
-                          {formatDuration(log.durationMs)}
-                        </span>
-                      </div>
-                      {failedRecords > 0 && (
-                        <Badge
-                          variant="secondary"
-                          className="text-destructive mt-1 h-5 px-1.5 text-[11px]"
-                        >
-                          {failedRecords.toLocaleString()} failed
-                        </Badge>
+            return (
+              <ListRow key={log.id} asChild className="px-4 py-1.5">
+                <Link
+                  to={activityHref}
+                  state={
+                    log.jobId && job
+                      ? {
+                          jobBackTo: `/projects/${projectId}?tab=overview`,
+                          jobBackLabel: 'Back to Project Overview',
+                        }
+                      : undefined
+                  }
+                  className="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 text-left xl:grid-cols-[6.75rem_minmax(0,1fr)_auto_auto]"
+                  aria-label={`Open activity details for ${mapping}`}
+                >
+                  <StatusBadge status={statusFor(log)} size="sm" />
+                  <div className="col-start-2 row-start-1 min-w-0 space-y-1 xl:col-auto xl:row-auto">
+                    <p
+                      className="truncate text-sm font-semibold"
+                      title={mapping}
+                    >
+                      {mapping}
+                    </p>
+                    <div className="text-muted-foreground flex min-w-0 flex-wrap items-center gap-1.5 text-xs">
+                      {jobName && jobName !== mapping && (
+                        <span className="max-w-48 truncate">{jobName}</span>
                       )}
+                      {jobName && jobName !== mapping && runType && (
+                        <span aria-hidden="true">·</span>
+                      )}
+                      {runType && <span>{runType}</span>}
                     </div>
-                    <ChevronRight
-                      className="text-muted-foreground col-start-3 row-start-1 size-4 shrink-0 xl:col-auto xl:row-auto"
-                      aria-hidden="true"
-                    />
-                  </Link>
-                </ListRow>
-              );
-            })
-          )}
-        </ListPanel>
+                  </div>
+                  <div className="col-start-2 row-start-2 flex flex-wrap items-center gap-x-3 gap-y-1 xl:col-auto xl:row-auto xl:block xl:text-right">
+                    <p className="text-sm font-semibold whitespace-nowrap">
+                      {(log.recordsProcessed ?? 0).toLocaleString()}
+                      <span className="text-muted-foreground ml-1 font-normal">
+                        synced
+                      </span>
+                    </p>
+                    <div className="text-muted-foreground flex items-center gap-2 text-xs xl:mt-1 xl:justify-end">
+                      <span className="inline-flex items-center gap-1">
+                        <Clock3 className="size-3" aria-hidden="true" />
+                        {hasValidDate
+                          ? formatDistanceToNow(createdAt, {
+                              addSuffix: true,
+                            })
+                          : 'Time unavailable'}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Timer className="size-3" aria-hidden="true" />
+                        {formatDuration(log.durationMs)}
+                      </span>
+                    </div>
+                    {failedRecords > 0 && (
+                      <Badge
+                        variant="secondary"
+                        className="text-destructive mt-1 h-5 px-1.5 text-[11px]"
+                      >
+                        {failedRecords.toLocaleString()} failed
+                      </Badge>
+                    )}
+                  </div>
+                  <ChevronRight
+                    className="text-muted-foreground col-start-3 row-start-1 size-4 shrink-0 xl:col-auto xl:row-auto"
+                    aria-hidden="true"
+                  />
+                </Link>
+              </ListRow>
+            );
+          })
+        )}
+      </ListPanel>
     </div>
   );
 }

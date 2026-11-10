@@ -7,13 +7,6 @@ import type { JobDetailTabView } from '@/features/jobs/hooks';
 import { useFieldMappingDraftStore } from '@/features/jobs/store/useFieldMappingDraftStore';
 import { selectJobOnboardingState } from '@/features/onboarding';
 
-// Tabs that only have content once the flow has run at least once.
-const RUN_DEPENDENT_TABS = new Set([
-  'run-history',
-  'conflicts',
-  'webhook-events',
-]);
-
 export default function JobTabs({ tabs }: { tabs: JobDetailTabView[] }) {
   const {
     job,
@@ -35,14 +28,9 @@ export default function JobTabs({ tabs }: { tabs: JobDetailTabView[] }) {
     runLogs,
     lastSyncedAt: job.lastSyncedAt,
   });
-  const hasRun = runLogs.length > 0 || Boolean(job.lastSyncedAt);
-
   const lockReasonFor = (id: string) => {
     if (id === 'pipeline' && !mappingReady) {
       return 'Map your fields and choose a match field first';
-    }
-    if (RUN_DEPENDENT_TABS.has(id) && !hasRun) {
-      return 'Available after the first sync run';
     }
     return '';
   };

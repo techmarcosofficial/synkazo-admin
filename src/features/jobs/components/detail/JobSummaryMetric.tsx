@@ -18,12 +18,12 @@ export default function JobSummaryMetric({
         <div className="bg-muted text-muted-foreground flex size-10 shrink-0 items-center justify-center rounded-xl">
           <Icon className="size-5" aria-hidden="true" />
         </div>
-        <h3 className="text-foreground truncate text-sm font-semibold">
+        <h3 className="text-muted-foreground truncate text-sm font-medium">
           {label}
         </h3>
       </div>
       <div>
-        <p className="text-foreground text-2xl font-extrabold tracking-tight tabular-nums">
+        <p className="text-foreground text-lg font-semibold tracking-tight tabular-nums">
           {value}
         </p>
         {description && (

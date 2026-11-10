@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_TAB_ID, TAB_DEFS } from './jobDetailTabs';
+import {
+  DEFAULT_TAB_ID,
+  LEGACY_SETTINGS_SECTION_TABS,
+  TAB_DEFS,
+} from './jobDetailTabs';
 
 describe('job detail tabs', () => {
   it('uses Overview as the first and default tab', () => {
@@ -11,9 +15,13 @@ describe('job detail tabs', () => {
     });
   });
 
-  it('labels run-history as Sync History', () => {
-    const historyTab = TAB_DEFS.find((tab) => tab.id === 'run-history');
-    expect(historyTab?.label).toBe('Sync History');
+  it('sends old history, conflict and webhook tab links to Settings sections', () => {
+    expect(LEGACY_SETTINGS_SECTION_TABS).toEqual({
+      'run-history': 'sync-history',
+      'sync-history': 'sync-history',
+      conflicts: 'conflicts',
+      'webhook-events': 'webhook-events',
+    });
   });
 
   it('maintains the expected tab sequence', () => {
@@ -21,10 +29,8 @@ describe('job detail tabs', () => {
     expect(tabIds).toEqual([
       'overview',
       'field-mapping',
+      'run-sync',
       'pipeline',
-      'run-history',
-      'conflicts',
-      'webhook-events',
       'settings',
     ]);
   });

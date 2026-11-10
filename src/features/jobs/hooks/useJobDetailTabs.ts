@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 
 import {
   DEFAULT_TAB_ID,
+  LEGACY_SETTINGS_SECTION_TABS,
   TAB_DEFS,
   type JobDetailTabContext,
   type JobDetailTabId,
@@ -24,10 +25,12 @@ export function useJobDetailTabs(ctx: JobDetailTabContext) {
   );
 
   const rawRequestedTab = searchParams.get('tab');
-  const normalizedRequestedTab =
-    rawRequestedTab === 'sync-history'
-      ? 'run-history'
-      : (rawRequestedTab as JobDetailTabId | null);
+  const legacySection = rawRequestedTab
+    ? LEGACY_SETTINGS_SECTION_TABS[rawRequestedTab]
+    : undefined;
+  const normalizedRequestedTab = legacySection
+    ? 'settings'
+    : (rawRequestedTab as JobDetailTabId | null);
   const activeTab = visibleDefs.some((t) => t.id === normalizedRequestedTab)
     ? (normalizedRequestedTab as JobDetailTabId)
     : DEFAULT_TAB_ID;
@@ -36,6 +39,16 @@ export function useJobDetailTabs(ctx: JobDetailTabContext) {
     id: tab.id,
     label: tab.label,
   }));
+
+  // Old history/conflicts/webhook tab links (e.g. ?tab=webhook-events&runId=…)
+  // open the matching Settings section, keeping their other params.
+  useEffect(() => {
+    if (!legacySection) return;
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', 'settings');
+    next.set('section', legacySection);
+    setSearchParams(next, { replace: true });
+  }, [legacySection, searchParams, setSearchParams]);
 
   // Automatically migrate legacy ?tab=schedule or ?tab=settings&section=schedule links to Overview tab with modal auto-open.
   useEffect(() => {

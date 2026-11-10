@@ -1,5 +1,4 @@
 import {
-  Activity,
   LayoutDashboard,
   Lock,
   Plug,
@@ -20,7 +19,6 @@ const TAB_ICONS: Record<ProjectDetailTabId, LucideIcon> = {
   overview: LayoutDashboard,
   connections: Plug,
   'sync-rules': Workflow,
-  activity: Activity,
   settings: Settings,
 };
 

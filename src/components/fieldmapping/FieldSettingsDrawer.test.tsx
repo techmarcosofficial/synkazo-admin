@@ -31,15 +31,25 @@ describe('FieldSettingsDrawer', () => {
         onOpenChange={vi.fn()}
         mapping={mockMapping}
         destKey="Phone"
-        sourceFieldDef={{ key: 'phone_number', label: 'Customer Phone', type: 'string' }}
+        sourceFieldDef={{
+          key: 'phone_number',
+          label: 'Customer Phone',
+          type: 'string',
+        }}
         destFieldDef={{ key: 'Phone', label: 'Primary Phone', type: 'string' }}
         onSave={vi.fn()}
       />,
     );
 
-    expect(screen.getAllByText('Customer Phone').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('Primary Phone').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText(/Field Settings & Pipeline/i)).toBeInTheDocument();
+    expect(screen.getAllByText('Customer Phone').length).toBeGreaterThanOrEqual(
+      1,
+    );
+    expect(screen.getAllByText('Primary Phone').length).toBeGreaterThanOrEqual(
+      1,
+    );
+    expect(
+      screen.queryByText(/Field Settings & Pipeline/i),
+    ).not.toBeInTheDocument();
   });
 
   it('renders all 3 unified workbench sections', () => {
@@ -54,13 +64,13 @@ describe('FieldSettingsDrawer', () => {
     );
 
     expect(
-      screen.getByText(/1\. Record Matching & Overwrite Policy/i),
+      screen.getByRole('button', { name: 'Matching & updates' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/2\. Data Cleaning & Transformation Pipeline/i),
+      screen.getByRole('button', { name: 'Transform rules' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/3\. Empty Value Policy & Fallback/i),
+      screen.getByRole('button', { name: 'Empty values' }),
     ).toBeInTheDocument();
   });
 
@@ -98,7 +108,12 @@ describe('FieldSettingsDrawer', () => {
       <FieldSettingsDrawer
         open={true}
         onOpenChange={onOpenChange}
-        mapping={{ ...mockMapping, destRules: { Phone: [{ type: 'replace', find: '', replacement: 'new' }] } }}
+        mapping={{
+          ...mockMapping,
+          destRules: {
+            Phone: [{ type: 'replace', find: '', replacement: 'new' }],
+          },
+        }}
         destKey="Phone"
         onSave={onSave}
       />,
@@ -106,13 +121,22 @@ describe('FieldSettingsDrawer', () => {
     fireEvent.click(screen.getByRole('button', { name: /save all settings/i }));
     expect(onSave).not.toHaveBeenCalled();
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
-    expect(screen.getByText(/Fill the highlighted required fields/)).toBeInTheDocument();
-    expect(screen.getAllByPlaceholderText('Required')[0]).toHaveAttribute('aria-invalid', 'true');
-    fireEvent.change(screen.getAllByPlaceholderText('Required')[0], { target: { value: 'old' } });
+    expect(
+      screen.getByText(/Fill the highlighted required fields/),
+    ).toBeInTheDocument();
+    expect(screen.getAllByPlaceholderText('Required')[0]).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    );
+    fireEvent.change(screen.getAllByPlaceholderText('Required')[0], {
+      target: { value: 'old' },
+    });
     fireEvent.click(screen.getByRole('button', { name: /save all settings/i }));
-    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
-      rules: [{ type: 'replace', find: 'old', replacement: 'new' }],
-    }));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        rules: [{ type: 'replace', find: 'old', replacement: 'new' }],
+      }),
+    );
   });
 
   it('requires Map Values fallback and source, but accepts an empty destination', () => {
@@ -121,28 +145,48 @@ describe('FieldSettingsDrawer', () => {
       <FieldSettingsDrawer
         open={true}
         onOpenChange={vi.fn()}
-        mapping={{ ...mockMapping, destRules: { Phone: [{ type: 'value_map', map: { '': '' }, fallback: '' }] } }}
+        mapping={{
+          ...mockMapping,
+          destRules: {
+            Phone: [{ type: 'value_map', map: { '': '' }, fallback: '' }],
+          },
+        }}
         destKey="Phone"
         onSave={onSave}
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: /save all settings/i }));
     expect(onSave).not.toHaveBeenCalled();
-    expect(screen.getByPlaceholderText('Source value')).toHaveAttribute('aria-invalid', 'true');
-    expect(screen.getByPlaceholderText('Required')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByPlaceholderText('Source value')).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    );
+    expect(screen.getByPlaceholderText('Required')).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    );
 
     rerender(
       <FieldSettingsDrawer
         open={true}
         onOpenChange={vi.fn()}
-        mapping={{ ...mockMapping, destRules: { Phone: [{ type: 'value_map', map: { pending: '' }, fallback: 'other' }] } }}
+        mapping={{
+          ...mockMapping,
+          destRules: {
+            Phone: [
+              { type: 'value_map', map: { pending: '' }, fallback: 'other' },
+            ],
+          },
+        }}
         destKey="Phone"
         onSave={onSave}
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: /save all settings/i }));
-    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
-      rules: [{ type: 'value_map', map: { pending: '' }, fallback: 'other' }],
-    }));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        rules: [{ type: 'value_map', map: { pending: '' }, fallback: 'other' }],
+      }),
+    );
   });
 });

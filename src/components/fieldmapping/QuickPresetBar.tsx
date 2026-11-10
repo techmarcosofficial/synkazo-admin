@@ -2,7 +2,15 @@ import { Check, Plus, Sparkles } from 'lucide-react';
 import { useMemo } from 'react';
 
 import { Badge } from '@/components/ui/badge';
+import InfoTip from '@/components/shared/InfoTip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import type { Rule } from '@/lib/ruleEngine';
+import type { RuleSuggestion } from '@/lib/ruleSuggestions';
 import { cn } from '@/lib/utils';
 import type { FieldDef } from './FieldMappingCanvas';
 
@@ -49,6 +57,11 @@ const ALL_PRESETS: QuickPreset[] = [
   },
 ];
 
+interface PresetChip extends QuickPreset {
+  key: string;
+  suggestion?: RuleSuggestion;
+}
+
 export interface QuickPresetBarProps {
   rules: Rule[];
   onRulesChange: (rules: Rule[]) => void;
@@ -56,7 +69,28 @@ export interface QuickPresetBarProps {
   destFieldDef?: FieldDef;
   canUseTransforms?: boolean;
   onUpgradeRequired?: () => void;
+  /** Rules suggested for this field pair. They show as orange chips first in
+   *  the row; one that matches a preset marks that preset instead. */
+  suggestions?: RuleSuggestion[];
+  onAddSuggestion?: (suggestion: RuleSuggestion) => void;
   className?: string;
+}
+
+function SuggestedMark({ reason }: { reason: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="inline-flex shrink-0 cursor-help">
+          <Sparkles className="text-warning size-3" aria-hidden="true" />
+        </span>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="max-w-64 text-xs leading-snug">
+        <span>
+          <span className="font-semibold">Suggested.</span> {reason}
+        </span>
+      </TooltipContent>
+    </Tooltip>
+  );
 }
 
 export default function QuickPresetBar({
@@ -66,6 +100,8 @@ export default function QuickPresetBar({
   destFieldDef,
   canUseTransforms = true,
   onUpgradeRequired,
+  suggestions = [],
+  onAddSuggestion,
   className,
 }: QuickPresetBarProps) {
   // Sort presets contextually based on field type
@@ -88,7 +124,9 @@ export default function QuickPresetBar({
       return [
         ALL_PRESETS.find((p) => p.type === 'trim')!,
         ALL_PRESETS.find((p) => p.type === 'lowercase')!,
-        ...ALL_PRESETS.filter((p) => p.type !== 'lowercase' && p.type !== 'trim'),
+        ...ALL_PRESETS.filter(
+          (p) => p.type !== 'lowercase' && p.type !== 'trim',
+        ),
       ];
     }
     return ALL_PRESETS;
@@ -113,45 +151,105 @@ export default function QuickPresetBar({
     onRulesChange([...cleaned, { type: preset.type, enabled: true }]);
   };
 
+  // One row: suggested chips first (orange, sparkle), then the remaining
+  // presets. A suggestion that is also a preset marks that preset.
+  const chips = useMemo<PresetChip[]>(() => {
+    const presetTypes = new Set(sortedPresets.map((p) => p.type));
+    const byType = new Map(suggestions.map((sug) => [sug.rule.type, sug]));
+    const suggestedPresets = sortedPresets
+      .filter((p) => byType.has(p.type))
+      .map((p) => ({ ...p, key: p.type, suggestion: byType.get(p.type) }));
+    const extraSuggestions = suggestions
+      .filter((sug) => !presetTypes.has(sug.rule.type))
+      .map((sug) => ({
+        key: sug.id,
+        type: sug.rule.type,
+        label: sug.label,
+        description: sug.reason,
+        suggestion: sug,
+      }));
+    const rest = sortedPresets
+      .filter((p) => !byType.has(p.type))
+      .map((p) => ({ ...p, key: p.type }));
+    return [...suggestedPresets, ...extraSuggestions, ...rest];
+  }, [sortedPresets, suggestions]);
+
+  const toggleChip = (chip: PresetChip) => {
+    const preset = ALL_PRESETS.find((p) => p.type === chip.type);
+    if (preset) {
+      togglePreset(preset);
+      return;
+    }
+    if (!canUseTransforms && onUpgradeRequired) {
+      onUpgradeRequired();
+      return;
+    }
+    if (rules.some((r) => r.type === chip.type)) {
+      onRulesChange(rules.filter((r) => r.type !== chip.type));
+    } else if (chip.suggestion) {
+      onAddSuggestion?.(chip.suggestion);
+    }
+  };
+
   return (
     <div className={cn('space-y-2', className)}>
       <div className="flex items-center justify-between">
-        <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-          <Sparkles className="size-3.5 text-primary" />
-          <span>Quick Presets</span>
-        </label>
-        <span className="text-[11px] text-muted-foreground">
-          Click to quickly add or remove
-        </span>
+        <div className="text-foreground flex items-center gap-1.5 text-sm font-medium">
+          <Sparkles className="text-primary size-3.5" />
+          <span>Quick presets</span>
+          <InfoTip label="About quick presets">
+            Click a preset to add it as a rule. Click it again to remove it.
+            Orange presets with a sparkle are suggested for this field.
+          </InfoTip>
+        </div>
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
-        {sortedPresets.map((preset) => {
-          const isActive = rules.some((r) => r.type === preset.type);
+      <TooltipProvider delayDuration={150}>
+        <div className="flex flex-wrap gap-1.5">
+          {chips.map((chip) => {
+            const isActive = rules.some((r) => r.type === chip.type);
+            const suggested = Boolean(chip.suggestion);
 
-          return (
-            <button
-              key={preset.type}
-              type="button"
-              onClick={() => togglePreset(preset)}
-              className={cn(
-                'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all cursor-pointer border',
-                isActive
-                  ? 'border-primary bg-primary/10 text-primary shadow-2xs hover:bg-primary/15'
-                  : 'border-border/70 bg-background text-muted-foreground hover:bg-muted/60 hover:text-foreground',
-              )}
-              title={preset.description}
-            >
-              {isActive ? (
-                <Check className="size-3 text-primary shrink-0" />
-              ) : (
-                <Plus className="size-3 text-muted-foreground shrink-0" />
-              )}
-              <span>{preset.label}</span>
-            </button>
-          );
-        })}
-      </div>
+            return (
+              <button
+                key={chip.key}
+                type="button"
+                onClick={() => toggleChip(chip)}
+                aria-pressed={isActive}
+                className={cn(
+                  'inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all',
+                  isActive
+                    ? 'border-primary bg-primary/10 text-primary hover:bg-primary/15 shadow-2xs'
+                    : suggested
+                      ? 'border-warning/50 bg-warning/10 text-foreground hover:bg-warning/15'
+                      : 'border-border/70 bg-background text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+                )}
+                title={suggested ? undefined : chip.description}
+              >
+                {isActive ? (
+                  <Check className="text-primary size-3 shrink-0" />
+                ) : (
+                  <Plus
+                    className={cn(
+                      'size-3 shrink-0',
+                      suggested ? 'text-warning' : 'text-muted-foreground',
+                    )}
+                  />
+                )}
+                <span>{chip.label}</span>
+                {chip.suggestion && (
+                  <>
+                    <span className="sr-only">
+                      (suggested: {chip.suggestion.reason})
+                    </span>
+                    <SuggestedMark reason={chip.suggestion.reason} />
+                  </>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </TooltipProvider>
     </div>
   );
 }

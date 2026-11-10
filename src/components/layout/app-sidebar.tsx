@@ -24,7 +24,11 @@ import {
 } from '@/components/ui/sidebar';
 import { SETTINGS_SECTION, sectionMinRole } from '@/lib/sectionTabs';
 import { SUPER_ADMIN_NAV } from '@/lib/superAdminNav';
+import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import type { WorkspaceKind } from '@/lib/workspace';
+import { useMyOrgQuery } from '@/queries/useOrganisations';
+
+const ORGANIZATION_URL = '/organization';
 
 const TENANT_NAV: NavGroup[] = [
   {
@@ -55,8 +59,9 @@ const TENANT_NAV: NavGroup[] = [
     label: 'Administrator',
     items: [
       {
-        title: 'This organization',
-        url: '/organization',
+        // Replaced with the organization's own name at render time.
+        title: 'Organization',
+        url: ORGANIZATION_URL,
         icon: Building2,
         minRole: 'org_admin',
       },
@@ -75,6 +80,29 @@ export function AppSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar> & { kind: WorkspaceKind }) {
   const platform = kind === 'platform';
+  const { hasRole } = useSynkazoAuth();
+  const { data: org } = useMyOrgQuery({
+    enabled: !platform && hasRole('org_admin'),
+  });
+  const orgName = org?.name?.trim();
+
+  // The organization item reads as the org's name ("Acme HVAC"), falling
+  // back to "Organization" while it loads.
+  const tenantNav = React.useMemo<NavGroup[]>(
+    () =>
+      orgName
+        ? TENANT_NAV.map((group) => ({
+            ...group,
+            items: group.items.map((item) =>
+              item.url === ORGANIZATION_URL
+                ? { ...item, title: orgName }
+                : item,
+            ),
+          }))
+        : TENANT_NAV,
+    [orgName],
+  );
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -98,7 +126,12 @@ export function AppSidebar({
                   synkazo
                 </span>
                 {platform && (
-                  <Badge variant="secondary" tone="warning" size="xs" className="text-[10px] font-semibold tracking-wider uppercase group-data-[collapsible=icon]:hidden">
+                  <Badge
+                    variant="secondary"
+                    tone="warning"
+                    size="xs"
+                    className="text-[10px] font-semibold tracking-wider uppercase group-data-[collapsible=icon]:hidden"
+                  >
                     Admin
                   </Badge>
                 )}
@@ -109,7 +142,7 @@ export function AppSidebar({
       </SidebarHeader>
 
       <SidebarContent>
-        <NavMain groups={platform ? SUPER_ADMIN_NAV : TENANT_NAV} />
+        <NavMain groups={platform ? SUPER_ADMIN_NAV : tenantNav} />
       </SidebarContent>
 
       <SidebarRail />

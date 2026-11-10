@@ -16,6 +16,7 @@ describe('project settings section definitions', () => {
       'schedule',
       'associations',
       'environments',
+      'activity',
     ]);
   });
 
@@ -27,6 +28,7 @@ describe('project settings section definitions', () => {
     expect(legacyProjectSettingsSectionForTab('environment-sync')).toBe(
       'environments',
     );
+    expect(legacyProjectSettingsSectionForTab('activity')).toBe('activity');
     expect(legacyProjectSettingsSectionForTab('overview')).toBeNull();
   });
 

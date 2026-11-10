@@ -108,7 +108,10 @@ function ValueMapEditor({
 
   return (
     <div className="flex flex-col gap-2 px-10 pt-1 pb-3">
-      <p className="text-[10px] text-muted-foreground">Source value <span className="text-destructive">*</span> → Destination value (optional)</p>
+      <p className="text-muted-foreground text-[10px]">
+        Source value <span className="text-destructive">*</span> → Destination
+        value (optional)
+      </p>
       {entries.length === 0 && (
         <p className="text-muted-foreground text-xs">
           No values mapped yet. Add a rule for each source value to convert.
@@ -120,13 +123,13 @@ function ValueMapEditor({
             value={from}
             onChange={(e) => renameKey(i, e.target.value)}
             placeholder="Source value"
-            className="flex-1 font-mono text-xs h-8"
+            className="h-8 flex-1 font-mono text-xs"
             aria-invalid={showErrors && !from.trim()}
           />
           <ArrowRight className="text-muted-foreground size-3 shrink-0" />
           {destOptions?.length ? (
             <Select value={to} onValueChange={(v) => setValue(i, v)}>
-              <SelectTrigger className="flex-1 text-xs h-8">
+              <SelectTrigger className="h-8 flex-1 text-xs">
                 <SelectValue placeholder="Destination option" />
               </SelectTrigger>
               <SelectContent>
@@ -142,7 +145,7 @@ function ValueMapEditor({
               value={to}
               onChange={(e) => setValue(i, e.target.value)}
               placeholder="Destination value"
-              className="flex-1 font-mono text-xs h-8"
+              className="h-8 flex-1 font-mono text-xs"
             />
           )}
           <Button
@@ -165,12 +168,12 @@ function ValueMapEditor({
         type="button"
         variant="outline"
         size="xs"
-        className="self-start text-xs h-7"
+        className="h-7 self-start text-xs"
         onClick={() =>
           writeEntries([...entries, ['', '']] as [string, string][])
         }
       >
-        <Plus className="size-3 mr-1" /> Add Value Pair
+        <Plus className="mr-1 size-3" /> Add Value Pair
       </Button>
     </div>
   );
@@ -216,7 +219,7 @@ function ValueMappingEditor({
   return (
     <div className="flex flex-col gap-2 px-10 pt-1 pb-3">
       <div className="flex flex-wrap items-center gap-3 pb-1 text-xs">
-        <label className="flex items-center gap-1.5 cursor-pointer">
+        <label className="flex cursor-pointer items-center gap-1.5">
           <Switch
             checked={!!norm.trim}
             onCheckedChange={(v) => setNorm({ trim: v })}
@@ -224,7 +227,7 @@ function ValueMappingEditor({
           />
           <span className="text-muted-foreground text-[11px]">Trim</span>
         </label>
-        <label className="flex items-center gap-1.5 cursor-pointer">
+        <label className="flex cursor-pointer items-center gap-1.5">
           <Switch
             checked={!!norm.lowercase}
             onCheckedChange={(v) => setNorm({ lowercase: v })}
@@ -232,7 +235,7 @@ function ValueMappingEditor({
           />
           <span className="text-muted-foreground text-[11px]">Lowercase</span>
         </label>
-        <label className="flex items-center gap-1.5 cursor-pointer">
+        <label className="flex cursor-pointer items-center gap-1.5">
           <Switch
             checked={!!norm.replaceUnderscoreAndHyphenWithSpace}
             onCheckedChange={(v) =>
@@ -240,7 +243,9 @@ function ValueMappingEditor({
             }
             className="scale-90"
           />
-          <span className="text-muted-foreground text-[11px]">_ / - to space</span>
+          <span className="text-muted-foreground text-[11px]">
+            _ / - to space
+          </span>
         </label>
       </div>
 
@@ -250,13 +255,16 @@ function ValueMappingEditor({
             value={from}
             onChange={(e) => renameKey(i, e.target.value)}
             placeholder="Source value"
-            className="flex-1 font-mono text-xs h-8"
+            className="h-8 flex-1 font-mono text-xs"
             aria-invalid={showErrors && !from.trim()}
           />
           <ArrowRight className="text-muted-foreground size-3 shrink-0" />
           {destOptions?.length ? (
             <Select value={to} onValueChange={(v) => setValue(i, v)}>
-              <SelectTrigger className="flex-1 text-xs h-8" aria-invalid={showErrors && !to.trim()}>
+              <SelectTrigger
+                className="h-8 flex-1 text-xs"
+                aria-invalid={showErrors && !to.trim()}
+              >
                 <SelectValue placeholder="Destination option" />
               </SelectTrigger>
               <SelectContent>
@@ -272,7 +280,7 @@ function ValueMappingEditor({
               value={to}
               onChange={(e) => setValue(i, e.target.value)}
               placeholder="Destination value"
-              className="flex-1 font-mono text-xs h-8"
+              className="h-8 flex-1 font-mono text-xs"
               aria-invalid={showErrors && !to.trim()}
             />
           )}
@@ -296,12 +304,12 @@ function ValueMappingEditor({
         type="button"
         variant="outline"
         size="xs"
-        className="self-start text-xs h-7"
+        className="h-7 self-start text-xs"
         onClick={() =>
           writeEntries([...entries, ['', '']] as [string, string][])
         }
       >
-        <Plus className="size-3 mr-1" /> Add Value Pair
+        <Plus className="mr-1 size-3" /> Add Value Pair
       </Button>
     </div>
   );
@@ -346,10 +354,12 @@ function ActiveRuleCard({
   return (
     <div
       className={cn(
-        'rounded-xl border bg-card transition-all',
-        !isEnabled ? 'border-border/60 opacity-60 bg-muted/20' : 'border-border/80 shadow-2xs',
-        isDragging && 'ring-primary/40 ring-2 shadow-md bg-background',
-        errors.length > 0 && 'border-destructive ring-1 ring-destructive/20',
+        'bg-card rounded-xl border transition-all',
+        !isEnabled
+          ? 'border-border/60 bg-muted/20 opacity-60'
+          : 'border-border/80 shadow-2xs',
+        isDragging && 'ring-primary/40 bg-background shadow-md ring-2',
+        errors.length > 0 && 'border-destructive ring-destructive/20 ring-1',
       )}
     >
       <div className="flex items-center gap-2 px-3 py-2">
@@ -362,23 +372,28 @@ function ActiveRuleCard({
           <GripVertical className="size-3.5" />
         </button>
 
-        <span className="bg-primary/10 text-primary font-bold flex size-5 shrink-0 items-center justify-center rounded-lg text-[10px]">
+        <span className="bg-primary/10 text-primary flex size-5 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold">
           {index + 1}
         </span>
 
         <div className="min-w-0 flex-1">
-          <p className="truncate text-xs font-semibold text-foreground">
+          <p className="text-foreground truncate text-xs font-semibold">
             {def?.label || rule.type}
           </p>
           {def?.description && (
-            <p className="text-[10px] text-muted-foreground truncate leading-tight">
+            <p className="text-muted-foreground truncate text-[10px] leading-tight">
               {def.description}
             </p>
           )}
         </div>
 
-        <div className="flex items-center gap-1 shrink-0">
-          {errors.length > 0 && <AlertCircle className="size-4 text-destructive" aria-label="Rule needs required values" />}
+        <div className="flex shrink-0 items-center gap-1">
+          {errors.length > 0 && (
+            <AlertCircle
+              className="text-destructive size-4"
+              aria-label="Rule needs required values"
+            />
+          )}
           <Switch
             checked={isEnabled}
             onCheckedChange={(checked) =>
@@ -402,26 +417,25 @@ function ActiveRuleCard({
       </div>
 
       {hasParams && isEnabled && (
-        <div className="grid gap-2 px-8 pb-2 pt-1 sm:grid-cols-2">
+        <div className="grid gap-2 px-8 pt-1 pb-2 sm:grid-cols-2">
           {(isValueMap ? ['fallback'] : inlineParams).map((p) => {
-            const isRequired = (REQUIRED_RULE_PARAMS[rule.type] || []).includes(p);
+            const isRequired = (REQUIRED_RULE_PARAMS[rule.type] || []).includes(
+              p,
+            );
             const isNum = isParamNumeric(rule.type, p);
 
             return (
               <label key={p} className="min-w-0 space-y-0.5">
                 <span className="text-muted-foreground text-[10px] font-medium">
-                  {PARAM_LABELS[p] || p} {isRequired && <span className="text-destructive">*</span>}
+                  {PARAM_LABELS[p] || p}{' '}
+                  {isRequired && <span className="text-destructive">*</span>}
                 </span>
                 <Input
                   value={(rule[p] as string) || ''}
                   onChange={(e) => handleParamChange(p, e.target.value)}
-                  placeholder={
-                    isRequired
-                        ? 'Required'
-                        : 'Optional'
-                  }
+                  placeholder={isRequired ? 'Required' : 'Optional'}
                   inputMode={isNum ? 'decimal' : 'text'}
-                  className="h-7 text-xs font-mono"
+                  className="h-7 font-mono text-xs"
                   aria-invalid={errors.includes(p)}
                 />
               </label>
@@ -448,14 +462,16 @@ function ActiveRuleCard({
         />
       )}
       {errors.length > 0 && (
-        <div className="px-8 pb-3 text-[11px] text-destructive" role="alert">
+        <div className="text-destructive px-8 pb-3 text-[11px]" role="alert">
           {errors.map((param) => (
             <p key={param}>
               {param === 'map'
                 ? rule.type === 'value_map'
                   ? 'Add a value pair and fill every source value.'
                   : 'Complete every source and destination value.'
-                : (rule.type === 'min_length' || rule.type === 'max_length') && param === 'value' && String(rule.value ?? '').trim()
+                : (rule.type === 'min_length' || rule.type === 'max_length') &&
+                    param === 'value' &&
+                    String(rule.value ?? '').trim()
                   ? 'Value must be a non-negative whole number.'
                   : `${PARAM_LABELS[param] || param} is required.`}
             </p>
@@ -504,14 +520,7 @@ export default function DraggableRulePipeline({
   };
 
   if (rules.length === 0) {
-    return (
-      <div className="rounded-xl border border-dashed border-border/70 p-3.5 text-center text-xs text-muted-foreground space-y-0.5">
-        <p className="font-medium text-foreground">No transformation rules applied yet</p>
-        <p className="text-[11px] text-muted-foreground">
-          Use the quick presets above or click below to add a custom rule.
-        </p>
-      </div>
-    );
+    return null;
   }
 
   return (

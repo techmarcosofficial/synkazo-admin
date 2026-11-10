@@ -1,4 +1,11 @@
-import { CalendarClock, Layers3, Link2, Lock, Settings2 } from 'lucide-react';
+import {
+  Activity,
+  CalendarClock,
+  Layers3,
+  Link2,
+  Lock,
+  Settings2,
+} from 'lucide-react';
 import { lazy, Suspense, type ComponentType } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -27,6 +34,7 @@ import type { ProjectEnvironment } from '@/types';
 const SchedulerSection = lazy(() => import('./SchedulerTab'));
 const AssociationsSection = lazy(() => import('./AssociationsTab'));
 const EnvironmentsSection = lazy(() => import('./EnvironmentSyncTab'));
+const ActivitySection = lazy(() => import('./ActivityTab'));
 
 const SECTION_ICONS: Record<
   ProjectSettingsSectionId,
@@ -36,6 +44,7 @@ const SECTION_ICONS: Record<
   schedule: CalendarClock,
   associations: Link2,
   environments: Layers3,
+  activity: Activity,
 };
 
 function SectionSkeleton() {
@@ -93,6 +102,7 @@ function SectionContent({
   }
   if (id === 'schedule') return <SchedulerSection />;
   if (id === 'associations') return <AssociationsSection />;
+  if (id === 'activity') return <ActivitySection />;
   return <EnvironmentsSection />;
 }
 
@@ -179,6 +189,7 @@ export default function SettingsTab() {
           label: section.label,
           icon: SECTION_ICONS[section.id],
           locked: section.locked,
+          groupLabel: section.group === 'activity' ? 'Activity' : undefined,
         }))}
         onSelect={(id) => handleSectionChange(id as ProjectSettingsSectionId)}
         renderLink={(item, children) => (
@@ -191,8 +202,12 @@ export default function SettingsTab() {
         )}
       />
 
-      {activeSection.id === 'associations' ? (
-        <section className="min-w-0" aria-label="Associations settings">
+      {activeSection.id === 'associations' ||
+      activeSection.id === 'activity' ? (
+        <section
+          className="min-w-0"
+          aria-label={`${activeSection.label} settings`}
+        >
           {sectionBody}
         </section>
       ) : (
@@ -200,7 +215,7 @@ export default function SettingsTab() {
           className="min-w-0 space-y-4"
           aria-labelledby="project-settings-section-title"
         >
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-1">
+          <div className="flex flex-col gap-3 px-1 sm:flex-row sm:items-center sm:justify-between">
             <HeadingPair
               titleId="project-settings-section-title"
               title={activeSection.label}

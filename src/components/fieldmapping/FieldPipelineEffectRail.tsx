@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
+import InfoTip from '@/components/shared/InfoTip';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -56,6 +57,8 @@ export function buildStepTrace(
 ): Array<{
   index: number;
   label: string;
+  description?: string;
+  input: string;
   output: string;
   enabled: boolean;
   failed?: boolean;
@@ -71,6 +74,7 @@ export function buildStepTrace(
 
   return rules.map((rule, index) => {
     const enabled = rule.enabled !== false;
+    const input = current;
     let stepSkipped = false;
     let stepSkipReason = '';
     let validation: boolean | undefined;
@@ -102,6 +106,8 @@ export function buildStepTrace(
     return {
       index,
       label: def?.label || rule.type,
+      description: def?.description,
+      input,
       output: current,
       enabled,
       failed,
@@ -245,6 +251,7 @@ export default function FieldPipelineEffectRail({
   const recordWillBeSkipped =
     recordSkippedByPipeline || emptySkipped || recordSkippedByFilter;
 
+  const activeRuleCount = traceSteps.filter((step) => step.enabled).length;
   const sourceName = sourceFieldDef?.label || sourceKey;
   const destName = destFieldDef?.label || destKey;
 
@@ -261,81 +268,151 @@ export default function FieldPipelineEffectRail({
           <div className="bg-primary/10 text-primary flex size-7 shrink-0 items-center justify-center rounded-lg border-0 shadow-2xs">
             <Sparkles className="size-4" />
           </div>
-          <div>
-            <h4 className="text-foreground text-xs font-semibold tracking-wider uppercase">
-              Live Pipeline Effect
-            </h4>
-          </div>
+          <h4 className="text-foreground text-sm font-semibold">Preview</h4>
+          <InfoTip label="About the preview">
+            Try a sample value to see what gets written with these settings.
+            Nothing is saved or synced.
+          </InfoTip>
         </div>
-        <Badge className="bg-muted text-muted-foreground border-0 font-mono text-[10px] font-medium">
-          Read-Only Trace
-        </Badge>
       </div>
 
       <ScrollArea className="min-h-0 flex-1 p-4 sm:p-5">
         <div className="space-y-4 text-xs">
-          {/* 1. Test Input Box */}
-          <div className="bg-card border-border/70 space-y-2 rounded-xl border p-3.5 shadow-2xs">
-            <div className="flex items-center justify-between">
-              <label
-                htmlFor="rail-test-input"
-                className="text-foreground flex items-center gap-1.5 text-[11px] font-semibold"
-              >
-                <span>Sample Source Value</span>
-                {sourceSample && (
-                  <Badge className="bg-primary/15 text-primary border-0 px-1.5 py-0 text-[9px] font-medium">
-                    Live
+          {/* 1. Before → after: the sample value and what gets written */}
+          <div className="bg-card border-border/70 overflow-hidden rounded-xl border shadow-2xs">
+            <div className="space-y-2 p-3.5">
+              <div className="flex items-center justify-between">
+                <label
+                  htmlFor="rail-test-input"
+                  className="text-muted-foreground flex items-center gap-1.5 text-[11px] font-medium"
+                >
+                  <span>Before</span>
+                  <span className="text-foreground font-semibold">
+                    {sourceName}
+                  </span>
+                  {sourceSample && (
+                    <Badge className="bg-primary/15 text-primary border-0 px-1.5 py-0 text-[9px] font-medium">
+                      Live
+                    </Badge>
+                  )}
+                </label>
+                {sourceSample && testInput !== sourceSample && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    className="text-muted-foreground hover:text-foreground size-5 cursor-pointer"
+                    onClick={() => setTestInput(sourceSample)}
+                    title="Reset to the live sample value"
+                    aria-label="Reset to the live sample value"
+                  >
+                    <RotateCcw className="size-3" />
+                  </Button>
+                )}
+              </div>
+              <Input
+                id="rail-test-input"
+                value={testInput}
+                onChange={(e) => setTestInput(e.target.value)}
+                placeholder="Type a sample value…"
+                className="bg-background h-8 font-mono text-xs"
+              />
+            </div>
+
+            <div
+              className={cn(
+                'space-y-2 border-t p-3.5',
+                recordWillBeSkipped || fieldSkippedByValidation
+                  ? 'border-destructive/30 bg-destructive/10'
+                  : 'border-success/30 bg-success/5',
+              )}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-[11px] font-medium">
+                  <span>After</span>
+                  <span className="text-foreground truncate font-semibold">
+                    {destName}
+                  </span>
+                </span>
+                {fieldSkippedByValidation && !recordWillBeSkipped ? (
+                  <Badge
+                    tone="danger"
+                    className="bg-destructive/20 text-destructive border-0 text-[10px] font-semibold"
+                  >
+                    Field omitted
+                  </Badge>
+                ) : recordWillBeSkipped ? (
+                  <Badge
+                    tone="danger"
+                    className="bg-destructive/20 text-destructive border-0 text-[10px] font-semibold"
+                  >
+                    Record skipped
+                  </Badge>
+                ) : (
+                  <Badge
+                    tone="success"
+                    className="bg-success/20 text-success border-0 text-[10px] font-semibold"
+                  >
+                    Ready to sync
                   </Badge>
                 )}
-              </label>
-              {sourceSample && testInput !== sourceSample && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  className="text-muted-foreground hover:text-foreground size-5 cursor-pointer"
-                  onClick={() => setTestInput(sourceSample)}
-                  title="Reset to live sample record value"
-                >
-                  <RotateCcw className="size-3" />
-                </Button>
+              </div>
+
+              {fieldSkippedByValidation && !recordWillBeSkipped ? (
+                <p className="text-destructive text-[11px]">
+                  The validation failed for {destName}. Other fields can still
+                  sync.
+                </p>
+              ) : recordWillBeSkipped ? (
+                <div className="text-destructive space-y-1 text-[11px]">
+                  <p className="flex items-center gap-1.5 font-medium">
+                    <AlertTriangle className="size-3.5 shrink-0" />
+                    This record will not sync.
+                  </p>
+                  <p className="text-muted-foreground">
+                    {recordSkippedByPipeline
+                      ? `The "${pipelineSkipStep?.label || 'Skip'}" rule skipped it.`
+                      : emptySkipped
+                        ? 'The value is empty and this field is set to skip the record.'
+                        : 'The value matches the skip filter.'}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="bg-card border-border/80 text-foreground rounded-lg border px-2.5 py-1.5 font-mono text-xs font-semibold break-all shadow-2xs">
+                    {finalPayloadValue || (
+                      <span className="text-muted-foreground font-normal">
+                        (empty)
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-muted-foreground text-[10px]">
+                    {activeRuleCount === 0
+                      ? 'No rules, so the value is written as it is.'
+                      : `${activeRuleCount} rule${activeRuleCount !== 1 ? 's' : ''} applied`}
+                    {fallbackApplied && ' · default value used'}
+                    {' · '}
+                    {updatePolicy === 'create_only'
+                      ? 'Create only'
+                      : 'Always overwrite'}
+                  </p>
+                </>
               )}
             </div>
-            <Input
-              id="rail-test-input"
-              value={testInput}
-              onChange={(e) => setTestInput(e.target.value)}
-              placeholder="Type test value..."
-              className="bg-background h-8 font-mono text-xs"
-            />
-            <p className="text-muted-foreground text-[10px] leading-tight">
-              Test how this sample transforms and behaves under your settings.
-            </p>
           </div>
 
-          {/* 2. Sequential Pipeline Trace */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-[11px] font-medium">
-                Sequential Transformation Steps:
+          {/* 2. Each rule, in order, with its value before and after */}
+          {traceSteps.length > 0 && (
+            <div className="space-y-2">
+              <span className="text-muted-foreground block text-[11px] font-medium">
+                How the rules change it
               </span>
-              <Badge className="bg-secondary text-secondary-foreground border-0 font-mono text-[10px] font-normal">
-                {traceSteps.filter((s) => s.enabled).length} active rule
-                {traceSteps.filter((s) => s.enabled).length !== 1 ? 's' : ''}
-              </Badge>
-            </div>
-
-            {traceSteps.length === 0 ? (
-              <div className="border-border/70 text-muted-foreground bg-card/40 rounded-xl border border-dashed p-3.5 text-center text-[11px]">
-                No transformation rules added. Value passes directly.
-              </div>
-            ) : (
-              <div className="space-y-1.5">
+              <ol className="space-y-1.5">
                 {traceSteps.map((step) => (
-                  <div
+                  <li
                     key={`${step.index}-${step.label}`}
                     className={cn(
-                      'rounded-xl border px-3 py-2 transition-colors',
+                      'rounded-xl border px-3 py-2.5 transition-colors',
                       step.skipped
                         ? 'bg-destructive/10 border-destructive/30'
                         : step.enabled
@@ -343,7 +420,7 @@ export default function FieldPipelineEffectRail({
                           : 'bg-muted/30 border-border/40 opacity-60',
                     )}
                   >
-                    <div className="flex items-center justify-between gap-1">
+                    <div className="flex items-start justify-between gap-2">
                       <div className="flex min-w-0 items-center gap-2">
                         <span
                           className={cn(
@@ -355,79 +432,88 @@ export default function FieldPipelineEffectRail({
                         >
                           {step.index + 1}
                         </span>
-                        <span className="text-foreground truncate text-[11px] font-semibold">
+                        <span className="text-foreground text-[11px] font-semibold">
                           {step.label}
                         </span>
+                        {step.description && (
+                          <InfoTip label={`About ${step.label}`}>
+                            {step.description}
+                          </InfoTip>
+                        )}
                       </div>
                       {!step.enabled ? (
-                        <Badge className="bg-muted text-muted-foreground border-0 px-1.5 py-0 text-[9px] font-normal">
+                        <Badge className="bg-muted text-muted-foreground shrink-0 border-0 px-1.5 py-0 text-[9px] font-normal">
                           Disabled
                         </Badge>
                       ) : step.validation !== undefined ? (
                         <Badge
                           className={cn(
-                            'border-0 px-1.5 py-0 text-[9px] font-medium',
+                            'shrink-0 border-0 px-1.5 py-0 text-[9px] font-medium',
                             step.validation
                               ? 'bg-success/15 text-success'
                               : 'bg-destructive/15 text-destructive',
                           )}
                         >
-                          {step.validation ? 'True · Continue' : 'False · Stop'}
+                          {step.validation ? 'Passed' : 'Failed'}
                         </Badge>
                       ) : step.skipped ? (
                         <Badge
                           tone="danger"
-                          className="bg-destructive/15 text-destructive border-0 px-1.5 py-0 text-[9px] font-medium"
+                          className="bg-destructive/15 text-destructive shrink-0 border-0 px-1.5 py-0 text-[9px] font-medium"
                         >
-                          Triggered Skip
+                          Skips record
                         </Badge>
                       ) : step.bypassed ? (
-                        <Badge className="bg-muted/60 text-muted-foreground border-0 px-1.5 py-0 text-[9px] font-normal">
-                          Bypassed
+                        <Badge className="bg-muted/60 text-muted-foreground shrink-0 border-0 px-1.5 py-0 text-[9px] font-normal">
+                          Not run
+                        </Badge>
+                      ) : step.input === step.output ? (
+                        <Badge className="bg-muted/60 text-muted-foreground shrink-0 border-0 px-1.5 py-0 text-[9px] font-normal">
+                          No change
                         </Badge>
                       ) : null}
                     </div>
-                    {step.enabled && (
-                      <div className="text-muted-foreground mt-1 flex items-center gap-1.5 font-mono text-[11px]">
-                        <ArrowRight className="text-muted-foreground/60 size-3 shrink-0" />
+                    {step.enabled && !step.bypassed && (
+                      <div className="mt-1.5 pl-6.5 text-[11px]">
                         {step.validation === false ? (
-                          <span className="text-destructive text-[11px] font-semibold">
-                            Field omitted; remaining rules stopped
-                          </span>
-                        ) : step.validation === true ? (
-                          <span className="text-success text-[11px] font-semibold">
-                            True; continue with "{step.output}"
+                          <span className="text-destructive font-medium">
+                            The field is left out and later rules don't run.
                           </span>
                         ) : step.skipped ? (
-                          <span className="text-destructive truncate text-[11px] font-semibold">
-                            🛑 Skip Record (Condition met:{' '}
-                            {step.skipReason || 'empty'})
-                          </span>
-                        ) : step.bypassed ? (
-                          <span className="text-muted-foreground text-[10px] italic">
-                            (Not run — pipeline already stopped)
+                          <span className="text-destructive font-medium">
+                            Condition met: {step.skipReason || 'empty'}
                           </span>
                         ) : (
-                          <span className="text-foreground truncate font-semibold">
-                            "{step.output}"
-                          </span>
+                          <div className="flex flex-wrap items-center gap-1.5 font-mono">
+                            <span className="text-muted-foreground bg-muted/50 rounded px-1.5 py-0.5 break-all">
+                              {step.input === '' ? '(empty)' : step.input}
+                            </span>
+                            <ArrowRight className="text-muted-foreground/60 size-3 shrink-0" />
+                            <span className="text-foreground bg-primary/8 rounded px-1.5 py-0.5 font-semibold break-all">
+                              {step.output === '' ? '(empty)' : step.output}
+                            </span>
+                          </div>
                         )}
                       </div>
                     )}
-                  </div>
+                  </li>
                 ))}
-              </div>
-            )}
-          </div>
+              </ol>
+            </div>
+          )}
 
-          {/* 3. Empty Fallback Verification */}
+          {/* 3. Empty value handling */}
           <div className="border-border/70 bg-card space-y-1.5 rounded-xl border p-3 shadow-2xs">
             <div className="flex items-center justify-between text-[11px]">
-              <span className="text-foreground font-semibold">
-                Empty Value Fallback:
-              </span>
+              <span className="text-foreground font-semibold">If empty</span>
               <Badge
-                tone={onEmpty === 'default' ? 'success' : onEmpty === 'skip_record' ? 'danger' : 'muted'}
+                tone={
+                  onEmpty === 'default'
+                    ? 'success'
+                    : onEmpty === 'skip_record'
+                      ? 'danger'
+                      : 'muted'
+                }
                 className={cn(
                   'border-0 text-[10px] font-medium',
                   onEmpty === 'default'
@@ -438,40 +524,26 @@ export default function FieldPipelineEffectRail({
                 )}
               >
                 {onEmpty === 'default'
-                  ? 'Use Default'
+                  ? 'Use default'
                   : onEmpty === 'skip_record'
-                    ? 'Skip Record'
-                    : 'Pass Blank'}
+                    ? 'Skip record'
+                    : 'Leave blank'}
               </Badge>
             </div>
-            {fieldSkippedByValidation ? (
-              <p className="text-destructive text-[11px] font-medium">
-                Validation failed. This field will be omitted.
-              </p>
-            ) : isPostEmpty ? (
-              fallbackApplied ? (
-                <p className="text-success text-[11px] font-medium">
-                  Value is blank. Fallback applied:{' '}
-                  <strong>"{defaultValue}"</strong>
-                </p>
-              ) : emptySkipped ? (
-                <p className="text-destructive flex items-center gap-1 text-[11px] font-medium">
-                  <AlertTriangle className="size-3 shrink-0" />
-                  Source is blank: Record will be skipped!
-                </p>
-              ) : (
-                <p className="text-muted-foreground text-[11px]">
-                  Source is blank: Writing null/empty to destination.
-                </p>
-              )
-            ) : (
-              <p className="text-muted-foreground text-[11px]">
-                Value is present ("{postTransformValue}"). Fallback bypassed.
-              </p>
-            )}
+            <p className="text-muted-foreground text-[11px]">
+              {fieldSkippedByValidation
+                ? 'Not checked, because the field is left out.'
+                : !isPostEmpty
+                  ? "The value isn't empty, so this isn't used."
+                  : fallbackApplied
+                    ? `The value is empty, so "${defaultValue}" is written.`
+                    : emptySkipped
+                      ? 'The value is empty, so the record is skipped.'
+                      : 'The value is empty, so a blank is written.'}
+            </p>
           </div>
 
-          {/* 4. Skip Filter Status */}
+          {/* 4. Skip filter */}
           {hasSkipRule && (
             <div
               className={cn(
@@ -483,7 +555,7 @@ export default function FieldPipelineEffectRail({
             >
               <div className="flex items-center justify-between text-[11px]">
                 <span className="text-foreground flex items-center gap-1 font-semibold">
-                  <Filter className="text-info size-3" /> Skip Condition:
+                  <Filter className="text-info size-3" /> Skip condition
                 </span>
                 <Badge
                   tone={recordSkippedByFilter ? 'danger' : 'success'}
@@ -494,7 +566,7 @@ export default function FieldPipelineEffectRail({
                       : 'bg-success/15 text-success',
                   )}
                 >
-                  {recordSkippedByFilter ? 'Triggered (Skip)' : 'Passes Filter'}
+                  {recordSkippedByFilter ? 'Skips record' : 'Passes'}
                 </Badge>
               </div>
               <p className="text-muted-foreground text-[11px]">
@@ -506,83 +578,6 @@ export default function FieldPipelineEffectRail({
               </p>
             </div>
           )}
-
-          {/* 5. Final Outcome Card */}
-          <div
-            className={cn(
-              'space-y-2 rounded-xl border p-3.5 shadow-2xs',
-              recordWillBeSkipped || fieldSkippedByValidation
-                ? 'border-destructive/30 bg-destructive/10'
-                : 'border-success/30 bg-success/5',
-            )}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-foreground text-[11px] font-semibold tracking-wide uppercase">
-                Final Result
-              </span>
-              {fieldSkippedByValidation && !recordWillBeSkipped ? (
-                <Badge
-                  tone="danger"
-                  className="bg-destructive/20 text-destructive border-0 text-[10px] font-semibold"
-                >
-                  Field Omitted
-                </Badge>
-              ) : recordWillBeSkipped ? (
-                <Badge
-                  tone="danger"
-                  className="bg-destructive/20 text-destructive border-0 text-[10px] font-semibold"
-                >
-                  Record Discarded
-                </Badge>
-              ) : (
-                <Badge
-                  tone="success"
-                  className="bg-success/20 text-success border-0 text-[10px] font-semibold"
-                >
-                  Ready to Sync
-                </Badge>
-              )}
-            </div>
-
-            {fieldSkippedByValidation && !recordWillBeSkipped ? (
-              <p className="text-destructive text-[11px]">
-                The validation failed for {destName}. Other fields can still
-                sync.
-              </p>
-            ) : recordWillBeSkipped ? (
-              <div className="text-destructive space-y-1 text-[11px]">
-                <p className="flex items-center gap-1.5 font-medium">
-                  <AlertTriangle className="size-3.5 shrink-0" />
-                  This record will not sync.
-                </p>
-                <p className="text-muted-foreground text-[10px]">
-                  {recordSkippedByPipeline
-                    ? `Reason: Rule "${pipelineSkipStep?.label || 'Skip rule'}" triggered a record skip.`
-                    : emptySkipped
-                      ? 'Reason: Empty source field configured to skip record.'
-                      : 'Reason: Value matches the row skip filter.'}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-1.5 text-[11px]">
-                <div className="text-muted-foreground flex items-center justify-between">
-                  <span>
-                    Destination: <strong>{destName}</strong>
-                  </span>
-                  <span className="text-[10px]">
-                    {updatePolicy === 'create_only'
-                      ? 'Create-Only'
-                      : 'Always Overwrite'}
-                  </span>
-                </div>
-                <div className="bg-card border-border/80 text-foreground rounded-xl border px-2.5 py-1.5 font-mono text-xs font-semibold break-all shadow-2xs">
-                  {finalPayloadValue || (
-                    <span className="text-muted-foreground">(empty)</span>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
         </div>
       </ScrollArea>
     </aside>

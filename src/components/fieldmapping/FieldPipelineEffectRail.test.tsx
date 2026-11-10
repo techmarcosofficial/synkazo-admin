@@ -57,9 +57,9 @@ describe('FieldPipelineEffectRail', () => {
         isMatch={false}
       />,
     );
-    expect(screen.getByText('False · Stop')).toBeInTheDocument();
-    expect(screen.getByText('Field Omitted')).toBeInTheDocument();
-    expect(screen.queryByText('Record Discarded')).not.toBeInTheDocument();
+    expect(screen.getByText('Failed')).toBeInTheDocument();
+    expect(screen.getByText('Field omitted')).toBeInTheDocument();
+    expect(screen.queryByText('Record skipped')).not.toBeInTheDocument();
   });
 
   it('renders live pipeline preview and outcome', () => {
@@ -84,10 +84,8 @@ describe('FieldPipelineEffectRail', () => {
       />,
     );
 
-    expect(screen.getByText(/Live Pipeline Effect/i)).toBeInTheDocument();
-    expect(
-      screen.getByText(/Sequential Transformation Steps/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/^Preview$/)).toBeInTheDocument();
+    expect(screen.getByText(/How the rules change it/)).toBeInTheDocument();
     expect(screen.getByText(/Trim Spaces/i)).toBeInTheDocument();
     expect(screen.getByText(/Ready to Sync/i)).toBeInTheDocument();
   });
@@ -109,7 +107,7 @@ describe('FieldPipelineEffectRail', () => {
     );
 
     // Initial test input does not match "Inactive"
-    expect(screen.getByText(/Passes Filter/i)).toBeInTheDocument();
+    expect(screen.getByText(/^Passes$/)).toBeInTheDocument();
 
     // Change test input to "Inactive"
     const input = document.getElementById(
@@ -117,8 +115,8 @@ describe('FieldPipelineEffectRail', () => {
     ) as HTMLInputElement;
     fireEvent.change(input, { target: { value: 'Inactive' } });
 
-    // Should now report Triggered and Record Discarded
-    expect(screen.getByText(/Triggered \(Skip\)/i)).toBeInTheDocument();
-    expect(screen.getByText(/Record Discarded/i)).toBeInTheDocument();
+    // Should now report the skip on the filter and the result
+    expect(screen.getByText(/^Skips record$/)).toBeInTheDocument();
+    expect(screen.getByText(/^Record skipped$/)).toBeInTheDocument();
   });
 });

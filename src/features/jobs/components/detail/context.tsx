@@ -65,8 +65,6 @@ export interface JobDetailContextValue {
   // Guidance and dialog orchestration
   highlightStatusGuide: boolean;
   triggerInactiveGuide: () => void;
-  manualDialogOpen: boolean;
-  setManualDialogOpen: (open: boolean) => void;
 }
 
 const JobDetailContext = createContext<JobDetailContextValue | null>(null);

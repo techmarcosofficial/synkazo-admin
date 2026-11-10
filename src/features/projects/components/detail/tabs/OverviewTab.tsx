@@ -44,8 +44,8 @@ export default function OverviewTab() {
           size="sm"
           className={
             isProductionReady
-              ? 'rounded-3xl border-primary/30 bg-primary/[0.04] p-4'
-              : 'rounded-3xl border-warning/30 bg-warning/[0.04] p-4'
+              ? 'border-primary/30 bg-primary/[0.04] rounded-3xl p-4'
+              : 'border-warning/30 bg-warning/[0.04] rounded-3xl p-4'
           }
         >
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -122,7 +122,7 @@ export default function OverviewTab() {
           projectId={project.id}
           logs={logs}
           jobs={jobs}
-          onViewAll={() => handleTabChange('activity')}
+          onViewAll={() => handleTabChange('settings', { section: 'activity' })}
         />
         <ProjectUpcomingEvents
           jobs={jobs}

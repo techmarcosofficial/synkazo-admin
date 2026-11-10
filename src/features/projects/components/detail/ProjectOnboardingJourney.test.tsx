@@ -87,12 +87,7 @@ describe('ProjectOnboardingJourney', () => {
   });
 
   it('renders nothing outside the Overview tab', () => {
-    for (const activeTab of [
-      'connections',
-      'sync-rules',
-      'activity',
-      'settings',
-    ]) {
+    for (const activeTab of ['connections', 'sync-rules', 'settings']) {
       vi.mocked(useProjectDetailContext).mockReturnValue({
         projectId: 'proj-1',
         jobs: [],

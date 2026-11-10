@@ -39,14 +39,17 @@ export default function JobDetailPage() {
     fromLabel?: string;
   } | null;
   const fromParam = searchParams.get('from');
-  const rawFrom = (typeof navigationState?.jobBackTo === 'string' ? navigationState.jobBackTo : null) ||
+  const rawFrom =
+    (typeof navigationState?.jobBackTo === 'string'
+      ? navigationState.jobBackTo
+      : null) ||
     navigationState?.from ||
     fromParam;
   const isFromDashboard = Boolean(
     rawFrom &&
-      (rawFrom === 'dashboard' ||
-        rawFrom === '/dashboard' ||
-        rawFrom.startsWith('/dashboard')),
+    (rawFrom === 'dashboard' ||
+      rawFrom === '/dashboard' ||
+      rawFrom.startsWith('/dashboard')),
   );
   const fallbackBackTo = isFromDashboard
     ? '/dashboard'
@@ -84,7 +87,6 @@ export default function JobDetailPage() {
   const pipelineRequired = detailQuery.data?.pipelineRequired ?? false;
   const pipelineConfigured = detailQuery.data?.pipelineConfigured ?? true;
 
-
   const runState = useJobRunState({
     projectId,
     jobId,
@@ -100,7 +102,6 @@ export default function JobDetailPage() {
   });
 
   const [highlightStatusGuide, setHighlightStatusGuide] = useState(false);
-  const [manualDialogOpen, setManualDialogOpen] = useState(false);
   const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const triggerInactiveGuide = useCallback(() => {
@@ -122,9 +123,12 @@ export default function JobDetailPage() {
     }, 2800);
   }, []);
 
-  useEffect(() => () => {
-    if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+    },
+    [],
+  );
 
   if (loading) {
     return (
@@ -184,8 +188,6 @@ export default function JobDetailPage() {
     handleTabChange,
     highlightStatusGuide,
     triggerInactiveGuide,
-    manualDialogOpen,
-    setManualDialogOpen,
     ...runState,
   };
 

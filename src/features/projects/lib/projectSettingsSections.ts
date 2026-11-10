@@ -1,5 +1,5 @@
 export type ProjectSettingsSectionId =
-  'general' | 'schedule' | 'associations' | 'environments';
+  'general' | 'schedule' | 'associations' | 'environments' | 'activity';
 
 export interface ProjectSettingsSectionRequirements {
   connections: boolean;
@@ -11,6 +11,8 @@ export interface ProjectSettingsSectionDef {
   label: string;
   description: string;
   requires?: ProjectSettingsSectionRequirements;
+  /** Sections listed under the sidebar's "Activity" heading. */
+  group?: 'activity';
 }
 
 export const DEFAULT_PROJECT_SETTINGS_SECTION: ProjectSettingsSectionId =
@@ -41,12 +43,20 @@ export const PROJECT_SETTINGS_SECTION_DEFS: ProjectSettingsSectionDef[] = [
     description: 'Choose where syncs run and transfer configuration safely.',
     requires: { connections: true, jobs: true },
   },
+  {
+    id: 'activity',
+    label: 'Sync Activity',
+    description:
+      'Complete history of sync executions, record outcomes, and timings across this project.',
+    group: 'activity',
+  },
 ];
 
 export const LEGACY_PROJECT_TAB_SECTIONS = {
   scheduler: 'schedule',
   associations: 'associations',
   'environment-sync': 'environments',
+  activity: 'activity',
 } as const satisfies Record<string, ProjectSettingsSectionId>;
 
 export function isProjectSettingsSectionId(

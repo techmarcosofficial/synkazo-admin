@@ -38,11 +38,11 @@ function renderAt(path: string) {
 }
 
 describe('project detail tab navigation', () => {
-  it('shows the approved five project-level tabs', () => {
+  it('shows the approved four project-level tabs', () => {
     renderAt('/projects/project-1?tab=overview');
 
     expect(screen.getByTestId('tabs')).toHaveTextContent(
-      'overview,connections,sync-rules,activity,settings',
+      'overview,connections,sync-rules,settings',
     );
   });
 
@@ -50,6 +50,7 @@ describe('project detail tab navigation', () => {
     ['scheduler', 'schedule'],
     ['associations', 'associations'],
     ['environment-sync', 'environments'],
+    ['activity', 'activity'],
   ])('redirects legacy %s links to Settings/%s', async (legacy, section) => {
     renderAt(`/projects/project-1?tab=${legacy}&checkout=success`);
 
@@ -66,7 +67,7 @@ describe('project detail tab navigation', () => {
 
   it('redirects a newly locked primary tab to Overview', async () => {
     render(
-      <MemoryRouter initialEntries={['/projects/project-1?tab=activity']}>
+      <MemoryRouter initialEntries={['/projects/project-1?tab=sync-rules']}>
         <Probe hasBothConnections={false} hasJobs={false} />
       </MemoryRouter>,
     );
