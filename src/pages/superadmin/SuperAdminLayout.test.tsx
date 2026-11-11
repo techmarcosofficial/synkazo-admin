@@ -27,6 +27,11 @@ vi.mock('@/lib/synkazoAuth', () => ({
   }),
 }));
 
+// The tenant sidebar's org-name lookup is disabled here, but still needs a QueryClient.
+vi.mock('@/queries/useOrganisations', () => ({
+  useMyOrgQuery: () => ({ data: undefined }),
+}));
+
 vi.mock('@/components/layout/nav-user', () => ({
   NavUser: ({ settingsPath }: { settingsPath: string }) => (
     <a href={settingsPath}>Settings</a>

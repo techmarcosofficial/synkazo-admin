@@ -5,8 +5,8 @@ import type { JobDetailContextValue } from './context';
 import { JobDetailProvider } from './context';
 import JobHeader from './JobHeader';
 import JobHeaderAlert from './JobHeaderAlert';
-import JobOnboardingJourney from './JobOnboardingJourney';
 import JobTabContent from './JobTabContent';
+import JobSetupProgress from './JobSetupProgress';
 import JobTabs from './JobTabs';
 
 import AccountContextAlert from '@/components/shared/AccountContextAlert';
@@ -204,13 +204,19 @@ export default function JobDetailPage() {
           header={
             <Card className="gap-0 space-y-3 overflow-hidden py-0">
               <JobHeader />
-              <div className="overflow-x-auto px-5">
-                <JobTabs tabs={tabs} />
+              {/* Tabs on the left; setup progress, until it's done, on the right. */}
+              <div className="flex flex-wrap items-center justify-between gap-x-3 px-5 md:flex-nowrap">
+                <div className="min-w-0 overflow-x-auto">
+                  <JobTabs tabs={tabs} />
+                </div>
+                <JobSetupProgress
+                  key={jobId}
+                  className="ml-auto pb-2 md:pb-0"
+                />
               </div>
             </Card>
           }
         >
-          <JobOnboardingJourney key={jobId} />
           <AccountContextAlert fallback={<JobHeaderAlert />} />
           <JobTabContent visibleTabIds={tabs.map((t) => t.id)} />
         </StickyDetailHeader>

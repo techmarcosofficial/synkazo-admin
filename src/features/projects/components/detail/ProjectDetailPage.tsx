@@ -6,7 +6,7 @@ import {
   type ProjectDetailContextValue,
 } from './context';
 import ProjectHeader from './ProjectHeader';
-import ProjectOnboardingJourney from './ProjectOnboardingJourney';
+import ProjectSetupProgress from './ProjectSetupProgress';
 import ProjectTabContent from './ProjectTabContent';
 import ProjectTabs from './ProjectTabs';
 
@@ -34,14 +34,17 @@ export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
-  const locationState = location.state as { from?: string; fromLabel?: string } | null;
+  const locationState = location.state as {
+    from?: string;
+    fromLabel?: string;
+  } | null;
   const fromParam = searchParams.get('from');
   const rawFrom = locationState?.from || fromParam;
   const isFromDashboard = Boolean(
     rawFrom &&
-      (rawFrom === 'dashboard' ||
-        rawFrom === '/dashboard' ||
-        rawFrom.startsWith('/dashboard')),
+    (rawFrom === 'dashboard' ||
+      rawFrom === '/dashboard' ||
+      rawFrom.startsWith('/dashboard')),
   );
   const backTo = isFromDashboard
     ? '/dashboard'
@@ -66,11 +69,16 @@ export default function ProjectDetailPage() {
   const logs = detailQuery.data?.logs ?? [];
 
   const [showCreateJob, setShowCreateJob] = useState(
-    () => searchParams.get('create') === 'true' || searchParams.get('create') === '1',
+    () =>
+      searchParams.get('create') === 'true' ||
+      searchParams.get('create') === '1',
   );
 
   useEffect(() => {
-    if (searchParams.get('create') === 'true' || searchParams.get('create') === '1') {
+    if (
+      searchParams.get('create') === 'true' ||
+      searchParams.get('create') === '1'
+    ) {
       setShowCreateJob(true);
     }
   }, [searchParams]);
@@ -276,14 +284,17 @@ export default function ProjectDetailPage() {
           header={
             <Card className="gap-0 space-y-2 overflow-hidden py-0">
               <ProjectHeader />
-              <div className="overflow-x-auto px-4">
-                {/* Settings is a regular tab and is never locked. */}
-                <ProjectTabs tabs={tabs} />
+              {/* Tabs on the left; setup progress, until it's done, on the right. */}
+              <div className="flex flex-wrap items-center justify-between gap-x-3 px-4 md:flex-nowrap">
+                <div className="min-w-0 overflow-x-auto">
+                  {/* Settings is a regular tab and is never locked. */}
+                  <ProjectTabs tabs={tabs} />
+                </div>
+                <ProjectSetupProgress className="ml-auto pb-2 md:pb-0" />
               </div>
             </Card>
           }
         >
-          <ProjectOnboardingJourney />
           <AccountContextAlert />
           <ProjectTabContent />
         </StickyDetailHeader>

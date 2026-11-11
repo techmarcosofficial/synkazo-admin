@@ -21,7 +21,7 @@ export default function JobTabs({ tabs }: { tabs: JobDetailTabView[] }) {
     job?.id ? state.hasDraft(job.id) : false,
   );
 
-  const { mappingReady } = selectJobOnboardingState({
+  const { mappingReady, configurationReady } = selectJobOnboardingState({
     mappings: jobFieldMappings,
     pipelineRequired,
     pipelineConfigured,
@@ -29,13 +29,17 @@ export default function JobTabs({ tabs }: { tabs: JobDetailTabView[] }) {
     lastSyncedAt: job.lastSyncedAt,
   });
   const lockReasonFor = (id: string) => {
-    if (id === 'pipeline' && !mappingReady) {
+    if ((id === 'pipeline' || id === 'run-sync') && !mappingReady) {
       return 'Map your fields and choose a match field first';
+    }
+    if (id === 'run-sync' && !configurationReady) {
+      return 'Choose the destination pipeline first';
     }
     return '';
   };
 
-  // Settings is a regular tab and is never locked.
+  // Run Sync and Pipeline unlock as setup progresses; Overview, Field Mapping
+  // and Settings are never locked.
   const barTabs = tabs.map((tab) => {
     const lockReason = lockReasonFor(tab.id);
     return {

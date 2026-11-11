@@ -46,8 +46,8 @@ vi.mock('./ProjectTabs', () => ({
 vi.mock('./ProjectTabContent', () => ({
   default: () => <div data-testid="project-tab-content" />,
 }));
-vi.mock('./ProjectOnboardingJourney', () => ({
-  default: () => <div data-testid="project-onboarding-journey" />,
+vi.mock('./ProjectSetupProgress', () => ({
+  default: () => <div data-testid="project-setup-progress" />,
 }));
 
 describe('ProjectDetailPage - Self-Healing Status Management', () => {
@@ -283,7 +283,9 @@ describe('ProjectDetailPage - Self-Healing Status Management', () => {
         </MemoryRouter>,
       );
 
-      const backLinks = screen.getAllByRole('link', { name: /back to dashboard/i });
+      const backLinks = screen.getAllByRole('link', {
+        name: /back to dashboard/i,
+      });
       expect(backLinks.length).toBeGreaterThan(0);
       expect(backLinks[0]).toHaveAttribute('href', '/dashboard');
     });
@@ -309,7 +311,9 @@ describe('ProjectDetailPage - Self-Healing Status Management', () => {
         </MemoryRouter>,
       );
 
-      const backLinks = screen.getAllByRole('link', { name: /back to dashboard/i });
+      const backLinks = screen.getAllByRole('link', {
+        name: /back to dashboard/i,
+      });
       expect(backLinks.length).toBeGreaterThan(0);
       expect(backLinks[0]).toHaveAttribute('href', '/dashboard');
     });
@@ -329,10 +333,11 @@ describe('ProjectDetailPage - Self-Healing Status Management', () => {
 
       renderPage();
 
-      const backLinks = screen.getAllByRole('link', { name: /back to projects/i });
+      const backLinks = screen.getAllByRole('link', {
+        name: /back to projects/i,
+      });
       expect(backLinks.length).toBeGreaterThan(0);
       expect(backLinks[0]).toHaveAttribute('href', '/projects');
     });
   });
 });
-
