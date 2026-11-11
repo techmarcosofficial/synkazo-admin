@@ -194,7 +194,7 @@ export default function QuickPresetBar({
   return (
     <div className={cn('space-y-2', className)}>
       <div className="flex items-center justify-between">
-        <div className="text-foreground flex items-center gap-1.5 text-sm font-medium">
+        <div className="text-foreground flex items-center gap-1.5 text-[13px] font-semibold">
           <Sparkles className="text-primary size-3.5" />
           <span>Quick presets</span>
           <InfoTip label="About quick presets">
