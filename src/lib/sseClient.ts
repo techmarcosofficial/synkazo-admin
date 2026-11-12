@@ -1,5 +1,3 @@
-import { tokenStorage } from './tokenStorage';
-
 const BASE_URL =
   import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
@@ -15,13 +13,12 @@ class SseClient {
   private connected = false;
 
   connect(): void {
-    const token = tokenStorage.getToken('accessToken');
-    if (!token || this.eventSource) return;
+    if (this.eventSource) return;
 
     try {
-      this.eventSource = new EventSource(
-        `${BASE_URL}/events/stream?token=${encodeURIComponent(token)}`,
-      );
+      this.eventSource = new EventSource(`${BASE_URL}/events/stream`, {
+        withCredentials: true,
+      });
       this.attachedEvents.clear();
 
       for (const event of this.listeners.keys()) {

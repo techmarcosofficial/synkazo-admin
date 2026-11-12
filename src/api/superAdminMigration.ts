@@ -60,9 +60,19 @@ export const superAdminMigrationApi = {
     projectId: string,
     runId: string,
   ): Promise<SuperAdminMigrationRunItem[]> =>
-    apiClient
-      .get<{ data: SuperAdminMigrationRunItem[] }>(
-        `${base(organisationId, projectId)}/runs/${runId}/items`,
-      )
-      .then(d),
+    fetchAllRunItems(`${base(organisationId, projectId)}/runs/${runId}/items`),
 };
+
+async function fetchAllRunItems(
+  path: string,
+): Promise<SuperAdminMigrationRunItem[]> {
+  const items: SuperAdminMigrationRunItem[] = [];
+  for (let page = 1; ; page++) {
+    const { data } = await apiClient.get<{
+      data: SuperAdminMigrationRunItem[];
+      total: number;
+    }>(path, { params: { page, limit: 100 } });
+    items.push(...data.data);
+    if (typeof data.total !== 'number' || items.length >= data.total || data.data.length === 0) return items;
+  }
+}

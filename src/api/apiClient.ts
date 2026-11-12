@@ -31,35 +31,32 @@ apiClient.interceptors.request.use((config) => {
 // instead of each racing the others with a token that's about to be revoked.
 let refreshPromise: Promise<string> | null = null;
 
-function refreshAccessToken(): Promise<string> {
+export function refreshAccessToken(): Promise<string> {
   if (!refreshPromise) {
     refreshPromise = (async () => {
-      const refreshToken = tokenStorage.getToken('refreshToken');
-      if (!refreshToken) throw new Error('No refresh token');
-      try {
-        const { data } = await axios.post<{
-          data: { accessToken: string; refreshToken: string };
-        }>(`${BASE_URL}/auth/refresh`, { refreshToken });
-        tokenStorage.updateTokens({
-          accessToken: data.data.accessToken,
-          refreshToken: data.data.refreshToken,
-        });
-        return data.data.accessToken;
-      } catch (err) {
-        // Refresh tokens are shared (localStorage) but single-use — another tab
-        // may have already rotated this one and written fresh tokens. Reuse
-        // those instead of forcing every open tab to log out over a lost race.
-        const currentRefreshToken = tokenStorage.getToken('refreshToken');
-        const currentAccessToken = tokenStorage.getToken('accessToken');
-        if (
-          currentRefreshToken &&
-          currentRefreshToken !== refreshToken &&
-          currentAccessToken
-        ) {
-          return currentAccessToken;
+      const request = () =>
+        axios.post<{ data: { accessToken: string } }>(
+          `${BASE_URL}/auth/refresh`,
+          {},
+          { withCredentials: true },
+        );
+      const rotate = async () => {
+        try {
+          return await request();
+        } catch (error) {
+          // Another tab may have just rotated the shared cookie. Retry once
+          // after its Set-Cookie response has reached the browser.
+          if (!axios.isAxiosError(error) || error.response?.status !== 401)
+            throw error;
+          await new Promise((resolve) => setTimeout(resolve, 150));
+          return request();
         }
-        throw err;
-      }
+      };
+      const { data } = navigator.locks
+        ? await navigator.locks.request('synkazo-refresh', rotate)
+        : await rotate();
+      tokenStorage.updateTokens(data.data);
+      return data.data.accessToken;
     })().finally(() => {
       refreshPromise = null;
     });
@@ -76,6 +73,7 @@ apiClient.interceptors.response.use(
       !original._retry &&
       !original.url?.includes('/auth/login') &&
       !original.url?.includes('/auth/logout') &&
+      !original.url?.includes('/auth/refresh') &&
       !original.url?.includes('/auth/verify-email') &&
       !original.url?.includes('/marketplace/hubspot/handoff')
     ) {
@@ -104,10 +102,9 @@ apiClient.interceptors.response.use(
         (error.response?.data as { correlationId?: string } | undefined)
           ?.correlationId ??
         (error.response?.headers?.['x-correlation-id'] as string | undefined);
-      const label = typeof msg === 'string' ? msg : 'Server error. Please try again.';
-      toast.error(
-        correlationId ? `${label} (ref: ${correlationId})` : label,
-      );
+      const label =
+        typeof msg === 'string' ? msg : 'Server error. Please try again.';
+      toast.error(correlationId ? `${label} (ref: ${correlationId})` : label);
     }
     return Promise.reject(error);
   },

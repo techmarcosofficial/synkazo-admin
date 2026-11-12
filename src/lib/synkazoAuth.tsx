@@ -10,7 +10,7 @@ import { ROLE_HIERARCHY, ROLE_DEFAULTS } from './permissions';
 import { sseClient } from './sseClient';
 import { tokenStorage } from './tokenStorage';
 
-import apiClient from '@/api/apiClient';
+import apiClient, { refreshAccessToken } from '@/api/apiClient';
 import { queryClientInstance } from '@/lib/query-client';
 import type {
   User,
@@ -27,13 +27,11 @@ export function SynkazoAuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const token = tokenStorage.getToken('accessToken');
-    if (!token) {
-      setIsLoading(false);
-      return;
-    }
-    apiClient
-      .get<{ data: User }>('/auth/me')
+    tokenStorage.clearTokens();
+    refreshAccessToken()
+      .then(() => {
+        return apiClient.get<{ data: User }>('/auth/me');
+      })
       .then(({ data }) => setCurrentUser(data.data))
       .catch(() => {})
       .finally(() => setIsLoading(false));
@@ -75,7 +73,7 @@ export function SynkazoAuthProvider({ children }: { children: ReactNode }) {
   ): Promise<User> => {
     void remember;
     const { data } = await apiClient.post<{
-      data: { user: User; accessToken: string; refreshToken: string };
+      data: { user: User; accessToken: string };
     }>('/auth/login', { email: email.trim().toLowerCase(), password });
     tokenStorage.setTokens(data.data);
     // Drop any cached queries (plan, org, projects…) from a previous session so the
@@ -92,7 +90,7 @@ export function SynkazoAuthProvider({ children }: { children: ReactNode }) {
   ): Promise<User> => {
     void remember;
     const { data } = await apiClient.post<{
-      data: { user: User; accessToken: string; refreshToken: string };
+      data: { user: User; accessToken: string };
     }>('/auth/verify-otp', {
       email: email.trim().toLowerCase(),
       code: code.trim(),
@@ -117,15 +115,11 @@ export function SynkazoAuthProvider({ children }: { children: ReactNode }) {
 
   const logout = (): void => {
     apiClient
-      .post('/auth/logout', {
-        refreshToken: tokenStorage.getToken('refreshToken'),
-      })
-      .catch(() => {});
+      .post('/auth/logout', {})
+      .catch(() => {})
+      .finally(() => window.location.replace('/login'));
     tokenStorage.clearTokens();
     queryClientInstance.clear();
-    // A single full navigation clears the in-memory auth state and app shell.
-    // Updating React state first briefly renders login before the navigation.
-    window.location.replace('/login');
   };
 
   const refreshUser = async (): Promise<User> => {

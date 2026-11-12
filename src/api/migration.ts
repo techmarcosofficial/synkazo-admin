@@ -76,5 +76,17 @@ export const migrationApi = {
     projectId: string,
     runId: string,
   ): Promise<MigrationRunItem[]> =>
-    apiClient.get(`${base(projectId)}/runs/${runId}/items`).then(d),
+    fetchRunItems(`${base(projectId)}/runs/${runId}/items`),
 };
+
+async function fetchRunItems(path: string): Promise<MigrationRunItem[]> {
+  const items: MigrationRunItem[] = [];
+  for (let page = 1; ; page++) {
+    const { data } = await apiClient.get<{
+      data: MigrationRunItem[];
+      total: number;
+    }>(path, { params: { page, limit: 100 } });
+    items.push(...data.data);
+    if (typeof data.total !== 'number' || items.length >= data.total || data.data.length === 0) return items;
+  }
+}

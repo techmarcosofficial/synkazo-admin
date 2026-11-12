@@ -1,37 +1,23 @@
-type TokenKey = 'accessToken' | 'refreshToken';
-
-const TOKEN_KEYS: TokenKey[] = ['accessToken', 'refreshToken'];
+// Access tokens live only for this page lifetime. Refresh is an HttpOnly cookie.
+let accessToken: string | null = null;
 
 interface Tokens {
   accessToken?: string;
-  refreshToken?: string;
 }
 
-// Tokens always live in localStorage so every tab of the same browser shares
-// one session — sessionStorage is per-tab and previously caused new tabs to
-// appear logged out while the original tab kept working.
 export const tokenStorage = {
-  getToken(key: TokenKey): string | null {
-    return localStorage.getItem(key);
+  getToken(key: 'accessToken'): string | null {
+    return key === 'accessToken' ? accessToken : null;
   },
-
-  setTokens({ accessToken, refreshToken }: Tokens): void {
-    if (accessToken !== undefined)
-      localStorage.setItem('accessToken', accessToken);
-    if (refreshToken !== undefined)
-      localStorage.setItem('refreshToken', refreshToken);
+  setTokens(tokens: Tokens): void {
+    if (tokens.accessToken !== undefined) accessToken = tokens.accessToken;
   },
-
-  updateTokens({ accessToken, refreshToken }: Tokens): void {
-    if (accessToken !== undefined)
-      localStorage.setItem('accessToken', accessToken);
-    if (refreshToken !== undefined)
-      localStorage.setItem('refreshToken', refreshToken);
+  updateTokens(tokens: Tokens): void {
+    if (tokens.accessToken !== undefined) accessToken = tokens.accessToken;
   },
-
   clearTokens(): void {
-    for (const key of TOKEN_KEYS) {
-      localStorage.removeItem(key);
-    }
+    accessToken = null;
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
   },
 };

@@ -1,5 +1,3 @@
-import { tokenStorage } from '@/lib/tokenStorage';
-
 const BASE_URL =
   import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
@@ -11,9 +9,9 @@ export function createSyncStream(
   onEvent: (data: Record<string, unknown>) => void,
   onError?: (err: Event) => void,
 ): () => void {
-  const token = tokenStorage.getToken('accessToken');
-  const url = `${BASE_URL}/events/stream?token=${encodeURIComponent(token ?? '')}`;
-  const es = new EventSource(url);
+  const es = new EventSource(`${BASE_URL}/events/stream`, {
+    withCredentials: true,
+  });
 
   es.onmessage = (e) => {
     try {
