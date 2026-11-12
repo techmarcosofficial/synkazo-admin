@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useGuideStore } from '@/features/guide';
 import { useCreateProjectStore } from '@/features/projects/store';
 
 export default function CreateProjectDialog() {
@@ -32,6 +33,7 @@ export default function CreateProjectDialog() {
   const isOpen = useCreateProjectStore((state) => state.isOpen);
   const close = useCreateProjectStore((state) => state.close);
   const setOpen = useCreateProjectStore((state) => state.setOpen);
+  const onCreated = useCreateProjectStore((state) => state.onCreated);
 
   return (
     <Dialog open={isOpen} onOpenChange={setOpen}>
@@ -54,6 +56,12 @@ export default function CreateProjectDialog() {
             onSelectionChange={setSelection}
             onSuccess={(project) => {
               close();
+              // The first project an organisation creates is the one the setup guide follows.
+              const guide = useGuideStore.getState();
+              if (guide.status === 'active' && !guide.projectId) {
+                guide.setProject(project.id);
+              }
+              onCreated?.(project as any);
               const isFromDashboard = location.pathname.includes('/dashboard');
               const targetUrl = isFromDashboard
                 ? `/projects/${project.id}?tab=connections&from=dashboard`
@@ -91,7 +99,10 @@ export default function CreateProjectDialog() {
               Cancel
             </Button>
 
-            <Button onClick={() => formRef.current?.submit()}>
+            <Button
+              data-guide="project-submit"
+              onClick={() => formRef.current?.submit()}
+            >
               Create Project
             </Button>
           </div>

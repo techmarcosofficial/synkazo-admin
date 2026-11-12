@@ -403,7 +403,10 @@ export default function QueueJobInlineEditor({
   };
 
   return (
-    <div className="bg-primary/5 border-primary/20 animate-in fade-in-0 slide-in-from-top-2 border-b p-4 shadow-xs transition-all">
+    <div
+      className="bg-primary/5 border-primary/20 animate-in fade-in-0 slide-in-from-top-2 border-b p-4 shadow-xs transition-all"
+      data-guide="queue-composer"
+    >
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3">
         <div className="flex items-center gap-2">
           <span className="bg-primary/10 text-primary flex size-6 items-center justify-center rounded-lg">
@@ -447,6 +450,7 @@ export default function QueueJobInlineEditor({
                 busy || drafts.some((draft) => !!validationError(draft))
               }
               onClick={saveAll}
+              data-guide="scheduler-apply"
               className="h-8 text-xs"
             >
               {busy ? <Spinner /> : <Check className="size-3.5" />}

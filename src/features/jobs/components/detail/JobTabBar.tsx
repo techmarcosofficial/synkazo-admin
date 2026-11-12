@@ -40,6 +40,7 @@ export default function JobTabBar({ tabs }: { tabs: JobTabView[] }) {
           <TabsTrigger
             value={tab.id}
             disabled={tab.locked}
+            data-guide={`tab-${tab.id}`}
             className="after:bg-primary py-2 font-semibold after:bottom-0! after:h-1! disabled:opacity-70"
           >
             <span className="flex items-center gap-1.5">

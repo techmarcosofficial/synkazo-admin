@@ -97,6 +97,7 @@ export default function BillingSubNavigation({
                     'h-8.5 w-full justify-start px-2.5 text-xs font-medium',
                     active && 'font-semibold',
                   )}
+                  data-tour={`${item.id}-nav`}
                   onClick={() => onSelect(item.id)}
                 >
                   <Icon className="size-4 shrink-0 text-muted-foreground" />

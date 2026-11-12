@@ -11,7 +11,7 @@ export default function SchedulerTab() {
       <Alert className="border-info/20 bg-info/5 text-info">
         <Info className="size-4" />
         <AlertTitle className="text-foreground text-xs font-semibold">
-          Project-wide bulk scheduler (Advanced)
+          Project-wide job scheduler (Advanced)
         </AlertTitle>
         <AlertDescription className="text-muted-foreground text-xs">
           Individual sync flows have their own schedules configured per flow. Use this section when you need coordinated project-wide schedules or a strict priority execution order across multiple flows.

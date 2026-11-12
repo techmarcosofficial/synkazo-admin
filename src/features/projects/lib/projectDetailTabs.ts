@@ -1,5 +1,9 @@
 export type ProjectDetailTabId =
-  'overview' | 'connections' | 'sync-rules' | 'settings';
+  | 'overview'
+  | 'connections'
+  | 'sync-rules'
+  | 'scheduler'
+  | 'settings';
 
 export interface ProjectDetailTabRequirements {
   connections: boolean;
@@ -21,6 +25,11 @@ export const TAB_DEFS: ProjectDetailTabDef[] = [
     id: 'sync-rules',
     label: 'Sync Flows',
     requires: { connections: true, jobs: false },
+  },
+  {
+    id: 'scheduler',
+    label: 'Scheduler',
+    requires: { connections: true, jobs: true },
   },
   { id: 'settings', label: 'Settings' },
 ];

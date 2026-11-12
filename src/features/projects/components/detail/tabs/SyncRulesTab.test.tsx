@@ -270,7 +270,7 @@ describe('SyncRulesTab UI', () => {
       '/projects/proj-1/jobs/job-unmapped?tab=field-mapping',
     );
     // Not activated yet: orange setup action, no activated tick
-    expect(configureBtn.className).toContain('bg-(--brand-orange)');
+    expect(configureBtn.className).toContain('bg-primary');
     expect(
       screen.queryByRole('img', { name: 'Flow activated' }),
     ).not.toBeInTheDocument();

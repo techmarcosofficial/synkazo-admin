@@ -44,6 +44,7 @@ import type {
   SyncProgressEvent,
   SyncRun,
 } from '@/types';
+import { useGuideSpot, useIsGuidedJob } from '@/features/guide';
 
 const MAX_POLL_COUNT = 180;
 const STUCK_THRESHOLD = 30;
@@ -158,7 +159,7 @@ export default function LimitSyncModal({
   const isInactive = !job?.isEnabled;
   const runButtonLabel = isInactive
     ? isSandboxTest
-      ? 'Activate & Run Test Sync'
+      ? 'Run Test Sync'
       : 'Activate & Start Sync'
     : isSandboxTest
       ? 'Run Test Sync'
@@ -180,6 +181,31 @@ export default function LimitSyncModal({
   }, [step, onStepChange]);
 
   const [limit, setLimit] = useState<number>(!job?.lastSyncedAt ? 5 : 100);
+
+  // First-run guide: a 5-record test, then the run button.
+  const guided = useIsGuidedJob(jobId);
+  useGuideSpot(
+    guided &&
+      step === 'config' &&
+      !job?.lastSyncedAt &&
+      (limit !== 5
+        ? {
+            id: 'test-limit',
+            target: '[data-guide="limit-5"]',
+            step: 'test',
+            placement: 'bottom',
+            title: 'Start small: 5 records',
+            body: 'A five-record test shows exactly how your mapping lands in HubSpot without moving everything.',
+          }
+        : {
+            id: 'test-run',
+            target: '[data-guide="run-test-sync"]',
+            step: 'test',
+            placement: 'top',
+            title: 'Run your test sync',
+            body: "We'll sync 5 records and show you what was created or updated. It doesn't move the sync bookmark.",
+          }),
+  );
   const [startPage, setStartPage] = useState<number>(1);
   const [batchSize, setBatchSize] = useState<number>(100);
   const [filterByDate, setFilterByDate] = useState(contactDateRequired);
@@ -468,7 +494,11 @@ export default function LimitSyncModal({
   const footerNode = (
     <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end">
       {step === 'config' ? (
-        <Button onClick={handleStart} disabled={pipelineBlocked || disabled}>
+        <Button
+          onClick={handleStart}
+          disabled={pipelineBlocked || disabled}
+          data-guide="run-test-sync"
+        >
           <Play /> {runButtonLabel}
         </Button>
       ) : isFinished ? (
@@ -604,6 +634,7 @@ export default function LimitSyncModal({
                 <div className="flex flex-wrap gap-1.5">
                   <Button
                     type="button"
+                    data-guide="limit-5"
                     variant={limit === 5 ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => {
@@ -901,6 +932,7 @@ export default function LimitSyncModal({
                   onClick={handleStart}
                   disabled={pipelineBlocked || disabled}
                   className="flex-1"
+                  data-guide="run-test-sync"
                 >
                   <Play /> {runButtonLabel}
                 </Button>
@@ -910,6 +942,7 @@ export default function LimitSyncModal({
                 <Button
                   onClick={handleStart}
                   disabled={pipelineBlocked || disabled}
+                  data-guide="run-test-sync"
                 >
                   <Play /> {runButtonLabel}
                 </Button>

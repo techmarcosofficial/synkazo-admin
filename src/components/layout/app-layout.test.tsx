@@ -33,6 +33,7 @@ vi.mock('@/components/shared/WelcomeGuideModal', () => ({
 vi.mock('@/features/projects/components/setup/SourceSetupDialog', () => ({
   default: () => null,
 }));
+vi.mock('@/features/guide', () => ({ GuideController: () => null }));
 vi.mock('@/features/projects/components/create/CreateProjectDialog', () => ({
   default: () => null,
 }));

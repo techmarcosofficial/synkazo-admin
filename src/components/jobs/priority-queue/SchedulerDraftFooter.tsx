@@ -24,7 +24,11 @@ export default function SchedulerDraftFooter({
             Save to apply the schedule and queue edits.
           </p>
         </div>
-        <Button disabled={saving || !valid} onClick={onSave}>
+        <Button
+          disabled={saving || !valid}
+          onClick={onSave}
+          data-guide="scheduler-save"
+        >
           {saving ? <Spinner /> : <Save />} Save changes
         </Button>
       </div>

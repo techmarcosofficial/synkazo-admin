@@ -27,6 +27,8 @@ export interface ActionButton {
   disabled?: boolean;
   tooltip?: string;
   dataFlowNextAction?: boolean;
+  /** Target for the first-run guide's highlight (data-guide). */
+  guideId?: string;
 }
 
 export interface EmptyStateProps {
@@ -58,6 +60,7 @@ function renderAction(
     disabled,
     tooltip,
     dataFlowNextAction,
+    guideId,
   } = action as ActionButton;
 
   const button = (
@@ -66,6 +69,7 @@ function renderAction(
       variant={variant}
       disabled={disabled}
       data-flow-next-action={dataFlowNextAction ? 'true' : undefined}
+      data-guide={guideId}
     >
       {ActionIcon && <ActionIcon />}
       <span>{label}</span>

@@ -222,14 +222,14 @@ export default function BillingOverviewTab() {
         />
 
         {/* ── SECTION CONTENT AREA ────────────────────────────────────────── */}
-        <div className="min-w-0 space-y-5">
+        <div className="min-w-0 space-y-5" data-tour="billing-section">
           {/* ── SECTION 1: OVERVIEW ───────────────────────────────────────── */}
       {activeSection === 'overview' && (
         <div className="grid gap-4 sm:gap-5 lg:grid-cols-12">
           {/* Left Column: Plan Limits & Features (~60-65%) */}
           <div className="space-y-4 sm:space-y-5 lg:col-span-7">
             {/* Plan Limits, Resource Quotas & Entitlements Card */}
-            <Card>
+            <Card data-tour="usage-section">
               <CardHeader visualLevel="section">
                 <CardTitle className="text-base font-bold flex items-center gap-2">
                   <FileText className="text-muted-foreground size-4" />
@@ -432,16 +432,18 @@ export default function BillingOverviewTab() {
           {/* Right Column: Subscription ATM Card & Upcoming Billing + Card (~35-40%) */}
           <div className="space-y-3.5 lg:col-span-5">
             {/* Subscription Plan "ATM" Card */}
-            <SubscriptionPlanCard
-              planName={plan.planName}
-              status={plan.subscriptionStatus}
-              billingInterval={plan.billingInterval}
-              currentPeriodEnd={renewalDate}
-              planAccessSource={hasSubscription ? 'stripe_subscription' : 'free'}
-              onChangePlan={() => setPlanSliderOpen((prev) => !prev)}
-              changePlanLabel={hasSubscription ? 'Change Plan' : 'Choose Plan'}
-              className="w-full"
-            />
+            <div data-tour="current-plan" className="w-full">
+              <SubscriptionPlanCard
+                planName={plan.planName}
+                status={plan.subscriptionStatus}
+                billingInterval={plan.billingInterval}
+                currentPeriodEnd={renewalDate}
+                planAccessSource={hasSubscription ? 'stripe_subscription' : 'free'}
+                onChangePlan={() => setPlanSliderOpen((prev) => !prev)}
+                changePlanLabel={hasSubscription ? 'Change Plan' : 'Choose Plan'}
+                className="w-full"
+              />
+            </div>
 
             {/* In-App Plan Upgrade / Change Slider (only visible on click change plan) */}
             <TenantPlanSlider
@@ -458,6 +460,7 @@ export default function BillingOverviewTab() {
             />
 
             {/* Upcoming billing card only and which card deduction info with manage card button top corner on it */}
+            <div data-tour="manage-subscription" className="w-full">
             <UpcomingBillingAndPaymentCard
               variant="tenant"
               plan={plan}
@@ -488,6 +491,7 @@ export default function BillingOverviewTab() {
               onCancelScheduledChange={doCancelScheduledChange}
               isCancellingScheduledChange={cancelScheduledChange.isPending}
             />
+            </div>
           </div>
         </div>
       )}

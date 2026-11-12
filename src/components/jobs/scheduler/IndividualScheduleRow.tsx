@@ -114,7 +114,12 @@ export default function IndividualScheduleRow({
         </p>
       </div>
       <div className="flex items-center gap-2 md:justify-end">
-        <Button size="sm" variant="outline" onClick={onConfigure}>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={onConfigure}
+          data-guide="scheduler-configure"
+        >
           <CalendarClock /> Configure
         </Button>
         {canToggle && onToggle && (

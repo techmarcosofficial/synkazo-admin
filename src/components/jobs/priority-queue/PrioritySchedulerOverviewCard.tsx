@@ -20,13 +20,17 @@ export default function PrioritySchedulerOverviewCard({
 }) {
   return (
     <Card className="gap-0 py-0">
-      <CardHeader className="flex flex-row items-center justify-between gap-3 border-b px-4 py-2.5">
+      <CardHeader
+        className="flex flex-row items-center justify-between gap-3 border-b px-4 py-2.5"
+        data-guide="priority-card-header"
+      >
         <CardTitle>Priority scheduler</CardTitle>
         <Switch
           checked={enabled}
           onCheckedChange={onEnabledChange}
           disabled={disabled}
           aria-label="Enable priority scheduler"
+          data-guide="priority-toggle"
         />
       </CardHeader>
       <CardContent className={enabled ? 'p-0' : 'hidden'}>

@@ -725,6 +725,7 @@ export default function AutoMapReviewDialog({
             <Button
               size="sm"
               onClick={handleApply}
+              data-guide="auto-map-apply"
               disabled={applyCount === 0}
               className="gap-1.5"
             >

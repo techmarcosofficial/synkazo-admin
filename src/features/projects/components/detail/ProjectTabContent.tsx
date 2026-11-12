@@ -8,6 +8,7 @@ const TAB_COMPONENTS = {
   overview: lazy(() => import('./tabs/OverviewTab')),
   connections: lazy(() => import('./tabs/ConnectionsTab')),
   'sync-rules': lazy(() => import('./tabs/SyncRulesTab')),
+  scheduler: lazy(() => import('./tabs/SchedulerTab')),
   settings: lazy(() => import('./tabs/SettingsTab')),
 } as const;
 

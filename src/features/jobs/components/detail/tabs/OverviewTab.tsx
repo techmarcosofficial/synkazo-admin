@@ -353,7 +353,7 @@ export default function OverviewTab() {
                 data-attention={
                   !hasRunHistory && canStartSync ? 'true' : undefined
                 }
-                className="bg-(--brand-orange) font-medium text-white shadow-xs hover:bg-(--brand-orange)/90"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 font-medium shadow-xs"
                 onClick={() => handleTabChange('run-sync')}
                 disabled={!canRunJob || syncBlocked}
               >

@@ -41,7 +41,7 @@ describe('SetupJourneyCard', () => {
     );
 
     expect(screen.getByText('Complete')).toBeInTheDocument();
-    expect(screen.getByText('Action needed')).toBeInTheDocument();
+    expect(screen.getByText('Up next')).toBeInTheDocument();
     expect(screen.getByText('Upcoming')).toBeInTheDocument();
     expect(screen.getByText('Optional')).toBeInTheDocument();
 
@@ -146,9 +146,7 @@ describe('SetupJourneyCard', () => {
     expect(current).not.toHaveTextContent('2');
     expect(view.queryByText('Connect Platforms')).not.toBeInTheDocument();
     expect(view.queryByText('Configure & Test')).not.toBeInTheDocument();
-    // The ring still counts every step, not just the visible one
-    expect(
-      view.getByRole('img', { name: '1 of 3 steps complete' }),
-    ).toBeInTheDocument();
+    // The count still covers every step, not just the visible one
+    expect(view.getByText('1 of 3 done')).toBeInTheDocument();
   });
 });

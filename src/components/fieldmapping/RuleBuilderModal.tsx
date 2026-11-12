@@ -884,6 +884,7 @@ export default function RuleBuilderModal({
     const q = search.toLowerCase();
     return RULE_DEFINITIONS.filter(
       (r) =>
+        !r.legacy &&
         r.label.toLowerCase().includes(q) ||
         r.description.toLowerCase().includes(q),
     );
@@ -1018,7 +1019,7 @@ export default function RuleBuilderModal({
                 >
                   {RULE_CATEGORIES.map((cat) => {
                     const catRules = RULE_DEFINITIONS.filter(
-                      (r) => r.category === cat.id,
+                      (r) => r.category === cat.id && !r.legacy,
                     );
                     const isOpen = activeCategory === cat.id;
                     const Icon = CATEGORY_ICONS[cat.id] || TypeIcon;

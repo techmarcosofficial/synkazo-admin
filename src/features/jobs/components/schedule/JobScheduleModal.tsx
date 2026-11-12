@@ -45,6 +45,7 @@ import { BROWSER_TIMEZONE } from '@/lib/timezones';
 import { showToast } from '@/lib/toast';
 import { useEntitlements } from '@/queries/useEntitlements';
 import { usePriorityQueueQuery } from '@/queries/usePriorityQueue';
+import { useGuideSpot, useIsGuideStep } from '@/features/guide';
 
 interface JobScheduleModalProps {
   projectId: string;
@@ -127,6 +128,20 @@ export default function JobScheduleModal({
     priorityQueueQuery.data?.schedulerMode === 'priority';
 
   const [mode, setMode] = useState<string>(job.scheduleMode || 'daily_time');
+
+  // First-run guide (last setup step): pick a schedule type, then save.
+  const guiding = useIsGuideStep(projectId, 'schedule');
+  useGuideSpot(
+    guiding &&
+      open && {
+        id: 'schedule-modal',
+        step: 'schedule',
+        target: '[data-guide="schedule-save"]',
+        extras: [{ target: '[data-guide="schedule-type"]', mode: 'area' }],
+        title: 'Pick how often it runs',
+        body: 'Choose a schedule type and its times, then save. You can change it any time.',
+      },
+  );
   const [times, setTimes] = useState<string[]>(
     job.scheduleTimes?.length ? job.scheduleTimes : ['09:00'],
   );
@@ -276,7 +291,7 @@ export default function JobScheduleModal({
         ) : (
           <div className="space-y-4">
             {/* 1. Schedule Type Primary Cards */}
-            <div className="space-y-2">
+            <div className="space-y-2" data-guide="schedule-type">
               <FieldLabel className="text-foreground text-xs font-semibold">
                 Schedule Type
               </FieldLabel>
@@ -600,7 +615,12 @@ export default function JobScheduleModal({
             Cancel
           </Button>
           {!isTwoWay && !priorityModeActive && (
-            <Button size="sm" onClick={handleSave} disabled={saving}>
+            <Button
+              size="sm"
+              onClick={handleSave}
+              disabled={saving}
+              data-guide="schedule-save"
+            >
               {saving ? (
                 <Spinner className="mr-1 size-3.5" />
               ) : (

@@ -278,10 +278,7 @@ function App() {
                   {/* Billing workspace — unified single dashboard */}
                   <Route path="billing" element={<BillingLayout />}>
                     <Route index element={<BillingOverviewTab />} />
-                    <Route
-                      path="overview"
-                      element={<Navigate to="/organization/billing" replace />}
-                    />
+                    <Route path="overview" element={<BillingOverviewTab />} />
                     <Route
                       path="subscription"
                       element={<Navigate to="/organization/billing" replace />}

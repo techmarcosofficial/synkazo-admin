@@ -1,6 +1,7 @@
 import { FolderOpen, Plus, RotateCcw } from 'lucide-react';
 
 import EmptyState from '@/components/shared/EmptyState';
+import { useGuideSpot, useGuideStore } from '@/features/guide';
 import { useCreateProjectStore } from '@/features/projects/store';
 import type { ProjectExtended } from '@/features/projects/types';
 
@@ -21,6 +22,20 @@ export default function ProjectEmptyState({
   viewMode,
 }: ProjectEmptyStateProps) {
   const openCreateProjectDialog = useCreateProjectStore((s) => s.open);
+  const guiding = useGuideStore((s) => s.status === 'active' && !s.projectId);
+
+  useGuideSpot(
+    guiding &&
+      hasNoProjects &&
+      canCreate && {
+        id: 'create-first-project',
+        target: '[data-guide="create-first-project"]',
+        step: 'project',
+        placement: 'bottom',
+        title: 'Create your first project',
+        body: 'Give it a name and pick the platform you sync from. HubSpot is already set as the destination.',
+      },
+  );
 
   if (hasNoProjects) {
     return (
@@ -38,6 +53,7 @@ export default function ProjectEmptyState({
                 label: 'Create your first project',
                 onClick: () => openCreateProjectDialog({ onCreated }),
                 icon: Plus,
+                guideId: 'create-first-project',
               }
             : undefined
         }

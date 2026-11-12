@@ -1,0 +1,1135 @@
+[
+  {
+    "name": "trim",
+    "input": "  Acme Inc  ",
+    "rules": [
+      {
+        "type": "trim"
+      }
+    ],
+    "expect": "Acme Inc"
+  },
+  {
+    "name": "remove_spaces",
+    "input": "Acme  Inc ",
+    "rules": [
+      {
+        "type": "remove_spaces"
+      }
+    ],
+    "expect": "AcmeInc"
+  },
+  {
+    "name": "uppercase",
+    "input": "acme",
+    "rules": [
+      {
+        "type": "uppercase"
+      }
+    ],
+    "expect": "ACME"
+  },
+  {
+    "name": "lowercase",
+    "input": "ACME",
+    "rules": [
+      {
+        "type": "lowercase"
+      }
+    ],
+    "expect": "acme"
+  },
+  {
+    "name": "capitalize",
+    "input": "john smith",
+    "rules": [
+      {
+        "type": "capitalize"
+      }
+    ],
+    "expect": "John Smith"
+  },
+  {
+    "name": "replace",
+    "input": "Acme Inc.",
+    "rules": [
+      {
+        "type": "replace",
+        "find": "Inc.",
+        "replacement": "Incorporated"
+      }
+    ],
+    "expect": "Acme Incorporated"
+  },
+  {
+    "name": "replace with empty find keeps value",
+    "input": "Acme",
+    "rules": [
+      {
+        "type": "replace",
+        "find": "",
+        "replacement": "x"
+      }
+    ],
+    "expect": "Acme"
+  },
+  {
+    "name": "remove_text",
+    "input": "555-123-4567",
+    "rules": [
+      {
+        "type": "remove_text",
+        "find": "-"
+      }
+    ],
+    "expect": "5551234567"
+  },
+  {
+    "name": "prefix",
+    "input": "1042",
+    "rules": [
+      {
+        "type": "prefix",
+        "value": "CUST-"
+      }
+    ],
+    "expect": "CUST-1042"
+  },
+  {
+    "name": "suffix",
+    "input": "Acme",
+    "rules": [
+      {
+        "type": "suffix",
+        "value": " LLC"
+      }
+    ],
+    "expect": "Acme LLC"
+  },
+  {
+    "name": "regex_replace",
+    "input": "(555) 123-4567",
+    "rules": [
+      {
+        "type": "regex_replace",
+        "pattern": "\\D",
+        "replacement": ""
+      }
+    ],
+    "expect": "5551234567"
+  },
+  {
+    "name": "regex_replace bad pattern keeps value",
+    "input": "abc",
+    "rules": [
+      {
+        "type": "regex_replace",
+        "pattern": "(",
+        "replacement": ""
+      }
+    ],
+    "expect": "abc"
+  },
+  {
+    "name": "remove_special",
+    "input": "Acme & Co.!",
+    "rules": [
+      {
+        "type": "remove_special"
+      }
+    ],
+    "expect": "Acme  Co"
+  },
+  {
+    "name": "remove_numbers",
+    "input": "Suite 42B",
+    "rules": [
+      {
+        "type": "remove_numbers"
+      }
+    ],
+    "expect": "Suite B"
+  },
+  {
+    "name": "remove_alpha",
+    "input": "Suite 42B",
+    "rules": [
+      {
+        "type": "remove_alpha"
+      }
+    ],
+    "expect": " 42"
+  },
+  {
+    "name": "slug",
+    "input": "Hello World_2024!",
+    "rules": [
+      {
+        "type": "slug"
+      }
+    ],
+    "expect": "hello-world-2024"
+  },
+  {
+    "name": "extract_numbers",
+    "input": "Order #A-1042",
+    "rules": [
+      {
+        "type": "extract_numbers"
+      }
+    ],
+    "expect": "1042"
+  },
+  {
+    "name": "extract_text",
+    "input": "Order #A-1042",
+    "rules": [
+      {
+        "type": "extract_text"
+      }
+    ],
+    "expect": "OrderA"
+  },
+  {
+    "name": "char_limit",
+    "input": "Synkazo",
+    "rules": [
+      {
+        "type": "char_limit",
+        "value": "5"
+      }
+    ],
+    "expect": "Synka"
+  },
+  {
+    "name": "char_limit without a number keeps value",
+    "input": "Synkazo",
+    "rules": [
+      {
+        "type": "char_limit",
+        "value": ""
+      }
+    ],
+    "expect": "Synkazo"
+  },
+  {
+    "name": "word_limit",
+    "input": "one two three",
+    "rules": [
+      {
+        "type": "word_limit",
+        "value": "2"
+      }
+    ],
+    "expect": "one two"
+  },
+  {
+    "name": "min_length passes",
+    "input": "abc",
+    "rules": [
+      {
+        "type": "min_length",
+        "value": "3"
+      }
+    ],
+    "expect": "abc"
+  },
+  {
+    "name": "min_length fails",
+    "input": "ab",
+    "rules": [
+      {
+        "type": "min_length",
+        "value": "3"
+      }
+    ],
+    "expect": {
+      "skip": "field"
+    }
+  },
+  {
+    "name": "max_length fails",
+    "input": "abcdef",
+    "rules": [
+      {
+        "type": "max_length",
+        "value": "5"
+      }
+    ],
+    "expect": {
+      "skip": "field"
+    }
+  },
+  {
+    "name": "is_email passes",
+    "input": "jane@acme.com",
+    "rules": [
+      {
+        "type": "is_email"
+      }
+    ],
+    "expect": "jane@acme.com"
+  },
+  {
+    "name": "is_email fails",
+    "input": "not-an-email",
+    "rules": [
+      {
+        "type": "is_email"
+      }
+    ],
+    "expect": {
+      "skip": "field"
+    }
+  },
+  {
+    "name": "is_number passes",
+    "input": "42.5",
+    "rules": [
+      {
+        "type": "is_number"
+      }
+    ],
+    "expect": "42.5"
+  },
+  {
+    "name": "is_phone passes",
+    "input": "(555) 123-4567",
+    "rules": [
+      {
+        "type": "is_phone"
+      }
+    ],
+    "expect": "(555) 123-4567"
+  },
+  {
+    "name": "is_date passes",
+    "input": "2024-03-15",
+    "rules": [
+      {
+        "type": "is_date"
+      }
+    ],
+    "expect": "2024-03-15"
+  },
+  {
+    "name": "is_not_empty fails",
+    "input": "",
+    "rules": [
+      {
+        "type": "is_not_empty"
+      }
+    ],
+    "expect": {
+      "skip": "field"
+    }
+  },
+  {
+    "name": "skip_if_equals",
+    "input": "test",
+    "rules": [
+      {
+        "type": "skip_if_equals",
+        "value": "test"
+      }
+    ],
+    "expect": {
+      "skip": "record"
+    }
+  },
+  {
+    "name": "skip_if_contains",
+    "input": "a@test.com",
+    "rules": [
+      {
+        "type": "skip_if_contains",
+        "find": "@test.com"
+      }
+    ],
+    "expect": {
+      "skip": "record"
+    }
+  },
+  {
+    "name": "skip_if_contains no match",
+    "input": "a@acme.com",
+    "rules": [
+      {
+        "type": "skip_if_contains",
+        "find": "@test.com"
+      }
+    ],
+    "expect": "a@acme.com"
+  },
+  {
+    "name": "replace_if_contains",
+    "input": "N/A - pending",
+    "rules": [
+      {
+        "type": "replace_if_contains",
+        "find": "N/A",
+        "replacement": "Unknown"
+      }
+    ],
+    "expect": "Unknown"
+  },
+  {
+    "name": "if equals then set",
+    "input": "Yes",
+    "rules": [
+      {
+        "type": "if_condition",
+        "operator": "equals",
+        "value": "Yes",
+        "thenAction": "set",
+        "thenValue": "true",
+        "elseAction": "set",
+        "elseValue": "false"
+      }
+    ],
+    "expect": "true"
+  },
+  {
+    "name": "if equals otherwise set",
+    "input": "No",
+    "rules": [
+      {
+        "type": "if_condition",
+        "operator": "equals",
+        "value": "Yes",
+        "thenAction": "set",
+        "thenValue": "true",
+        "elseAction": "set",
+        "elseValue": "false"
+      }
+    ],
+    "expect": "false"
+  },
+  {
+    "name": "if contains (ignore case) skip record",
+    "input": "TEST user",
+    "rules": [
+      {
+        "type": "if_condition",
+        "operator": "contains",
+        "value": "test",
+        "ignoreCase": true,
+        "thenAction": "skip_record"
+      }
+    ],
+    "expect": {
+      "skip": "record"
+    }
+  },
+  {
+    "name": "if contains is case-sensitive by default",
+    "input": "TEST user",
+    "rules": [
+      {
+        "type": "if_condition",
+        "operator": "contains",
+        "value": "test",
+        "thenAction": "skip_record"
+      }
+    ],
+    "expect": "TEST user"
+  },
+  {
+    "name": "if is empty then set",
+    "input": "",
+    "rules": [
+      {
+        "type": "if_condition",
+        "operator": "is_empty",
+        "thenAction": "set",
+        "thenValue": "Unknown"
+      }
+    ],
+    "expect": "Unknown"
+  },
+  {
+    "name": "if is empty, not empty keeps value",
+    "input": "Bob",
+    "rules": [
+      {
+        "type": "if_condition",
+        "operator": "is_empty",
+        "thenAction": "set",
+        "thenValue": "Unknown"
+      }
+    ],
+    "expect": "Bob"
+  },
+  {
+    "name": "if not equals on empty is true",
+    "input": "",
+    "rules": [
+      {
+        "type": "if_condition",
+        "operator": "not_equals",
+        "value": "x",
+        "thenAction": "set",
+        "thenValue": "other"
+      }
+    ],
+    "expect": "other"
+  },
+  {
+    "name": "if greater than",
+    "input": "1500",
+    "rules": [
+      {
+        "type": "if_condition",
+        "operator": "gt",
+        "value": "1000",
+        "thenAction": "set",
+        "thenValue": "Large"
+      }
+    ],
+    "expect": "Large"
+  },
+  {
+    "name": "if greater than with text keeps value",
+    "input": "abc",
+    "rules": [
+      {
+        "type": "if_condition",
+        "operator": "gt",
+        "value": "1000",
+        "thenAction": "set",
+        "thenValue": "Large"
+      }
+    ],
+    "expect": "abc"
+  },
+  {
+    "name": "if less than",
+    "input": "5",
+    "rules": [
+      {
+        "type": "if_condition",
+        "operator": "lt",
+        "value": "10",
+        "thenAction": "set",
+        "thenValue": "Small"
+      }
+    ],
+    "expect": "Small"
+  },
+  {
+    "name": "if starts with then skip field",
+    "input": "+1 555 0100",
+    "rules": [
+      {
+        "type": "if_condition",
+        "operator": "starts_with",
+        "value": "+1",
+        "thenAction": "skip_field"
+      }
+    ],
+    "expect": {
+      "skip": "field"
+    }
+  },
+  {
+    "name": "if ends with",
+    "input": "acme.co.uk",
+    "rules": [
+      {
+        "type": "if_condition",
+        "operator": "ends_with",
+        "value": ".uk",
+        "thenAction": "set",
+        "thenValue": "UK"
+      }
+    ],
+    "expect": "UK"
+  },
+  {
+    "name": "if matches pattern",
+    "input": "90210",
+    "rules": [
+      {
+        "type": "if_condition",
+        "operator": "matches",
+        "value": "^\\d{5}$",
+        "thenAction": "set",
+        "thenValue": "valid-zip"
+      }
+    ],
+    "expect": "valid-zip"
+  },
+  {
+    "name": "if does not contain",
+    "input": "hello",
+    "rules": [
+      {
+        "type": "if_condition",
+        "operator": "not_contains",
+        "value": "@",
+        "thenAction": "set",
+        "thenValue": "no-email"
+      }
+    ],
+    "expect": "no-email"
+  },
+  {
+    "name": "older if_starts_with passes through",
+    "input": "abc",
+    "rules": [
+      {
+        "type": "if_starts_with",
+        "value": "a",
+        "action": "x"
+      }
+    ],
+    "expect": "abc"
+  },
+  {
+    "name": "abs",
+    "input": "-42.5",
+    "rules": [
+      {
+        "type": "abs"
+      }
+    ],
+    "expect": "42.5"
+  },
+  {
+    "name": "abs keeps text",
+    "input": "abc",
+    "rules": [
+      {
+        "type": "abs"
+      }
+    ],
+    "expect": "abc"
+  },
+  {
+    "name": "math_add",
+    "input": "5",
+    "rules": [
+      {
+        "type": "math_add",
+        "value": "10"
+      }
+    ],
+    "expect": "15"
+  },
+  {
+    "name": "math_add keeps text",
+    "input": "abc",
+    "rules": [
+      {
+        "type": "math_add",
+        "value": "10"
+      }
+    ],
+    "expect": "abc"
+  },
+  {
+    "name": "math_subtract",
+    "input": "10",
+    "rules": [
+      {
+        "type": "math_subtract",
+        "value": "2"
+      }
+    ],
+    "expect": "8"
+  },
+  {
+    "name": "math_multiply",
+    "input": "10",
+    "rules": [
+      {
+        "type": "math_multiply",
+        "value": "1.5"
+      }
+    ],
+    "expect": "15"
+  },
+  {
+    "name": "math_divide",
+    "input": "10",
+    "rules": [
+      {
+        "type": "math_divide",
+        "value": "4"
+      }
+    ],
+    "expect": "2.5"
+  },
+  {
+    "name": "math_divide by zero keeps value",
+    "input": "10",
+    "rules": [
+      {
+        "type": "math_divide",
+        "value": "0"
+      }
+    ],
+    "expect": "10"
+  },
+  {
+    "name": "round",
+    "input": "3.14159",
+    "rules": [
+      {
+        "type": "round",
+        "decimals": "1"
+      }
+    ],
+    "expect": "3.1"
+  },
+  {
+    "name": "round keeps text",
+    "input": "abc",
+    "rules": [
+      {
+        "type": "round",
+        "decimals": "1"
+      }
+    ],
+    "expect": "abc"
+  },
+  {
+    "name": "decimal_format",
+    "input": "3.5",
+    "rules": [
+      {
+        "type": "decimal_format",
+        "decimals": "2"
+      }
+    ],
+    "expect": "3.50"
+  },
+  {
+    "name": "currency_format USD",
+    "input": "1234.5",
+    "rules": [
+      {
+        "type": "currency_format",
+        "currency": "USD"
+      }
+    ],
+    "expect": "$1,234.50"
+  },
+  {
+    "name": "currency_format EUR",
+    "input": "1234.5",
+    "rules": [
+      {
+        "type": "currency_format",
+        "currency": "EUR"
+      }
+    ],
+    "expect": "€1,234.50"
+  },
+  {
+    "name": "currency_format keeps text",
+    "input": "abc",
+    "rules": [
+      {
+        "type": "currency_format",
+        "currency": "USD"
+      }
+    ],
+    "expect": "abc"
+  },
+  {
+    "name": "currency_format bad code keeps value",
+    "input": "10",
+    "rules": [
+      {
+        "type": "currency_format",
+        "currency": "XXXX"
+      }
+    ],
+    "expect": "10"
+  },
+  {
+    "name": "date_format US",
+    "input": "2024-03-15",
+    "rules": [
+      {
+        "type": "date_format",
+        "format": "MM/DD/YYYY"
+      }
+    ],
+    "expect": "03/15/2024"
+  },
+  {
+    "name": "date_format long",
+    "input": "2024-03-15T10:30:00Z",
+    "rules": [
+      {
+        "type": "date_format",
+        "format": "MMM D, YYYY"
+      }
+    ],
+    "expect": "Mar 15, 2024"
+  },
+  {
+    "name": "date_format no zone",
+    "input": "2024-03-15 10:30",
+    "rules": [
+      {
+        "type": "date_format",
+        "format": "YYYY-MM-DD HH:mm"
+      }
+    ],
+    "expect": "2024-03-15 10:30"
+  },
+  {
+    "name": "date_format weekday",
+    "input": "2024-03-15",
+    "rules": [
+      {
+        "type": "date_format",
+        "format": "dddd"
+      }
+    ],
+    "expect": "Friday"
+  },
+  {
+    "name": "date_format 12h",
+    "input": "2024-03-15T14:05:00Z",
+    "rules": [
+      {
+        "type": "date_format",
+        "format": "h:mm A"
+      }
+    ],
+    "expect": "2:05 PM"
+  },
+  {
+    "name": "date_format keeps non-dates",
+    "input": "not a date",
+    "rules": [
+      {
+        "type": "date_format",
+        "format": "MM/DD/YYYY"
+      }
+    ],
+    "expect": "not a date"
+  },
+  {
+    "name": "timezone New York (DST)",
+    "input": "2024-03-15T15:00:00Z",
+    "rules": [
+      {
+        "type": "timezone",
+        "tz": "America/New_York"
+      }
+    ],
+    "expect": "2024-03-15T11:00:00-04:00"
+  },
+  {
+    "name": "timezone Kolkata",
+    "input": "2024-01-01T00:00:00Z",
+    "rules": [
+      {
+        "type": "timezone",
+        "tz": "Asia/Kolkata"
+      }
+    ],
+    "expect": "2024-01-01T05:30:00+05:30"
+  },
+  {
+    "name": "timezone unknown keeps value",
+    "input": "2024-01-01T00:00:00Z",
+    "rules": [
+      {
+        "type": "timezone",
+        "tz": "Mars/Base"
+      }
+    ],
+    "expect": "2024-01-01T00:00:00Z"
+  },
+  {
+    "name": "date_add date only",
+    "input": "2024-03-15",
+    "rules": [
+      {
+        "type": "date_add",
+        "days": "7"
+      }
+    ],
+    "expect": "2024-03-22"
+  },
+  {
+    "name": "date_add date-time",
+    "input": "2024-03-15T10:30:00Z",
+    "rules": [
+      {
+        "type": "date_add",
+        "days": "1"
+      }
+    ],
+    "expect": "2024-03-16T10:30:00.000Z"
+  },
+  {
+    "name": "date_subtract across leap day",
+    "input": "2024-03-10",
+    "rules": [
+      {
+        "type": "date_subtract",
+        "days": "15"
+      }
+    ],
+    "expect": "2024-02-24"
+  },
+  {
+    "name": "timestamp_convert",
+    "input": "1710460800",
+    "rules": [
+      {
+        "type": "timestamp_convert"
+      }
+    ],
+    "expect": "2024-03-15"
+  },
+  {
+    "name": "split_by_space",
+    "input": "Jane Q Public",
+    "rules": [
+      {
+        "type": "split_by_space",
+        "index": "1"
+      }
+    ],
+    "expect": "Q"
+  },
+  {
+    "name": "split_by_delimiter",
+    "input": "red, green, blue",
+    "rules": [
+      {
+        "type": "split_by_delimiter",
+        "delimiter": ",",
+        "index": "1"
+      }
+    ],
+    "expect": "green"
+  },
+  {
+    "name": "first_value",
+    "input": "Jane Q Public",
+    "rules": [
+      {
+        "type": "first_value"
+      }
+    ],
+    "expect": "Jane"
+  },
+  {
+    "name": "last_value",
+    "input": "Jane Q Public",
+    "rules": [
+      {
+        "type": "last_value"
+      }
+    ],
+    "expect": "Public"
+  },
+  {
+    "name": "string_to_number",
+    "input": "42.50",
+    "rules": [
+      {
+        "type": "string_to_number"
+      }
+    ],
+    "expect": "42.5"
+  },
+  {
+    "name": "string_to_number text is 0",
+    "input": "abc",
+    "rules": [
+      {
+        "type": "string_to_number"
+      }
+    ],
+    "expect": "0"
+  },
+  {
+    "name": "number_to_string",
+    "input": "007",
+    "rules": [
+      {
+        "type": "number_to_string"
+      }
+    ],
+    "expect": "7"
+  },
+  {
+    "name": "number_to_string keeps text",
+    "input": "abc",
+    "rules": [
+      {
+        "type": "number_to_string"
+      }
+    ],
+    "expect": "abc"
+  },
+  {
+    "name": "string_to_boolean yes",
+    "input": "Yes",
+    "rules": [
+      {
+        "type": "string_to_boolean"
+      }
+    ],
+    "expect": "true"
+  },
+  {
+    "name": "string_to_boolean other",
+    "input": "nope",
+    "rules": [
+      {
+        "type": "string_to_boolean"
+      }
+    ],
+    "expect": "false"
+  },
+  {
+    "name": "boolean_to_string",
+    "input": "1",
+    "rules": [
+      {
+        "type": "boolean_to_string"
+      }
+    ],
+    "expect": "true"
+  },
+  {
+    "name": "string_to_date",
+    "input": "March 15, 2024",
+    "rules": [
+      {
+        "type": "string_to_date"
+      }
+    ],
+    "expect": "2024-03-15"
+  },
+  {
+    "name": "date_to_string",
+    "input": "2024-03-15T10:30:00Z",
+    "rules": [
+      {
+        "type": "date_to_string"
+      }
+    ],
+    "expect": "2024-03-15"
+  },
+  {
+    "name": "number_to_boolean",
+    "input": "0",
+    "rules": [
+      {
+        "type": "number_to_boolean"
+      }
+    ],
+    "expect": "false"
+  },
+  {
+    "name": "boolean_to_number",
+    "input": "true",
+    "rules": [
+      {
+        "type": "boolean_to_number"
+      }
+    ],
+    "expect": "1"
+  },
+  {
+    "name": "value_map hit",
+    "input": "paid",
+    "rules": [
+      {
+        "type": "value_map",
+        "map": {
+          "paid": "closed"
+        },
+        "fallback": "open"
+      }
+    ],
+    "expect": "closed"
+  },
+  {
+    "name": "value_map fallback",
+    "input": "unknown",
+    "rules": [
+      {
+        "type": "value_map",
+        "map": {
+          "paid": "closed"
+        },
+        "fallback": "open"
+      }
+    ],
+    "expect": "open"
+  },
+  {
+    "name": "value_mapping normalized",
+    "input": " balance_due ",
+    "rules": [
+      {
+        "type": "value_mapping",
+        "map": {
+          "Balance Due": "open"
+        },
+        "normalization": {
+          "trim": true,
+          "lowercase": true,
+          "replaceUnderscoreAndHyphenWithSpace": true
+        }
+      }
+    ],
+    "expect": "open"
+  },
+  {
+    "name": "pipeline runs in order",
+    "input": "  john smith ",
+    "rules": [
+      {
+        "type": "trim"
+      },
+      {
+        "type": "capitalize"
+      },
+      {
+        "type": "prefix",
+        "value": "Mr. "
+      }
+    ],
+    "expect": "Mr. John Smith"
+  },
+  {
+    "name": "pipeline stops at a failed check",
+    "input": "nope",
+    "rules": [
+      {
+        "type": "is_email"
+      },
+      {
+        "type": "uppercase"
+      }
+    ],
+    "expect": {
+      "skip": "field"
+    }
+  },
+  {
+    "name": "disabled rule is ignored",
+    "input": "acme",
+    "rules": [
+      {
+        "type": "uppercase",
+        "enabled": false
+      }
+    ],
+    "expect": "acme"
+  }
+]

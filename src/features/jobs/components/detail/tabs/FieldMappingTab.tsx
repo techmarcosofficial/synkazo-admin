@@ -43,6 +43,7 @@ import {
   type CanvasField,
 } from '@/features/jobs/utils';
 import { recordMatchesExcludeConditions } from '@/lib/excludeConditions';
+import { useGuideSpot, useIsGuidedJob, type GuideSpot } from '@/features/guide';
 import { classifyTypePair } from '@/lib/fieldMatching';
 import type { Connection, FieldMapping } from '@/types';
 import type {
@@ -434,6 +435,48 @@ export default function FieldMappingTab() {
   }, [job.id, projectId]);
 
   const anyDirty = mappingDirty || conditionsDirty;
+
+  // First-run guide: Auto-map → choose an identifier → save, one ring at a time.
+  const guided = useIsGuidedJob(job.id);
+  let guideSpot: GuideSpot | null = null;
+  if (guided && !loadingMappings && !fieldsLoading) {
+    if (fieldMappings.length === 0) {
+      guideSpot = {
+        id: 'map-auto',
+        target: ['[data-guide="auto-map-apply"]', '[data-guide="auto-map"]'],
+        extras: [{ target: '[data-guide="add-mapping"]', mode: 'quiet' }],
+        placement: 'bottom',
+        title: 'Map fields automatically',
+        body: 'Auto-map pairs fields with matching names and types, and you review every suggestion. Prefer to choose by hand? Use Add mapping.',
+      };
+    } else if (!fieldMappings.some((m) => Boolean(m.matchDestKey))) {
+      // The label, the picker, the table column and every row's
+      // "Set Identifier" light up together: any of them sets it.
+      guideSpot = {
+        id: 'map-identifier',
+        target: '[data-guide="identifier-label"]',
+        targetMode: 'text',
+        extras: [
+          { target: '[data-guide="identifier"]', mode: 'area' },
+          { target: '[data-guide="identifier-select"]', mode: 'control' },
+          { target: '[data-guide="identifier-column"]', mode: 'text' },
+          { target: '[data-guide="set-identifier"]', mode: 'blink', all: true },
+        ],
+        placement: 'bottom',
+        title: 'Choose an identifier',
+        body: 'Pick one with Choose identifier, or Set Identifier on any row. Use a field that is unique per record, like an ID or email, so existing records update instead of duplicating.',
+      };
+    } else if (mappingDirty) {
+      guideSpot = {
+        id: 'map-save',
+        target: '[data-guide="mapping-save"]',
+        placement: 'top',
+        title: 'Save your mapping',
+        body: "Changes stay a draft until you save. If a field needs a value or a fix, we'll point you to it.",
+      };
+    }
+  }
+  useGuideSpot(guideSpot && { ...guideSpot, step: 'map' });
 
   useEffect(() => {
     if (!anyDirty) return;

@@ -13,7 +13,6 @@ describe('project settings section definitions', () => {
   it('keeps the approved section order', () => {
     expect(PROJECT_SETTINGS_SECTION_DEFS.map((section) => section.id)).toEqual([
       'general',
-      'schedule',
       'associations',
       'environments',
       'activity',
@@ -21,7 +20,6 @@ describe('project settings section definitions', () => {
   });
 
   it('maps legacy project tabs to their new Settings destinations', () => {
-    expect(legacyProjectSettingsSectionForTab('scheduler')).toBe('schedule');
     expect(legacyProjectSettingsSectionForTab('associations')).toBe(
       'associations',
     );
@@ -35,7 +33,7 @@ describe('project settings section definitions', () => {
   it('falls back to General for missing or invalid sections', () => {
     expect(resolveProjectSettingsSection(null)).toBe('general');
     expect(resolveProjectSettingsSection('unknown')).toBe('general');
-    expect(resolveProjectSettingsSection('schedule')).toBe('schedule');
+    expect(resolveProjectSettingsSection('associations')).toBe('associations');
   });
 
   it('preserves unrelated parameters while building a section URL', () => {
@@ -52,8 +50,8 @@ describe('project settings section definitions', () => {
 });
 
 describe('project settings prerequisites', () => {
-  const schedule = PROJECT_SETTINGS_SECTION_DEFS.find(
-    (section) => section.id === 'schedule',
+  const associations = PROJECT_SETTINGS_SECTION_DEFS.find(
+    (section) => section.id === 'associations',
   )!;
 
   it('keeps General available without project prerequisites', () => {
@@ -67,17 +65,17 @@ describe('project settings prerequisites', () => {
   });
 
   it('explains missing connections before missing jobs', () => {
-    expect(isProjectSettingsSectionLocked(schedule, false, false)).toBe(true);
-    expect(projectSettingsSectionLockReason(schedule, false, false)).toMatch(
+    expect(isProjectSettingsSectionLocked(associations, false, false)).toBe(true);
+    expect(projectSettingsSectionLockReason(associations, false, false)).toMatch(
       /source and destination connections/i,
     );
   });
 
   it('explains the job prerequisite after connections are ready', () => {
-    expect(isProjectSettingsSectionLocked(schedule, true, false)).toBe(true);
-    expect(projectSettingsSectionLockReason(schedule, true, false)).toMatch(
+    expect(isProjectSettingsSectionLocked(associations, true, false)).toBe(true);
+    expect(projectSettingsSectionLockReason(associations, true, false)).toMatch(
       /sync job/i,
     );
-    expect(isProjectSettingsSectionLocked(schedule, true, true)).toBe(false);
+    expect(isProjectSettingsSectionLocked(associations, true, true)).toBe(false);
   });
 });

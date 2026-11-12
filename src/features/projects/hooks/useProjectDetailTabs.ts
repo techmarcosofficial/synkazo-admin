@@ -81,12 +81,21 @@ export function useProjectDetailTabs(input: UseProjectDetailTabsInput) {
   // section without adding a stale history entry. All unrelated query params
   // survive the canonicalization.
   useEffect(() => {
-    if (!legacySection) return;
-    setSearchParams(
-      buildProjectSettingsSearchParams(searchParams, legacySection),
-      { replace: true },
-    );
-  }, [legacySection, searchParams, setSearchParams]);
+    if (legacySection) {
+      setSearchParams(
+        buildProjectSettingsSearchParams(searchParams, legacySection),
+        { replace: true },
+      );
+      return;
+    }
+    // Backward compatibility: ?tab=settings&section=schedule moved to top-level ?tab=scheduler
+    if (requestedTab === 'settings' && searchParams.get('section') === 'schedule') {
+      const next = new URLSearchParams(searchParams);
+      next.set('tab', 'scheduler');
+      next.delete('section');
+      setSearchParams(next, { replace: true });
+    }
+  }, [legacySection, requestedTab, searchParams, setSearchParams]);
 
   // If data changes (or the URL points at an unlocked-then-locked tab) land
   // us on a locked tab, bounce back to Overview rather than showing it.

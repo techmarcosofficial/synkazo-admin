@@ -1,5 +1,9 @@
+import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { useState } from 'react';
+
 import type { FieldDef, OnEmptyPolicy } from '../FieldMappingCanvas';
 
+import SettingsSideNavLayout from './SettingsSideNav';
 import { SettingRow, SettingRows, TabIntro } from './SettingRow';
 
 import { Input } from '@/components/ui/input';
@@ -114,28 +118,54 @@ export default function EmptyValueTab({
   reverseDefaultValue: string;
   onReverseDefaultValueChange: (value: string) => void;
 }) {
+  const [section, setSection] = useState<'forward' | 'reverse'>('forward');
+  const active = isTwoWay ? section : 'forward';
+
   return (
-    <div className="space-y-2">
-      <TabIntro
-        title="What happens when the value is empty?"
-        subtitle="Runs after your rules, when the final value is blank."
-      />
-      <EmptyPolicyRows
-        idPrefix="field-empty"
-        options={destFieldDef?.options}
-        onEmpty={onEmpty}
-        onOnEmptyChange={onOnEmptyChange}
-        defaultValue={defaultValue}
-        onDefaultValueChange={onDefaultValueChange}
-      />
-      {isTwoWay && (
-        <div className="space-y-1 pt-4">
-          <h4 className="text-foreground text-[13px] font-semibold">
-            Reverse direction
-          </h4>
-          <p className="text-muted-foreground text-xs">
-            When the value syncs back from the destination.
-          </p>
+    <SettingsSideNavLayout
+      label="Empty value sections"
+      active={active}
+      onSelect={(id) => setSection(id as 'forward' | 'reverse')}
+      items={[
+        {
+          id: 'forward',
+          label: isTwoWay ? 'Into destination' : 'When empty',
+          icon: ArrowRight,
+          configured: onEmpty !== 'none',
+        },
+        ...(isTwoWay
+          ? [
+              {
+                id: 'reverse',
+                label: 'Back to source',
+                icon: ArrowLeft,
+                configured: reverseOnEmpty !== 'none',
+              },
+            ]
+          : []),
+      ]}
+    >
+      {active === 'forward' ? (
+        <div className="space-y-2">
+          <TabIntro
+            title="What happens when the value is empty?"
+            subtitle="Runs after your rules, when the final value is blank."
+          />
+          <EmptyPolicyRows
+            idPrefix="field-empty"
+            options={destFieldDef?.options}
+            onEmpty={onEmpty}
+            onOnEmptyChange={onOnEmptyChange}
+            defaultValue={defaultValue}
+            onDefaultValueChange={onDefaultValueChange}
+          />
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <TabIntro
+            title="Reverse direction"
+            subtitle="When the value syncs back from the destination."
+          />
           <EmptyPolicyRows
             idPrefix="field-reverse-empty"
             options={sourceFieldDef?.options}
@@ -146,6 +176,6 @@ export default function EmptyValueTab({
           />
         </div>
       )}
-    </div>
+    </SettingsSideNavLayout>
   );
 }

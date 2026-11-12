@@ -763,7 +763,7 @@ html:has([data-admin-shell]) {
 @keyframes attention-ring {
   0% {
     box-shadow: 0 0 0 0
-      color-mix(in oklch, var(--brand-orange) 55%, transparent);
+      color-mix(in oklch, var(--primary) 55%, transparent);
   }
   45%,
   100% {
@@ -802,7 +802,7 @@ html:has([data-admin-shell]) {
 @keyframes attention-flash {
   0% {
     box-shadow: 0 0 0 0
-      color-mix(in oklch, var(--brand-orange) 70%, transparent);
+      color-mix(in oklch, var(--primary) 70%, transparent);
   }
   100% {
     box-shadow: 0 0 0 10px transparent;
@@ -812,7 +812,7 @@ html:has([data-admin-shell]) {
 @media (prefers-reduced-motion: reduce) {
   [data-attention-flash='true'] {
     animation: none;
-    box-shadow: 0 0 0 3px var(--brand-orange);
+    box-shadow: 0 0 0 3px var(--primary);
   }
 
   [data-attention='true']::before,
@@ -823,16 +823,255 @@ html:has([data-admin-shell]) {
 
   [data-attention='true']::before {
     box-shadow: 0 0 0 3px
-      color-mix(in oklch, var(--brand-orange) 25%, transparent);
+      color-mix(in oklch, var(--primary) 25%, transparent);
+  }
+}
+
+/* First-run guide (features/guide): the control to use next lights up in
+   the theme's primary colour. No box is drawn around it; the element itself
+   carries the highlight. GuideLayer sets data-guide-active to the mode. */
+[data-guide-active] {
+  --guide-aura: color-mix(in oklch, var(--primary) 45%, transparent);
+  --guide-aura-soft: color-mix(in oklch, var(--primary) 22%, transparent);
+  transition:
+    color 200ms ease-out,
+    box-shadow 200ms ease-out,
+    background-color 200ms ease-out;
+}
+
+/* Tabs, nav links, ghost buttons: primary label + an aura line that glides
+   back and forth beneath it. */
+[data-guide-active='text'] {
+  color: var(--primary);
+  text-shadow: 0 0 14px var(--guide-aura-soft);
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    var(--primary) 50%,
+    transparent
+  );
+  background-repeat: no-repeat;
+  background-size: 55% 2px;
+  background-position: 0% 100%;
+  /* Glides start → end, then back end → start, easing at each edge. */
+  animation: guide-aura-flow 1.8s cubic-bezier(0.45, 0, 0.55, 1) infinite
+    alternate;
+}
+
+[data-guide-active='text'] svg {
+  color: var(--primary);
+  filter: drop-shadow(0 0 5px var(--guide-aura));
+}
+
+@keyframes guide-aura-flow {
+  to {
+    background-position: 100% 100%;
+  }
+}
+
+/* Filled and outlined buttons: a soft glow around the shape, plus a band of
+   light that glides back and forth across it (the same motion as the text
+   underline). The band is tinted from the text colour, so it reads white on a
+   filled button and primary on an outlined one. */
+[data-guide-active='control'] {
+  background-image: linear-gradient(
+    105deg,
+    transparent 20%,
+    color-mix(in oklch, currentColor 28%, transparent) 50%,
+    transparent 80%
+  );
+  background-repeat: no-repeat;
+  background-size: 45% 100%;
+  background-position: 0% 0;
+  animation:
+    guide-aura-glow 2.2s ease-in-out infinite,
+    guide-aura-sweep 1.8s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
+}
+
+@keyframes guide-aura-sweep {
+  to {
+    background-position: 100% 0;
+  }
+}
+
+/* Groups such as a form field or the identifier bar: faint wash + glow. */
+[data-guide-active='area'] {
+  border-radius: 0.875rem;
+  background-color: color-mix(in oklch, var(--primary) 5%, transparent);
+  background-image: linear-gradient(
+    105deg,
+    transparent 20%,
+    color-mix(in oklch, var(--primary) 10%, transparent) 50%,
+    transparent 80%
+  );
+  background-repeat: no-repeat;
+  background-size: 45% 100%;
+  background-position: 0% 0;
+  animation:
+    guide-aura-glow-soft 2.6s ease-in-out infinite,
+    guide-aura-sweep 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
+}
+
+/* Cards and sections with their own surface: glow only, surface untouched. */
+[data-guide-active='panel'] {
+  animation: guide-aura-glow-panel 2.6s ease-in-out infinite;
+}
+
+@keyframes guide-aura-glow-panel {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px var(--guide-aura-soft);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1.5px var(--guide-aura),
+      0 0 26px 2px var(--guide-aura-soft);
+  }
+}
+
+/* Every place the user could click, shown at once: forces controls that
+   only appear on hover into view (Set Identifier on each mapping row) and
+   fades them between full and faint so the eye finds them. */
+[data-guide-active='blink'] {
+  opacity: 1;
+  color: var(--primary);
+  border-color: color-mix(in oklch, var(--primary) 55%, transparent);
+  background-color: color-mix(in oklch, var(--primary) 7%, transparent);
+  animation: guide-blink 1.6s ease-in-out infinite;
+}
+
+[data-guide-active='blink'] svg {
+  color: var(--primary);
+}
+
+@keyframes guide-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+/* A secondary option next to the main one (Add mapping beside Auto-map). */
+[data-guide-active='quiet'] {
+  box-shadow: 0 0 0 1px var(--guide-aura-soft);
+}
+
+@keyframes guide-aura-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px var(--guide-aura-soft),
+      0 0 8px -2px var(--guide-aura-soft);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px var(--guide-aura),
+      0 0 20px 1px var(--guide-aura);
+  }
+}
+
+@keyframes guide-aura-glow-soft {
+  0%,
+  100% {
+    box-shadow: 0 0 0 4px transparent;
+  }
+  50% {
+    box-shadow:
+      0 0 0 4px color-mix(in oklch, var(--primary) 8%, transparent),
+      0 0 22px var(--guide-aura-soft);
+  }
+}
+
+.guide-card {
+  animation: guide-card-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes guide-card-in {
+  from {
+    opacity: 0;
+    filter: blur(2px);
+    translate: 0 4px;
+  }
+}
+
+.guide-chip {
+  animation: guide-card-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-guide-active='text'] {
+    animation: none;
+    background-size: 100% 2px;
+    background-position: 0 100%;
+    background-image: linear-gradient(var(--primary), var(--primary));
+  }
+  [data-guide-active='blink'] {
+    animation: none;
+    opacity: 1;
+  }
+  [data-guide-active='control'],
+  [data-guide-active='area'],
+  [data-guide-active='panel'] {
+    animation: none;
+    background-image: none;
+    box-shadow:
+      0 0 0 1px var(--guide-aura),
+      0 0 14px var(--guide-aura-soft);
+  }
+  .guide-card,
+  .guide-chip {
+    animation: none;
+  }
+}
+
+/* Field settings side tabs: a rule added from another section flashes the
+   "Applied rules" tab and pops its count, so it's clear where it went. */
+.side-nav-flash {
+  background-color: color-mix(in oklch, var(--primary) 22%, transparent);
+  box-shadow: 0 0 0 1.5px color-mix(in oklch, var(--primary) 55%, transparent);
+  animation: side-nav-flash 1.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes side-nav-flash {
+  0%,
+  35% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.side-nav-count-pop {
+  animation: side-nav-count-pop 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes side-nav-count-pop {
+  0% {
+    scale: 1;
+  }
+  45% {
+    scale: 1.35;
+  }
+  100% {
+    scale: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .side-nav-flash {
+    animation-duration: 0.01ms;
+    animation-delay: 1.2s;
+  }
+  .side-nav-count-pop {
+    animation: none;
   }
 }
 
 /* Elevate Stripe.js Testing Assistant & test autofill widgets above modal dialog overlays */
-body > iframe[src*="stripe" i],
-body > iframe[name*="stripe" i],
-body > iframe[name*="__privateStripe" i],
-body > div:has(> iframe[src*="stripe" i]),
-body > div:has(> iframe[name*="__privateStripe" i]),
 body > [style*="bottom"][style*="right"],
 body > div[style*="bottom"][style*="right"],
 body > iframe[style*="bottom"][style*="right"],

@@ -46,8 +46,8 @@ vi.mock('./ProjectTabs', () => ({
 vi.mock('./ProjectTabContent', () => ({
   default: () => <div data-testid="project-tab-content" />,
 }));
-vi.mock('./ProjectSetupProgress', () => ({
-  default: () => <div data-testid="project-setup-progress" />,
+vi.mock('./ProjectGuide', () => ({
+  default: () => <div data-testid="project-guide" />,
 }));
 
 describe('ProjectDetailPage - Self-Healing Status Management', () => {

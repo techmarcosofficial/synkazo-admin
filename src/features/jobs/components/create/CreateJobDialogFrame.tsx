@@ -52,7 +52,11 @@ export default function CreateJobDialogFrame({
           >
             {onBack ? 'Back' : 'Cancel'}
           </Button>
-          <Button onClick={onSubmit} disabled={isSaving}>
+          <Button
+            onClick={onSubmit}
+            disabled={isSaving}
+            data-guide="create-job-submit"
+          >
             {isSaving && <Spinner />}
             {isSaving ? 'Saving…' : submitLabel}
           </Button>

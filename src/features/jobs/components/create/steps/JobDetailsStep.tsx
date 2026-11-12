@@ -21,6 +21,7 @@ import {
   type ObjectItem,
 } from '@/queries/useConnections';
 import type { Connection } from '@/types';
+import { useGuideSpot, useIsCreatingGuidedJob } from '@/features/guide';
 
 interface SyncRecipe {
   id: string;
@@ -177,6 +178,37 @@ export default function JobDetailsStep({
   allowPlatformSwap?: boolean;
   twoWayNotice?: ReactNode;
 }) {
+  // First-run guide: source → destination → Create, as each gets filled.
+  const guiding = useIsCreatingGuidedJob();
+  useGuideSpot(
+    guiding &&
+      (!config.sourceObject
+        ? {
+            id: 'job-source',
+            step: 'job',
+            target: '[data-guide="job-source"]',
+            extras: [
+              { target: '[aria-label="Recommended sync recipes"]', mode: 'quiet' },
+            ],
+            title: 'Choose what to sync from',
+            body: 'Pick the source records, or tap a recommended recipe above to fill both sides at once.',
+          }
+        : !config.destObject
+          ? {
+              id: 'job-destination',
+              step: 'job',
+              target: '[data-guide="job-destination"]',
+              title: 'Choose where it lands in HubSpot',
+              body: 'Pick the HubSpot object these records become, like Contacts or Companies.',
+            }
+          : {
+              id: 'create-job-submit',
+              step: 'job',
+              target: '[data-guide="create-job-submit"]',
+              title: 'Create your sync job',
+              body: 'The name filled in for you. Next you will map fields and run a small test.',
+            }),
+  );
   const relevantRecipes = PRESET_RECIPES.filter((r) => {
     if (
       r.sourcePlatform !== config.sourcePlatform ||
@@ -346,7 +378,7 @@ export default function JobDetailsStep({
         )}
 
         <div className="grid grid-cols-1 items-start gap-3 md:grid-cols-[1fr_auto_1fr]">
-          <div>
+          <div data-guide="job-source">
             <ObjectSelector
               label="Source"
               platformId={config.sourcePlatform}
@@ -394,7 +426,7 @@ export default function JobDetailsStep({
             </Button>
           </div>
 
-          <div>
+          <div data-guide="job-destination">
             <ObjectSelector
               label="Destination"
               platformId={config.destPlatform}

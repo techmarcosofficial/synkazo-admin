@@ -1,18 +1,33 @@
-import { ArrowLeft, ArrowRight, X } from 'lucide-react';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { ArrowLeft, ArrowRight, CircleCheck } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useLocation, useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import GuideCard from '@/features/guide/GuideCard';
+import {
+  findVisible,
+  highlightMode,
+  mark,
+  sameBoxes,
+  scrimClipPath,
+  toBox,
+  type Box,
+  type GuidePlacement,
+} from '@/features/guide/guideDom';
+
+export type BillingTourSection = 'overview' | 'cards' | 'invoices' | 'activity';
 
 type TourStep = {
   id: string;
   title: string;
   description: string;
-  selector: string | null;
-  tab: string | null;
-  position: 'top' | 'bottom' | 'center';
+  /** The billing section this step shows; the tour switches to it. */
+  section: BillingTourSection;
+  /** Everything that stays sharp and lit. Empty for a centred step. */
+  targets: string[];
+  /** Index into `targets` the hint card points at. */
+  anchor?: number;
+  placement?: GuidePlacement;
 };
 
 const STEPS: TourStep[] = [
@@ -20,157 +35,163 @@ const STEPS: TourStep[] = [
     id: 'welcome',
     title: 'Welcome to your billing dashboard',
     description:
-      "Here's a quick look at where to manage your subscription, usage, and payments.",
-    selector: null,
-    tab: 'overview',
-    position: 'bottom',
+      'A quick look at where you manage your plan, usage, cards and invoices. Takes under a minute.',
+    section: 'overview',
+    targets: [],
   },
   {
     id: 'current-plan',
-    title: 'Your current plan',
-    description: 'Your active plan, status, and renewal date live here.',
-    selector: '[data-tour="current-plan"]',
-    tab: 'overview',
-    position: 'bottom',
+    title: 'Your active plan',
+    description:
+      'Your plan, its status, billing interval and renewal countdown live here.',
+    section: 'overview',
+    targets: ['[data-tour="current-plan"]'],
+    placement: 'bottom',
   },
   {
     id: 'usage',
-    title: 'Track your usage',
+    title: 'Limits and usage',
     description:
-      "See how many records you've synced this billing period, and how close you are to your plan's limit.",
-    selector: '[data-tour="usage-section"]',
-    tab: 'overview',
-    position: 'top',
+      'Synced records, projects, jobs and the features your plan includes, for this billing cycle.',
+    section: 'overview',
+    targets: ['[data-tour="usage-section"]'],
+    placement: 'right',
   },
   {
     id: 'manage-subscription',
-    title: 'Manage your subscription',
-    description: 'Change plans, switch billing interval, or cancel from here.',
-    selector: '[data-tour="manage-subscription"]',
-    tab: 'overview',
-    position: 'top',
-  },
-  {
-    id: 'subscription-tab',
-    title: 'Subscription details',
+    title: 'Upcoming payment',
     description:
-      'Full subscription controls, including cancellation and reactivation, live in this tab.',
-    selector: '[data-tour="subscription-tab"]',
-    tab: 'subscription',
-    position: 'bottom',
+      'Your next payment, the card it will be charged to, and where to change plans.',
+    section: 'overview',
+    targets: ['[data-tour="manage-subscription"]'],
+    placement: 'top',
   },
   {
-    id: 'invoices-tab',
-    title: 'Invoices',
-    description: 'Every past payment and receipt is available here.',
-    selector: '[data-tour="invoices-tab"]',
-    tab: 'invoices',
-    position: 'bottom',
+    id: 'cards',
+    title: 'Manage cards',
+    description:
+      'Add a card, choose the default one for payments, or remove cards you no longer use.',
+    section: 'cards',
+    targets: ['[data-tour="cards-nav"]', '[data-tour="billing-section"]'],
+    anchor: 0,
+    placement: 'bottom',
   },
   {
-    id: 'payment-tab',
-    title: 'Payment methods',
-    description: 'Update the card on file or add a new payment method anytime.',
-    selector: '[data-tour="payment-methods-tab"]',
-    tab: 'payment-methods',
-    position: 'bottom',
+    id: 'invoices',
+    title: 'Invoices and payments',
+    description:
+      'Every invoice and payment, with PDFs to download for your records.',
+    section: 'invoices',
+    targets: ['[data-tour="invoices-nav"]', '[data-tour="billing-section"]'],
+    anchor: 0,
+    placement: 'bottom',
+  },
+  {
+    id: 'activity',
+    title: 'Billing activity',
+    description:
+      'A timeline of plan changes, renewals and payment events, so nothing on your bill is a surprise.',
+    section: 'activity',
+    targets: ['[data-tour="activity-nav"]', '[data-tour="billing-section"]'],
+    anchor: 0,
+    placement: 'bottom',
   },
   {
     id: 'complete',
-    title: "You're all set!",
+    title: 'Billing is ready',
     description:
-      "That's everything. You can revisit any of this anytime from the Billing page.",
-    selector: null,
-    tab: 'overview',
-    position: 'center',
+      "Next up: your first sync. We'll highlight each step as you go, starting with Projects.",
+    section: 'overview',
+    targets: [],
   },
 ];
 
-const TOOLTIP_WIDTH = 340;
-const TOOLTIP_HEIGHT_ESTIMATE = 160;
-const GAP = 16;
-const VIEWPORT_PADDING = 16;
-const HIGHLIGHT_PADDING = 6;
-
-type Rect = { top: number; left: number; width: number; height: number };
-
-function measure(selector: string | null): Rect | null {
-  if (!selector) return null;
-  const el = document.querySelector(selector);
-  if (!el) return null;
-  const r = el.getBoundingClientRect();
-  return { top: r.top, left: r.left, width: r.width, height: r.height };
-}
-
-const BILLING_BASE = '/organization/billing';
-
+/**
+ * First-checkout tour of the billing workspace. Each step opens its section
+ * (switching tabs for Cards, Invoices and Activity), lights up the tab and
+ * its content in the theme's primary colour, and blurs everything else.
+ */
 export default function BillingGuidedTour({
   active,
   onDone,
+  onSection,
 }: {
   active: boolean;
   onDone: () => void;
+  onSection: (section: BillingTourSection) => void;
 }) {
   const [stepIndex, setStepIndex] = useState(0);
-  const [rect, setRect] = useState<Rect | null>(null);
+  const [boxes, setBoxes] = useState<Array<Box | null>>([]);
+  const [confirmSkip, setConfirmSkip] = useState(false);
+  const [waitedOut, setWaitedOut] = useState(false);
   const step = STEPS[stepIndex];
+  const isFirst = stepIndex === 0;
+  const isLast = stepIndex === STEPS.length - 1;
 
-  // Billing sub-tabs are routes now, so the current tab is read from the URL and
-  // advanced by navigating rather than by driving a parent's tab state.
-  const { pathname } = useLocation();
-  const navigate = useNavigate();
-  const tab = pathname.startsWith(`${BILLING_BASE}/`)
-    ? pathname.slice(BILLING_BASE.length + 1).split('/')[0]
-    : '';
+  const onSectionRef = useRef(onSection);
+  onSectionRef.current = onSection;
+  const onDoneRef = useRef(onDone);
+  onDoneRef.current = onDone;
 
-  // Reset to the first step whenever the tour (re)activates.
   useEffect(() => {
     if (active) setStepIndex(0);
   }, [active]);
 
-  // Drive the real page's route so the tour highlights what the user actually sees.
   useEffect(() => {
-    if (!active || !step.tab || step.tab === tab) return;
-    navigate(`${BILLING_BASE}/${step.tab}`, { replace: true });
-  }, [active, step.tab, tab, navigate]);
+    setConfirmSkip(false);
+    setWaitedOut(false);
+    if (!active) return;
+    onSectionRef.current(step.section);
+    // If a target never renders (e.g. data failed to load), don't strand the
+    // user behind the blur: show the card centred after a moment.
+    const id = window.setTimeout(() => setWaitedOut(true), 1500);
+    return () => window.clearTimeout(id);
+  }, [active, step.section, stepIndex]);
 
-  // Measure the target element once the right tab (and its content) is mounted, and keep the
-  // highlight glued to it across layout shifts — the tour can sit on a step for a while.
-  useLayoutEffect(() => {
-    if (!active || step.tab !== tab) {
-      setRect(null);
-      return;
-    }
+  // Follow the targets every frame: the section swaps content, data loads in,
+  // the page scrolls. Each target is marked so it glows.
+  useEffect(() => {
+    if (!active) return;
+    const marks = step.targets.map(() => ({ current: null as Element | null }));
+    let scrolled = false;
+    let raf = 0;
+    const tick = () => {
+      const els = step.targets.map((sel) => findVisible(sel));
+      els.forEach((el, i) => mark(marks[i], el, el ? highlightMode(el) : null));
+      const next = els.map((el) => (el ? toBox(el) : null));
+      setBoxes((prev) => (sameBoxes(prev, next) ? prev : next));
 
-    let cancelled = false;
-    const recalc = () => {
-      if (cancelled) return;
-      setRect(measure(step.selector));
+      const anchorEl = els[step.anchor ?? 0];
+      if (!scrolled && anchorEl) {
+        scrolled = true;
+        const r = anchorEl.getBoundingClientRect();
+        if (r.top < 72 || r.bottom > window.innerHeight - 24) {
+          anchorEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }
+      }
+      raf = requestAnimationFrame(tick);
     };
-
-    const raf = requestAnimationFrame(() => {
-      const el = step.selector ? document.querySelector(step.selector) : null;
-      el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      recalc();
-    });
-
-    window.addEventListener('resize', recalc);
-    window.addEventListener('scroll', recalc, true);
+    raf = requestAnimationFrame(tick);
     return () => {
-      cancelled = true;
       cancelAnimationFrame(raf);
-      window.removeEventListener('resize', recalc);
-      window.removeEventListener('scroll', recalc, true);
+      marks.forEach((m) => mark(m, null, null));
+      setBoxes([]);
     };
-  }, [active, step.selector, step.tab, tab]);
+  }, [active, step]);
 
-  const closedRef = useRef(onDone);
-  closedRef.current = onDone;
+  const next = () => (isLast ? onDoneRef.current() : setStepIndex((i) => i + 1));
+  const back = () => !isFirst && setStepIndex((i) => i - 1);
+  const nextRef = useRef(next);
+  nextRef.current = next;
+  const backRef = useRef(back);
+  backRef.current = back;
 
   useEffect(() => {
     if (!active) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closedRef.current();
+      if (e.key === 'Escape') onDoneRef.current();
+      else if (e.key === 'ArrowRight') nextRef.current();
+      else if (e.key === 'ArrowLeft') backRef.current();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
@@ -178,157 +199,89 @@ export default function BillingGuidedTour({
 
   if (!active) return null;
 
-  const isLast = stepIndex === STEPS.length - 1;
-  const isFirst = stepIndex === 0;
+  const visible = boxes.filter((b): b is Box => Boolean(b));
+  const anchor = step.targets.length ? (boxes[step.anchor ?? 0] ?? visible[0] ?? null) : null;
+  // A targeted step whose element hasn't rendered yet waits rather than
+  // flashing a centred card.
+  const waiting =
+    step.targets.length > 0 && visible.length === 0 && !waitedOut;
 
-  const handleNext = () => {
-    if (isLast) {
-      onDone();
-      return;
-    }
-    setStepIndex((i) => i + 1);
-  };
-
-  const handlePrev = () => {
-    if (!isFirst) setStepIndex((i) => i - 1);
-  };
-
-  let tooltipStyle: React.CSSProperties = {
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-  };
-
-  if (rect && step.position !== 'center') {
-    let top =
-      step.position === 'bottom'
-        ? rect.top + rect.height + GAP
-        : rect.top - GAP;
-    let left = rect.left + rect.width / 2 - TOOLTIP_WIDTH / 2;
-
-    if (left < VIEWPORT_PADDING) left = VIEWPORT_PADDING;
-    if (left + TOOLTIP_WIDTH > window.innerWidth - VIEWPORT_PADDING) {
-      left = window.innerWidth - TOOLTIP_WIDTH - VIEWPORT_PADDING;
-    }
-    if (step.position === 'top') top -= TOOLTIP_HEIGHT_ESTIMATE;
-    if (top < VIEWPORT_PADDING) top = rect.top + rect.height + GAP;
-    top = Math.min(top, window.innerHeight - VIEWPORT_PADDING);
-
-    tooltipStyle = { top, left, transform: 'none' };
-  }
-
-  // Portalled to <body> — BillingPage's outer container has `animate-fade-in-up`, whose
-  // keyframes leave a non-none `transform` on it (translateY(0) at rest), which makes it a
-  // containing block for `position: fixed` descendants. Without the portal, every fixed-position
-  // element here would be positioned relative to that div instead of the real viewport.
-  // Dim+blur the whole viewport except a cutout around the highlighted element, so the
-  // element itself stays sharp instead of being blurred behind a full-screen overlay. Four
-  // strips (top/bottom/left/right) around the hole, rather than a single overlay + border,
-  // since a plain border draws on top of a blurred element without un-blurring it.
-  const overlayClass = 'bg-background/60 fixed z-[9998] backdrop-blur-[2px]';
-  const hole = rect
-    ? {
-        top: rect.top - HIGHLIGHT_PADDING,
-        left: rect.left - HIGHLIGHT_PADDING,
-        width: rect.width + HIGHLIGHT_PADDING * 2,
-        height: rect.height + HIGHLIGHT_PADDING * 2,
-      }
-    : null;
-
+  // Portalled to <body>: BillingPage animates in with a transform, which would
+  // otherwise become the containing block for these fixed elements.
   return createPortal(
     <>
-      {hole ? (
-        <>
-          <div
-            className={overlayClass}
-            style={{ top: 0, left: 0, right: 0, height: Math.max(hole.top, 0) }}
-          />
-          <div
-            className={overlayClass}
-            style={{
-              top: hole.top + hole.height,
-              left: 0,
-              right: 0,
-              bottom: 0,
-            }}
-          />
-          <div
-            className={overlayClass}
-            style={{
-              top: hole.top,
-              left: 0,
-              width: Math.max(hole.left, 0),
-              height: hole.height,
-            }}
-          />
-          <div
-            className={overlayClass}
-            style={{
-              top: hole.top,
-              left: hole.left + hole.width,
-              right: 0,
-              height: hole.height,
-            }}
-          />
-        </>
-      ) : (
-        <div className={overlayClass} style={{ inset: 0 }} />
-      )}
+      <div
+        aria-hidden="true"
+        className="bg-background/55 fixed inset-0 z-[9998] backdrop-blur-[3px] transition-[clip-path] duration-200"
+        style={visible.length ? { clipPath: scrimClipPath(visible) } : undefined}
+      />
 
-      {rect && (
-        <div
-          className="border-ring pointer-events-none fixed z-[9999] rounded-lg border-2 transition-all duration-200"
-          style={{
-            top: rect.top - HIGHLIGHT_PADDING,
-            left: rect.left - HIGHLIGHT_PADDING,
-            width: rect.width + HIGHLIGHT_PADDING * 2,
-            height: rect.height + HIGHLIGHT_PADDING * 2,
-          }}
+      {!waiting && (
+        <GuideCard
+          key={step.id}
+          anchor={anchor}
+          placement={step.placement}
+          className="z-[10000]"
+          icon={
+            isLast && (
+              <CircleCheck className="text-primary mb-2 size-7" aria-hidden="true" />
+            )
+          }
+          title={step.title}
+          body={step.description}
+          footer={
+            <>
+              {confirmSkip ? (
+                <span className="flex items-center gap-1.5 text-xs">
+                  <span className="text-muted-foreground">Skip the tour?</span>
+                  <button
+                    type="button"
+                    onClick={onDone}
+                    className="text-foreground cursor-pointer font-semibold underline-offset-2 hover:underline"
+                  >
+                    Yes, skip
+                  </button>
+                </span>
+              ) : (
+                <span className="text-muted-foreground flex items-center gap-2 text-xs">
+                  <span className="tabular-nums">
+                    Step {stepIndex + 1} of {STEPS.length}
+                  </span>
+                  {!isLast && (
+                    <>
+                      <span aria-hidden="true">·</span>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmSkip(true)}
+                        className="hover:text-foreground cursor-pointer underline-offset-2 hover:underline"
+                      >
+                        Skip tour
+                      </button>
+                    </>
+                  )}
+                </span>
+              )}
+              <span className="flex shrink-0 items-center gap-1.5">
+                {!isFirst && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={back}
+                  >
+                    <ArrowLeft className="size-3.5" aria-hidden="true" />
+                    Back
+                  </Button>
+                )}
+                <Button size="sm" className="h-7 px-3 text-xs" onClick={next}>
+                  {isLast ? 'Done' : 'Next'}
+                  {!isLast && <ArrowRight className="size-3.5" aria-hidden="true" />}
+                </Button>
+              </span>
+            </>
+          }
         />
       )}
-
-      <div
-        className="bg-popover text-popover-foreground border-border fixed z-[10000] w-[340px] rounded-4xl border p-5 shadow-lg"
-        style={tooltipStyle}
-      >
-        <div className="mb-3 flex items-start justify-between gap-2">
-          <h3 className="text-sm font-medium">{step.title}</h3>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-muted-foreground -mt-1 -mr-1 size-6 shrink-0"
-            onClick={onDone}
-            aria-label="Close tour"
-          >
-            <X className="size-4" />
-          </Button>
-        </div>
-
-        <p className="text-muted-foreground mb-5 text-sm leading-relaxed">
-          {step.description}
-        </p>
-
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-muted-foreground text-xs">
-            Step {stepIndex + 1} of {STEPS.length}
-          </span>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handlePrev}
-              disabled={isFirst}
-              className={cn(isFirst && 'opacity-50')}
-            >
-              <ArrowLeft className="size-3.5" /> Back
-            </Button>
-            <Button size="sm" onClick={handleNext}>
-              {isLast ? 'Done' : 'Next'}
-              {!isLast && <ArrowRight className="size-3.5" />}
-            </Button>
-          </div>
-        </div>
-      </div>
     </>,
     document.body,
   );

@@ -1,6 +1,5 @@
 import {
   Activity,
-  CalendarClock,
   Layers3,
   Link2,
   Lock,
@@ -31,7 +30,6 @@ import type { ProjectSettingsSectionId } from '@/features/projects/lib/projectSe
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import type { ProjectEnvironment } from '@/types';
 
-const SchedulerSection = lazy(() => import('./SchedulerTab'));
 const AssociationsSection = lazy(() => import('./AssociationsTab'));
 const EnvironmentsSection = lazy(() => import('./EnvironmentSyncTab'));
 const ActivitySection = lazy(() => import('./ActivityTab'));
@@ -41,7 +39,6 @@ const SECTION_ICONS: Record<
   ComponentType<{ className?: string }>
 > = {
   general: Settings2,
-  schedule: CalendarClock,
   associations: Link2,
   environments: Layers3,
   activity: Activity,
@@ -100,7 +97,6 @@ function SectionContent({
   if (id === 'general') {
     return <GeneralSection environmentsHref={environmentsHref} />;
   }
-  if (id === 'schedule') return <SchedulerSection />;
   if (id === 'associations') return <AssociationsSection />;
   if (id === 'activity') return <ActivitySection />;
   return <EnvironmentsSection />;

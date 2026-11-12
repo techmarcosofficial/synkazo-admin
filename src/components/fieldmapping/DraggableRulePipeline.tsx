@@ -31,6 +31,16 @@ import {
 } from '@/lib/ruleEngine';
 import { cn } from '@/lib/utils';
 import { REQUIRED_RULE_PARAMS } from '@/lib/ruleValidation';
+import type { PipelineStep } from '@/lib/transformRules.shared';
+
+import {
+  IfConditionEditor,
+  LegacyConditionNotice,
+  RuleParamInput,
+  StepResult,
+  convertLegacyCondition,
+  isLegacyCondition,
+} from './RuleCardParts';
 
 export const NUMERIC_VALUE_RULES = new Set([
   'char_limit',
@@ -52,17 +62,19 @@ export const PARAM_LABELS: Record<string, string> = {
   find: 'Find',
   replacement: 'Replace with',
   value: 'Value',
-  pattern: 'Regex',
+  pattern: 'Pattern',
   format: 'Format',
   tz: 'Timezone',
   days: 'Days',
   decimals: 'Decimals',
   currency: 'Currency',
   delimiter: 'Delimiter',
-  index: 'Index',
+  index: 'Position',
   action: 'Action',
   map: 'Value mapping',
   fallback: 'If not listed',
+  operator: 'Condition',
+  thenAction: 'Then',
   defaultValue: 'Default value',
 };
 
@@ -324,7 +336,9 @@ function ActiveRuleCard({
   dragHandleProps,
   isDragging,
   errors,
+  step,
 }: {
+  step?: PipelineStep;
   rule: Rule;
   index: number;
   onUpdate: (index: number, rule: Rule) => void;
@@ -337,7 +351,11 @@ function ActiveRuleCard({
   const def: RuleDefinition | undefined = RULE_DEFINITIONS.find(
     (r) => r.type === rule.type,
   );
-  const inlineParams = (def?.params ?? []).filter((p) => p !== 'map');
+  const isCondition = rule.type === 'if_condition';
+  const isLegacy = isLegacyCondition(rule.type);
+  const inlineParams = isCondition
+    ? []
+    : (def?.params ?? []).filter((p) => p !== 'map');
   const isValueMap = rule.type === 'value_map';
   const isValueMapping = rule.type === 'value_mapping';
   const hasParams = inlineParams.length > 0 || isValueMap || isValueMapping;
@@ -416,33 +434,38 @@ function ActiveRuleCard({
         </div>
       </div>
 
-      {hasParams && isEnabled && (
-        <div className="grid gap-2 px-8 pt-1 pb-2 sm:grid-cols-2">
-          {(isValueMap ? ['fallback'] : inlineParams).map((p) => {
-            const isRequired = (REQUIRED_RULE_PARAMS[rule.type] || []).includes(
-              p,
-            );
-            const isNum = isParamNumeric(rule.type, p);
+      {isLegacy && (
+        <LegacyConditionNotice
+          onConvert={() => onUpdate(index, convertLegacyCondition(rule))}
+        />
+      )}
 
-            return (
-              <label key={p} className="min-w-0 space-y-0.5">
-                <span className="text-muted-foreground text-[10px] font-medium">
-                  {PARAM_LABELS[p] || p}{' '}
-                  {isRequired && <span className="text-destructive">*</span>}
-                </span>
-                <Input
-                  value={(rule[p] as string) || ''}
-                  onChange={(e) => handleParamChange(p, e.target.value)}
-                  placeholder={isRequired ? 'Required' : 'Optional'}
-                  inputMode={isNum ? 'decimal' : 'text'}
-                  className="h-7 font-mono text-xs"
-                  aria-invalid={errors.includes(p)}
-                />
-              </label>
-            );
-          })}
+      {isCondition && isEnabled && (
+        <IfConditionEditor
+          rule={rule}
+          errors={errors}
+          onUpdate={(next) => onUpdate(index, next)}
+        />
+      )}
+
+      {hasParams && isEnabled && !isLegacy && !isCondition && (
+        <div className="grid gap-x-3 gap-y-2 px-8 pt-1 pb-2.5 sm:grid-cols-2">
+          {(isValueMap ? ['fallback'] : inlineParams).map((p) => (
+            <RuleParamInput
+              key={p}
+              ruleType={rule.type}
+              param={p}
+              label={PARAM_LABELS[p] || p}
+              value={String(rule[p] ?? '')}
+              required={(REQUIRED_RULE_PARAMS[rule.type] || []).includes(p)}
+              invalid={errors.includes(p)}
+              onChange={(value) => handleParamChange(p, value)}
+            />
+          ))}
         </div>
       )}
+
+      <StepResult step={step} />
 
       {isValueMap && isEnabled && (
         <ValueMapEditor
@@ -488,6 +511,8 @@ export interface DraggableRulePipelineProps {
   destOptions?: { value: string; label: string }[];
   className?: string;
   validationErrors?: Record<number, string[]>;
+  /** Live preview trace, one step per rule, shown on each card. */
+  trace?: PipelineStep[];
 }
 
 export default function DraggableRulePipeline({
@@ -496,6 +521,7 @@ export default function DraggableRulePipeline({
   destOptions,
   className,
   validationErrors = {},
+  trace,
 }: DraggableRulePipelineProps) {
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
@@ -544,6 +570,7 @@ export default function DraggableRulePipeline({
                       ref={dragProvided.innerRef}
                       {...dragProvided.draggableProps}
                       style={dragProvided.draggableProps.style}
+                      data-rule-index={idx}
                     >
                       <ActiveRuleCard
                         rule={rule}
@@ -554,6 +581,7 @@ export default function DraggableRulePipeline({
                         dragHandleProps={dragProvided.dragHandleProps}
                         isDragging={snapshot.isDragging}
                         errors={validationErrors[idx] ?? []}
+                        step={trace?.[idx]}
                       />
                     </div>
                   )}

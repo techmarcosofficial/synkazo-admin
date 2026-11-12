@@ -71,71 +71,6 @@ function SetupJourneyFrame({
   );
 }
 
-export function SetupProgressRing({
-  done,
-  total,
-  className,
-  labelClassName,
-  decorative = false,
-}: {
-  done: number;
-  total: number;
-  className?: string;
-  labelClassName?: string;
-  /** Hide from assistive tech and drop the native title when a parent already describes progress. */
-  decorative?: boolean;
-}) {
-  const percent = total === 0 ? 0 : Math.round((done / total) * 100);
-  const radius = 16;
-  const circumference = 2 * Math.PI * radius;
-  return (
-    <div
-      {...(decorative
-        ? { 'aria-hidden': true }
-        : {
-            role: 'img',
-            'aria-label': `${done} of ${total} steps complete`,
-            title: `${done} of ${total} steps complete · ${100 - percent}% pending`,
-          })}
-      className={cn('relative size-11 shrink-0', className)}
-    >
-      <svg
-        viewBox="0 0 40 40"
-        className="size-full -rotate-90"
-        aria-hidden="true"
-      >
-        <circle
-          cx="20"
-          cy="20"
-          r={radius}
-          fill="none"
-          strokeWidth="4"
-          className="stroke-muted"
-        />
-        <circle
-          cx="20"
-          cy="20"
-          r={radius}
-          fill="none"
-          strokeWidth="4"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={circumference * (1 - percent / 100)}
-          className="stroke-success transition-[stroke-dashoffset] duration-500"
-        />
-      </svg>
-      <span
-        className={cn(
-          'text-foreground absolute inset-0 flex items-center justify-center text-[11px] font-semibold tabular-nums',
-          labelClassName,
-        )}
-      >
-        {percent}%
-      </span>
-    </div>
-  );
-}
-
 const setupEyebrowStyles =
   'text-muted-foreground text-[10px] leading-4 font-semibold tracking-wider uppercase';
 
@@ -253,7 +188,7 @@ export default function SetupJourneyCard({
               const statusLabel = isComplete
                 ? 'Complete'
                 : isCurrent
-                  ? 'Action needed'
+                  ? 'Up next'
                   : step.optional
                     ? 'Optional'
                     : 'Upcoming';
@@ -336,7 +271,7 @@ export default function SetupJourneyCard({
                                   ? 'sr-only'
                                   : 'xl:sr-only 2xl:not-sr-only'),
                               isCurrent &&
-                                'font-semibold text-(--brand-orange)',
+                                'text-primary font-semibold',
                               isUpcoming && 'text-muted-foreground',
                             )}
                           >
@@ -383,12 +318,8 @@ export default function SetupJourneyCard({
                 {secondaryAction.label}
               </Button>
             )}
-            <SetupProgressRing
-              done={completedCount}
-              total={requiredSteps.length}
-            />
-            <span className="sr-only">
-              {completedCount}/{requiredSteps.length} complete
+            <span className="text-muted-foreground text-xs font-medium whitespace-nowrap tabular-nums">
+              {completedCount} of {requiredSteps.length} done
             </span>
             {completedCount === requiredSteps.length &&
               onContinue &&
@@ -465,7 +396,7 @@ export default function SetupJourneyCard({
                 const statusLabel = isComplete
                   ? 'Complete'
                   : isCurrent
-                    ? 'Action needed'
+                    ? 'Up next'
                     : step.optional
                       ? 'Optional'
                       : 'Upcoming';

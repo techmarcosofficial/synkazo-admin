@@ -38,16 +38,15 @@ function renderAt(path: string) {
 }
 
 describe('project detail tab navigation', () => {
-  it('shows the approved four project-level tabs', () => {
+  it('shows the approved project-level tabs including Job Scheduler', () => {
     renderAt('/projects/project-1?tab=overview');
 
     expect(screen.getByTestId('tabs')).toHaveTextContent(
-      'overview,connections,sync-rules,settings',
+      'overview,connections,sync-rules,scheduler,settings',
     );
   });
 
   it.each([
-    ['scheduler', 'schedule'],
     ['associations', 'associations'],
     ['environment-sync', 'environments'],
     ['activity', 'activity'],
@@ -62,6 +61,19 @@ describe('project detail tab navigation', () => {
       expect(params.get('tab')).toBe('settings');
       expect(params.get('section')).toBe(section);
       expect(params.get('checkout')).toBe('success');
+    });
+  });
+
+  it('redirects legacy settings schedule section to top-level scheduler tab', async () => {
+    renderAt('/projects/project-1?tab=settings&section=schedule');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('active-tab')).toHaveTextContent('scheduler');
+      const params = new URLSearchParams(
+        screen.getByTestId('search').textContent ?? '',
+      );
+      expect(params.get('tab')).toBe('scheduler');
+      expect(params.get('section')).toBeNull();
     });
   });
 

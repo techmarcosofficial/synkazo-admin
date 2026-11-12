@@ -1,4 +1,5 @@
 import {
+  CalendarClock,
   LayoutDashboard,
   Lock,
   Plug,
@@ -19,6 +20,7 @@ const TAB_ICONS: Record<ProjectDetailTabId, LucideIcon> = {
   overview: LayoutDashboard,
   connections: Plug,
   'sync-rules': Workflow,
+  scheduler: CalendarClock,
   settings: Settings,
 };
 
@@ -42,6 +44,7 @@ export default function ProjectTabs({
           <TabsTrigger
             value={tab.id}
             disabled={tab.locked}
+            data-guide={`tab-${tab.id}`}
             className="py-2 disabled:opacity-70"
           >
             {Icon && <Icon aria-hidden="true" />}

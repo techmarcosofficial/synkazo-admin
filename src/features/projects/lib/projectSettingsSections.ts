@@ -1,5 +1,8 @@
 export type ProjectSettingsSectionId =
-  'general' | 'schedule' | 'associations' | 'environments' | 'activity';
+  | 'general'
+  | 'associations'
+  | 'environments'
+  | 'activity';
 
 export interface ProjectSettingsSectionRequirements {
   connections: boolean;
@@ -25,13 +28,6 @@ export const PROJECT_SETTINGS_SECTION_DEFS: ProjectSettingsSectionDef[] = [
     description: 'Project identity and fixed integration context.',
   },
   {
-    id: 'schedule',
-    label: 'Bulk Scheduler',
-    description:
-      'Coordinated project-wide scheduling and priority queue execution across all sync flows.',
-    requires: { connections: true, jobs: true },
-  },
-  {
     id: 'associations',
     label: 'Associations',
     description: 'Create and monitor relationships between synced records.',
@@ -53,7 +49,6 @@ export const PROJECT_SETTINGS_SECTION_DEFS: ProjectSettingsSectionDef[] = [
 ];
 
 export const LEGACY_PROJECT_TAB_SECTIONS = {
-  scheduler: 'schedule',
   associations: 'associations',
   'environment-sync': 'environments',
   activity: 'activity',

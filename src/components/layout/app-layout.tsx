@@ -12,6 +12,7 @@ import SubscriptionPaywall from '@/components/billing/SubscriptionPaywall';
 import { TenantAdminVisualContext } from '@/components/shared/TenantAdminVisualContext';
 import SourceSetupDialog from '@/features/projects/components/setup/SourceSetupDialog';
 import CreateProjectDialog from '@/features/projects/components/create/CreateProjectDialog';
+import { GuideController } from '@/features/guide';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { PLATFORM_HOME } from '@/lib/workspace';
 import { usePlanQuery } from '@/queries/useBilling';
@@ -83,6 +84,7 @@ export default function AppLayout() {
         )}
         <SourceSetupDialog />
         <CreateProjectDialog />
+        <GuideController />
       </WorkspaceShell>
     </TenantAdminVisualContext.Provider>
   );

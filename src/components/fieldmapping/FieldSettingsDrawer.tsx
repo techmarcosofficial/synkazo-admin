@@ -15,7 +15,10 @@ import type {
   MappingUpdatePolicy,
   OnEmptyPolicy,
 } from './FieldMappingCanvas';
-import DataCleaningTab from './field-settings/DataCleaningTab';
+import DataCleaningTab, {
+  defaultCleaningSection,
+  type CleaningSection,
+} from './field-settings/DataCleaningTab';
 import EmptyValueTab from './field-settings/EmptyValueTab';
 import RecordMatchingTab from './field-settings/RecordMatchingTab';
 
@@ -35,13 +38,16 @@ import { validateRules } from '@/lib/ruleValidation';
 import { cn } from '@/lib/utils';
 import type { ExcludeCondition } from '@/types/conditions';
 
-export type FieldSettingsDrawerSize = 'compact' | 'default' | 'wide' | 'xl';
+export type FieldSettingsDrawerSize =
+  'compact' | 'default' | 'wide' | 'xl' | 'half';
 
 const DRAWER_SIZE_CLASSES: Record<FieldSettingsDrawerSize, string> = {
   compact: 'data-[side=right]:w-full data-[side=right]:sm:max-w-[480px]',
   default: 'data-[side=right]:w-full data-[side=right]:sm:max-w-2xl',
   wide: 'data-[side=right]:w-full data-[side=right]:sm:max-w-3xl',
   xl: 'data-[side=right]:w-full data-[side=right]:sm:max-w-2xl',
+  // Half the window, but never so narrow the side tabs and rules crowd.
+  half: 'data-[side=right]:w-full data-[side=right]:sm:max-w-[max(50vw,760px)]',
 };
 
 export type TargetDrawerSection =
@@ -105,7 +111,9 @@ export default function FieldSettingsDrawer({
   promptUpgrade,
   excludeCondition,
   targetSection = 'all',
-  size = 'xl',
+  projectId,
+  sourceObject,
+  size = 'half',
   className,
   onSave,
 }: FieldSettingsDrawerProps) {
@@ -121,6 +129,8 @@ export default function FieldSettingsDrawer({
   const [reverseDefaultValue, setReverseDefaultValue] = useState('');
   const [rules, setRules] = useState<Rule[]>([]);
   const [saveAttempted, setSaveAttempted] = useState(false);
+  const [cleaningSection, setCleaningSection] =
+    useState<CleaningSection>('applied');
 
   const validationErrors = useMemo(
     () => (saveAttempted ? validateRules(rules) : {}),
@@ -137,9 +147,13 @@ export default function FieldSettingsDrawer({
     setDefaultValue(mapping.destDefaults?.[destKey] ?? '');
     setReverseOnEmpty(mapping.destReverseOnEmpty?.[destKey] ?? 'none');
     setReverseDefaultValue(mapping.destReverseDefaults?.[destKey] ?? '');
-    setRules((mapping.destRules?.[destKey] ?? []) as Rule[]);
+    const savedRules = (mapping.destRules?.[destKey] ?? []) as Rule[];
+    setRules(savedRules);
+    setCleaningSection(defaultCleaningSection(savedRules, destFieldDef));
     setSaveAttempted(false);
     setActiveTab(TAB_FOR_SECTION[targetSection] ?? 'matching');
+    // Opened for this field only: later edits to its definition don't reset it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, mapping, destKey, targetSection]);
 
   if (!mapping || !destKey) return null;
@@ -148,6 +162,7 @@ export default function FieldSettingsDrawer({
     setSaveAttempted(true);
     if (Object.keys(validateRules(rules)).length > 0) {
       setActiveTab('cleaning');
+      setCleaningSection('applied');
       requestAnimationFrame(() => {
         document
           .querySelector<HTMLElement>(
@@ -212,7 +227,7 @@ export default function FieldSettingsDrawer({
                   className="bg-primary/15 text-primary gap-1 border-0 font-medium"
                 >
                   <KeyRound className="size-3" aria-hidden="true" />
-                  Match key
+                  Identifier
                 </Badge>
               )}
               {destFieldDef?.required && (
@@ -268,8 +283,8 @@ export default function FieldSettingsDrawer({
             </TabsList>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-            <div className="bg-card rounded-xl border px-4 py-4 sm:px-5">
+          <div className="bg-muted/20 min-h-0 flex-1 overflow-y-auto px-6 py-5">
+            <div>
               <TabsContent value="matching" data-field-settings-tab="matching">
                 <RecordMatchingTab
                   isMatch={isMatch}
@@ -287,6 +302,10 @@ export default function FieldSettingsDrawer({
                   validationErrors={validationErrors}
                   canUseTransforms={canUseTransforms}
                   onUpgradeRequired={() => promptUpgrade?.(UPGRADE_MESSAGE)}
+                  section={cleaningSection}
+                  onSectionChange={setCleaningSection}
+                  projectId={projectId}
+                  sourceObject={sourceObject}
                 />
               </TabsContent>
               <TabsContent value="empty" data-field-settings-tab="empty">

@@ -136,6 +136,7 @@ export default function PlatformCard({
                 variant={nextRequired ? 'default' : 'secondary'}
                 size="sm"
                 data-flow-next-action={nextRequired ? 'true' : undefined}
+                data-guide={nextRequired ? 'connect-next' : undefined}
                 className="w-full md:ml-auto md:w-auto"
                 onClick={() => canManage && onConnect(conn)}
                 disabled={!canManage || connectDisabled}

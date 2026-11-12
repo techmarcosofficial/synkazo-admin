@@ -130,7 +130,7 @@ export function FieldMappingDraftFooter({
       </div>
       <div className="flex items-center justify-end gap-2.5">
         <Button type="button" variant="outline" onClick={onDiscard} disabled={saving} className="bg-background/60 hover:bg-background border-border/80 dark:bg-background/30 dark:hover:bg-background/60 cursor-pointer shadow-2xs"><RotateCcw className="size-3.5" /> Discard changes</Button>
-        <Button onClick={onSave} disabled={saving} variant="default" className="cursor-pointer shadow-xs">{saving ? <Spinner /> : <Check className="size-3.5" />}{saving ? 'Saving...' : saved ? 'Saved!' : 'Save changes'}</Button>
+        <Button onClick={onSave} disabled={saving} variant="default" className="cursor-pointer shadow-xs" data-guide="mapping-save">{saving ? <Spinner /> : <Check className="size-3.5" />}{saving ? 'Saving...' : saved ? 'Saved!' : 'Save changes'}</Button>
       </div>
     </div>
   </div>;

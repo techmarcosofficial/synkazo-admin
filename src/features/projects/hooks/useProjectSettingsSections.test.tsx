@@ -16,8 +16,8 @@ function Probe() {
   return (
     <>
       <output data-testid="active-section">{activeSection.id}</output>
-      <output data-testid="schedule-locked">
-        {String(sections.find((section) => section.id === 'schedule')?.locked)}
+      <output data-testid="associations-locked">
+        {String(sections.find((section) => section.id === 'associations')?.locked)}
       </output>
       <output data-testid="search">{location.search}</output>
     </>
@@ -55,7 +55,7 @@ describe('project settings section navigation', () => {
     );
 
     expect(screen.getByTestId('active-section')).toHaveTextContent('general');
-    expect(screen.getByTestId('schedule-locked')).toHaveTextContent('true');
+    expect(screen.getByTestId('associations-locked')).toHaveTextContent('true');
     await waitFor(() => {
       expect(screen.getByTestId('search')).toHaveTextContent('section=general');
     });

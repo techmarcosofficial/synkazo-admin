@@ -6,7 +6,7 @@ import {
   type ProjectDetailContextValue,
 } from './context';
 import ProjectHeader from './ProjectHeader';
-import ProjectSetupProgress from './ProjectSetupProgress';
+import ProjectGuide from './ProjectGuide';
 import ProjectTabContent from './ProjectTabContent';
 import ProjectTabs from './ProjectTabs';
 
@@ -284,14 +284,12 @@ export default function ProjectDetailPage() {
           header={
             <Card className="gap-0 space-y-2 overflow-hidden py-0">
               <ProjectHeader />
-              {/* Tabs on the left; setup progress, until it's done, on the right. */}
-              <div className="flex flex-wrap items-center justify-between gap-x-3 px-4 md:flex-nowrap">
-                <div className="min-w-0 overflow-x-auto">
-                  {/* Settings is a regular tab and is never locked. */}
-                  <ProjectTabs tabs={tabs} />
-                </div>
-                <ProjectSetupProgress className="ml-auto pb-2 md:pb-0" />
+              <div className="min-w-0 overflow-x-auto px-4">
+                {/* Settings is a regular tab and is never locked. */}
+                <ProjectTabs tabs={tabs} />
               </div>
+              {/* First-run setup steps; only on the project the guide follows. */}
+              <ProjectGuide className="px-4" />
             </Card>
           }
         >

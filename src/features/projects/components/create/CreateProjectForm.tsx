@@ -20,6 +20,8 @@ import {
   FieldLabel,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { useGuideSpot, useGuideStore, type GuideSpot } from '@/features/guide';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useCreateProject, usePlatforms } from '@/features/projects/hooks';
 import { getUserFriendlyError } from '@/lib/errorMessages';
 import { showToast } from '@/lib/toast';
@@ -49,6 +51,46 @@ const CreateProjectForm = forwardRef<
   const syncMode = form.watch('syncMode') as
     '' | 'one_way' | 'two_way' | undefined;
 
+  // First-run guide: the ring walks the form in order as each part is filled.
+  // The name waits for a typing pause so the ring doesn't jump mid-word.
+  const guiding = useGuideStore((s) => s.status === 'active' && !s.projectId);
+  const settledName = useDebouncedValue(form.watch('name') ?? '', 700);
+  let guideSpot: GuideSpot | null = null;
+  if (guiding) {
+    if (!settledName.trim()) {
+      guideSpot = {
+        id: 'project-name',
+        target: '[data-guide="project-name"]',
+        title: 'Name your project',
+        body: 'Pick something your team will recognise, like the two systems it connects.',
+      };
+    } else if (!sourcePlatformId) {
+      guideSpot = {
+        id: 'project-source',
+        target: '[data-guide="project-source"]',
+        title: 'Choose where records come from',
+        body: 'Select your source platform. HubSpot is already set as the destination.',
+      };
+    } else if (!syncMode) {
+      guideSpot = {
+        id: 'project-sync-mode',
+        target: '[data-guide="project-sync-mode"]',
+        title: 'Choose the sync direction',
+        body: 'One way sends source records into HubSpot. Two way also writes HubSpot changes back.',
+      };
+    } else {
+      guideSpot = {
+        id: 'project-submit',
+        target: '[data-guide="project-submit"]',
+        title: 'Create the project',
+        body: "That's everything. Next, you'll connect both platforms.",
+      };
+    }
+  }
+  useGuideSpot(
+    guideSpot && { ...guideSpot, step: 'project', placement: 'top' },
+  );
+
   useEffect(() => {
     onSelectionChange?.({
       sourcePlatformId,
@@ -65,7 +107,7 @@ const CreateProjectForm = forwardRef<
       });
 
       form.reset();
-
+      showToast.success('Project created');
       onSuccess?.(project);
     } catch (err) {
       // Surface API failures (e.g. PLAN_LIMIT_PROJECTS) instead of failing silently.
@@ -110,7 +152,7 @@ const CreateProjectForm = forwardRef<
   return (
     <form onSubmit={submit} className="space-y-6">
       <FieldGroup className="grid gap-4 md:grid-cols-2">
-        <Field>
+        <Field data-guide="project-name">
           <FieldLabel htmlFor="name" required>
             Project Name
           </FieldLabel>
@@ -141,6 +183,7 @@ const CreateProjectForm = forwardRef<
         </Field>
       </FieldGroup>
 
+      <div data-guide="project-source">
       <PlatformPairField
         compact
         sourceValue={sourcePlatformId}
@@ -164,7 +207,9 @@ const CreateProjectForm = forwardRef<
         sourceError={form.formState.errors.sourcePlatformId?.message}
         destError={form.formState.errors.destPlatformId?.message}
       />
+      </div>
 
+      <div data-guide="project-sync-mode">
       <SyncModeField
         value={syncMode ?? ''}
         onChange={(value) =>
@@ -176,6 +221,7 @@ const CreateProjectForm = forwardRef<
         disabled={isLoading}
         error={form.formState.errors.syncMode?.message}
       />
+      </div>
     </form>
   );
 });

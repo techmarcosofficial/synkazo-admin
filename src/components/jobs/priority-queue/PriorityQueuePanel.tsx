@@ -46,6 +46,7 @@ import QueueScheduleCard, {
 } from './QueueScheduleCard';
 import QueueStatusPanel from './QueueStatusPanel';
 import SchedulerDraftFooter from './SchedulerDraftFooter';
+import SchedulerGuide from './SchedulerGuide';
 
 const EMPTY_QUEUE_JOBS: QueueJob[] = [];
 
@@ -300,11 +301,13 @@ export default function PriorityQueuePanel({
           )
         }
         schedule={
-          <QueueScheduleCard
-            queue={queue.queue}
-            value={schedule}
-            onChange={setScheduleDraft}
-          />
+          <div data-guide="queue-schedule">
+            <QueueScheduleCard
+              queue={queue.queue}
+              value={schedule}
+              onChange={setScheduleDraft}
+            />
+          </div>
         }
         status={
           <QueueStatusPanel
@@ -344,6 +347,7 @@ export default function PriorityQueuePanel({
                 setEditing(null);
                 setComposerOpen(true);
               }}
+              data-guide="scheduler-add-job"
             >
               <Plus /> Add job
             </Button>
@@ -447,6 +451,13 @@ export default function PriorityQueuePanel({
           {error}
         </p>
       )}
+      <SchedulerGuide
+        projectId={projectId}
+        priority={priority}
+        queuedJobs={localJobs.length + stagedJobs.length}
+        composerOpen={composerOpen}
+        hasChanges={hasChanges}
+      />
       <SchedulerDraftFooter
         dirty={hasChanges}
         saving={saving}

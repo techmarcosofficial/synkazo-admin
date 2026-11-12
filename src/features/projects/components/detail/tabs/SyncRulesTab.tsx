@@ -296,11 +296,12 @@ function SyncJobCard({
           variant={lifecycle.actionVariant}
           size="sm"
           data-flow-next-action={lifecycle.isActionable ? 'true' : undefined}
+          data-guide={`job-action-${job.id}`}
           data-attention={lifecycle.highlight ? 'true' : undefined}
           className={cn(
             lifecycle.actionVariant === 'default' && 'font-medium shadow-xs',
             lifecycle.highlight &&
-              'bg-(--brand-orange) text-white hover:bg-(--brand-orange)/90',
+              'bg-primary text-primary-foreground hover:bg-primary/90',
             lifecycle.actionVariant === 'outline' &&
               lifecycle.isActionable &&
               'border-primary/30 text-primary hover:bg-primary/5 font-medium',
@@ -386,6 +387,7 @@ export default function SyncRulesTab() {
               disabled={isBlockedByPermission}
               onClick={startCreateJob}
               data-flow-next-action={jobs.length === 0 ? 'true' : undefined}
+              data-guide="create-sync-job"
             >
               {canCreateJob && canAddJob ? <Plus /> : <Lock />}
               Create Sync Flow

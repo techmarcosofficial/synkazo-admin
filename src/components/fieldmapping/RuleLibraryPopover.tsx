@@ -27,7 +27,7 @@ import {
 } from '@/lib/ruleEngine';
 import { cn } from '@/lib/utils';
 
-const CATEGORY_ICONS: Record<
+export const CATEGORY_ICONS: Record<
   string,
   ComponentType<{ className?: string; style?: React.CSSProperties; 'aria-hidden'?: boolean | 'true' | 'false' }>
 > = {
@@ -82,7 +82,7 @@ export default function RuleLibraryPopover({
   }, []);
 
   const filteredRules = useMemo(() => {
-    let list = RULE_DEFINITIONS;
+    let list = RULE_DEFINITIONS.filter((r) => !r.legacy);
     if (selectedCategory !== 'all') {
       list = list.filter((r) => r.category === selectedCategory);
     }

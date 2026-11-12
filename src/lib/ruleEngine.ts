@@ -1,3 +1,9 @@
+import {
+  isValidationRule as isSharedValidationRule,
+  passesRuleValidation as sharedPassesValidation,
+  runTransformPipeline,
+} from './transformRules.shared';
+
 export interface RuleCategory {
   id: string;
   label: string;
@@ -10,6 +16,8 @@ export interface RuleDefinition {
   label: string;
   description: string;
   params?: string[];
+  /** Saved rules still load and show, but it isn't offered in the library. */
+  legacy?: boolean;
 }
 
 /** A configured rule instance in a pipeline */
@@ -44,23 +52,7 @@ export interface Rule {
   [key: string]: unknown;
 }
 
-const VALIDATION_RULES = new Set([
-  'min_length',
-  'max_length',
-  'is_string',
-  'is_number',
-  'is_email',
-  'is_phone',
-  'is_currency',
-  'is_boolean',
-  'is_date',
-  'is_empty',
-  'is_not_empty',
-]);
-
-export function isValidationRule(type: string): boolean {
-  return VALIDATION_RULES.has(type);
-}
+export { isValidationRule } from './transformRules.shared';
 
 export function previewSourceValue(
   input: string,
@@ -83,33 +75,7 @@ export function previewSourceValue(
 }
 
 export function passesRuleValidation(value: unknown, rule: Rule): boolean {
-  const v = String(value ?? '');
-  switch (rule.type) {
-    case 'min_length':
-      return v.length >= Number(rule.value);
-    case 'max_length':
-      return v.length <= Number(rule.value);
-    case 'is_string':
-      return typeof value === 'string';
-    case 'is_number':
-      return v.trim() !== '' && Number.isFinite(Number(v));
-    case 'is_email':
-      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-    case 'is_phone':
-      return /^\+?[\d\s().-]+$/.test(v) && v.replace(/\D/g, '').length >= 7;
-    case 'is_currency':
-      return /^[+-]?(?:[$€£₹]\s*)?\d+(?:,\d{3})*(?:\.\d{1,2})?$/.test(v.trim());
-    case 'is_boolean':
-      return typeof value === 'boolean' || /^(true|false|1|0)$/i.test(v.trim());
-    case 'is_date':
-      return v.trim() !== '' && !Number.isNaN(Date.parse(v));
-    case 'is_empty':
-      return v.trim() === '';
-    case 'is_not_empty':
-      return v.trim() !== '';
-    default:
-      return true;
-  }
+  return sharedPassesValidation(value, rule);
 }
 
 export const RULE_CATEGORIES: RuleCategory[] = [
@@ -231,28 +197,28 @@ export const RULE_DEFINITIONS: RuleDefinition[] = [
     type: 'char_limit',
     category: 'length',
     label: 'Character Limit',
-    description: 'Truncate to max characters',
+    description: 'Cut the value after N characters',
     params: ['value'],
   },
   {
     type: 'word_limit',
     category: 'length',
     label: 'Word Limit',
-    description: 'Truncate to max words',
+    description: 'Cut the value after N words',
     params: ['value'],
   },
   {
     type: 'min_length',
     category: 'length',
     label: 'Minimum Length',
-    description: 'Validate minimum character count',
+    description: 'Skip this field if it’s shorter than N characters',
     params: ['value'],
   },
   {
     type: 'max_length',
     category: 'length',
     label: 'Maximum Length',
-    description: 'Validate maximum character count',
+    description: 'Skip this field if it’s longer than N characters',
     params: ['value'],
   },
   // Validation
@@ -260,80 +226,89 @@ export const RULE_DEFINITIONS: RuleDefinition[] = [
     type: 'is_string',
     category: 'validation',
     label: 'Is String',
-    description: 'Assert value is a string',
+    description: 'Send only if it’s text; otherwise skip this field',
   },
   {
     type: 'is_number',
     category: 'validation',
     label: 'Is Number',
-    description: 'Assert value is numeric',
+    description: 'Send only if it’s a number; otherwise skip this field',
   },
   {
     type: 'is_email',
     category: 'validation',
     label: 'Is Email',
-    description: 'Assert value is a valid email',
+    description: 'Send only if it’s a valid email; otherwise skip this field',
   },
   {
     type: 'is_phone',
     category: 'validation',
     label: 'Is Phone',
-    description: 'Assert value is a valid phone number',
+    description: 'Send only if it’s a valid phone; otherwise skip this field',
   },
   {
     type: 'is_currency',
     category: 'validation',
     label: 'Is Price/Currency',
-    description: 'Assert value is a currency amount',
+    description: 'Send only if it’s a money amount; otherwise skip this field',
   },
   {
     type: 'is_boolean',
     category: 'validation',
     label: 'Is Boolean',
-    description: 'Assert value is true/false',
+    description: 'Send only if it’s true/false; otherwise skip this field',
   },
   {
     type: 'is_date',
     category: 'validation',
     label: 'Is Date',
-    description: 'Assert value is a valid date',
+    description: 'Send only if it’s a valid date; otherwise skip this field',
   },
   {
     type: 'is_empty',
     category: 'validation',
     label: 'Is Empty',
-    description: 'Assert value is empty',
+    description: 'Send only if it’s empty; otherwise skip this field',
   },
   {
     type: 'is_not_empty',
     category: 'validation',
     label: 'Is Not Empty',
-    description: 'Assert value is not empty',
+    description: 'Send only if it has a value; otherwise skip this field',
   },
   // Conditional / Skip
+  {
+    type: 'if_condition',
+    category: 'conditional',
+    label: 'If → Then',
+    description:
+      'Check the value (equals, contains, is empty…) and set a value or skip',
+    params: ['operator', 'thenAction'],
+  },
   {
     type: 'skip_if_equals',
     category: 'conditional',
     label: 'Skip If Equals',
-    description: 'Drop record from sync if field equals target value',
+    description: 'Don’t sync the record when the value equals this',
     params: ['value'],
   },
   {
     type: 'skip_if_contains',
     category: 'conditional',
     label: 'Skip If Contains',
-    description: 'Drop record from sync if field contains text',
+    description: 'Don’t sync the record when the value contains this',
     params: ['find'],
   },
   {
     type: 'replace_if_contains',
     category: 'conditional',
     label: 'Replace If Contains',
-    description: 'Replace value if it contains X',
+    description: 'Replace the whole value when it contains this',
     params: ['find', 'replacement'],
   },
   {
     type: 'if_starts_with',
+    legacy: true,
     category: 'conditional',
     label: 'If Starts With',
     description: 'Apply if value starts with text',
@@ -341,6 +316,7 @@ export const RULE_DEFINITIONS: RuleDefinition[] = [
   },
   {
     type: 'if_ends_with',
+    legacy: true,
     category: 'conditional',
     label: 'If Ends With',
     description: 'Apply if value ends with text',
@@ -348,6 +324,7 @@ export const RULE_DEFINITIONS: RuleDefinition[] = [
   },
   {
     type: 'if_matches_regex',
+    legacy: true,
     category: 'conditional',
     label: 'If Matches Regex',
     description: 'Apply if value matches pattern',
@@ -365,14 +342,14 @@ export const RULE_DEFINITIONS: RuleDefinition[] = [
     type: 'decimal_format',
     category: 'number',
     label: 'Decimal Format',
-    description: 'Format to N decimal places',
+    description: 'Show a number with a fixed number of decimals',
     params: ['decimals'],
   },
   {
     type: 'currency_format',
     category: 'number',
     label: 'Currency Format',
-    description: 'Format as currency string',
+    description: 'Format a number as money, like $1,234.50',
     params: ['currency'],
   },
   {
@@ -414,28 +391,28 @@ export const RULE_DEFINITIONS: RuleDefinition[] = [
     type: 'date_format',
     category: 'date',
     label: 'Date Format',
-    description: 'Convert date to format',
+    description: 'Rewrite a date in another format',
     params: ['format'],
   },
   {
     type: 'timezone',
     category: 'date',
     label: 'Timezone Convert',
-    description: 'Convert to target timezone',
+    description: 'Convert a date-time into another timezone',
     params: ['tz'],
   },
   {
     type: 'date_add',
     category: 'date',
     label: 'Add Days',
-    description: 'Add N days to date',
+    description: 'Move a date forward by N days',
     params: ['days'],
   },
   {
     type: 'date_subtract',
     category: 'date',
     label: 'Subtract Days',
-    description: 'Subtract N days from date',
+    description: 'Move a date back by N days',
     params: ['days'],
   },
   {
@@ -448,28 +425,28 @@ export const RULE_DEFINITIONS: RuleDefinition[] = [
   {
     type: 'split_by_space',
     category: 'split',
-    label: 'Split by Space',
-    description: 'Split value by whitespace',
+    label: 'Pick a Word',
+    description: 'Keep the Nth word (0 = first)',
     params: ['index'],
   },
   {
     type: 'split_by_delimiter',
     category: 'split',
     label: 'Split by Delimiter',
-    description: 'Split by custom delimiter',
+    description: 'Split on a character and keep the Nth part (0 = first)',
     params: ['delimiter', 'index'],
   },
   {
     type: 'first_value',
     category: 'split',
-    label: 'First Value',
-    description: 'Take the first part of a split',
+    label: 'First Word',
+    description: 'Keep only the first word',
   },
   {
     type: 'last_value',
     category: 'split',
-    label: 'Last Value',
-    description: 'Take the last part of a split',
+    label: 'Last Word',
+    description: 'Keep only the last word',
   },
   // Type Conversion
   {
@@ -569,195 +546,20 @@ export function suggestCastRule(
   return CASTS[key] ? { type: CASTS[key] } : null;
 }
 
-function applyRule(value: string, rule: Rule): string {
-  const v = String(value ?? '');
-  switch (rule.type) {
-    case 'skip_if_empty':
-      return v.trim() === '' ? '__SKIPPED__:empty' : v;
-    case 'skip_if_equals':
-      return v === String(rule.value ?? '')
-        ? `__SKIPPED__:equals:${rule.value}`
-        : v;
-    case 'skip_if_contains':
-      return v.includes(String(rule.find ?? ''))
-        ? `__SKIPPED__:contains:${rule.find}`
-        : v;
-    case 'trim':
-      return v.trim();
-    case 'remove_spaces':
-      return v.replace(/\s+/g, '');
-    case 'uppercase':
-      return v.toUpperCase();
-    case 'lowercase':
-      return v.toLowerCase();
-    case 'capitalize':
-      return v.replace(/\b\w/g, (c) => c.toUpperCase());
-    case 'replace':
-      return v.split(rule.find ?? '').join(rule.replacement ?? '');
-    case 'remove_text':
-      return v.split(rule.find ?? '').join('');
-    case 'prefix':
-      return (rule.value ?? '') + v;
-    case 'suffix':
-      return v + (rule.value ?? '');
-    case 'regex_replace': {
-      try {
-        return v.replace(
-          new RegExp(rule.pattern ?? '', 'g'),
-          rule.replacement ?? '',
-        );
-      } catch {
-        return v;
-      }
-    }
-    case 'remove_special':
-      return v.replace(/[^a-zA-Z0-9\s]/g, '');
-    case 'remove_numbers':
-      return v.replace(/[0-9]/g, '');
-    case 'remove_alpha':
-      return v.replace(/[a-zA-Z]/g, '');
-    case 'slug':
-      return v
-        .toLowerCase()
-        .trim()
-        .replace(/[\s_]+/g, '-')
-        .replace(/[^a-z0-9-]/g, '');
-    case 'extract_numbers':
-      return v.replace(/[^0-9]/g, '');
-    case 'extract_text':
-      return v.replace(/[^a-zA-Z]/g, '');
-    case 'char_limit':
-      return v.slice(0, parseInt(String(rule.value)) || 30);
-    case 'word_limit':
-      return v
-        .split(/\s+/)
-        .slice(0, parseInt(String(rule.value)) || 15)
-        .join(' ');
-    case 'default_if_empty':
-      return v.trim() === '' ? (rule.value ?? '') : v;
-    case 'replace_if_contains':
-      return v.includes(rule.find ?? '') ? (rule.replacement ?? '') : v;
-    case 'split_by_space': {
-      const parts = v.split(/\s+/);
-      const idx = parseInt(String(rule.index ?? 0));
-      return parts[idx] ?? v;
-    }
-    case 'split_by_delimiter': {
-      const parts = v.split(rule.delimiter ?? ',');
-      const idx = parseInt(String(rule.index ?? 0));
-      return parts[idx]?.trim() ?? v;
-    }
-    case 'first_value':
-      return v.split(/\s+/)[0] ?? v;
-    case 'last_value': {
-      const p = v.split(/\s+/);
-      return p[p.length - 1] ?? v;
-    }
-    case 'abs':
-      return String(Math.abs(parseFloat(v)) || v);
-    case 'math_add':
-      return String(
-        (parseFloat(v) || 0) + (parseFloat(String(rule.value)) || 0),
-      );
-    case 'math_subtract':
-      return String(
-        (parseFloat(v) || 0) - (parseFloat(String(rule.value)) || 0),
-      );
-    case 'math_multiply':
-      return String(
-        (parseFloat(v) || 0) * (parseFloat(String(rule.value)) || 1),
-      );
-    case 'math_divide': {
-      const divisor = parseFloat(String(rule.value));
-      return divisor ? String((parseFloat(v) || 0) / divisor) : v;
-    }
-    case 'round':
-      return String(
-        parseFloat(parseFloat(v).toFixed(parseInt(String(rule.decimals)) || 0)),
-      );
-    case 'timestamp_convert': {
-      const n = parseInt(v);
-      return n
-        ? new Date(n < 1e10 ? n * 1000 : n).toISOString().split('T')[0]
-        : v;
-    }
-    case 'string_to_number': {
-      const n = parseFloat(v);
-      return String(isNaN(n) ? 0 : n);
-    }
-    case 'number_to_string':
-      return String(parseFloat(v) || 0);
-    case 'string_to_boolean':
-      return String(
-        ['true', '1', 'yes', 'on'].includes(v.toLowerCase().trim()),
-      );
-    case 'boolean_to_string':
-      return v === 'true' || v === '1' ? 'true' : 'false';
-    case 'string_to_date': {
-      try {
-        const d = new Date(v);
-        return isNaN(d.getTime()) ? v : d.toISOString().split('T')[0];
-      } catch {
-        return v;
-      }
-    }
-    case 'date_to_string': {
-      try {
-        const d = new Date(v);
-        return isNaN(d.getTime()) ? v : d.toISOString().split('T')[0];
-      } catch {
-        return v;
-      }
-    }
-    case 'number_to_boolean':
-      return String(parseFloat(v) !== 0);
-    case 'boolean_to_number':
-      return v === 'true' || v === '1' ? '1' : '0';
-    case 'value_map': {
-      const map = (rule.map ?? {}) as Record<string, string>;
-      if (map[v] !== undefined) return map[v];
-      return rule.fallback != null && rule.fallback !== ''
-        ? String(rule.fallback)
-        : v;
-    }
-    case 'value_mapping': {
-      const norm = rule.normalization ?? {};
-      const normalize = (s: string): string => {
-        let out = s;
-        if (norm.replaceUnderscoreAndHyphenWithSpace)
-          out = out.replace(/[_-]+/g, ' ');
-        if (norm.trim) out = out.trim();
-        if (norm.lowercase) out = out.toLowerCase();
-        return out;
-      };
-      const fallback = () =>
-        rule.defaultValue != null ? String(rule.defaultValue) : v;
-      const key = normalize(v);
-      if (key === '') return fallback();
-      const map = (rule.map ?? {}) as Record<string, string>;
-      const normalizedMap = new Map(
-        Object.entries(map).map(([k, val]) => [normalize(k), val]),
-      );
-      return normalizedMap.has(key) ? normalizedMap.get(key)! : fallback();
-    }
-    default:
-      return v;
-  }
-}
-
+/**
+ * Runs a pipeline to a string, for previews. The rules themselves live in
+ * transformRules.shared.ts, the same file the API's sync uses. A failed
+ * check returns `__SKIPPED__:validation:<type>`; a skip rule
+ * `__SKIPPED__:<field|record>:<reason>`.
+ */
 export function executeRulePipeline(value: string, rules: Rule[] = []): string {
-  let current = value;
-  for (const rule of rules) {
-    if (rule.enabled === false) continue;
-    if (isValidationRule(rule.type)) {
-      if (!passesRuleValidation(current, rule))
-        return `__SKIPPED__:validation:${rule.type}`;
-      continue;
+  const result = runTransformPipeline(value, rules);
+  if (result.skip) {
+    const step = result.steps.find((s) => s.skip);
+    if (step && isSharedValidationRule(step.type)) {
+      return `__SKIPPED__:validation:${step.type}`;
     }
-    current = applyRule(current, rule);
-    if (current.startsWith('__SKIPPED__:')) {
-      return current;
-    }
+    return `__SKIPPED__:${result.skip.skip}:${result.skip.reason}`;
   }
-  return current;
+  return String(result.value ?? '');
 }

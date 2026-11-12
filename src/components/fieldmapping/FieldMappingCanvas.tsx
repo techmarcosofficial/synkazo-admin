@@ -51,6 +51,7 @@ import {
   SelectValue,
 } from '../ui/select';
 
+import IdentifierHelp from './IdentifierHelp';
 import AutoMapReviewDialog, {
   type AutoMapPreview,
   type AutoMapPreviewRow,
@@ -2366,6 +2367,7 @@ export default function FieldMappingCanvas({
             type="button"
             variant={isFirstTime ? 'outline' : 'default'}
             size={toolbarControlSize}
+            data-guide="add-mapping"
             onClick={() => {
               if (!canManualMap) {
                 promptUpgrade(MANUAL_MAPPING_UPGRADE_MESSAGE);
@@ -2757,12 +2759,14 @@ export default function FieldMappingCanvas({
 
             {/* Matched by: flexes to fill remaining width, chips scroll if crowded */}
             <section
-              className="flex min-w-0 flex-1 items-center gap-2"
+              className="flex min-w-0 flex-1 items-center gap-2 rounded-xl"
               aria-labelledby="matched-by-heading"
+              data-guide="identifier"
             >
               <div
                 className="flex shrink-0 items-center gap-1.5"
                 title="Fields used to uniquely identify records and match them between platforms"
+                data-guide="identifier-label"
               >
                 <KeyRound className="text-primary size-3.5" />
                 <h3
@@ -2771,6 +2775,7 @@ export default function FieldMappingCanvas({
                 >
                   Identifier
                 </h3>
+                <IdentifierHelp />
               </div>
 
               {activeMatches.length >= 2 && (
@@ -2912,7 +2917,11 @@ export default function FieldMappingCanvas({
                   setMatchActive(selected.sourceField, selected.destKey, true);
                 }}
               >
-                <SelectTrigger size="sm" className="w-36 shrink-0">
+                <SelectTrigger
+                  size="sm"
+                  className="w-36 shrink-0"
+                  data-guide="identifier-select"
+                >
                   <SelectValue
                     placeholder={
                       activeMatches.length === 0
@@ -2953,6 +2962,7 @@ export default function FieldMappingCanvas({
             <Button
               variant={isFirstTime ? 'default' : 'outline'}
               onClick={handleAutoMapClick}
+              data-guide="auto-map"
               size="sm"
               className="shrink-0"
               disabled={
@@ -3490,7 +3500,13 @@ export default function FieldMappingCanvas({
                         Destination field
                       </TableHead>
                       <TableHead className="text-foreground/80 dark:text-foreground/75 w-32 px-2 py-3 text-xs font-semibold">
-                        Identifier
+                        <span
+                          className="inline-flex items-center gap-1"
+                          data-guide="identifier-column"
+                        >
+                          Identifier
+                          <IdentifierHelp />
+                        </span>
                       </TableHead>
                       <TableHead className="text-foreground/80 dark:text-foreground/75 py-3 pr-4 pl-2 text-right text-xs font-semibold">
                         Actions
@@ -3825,6 +3841,7 @@ export default function FieldMappingCanvas({
                                   size="sm"
                                   className="text-muted-foreground hover:text-primary hover:bg-primary/10 border-border/70 hover:border-primary/40 h-7.5 shrink-0 cursor-pointer gap-1.5 rounded-lg border border-dashed px-2 text-xs font-medium opacity-0 transition-opacity group-hover/row:opacity-100"
                                   onClick={() => toggleMatch(m.sourceField, dk)}
+                                  data-guide="set-identifier"
                                   title="Set as identifier match key (will move to top on save)"
                                 >
                                   <KeyRound className="size-3.5" />

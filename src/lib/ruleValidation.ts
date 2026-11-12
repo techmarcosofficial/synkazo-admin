@@ -1,3 +1,4 @@
+import { VALUE_OPERATORS } from './transformRules.shared';
 import type { Rule } from './ruleEngine';
 
 export const REQUIRED_RULE_PARAMS: Record<string, string[]> = {
@@ -5,7 +6,8 @@ export const REQUIRED_RULE_PARAMS: Record<string, string[]> = {
   remove_text: ['find'],
   prefix: ['value'],
   suffix: ['value'],
-  regex_replace: ['pattern', 'replacement'],
+  // An empty replacement deletes what matches, so only the pattern is needed.
+  regex_replace: ['pattern'],
   char_limit: ['value'],
   word_limit: ['value'],
   min_length: ['value'],
@@ -36,6 +38,16 @@ export const REQUIRED_RULE_PARAMS: Record<string, string[]> = {
 
 export function validateRule(rule: Rule): string[] {
   if (rule.enabled === false) return [];
+  if (rule.type === 'if_condition') {
+    const missing: string[] = [];
+    const operator = String(rule.operator ?? '');
+    if (!operator) missing.push('operator');
+    else if (VALUE_OPERATORS.has(operator) && String(rule.value ?? '').trim() === '')
+      missing.push('value');
+    if (!['set', 'skip_field', 'skip_record', 'keep'].includes(String(rule.thenAction ?? '')))
+      missing.push('thenAction');
+    return missing;
+  }
   return (REQUIRED_RULE_PARAMS[rule.type] ?? []).filter((param) => {
     if (param === 'map') {
       const entries = Object.entries(rule.map ?? {});

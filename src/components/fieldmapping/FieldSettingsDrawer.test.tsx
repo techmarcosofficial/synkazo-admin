@@ -46,6 +46,10 @@ const save = () =>
   fireEvent.click(screen.getByRole('button', { name: /Save settings/ }));
 const openTab = (name: RegExp) =>
   userEvent.click(screen.getByRole('tab', { name }));
+const openSection = (name: string | RegExp) =>
+  userEvent.click(
+    screen.getByRole('button', { name: typeof name === 'string' ? new RegExp(`^${name}`) : name }),
+  );
 async function choose(label: string, option: string) {
   await userEvent.click(screen.getByRole('combobox', { name: label }));
   await userEvent.click(await screen.findByRole('option', { name: option }));
@@ -72,24 +76,29 @@ describe('FieldSettingsDrawer', () => {
   });
 
   it.each([
-    ['transforms', 'Data cleaning rules'],
-    ['skips', 'Data cleaning rules'],
+    // The field already has a rule, so Data Cleaning opens on Applied rules.
+    ['transforms', 'Applied rules'],
+    ['skips', 'Applied rules'],
     ['fallbacks', 'What happens when the value is empty?'],
     ['identity', 'How should records be matched?'],
   ] as const)(
     'opens the tab for targetSection=%s',
     (targetSection, heading) => {
       renderDrawer({ targetSection });
-      expect(screen.getByText(heading)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: heading })).toBeInTheDocument();
     },
   );
 
-  it('saves the match key and update policy', async () => {
+  it('saves the identifier and update policy', async () => {
     const { onSave, onOpenChange } = renderDrawer();
 
-    fireEvent.click(screen.getByRole('switch', { name: 'Use as match key' }));
-    expect(screen.getByText('Primary key')).toBeInTheDocument();
-    await choose('When a match is found', 'Only set when creating');
+    fireEvent.click(screen.getByRole('switch', { name: 'Use as identifier' }));
+    expect(
+      screen.getByText(/This field is the identifier/),
+    ).toBeInTheDocument();
+    await openSection('On existing records');
+    expect(screen.getByRole('radio', { name: 'Always overwrite' })).toBeChecked();
+    fireEvent.click(screen.getByRole('radio', { name: 'Create only' }));
     save();
 
     expect(onSave).toHaveBeenCalledWith(
@@ -106,6 +115,7 @@ describe('FieldSettingsDrawer', () => {
   it('turns quick settings into rules that show in Applied rules', async () => {
     const { onSave } = renderDrawer();
     await openTab(/Data Cleaning/);
+    await openSection('Quick cleanup');
 
     expect(
       screen.getByRole('switch', { name: 'Trim whitespace' }),
@@ -114,7 +124,8 @@ describe('FieldSettingsDrawer', () => {
     fireEvent.change(screen.getByLabelText('Maximum text length'), {
       target: { value: '80' },
     });
-    expect(screen.getByText('Applied rules')).toBeInTheDocument();
+    // Trim + uppercase + length limit are now three applied rules.
+    expect(screen.getByRole('button', { name: /^Applied rules/ })).toHaveTextContent('3');
 
     fireEvent.click(screen.getByRole('switch', { name: 'Trim whitespace' }));
     save();
@@ -131,9 +142,56 @@ describe('FieldSettingsDrawer', () => {
     });
     await openTab(/Data Cleaning/);
 
+    const quick = screen.queryByRole('button', { name: /^Quick cleanup/ });
+    if (quick) await userEvent.click(quick);
     expect(screen.queryByText('Trim whitespace')).not.toBeInTheDocument();
+  });
+
+  it('lists every rule in a category and adds one from it', async () => {
+    const { onSave } = renderDrawer();
+    await openTab(/Data Cleaning/);
+    await openSection('Text');
+
+    expect(screen.getByRole('heading', { name: 'Text rules' })).toBeInTheDocument();
+    // Trim is already applied, so it can't be added twice.
+    expect(screen.queryByRole('button', { name: 'Add Trim Spaces' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Add Uppercase' }));
+    // No input needed: stays on the category, now marked as added.
+    expect(screen.queryByRole('button', { name: 'Add Uppercase' })).not.toBeInTheDocument();
+
+    // A rule that needs a value jumps to Applied rules to fill it in.
+    fireEvent.click(screen.getByRole('button', { name: 'Add Add Prefix' }));
+    expect(screen.getByRole('heading', { name: 'Applied rules' })).toBeInTheDocument();
+    save();
+
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByText(/in 1 rule before saving/)).toBeInTheDocument();
+  }, 15000);
+
+  it('flashes Applied rules when a rule lands there from elsewhere', async () => {
+    renderDrawer();
+    await openTab(/Data Cleaning/);
+    await openSection('Text');
+    const applied = screen.getByRole('button', { name: /^Applied rules/ });
+    expect(applied.querySelector('.side-nav-flash')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Uppercase' }));
+    expect(applied.querySelector('.side-nav-flash')).not.toBeNull();
+    expect(applied).toHaveTextContent('2');
+
+    // "Added · View" jumps to where the rule now lives.
+    fireEvent.click(screen.getAllByRole('button', { name: /Added/ })[0]);
+    expect(screen.getByRole('heading', { name: 'Applied rules' })).toBeInTheDocument();
+  });
+
+  it('finds rules across categories by search', async () => {
+    renderDrawer();
+    await openTab(/Data Cleaning/);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Search rules' }), {
+      target: { value: 'timezone' },
+    });
     expect(
-      screen.getByRole('button', { name: /Add transformation rule/ }),
+      screen.getByRole('button', { name: 'Add Timezone Convert' }),
     ).toBeInTheDocument();
   });
 
@@ -165,7 +223,7 @@ describe('FieldSettingsDrawer', () => {
     expect(onSave).not.toHaveBeenCalled();
     expect(screen.getByText(/in 1 rule before saving/)).toBeInTheDocument();
     expect(screen.getByText('Value is required.')).toBeInTheDocument();
-    expect(screen.getByText('Data cleaning rules')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Applied rules' })).toBeInTheDocument();
   });
 
   it('saves the empty-value policy with its default', async () => {
@@ -187,12 +245,12 @@ describe('FieldSettingsDrawer', () => {
   it('shows and saves the reverse direction on two-way flows', async () => {
     const { onSave } = renderDrawer({ isTwoWay: true });
     await openTab(/Empty Value Policy/);
+    await openSection('Back to source');
 
     expect(screen.getByText('Reverse direction')).toBeInTheDocument();
-    const [, reverse] = screen.getAllByRole('combobox', {
-      name: 'Empty source value',
-    });
-    await userEvent.click(reverse);
+    await userEvent.click(
+      screen.getByRole('combobox', { name: 'Empty source value' }),
+    );
     await userEvent.click(
       await screen.findByRole('option', { name: 'Skip the record' }),
     );
@@ -211,6 +269,88 @@ describe('FieldSettingsDrawer', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(onSave).not.toHaveBeenCalled();
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+});
+
+describe('FieldSettingsDrawer live preview', () => {
+  it('shows what each rule does and what gets sent', async () => {
+    renderDrawer({
+      mapping: {
+        ...mapping,
+        destRules: {
+          email: [{ type: 'trim', enabled: true }, { type: 'lowercase', enabled: true }],
+        },
+      },
+    });
+    await openTab(/Data Cleaning/);
+
+    const input = screen.getByLabelText(/Try it/);
+    fireEvent.change(input, { target: { value: '  Jane@Acme.COM ' } });
+    const preview = screen.getByRole('region', { name: 'Try your rules' });
+    expect(preview).toHaveTextContent('Sent to HubSpot:jane@acme.com');
+    // Each card shows its own step.
+    expect(
+      screen.getAllByText('Jane@Acme.COM', { selector: 'span' }).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it('runs an If → Then rule and explains a skipped record', async () => {
+    renderDrawer({
+      mapping: {
+        ...mapping,
+        destRules: {
+          email: [
+            {
+              type: 'if_condition',
+              enabled: true,
+              operator: 'contains',
+              value: '@test.com',
+              thenAction: 'skip_record',
+            },
+          ],
+        },
+      },
+    });
+    await openTab(/Data Cleaning/);
+    expect(screen.getByText('If value')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/Try it/), {
+      target: { value: 'qa@test.com' },
+    });
+    expect(
+      screen.getByRole('region', { name: 'Try your rules' }),
+    ).toHaveTextContent('Record not synced');
+  });
+
+  it('converts an older If Starts With rule into a working If → Then', async () => {
+    const { onSave } = renderDrawer({
+      mapping: {
+        ...mapping,
+        destRules: {
+          email: [{ type: 'if_starts_with', enabled: true, value: '+1', action: 'US' }],
+        },
+      },
+    });
+    await openTab(/Data Cleaning/);
+    expect(screen.getByText(/never changed values/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Convert/ }));
+    save();
+
+    expect(onSave.mock.calls[0][0].rules).toEqual([
+      expect.objectContaining({
+        type: 'if_condition',
+        operator: 'starts_with',
+        value: '+1',
+        thenAction: 'set',
+        thenValue: 'US',
+      }),
+    ]);
+  });
+
+  it('shows a worked example for each rule in a category', async () => {
+    renderDrawer();
+    await openTab(/Data Cleaning/);
+    await openSection('Date & time');
+    expect(screen.getByText('Mar 15, 2024')).toBeInTheDocument();
   });
 });
 
