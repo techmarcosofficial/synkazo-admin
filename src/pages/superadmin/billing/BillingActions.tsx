@@ -61,7 +61,9 @@ export default function BillingActions({
   const providerLabel =
     planAccessSource === 'stripe_subscription'
       ? 'Stripe subscription'
-      : planAccessSource === 'manual_override'
+      : planAccessSource === 'razorpay_subscription'
+        ? 'Razorpay subscription'
+        : planAccessSource === 'manual_override'
         ? 'Super Admin assignment'
         : 'Free plan';
 

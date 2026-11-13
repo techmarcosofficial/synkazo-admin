@@ -438,7 +438,13 @@ export default function BillingOverviewTab() {
                 status={plan.subscriptionStatus}
                 billingInterval={plan.billingInterval}
                 currentPeriodEnd={renewalDate}
-                planAccessSource={hasSubscription ? 'stripe_subscription' : 'free'}
+                planAccessSource={
+                  !hasSubscription
+                    ? 'free'
+                    : plan.gateway === 'razorpay'
+                      ? 'razorpay_subscription'
+                      : 'stripe_subscription'
+                }
                 onChangePlan={() => setPlanSliderOpen((prev) => !prev)}
                 changePlanLabel={hasSubscription ? 'Change Plan' : 'Choose Plan'}
                 className="w-full"
@@ -461,7 +467,7 @@ export default function BillingOverviewTab() {
 
             {/* Upcoming billing card only and which card deduction info with manage card button top corner on it */}
             <div data-tour="manage-subscription" className="w-full">
-            <UpcomingBillingAndPaymentCard
+              <UpcomingBillingAndPaymentCard
               variant="tenant"
               plan={plan}
               renewalDate={renewalDate}
@@ -480,13 +486,18 @@ export default function BillingOverviewTab() {
                   variant: 'danger',
                   title: 'Cancel subscription?',
                   description:
-                    'You’ll keep full access until the end of your current billing period, then your account moves to the free tier. You can reactivate any time before then.',
+                    sub?.gateway === 'razorpay'
+                      ? 'You’ll keep full access until the end of your current billing period, then your account moves to the free tier. A cancelled Razorpay subscription can’t be resumed, but you can subscribe again at any time.'
+                      : 'You’ll keep full access until the end of your current billing period, then your account moves to the free tier. You can reactivate any time before then.',
                   confirmLabel: 'Cancel subscription',
                   cancelLabel: 'Keep subscription',
                   onConfirm: doCancel,
                 })
               }
-              onReactivateSubscription={doReactivate}
+              onReactivateSubscription={
+                sub?.gateway === 'razorpay' ? undefined : doReactivate
+              }
+              canManageCards={sub?.gateway !== 'razorpay'}
               isReactivating={reactivateSubscription.isPending}
               onCancelScheduledChange={doCancelScheduledChange}
               isCancellingScheduledChange={cancelScheduledChange.isPending}

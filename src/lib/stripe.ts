@@ -1,46 +1,55 @@
 import { loadStripe, type Stripe } from '@stripe/stripe-js';
+import { usePublicPaymentConfigQuery } from '@/queries/usePaymentGateways';
 
 /**
- * Lazily-loaded Stripe.js singleton for Elements. The publishable key is safe to expose
- * in the browser. Returns null if the key isn't configured so the checkout page can show a
- * clear "billing not configured" message instead of throwing.
+ * Stripe.js for Elements. The publishable key comes from `GET /billing/public-config` (Super
+ * Admin settings, falling back to the API's .env), so changing it needs no frontend rebuild.
+ * VITE_STRIPE_PUBLISHABLE_KEY is only used if that request fails.
  */
-const key = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string | undefined;
+const buildTimeKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as
+  string | undefined;
+const clients = new Map<string, Promise<Stripe | null>>();
+const NOT_CONFIGURED: Promise<Stripe | null> = Promise.resolve(null);
 
-export const stripePromise: Promise<Stripe | null> = key
-  ? loadStripe(key)
-  : Promise.resolve(null);
-
-export const isStripeConfigured = Boolean(key);
+export function useStripeClient(): {
+  stripePromise: Promise<Stripe | null>;
+  isStripeConfigured: boolean;
+  isLoading: boolean;
+} {
+  const config = usePublicPaymentConfigQuery();
+  const key = config.data
+    ? config.data.stripePublishableKey
+    : config.isError
+      ? (buildTimeKey ?? null)
+      : null;
+  if (!key)
+    return {
+      stripePromise: NOT_CONFIGURED,
+      isStripeConfigured: false,
+      isLoading: config.isLoading,
+    };
+  if (!clients.has(key)) clients.set(key, loadStripe(key));
+  return {
+    stripePromise: clients.get(key)!,
+    isStripeConfigured: true,
+    isLoading: false,
+  };
+}
 
 // Ensure the Stripe.js Testing Assistant and test autofill tools appear above modal dialog overlays
 if (typeof window !== 'undefined') {
   const elevateStripeWidgets = () => {
     try {
       const candidates = document.querySelectorAll<HTMLElement>(
-        'iframe[src*="stripe"], iframe[name*="stripe"], iframe[name*="__privateStripe"], [class*="stripe-assistant"], [id*="stripe-assistant"], [class*="marvin"], [id*="marvin"], body > [style*="bottom"][style*="right"]',
+        '[class*="stripe-assistant"], [id*="stripe-assistant"], [class*="marvin"], [id*="marvin"], body > iframe[src*="test-assistant"], body > [style*="bottom"][style*="right"]',
       );
       candidates.forEach((el) => {
-        if (
-          el.closest('#root') &&
-          !el.tagName.toLowerCase().includes('iframe')
-        ) {
+        // Never elevate normal Elements iframes inside the application root
+        if (el.closest('#root')) {
           return;
         }
         el.style.setProperty('z-index', '999999', 'important');
         el.style.setProperty('pointer-events', 'auto', 'important');
-        if (
-          el.parentElement &&
-          el.parentElement !== document.body &&
-          el.parentElement !== document.documentElement
-        ) {
-          el.parentElement.style.setProperty('z-index', '999999', 'important');
-          el.parentElement.style.setProperty(
-            'pointer-events',
-            'auto',
-            'important',
-          );
-        }
       });
     } catch {
       // Safe guard against closed shadow roots or cross-origin access

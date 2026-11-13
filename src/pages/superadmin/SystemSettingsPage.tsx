@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Flag, Gauge, Lock, Store, Webhook } from 'lucide-react';
+import { CreditCard, Flag, Gauge, Lock, Store, Webhook } from 'lucide-react';
 
 import FeatureFlagsCard from './FeatureFlagsCard';
 import HubspotWebhookSettingsCard from './HubspotWebhookSettingsCard';
@@ -7,16 +7,29 @@ import MarketplaceCatalogCard from './MarketplaceCatalogCard';
 import ScheduleAndTimeSettingsCard from './ScheduleAndTimeSettingsCard';
 import ManageAuthPagesCard from './ManageAuthPagesCard';
 import BillingRecoveryCard from './BillingRecoveryCard';
+import PaymentGatewaySettingsCard from './PaymentGatewaySettingsCard';
 
 import PageHeader from '@/components/shared/PageHeader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-type TabId = 'sync' | 'webhooks' | 'auth' | 'flags' | 'marketplace' | 'billing';
+type TabId =
+  | 'sync'
+  | 'webhooks'
+  | 'auth'
+  | 'flags'
+  | 'marketplace'
+  | 'billing'
+  | 'payments';
 
 export default function SystemSettingsPage() {
   const [activeTab, setActiveTab] = useState<TabId>('sync');
 
   const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
+    {
+      id: 'payments',
+      label: 'Payment Gateways',
+      icon: <CreditCard className="size-4" />,
+    },
     {
       id: 'billing',
       label: 'Billing Recovery',
@@ -58,7 +71,7 @@ export default function SystemSettingsPage() {
       <PageHeader
         backTo={{ label: 'Back to Super Admin', to: '/super-admin' }}
         title="Platform Settings"
-        description="Configure sync schedules, billing recovery, webhooks, authentication pages, feature flags, and marketplace catalog."
+        description="Configure sync schedules, payment gateways, billing recovery, webhooks, authentication pages, feature flags, and marketplace catalog."
       />
 
       <Tabs
@@ -80,6 +93,9 @@ export default function SystemSettingsPage() {
 
         <TabsContent value="sync" className="space-y-6">
           <ScheduleAndTimeSettingsCard />
+        </TabsContent>
+        <TabsContent value="payments">
+          <PaymentGatewaySettingsCard />
         </TabsContent>
         <TabsContent value="billing">
           <BillingRecoveryCard />

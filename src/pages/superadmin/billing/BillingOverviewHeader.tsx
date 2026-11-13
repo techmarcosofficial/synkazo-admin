@@ -44,7 +44,9 @@ export default function BillingOverviewHeader({
       ? 'Super Admin assignment'
       : plan.planAccessSource === 'stripe_subscription'
         ? 'Stripe subscription'
-        : 'Free plan';
+        : plan.planAccessSource === 'razorpay_subscription'
+          ? 'Razorpay subscription'
+          : 'Free plan';
 
   const intervalLabel =
     plan.billingInterval && plan.billingInterval.toLowerCase() === 'year'
@@ -53,7 +55,8 @@ export default function BillingOverviewHeader({
         ? 'Monthly'
         : plan.billingInterval
           ? plan.billingInterval
-          : plan.planAccessSource === 'stripe_subscription'
+          : plan.planAccessSource === 'stripe_subscription' ||
+              plan.planAccessSource === 'razorpay_subscription'
             ? 'Monthly'
             : 'None';
 

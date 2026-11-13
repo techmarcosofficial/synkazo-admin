@@ -144,6 +144,7 @@ export const queryKeys = {
       settings: ['superAdmin', 'billingRecovery', 'settings'] as const,
       status: ['superAdmin', 'billingRecovery', 'status'] as const,
     },
+    paymentGateways: ['superAdmin', 'paymentGateways'] as const,
     platform: {
       overview: ['superAdmin', 'platform', 'overview'] as const,
       failedPayments: (
@@ -388,6 +389,7 @@ export const queryKeys = {
   },
   billing: {
     all: ['billing'] as const,
+    publicConfig: ['billing', 'publicConfig'] as const,
     plan: ['billing', 'plan'] as const,
     usage: ['billing', 'usage'] as const,
     plans: (interval?: string) =>

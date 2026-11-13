@@ -67,7 +67,13 @@ export interface OverLimitSummary {
 export type BillingInterval = 'month' | 'year' | 'day';
 
 export interface PlanStatus {
-  planAccessSource?: 'free' | 'stripe_subscription' | 'manual_override';
+  planAccessSource?:
+    | 'free'
+    | 'stripe_subscription'
+    | 'razorpay_subscription'
+    | 'manual_override';
+  /** Gateway of the org's paid subscription (routes billing UI actions). */
+  gateway?: 'stripe' | 'razorpay';
   paymentHoldActive?: boolean;
   paymentHoldSince?: string | null;
   manualHoldReason?: string | null;
@@ -160,10 +166,43 @@ export interface SubscriptionDetail {
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
   defaultPaymentMethod: string | null;
+  /** Gateway this subscription lives on; Razorpay subscriptions have no saved Stripe card. */
+  gateway?: 'stripe' | 'razorpay';
   // A downgrade in progress — the current plan/price stays active until pendingPlanChangeAt.
   pendingPlanId: string | null;
   pendingPriceId: string | null;
   pendingPlanChangeAt: string | null;
+}
+
+// ── Razorpay (Checkout.js modal) ───────────────────────────────────────────────
+
+export interface RazorpayCheckoutSession {
+  gateway: 'razorpay';
+  subscriptionId: string;
+  keyId: string;
+  name: string;
+  email: string;
+  description: string;
+  trialDays: number;
+}
+
+/** Fields Razorpay Checkout passes to its success handler. */
+export interface RazorpayCheckoutResponse {
+  razorpay_payment_id: string;
+  razorpay_subscription_id: string;
+  razorpay_signature: string;
+}
+
+/** Razorpay plan changes are scheduled for the end of the current cycle (nothing due now). */
+export interface RazorpayPlanChangePreview {
+  gateway: 'razorpay';
+  currentPlanName: string;
+  newPlanName: string;
+  effectiveAt: string | null;
+  amountDueNow: 0;
+  newAmount: number;
+  currency: string;
+  billingInterval: BillingInterval;
 }
 
 // ── Upgrade/downgrade (checkout-confirmed plan changes) ────────────────────────
@@ -237,6 +276,8 @@ export interface HistoryItem {
 export interface AdminApiPrice extends ApiPrice {
   isActive: boolean;
   stripePriceId: string;
+  /** Null until synced to Razorpay; always null for daily prices (unsupported there). */
+  razorpayPlanId: string | null;
 }
 
 export interface AdminApiPlan {
@@ -318,6 +359,8 @@ export interface Coupon {
   expiresAt: string | null;
   isActive: boolean;
   stripeCouponId: string | null;
+  /** Dashboard-created Razorpay Offer used on Razorpay checkouts (offer_…). */
+  razorpayOfferId?: string | null;
   stripePromotionCodeId: string | null;
   createdAt: string;
 }
@@ -334,6 +377,7 @@ export interface CreateCouponRequest {
   applicablePlanIds?: string[];
   maxRedemptions?: number;
   maxRedemptionsPerOrg?: number;
+  razorpayOfferId?: string | null;
   expiresAt?: string;
 }
 
@@ -394,6 +438,8 @@ export interface DiscountRule {
   startsAt: string | null;
   endsAt: string | null;
   stripeCouponId: string | null;
+  /** Dashboard-created Razorpay Offer used on Razorpay checkouts (offer_…). */
+  razorpayOfferId?: string | null;
   createdAt: string;
 }
 
@@ -408,6 +454,7 @@ export interface CreateDiscountRuleRequest {
   duration?: CouponDuration;
   durationInMonths?: number;
   priority?: number;
+  razorpayOfferId?: string | null;
   startsAt?: string;
   endsAt?: string;
 }

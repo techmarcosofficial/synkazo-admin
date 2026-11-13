@@ -16,7 +16,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { getUserFriendlyError } from '@/lib/errorMessages';
-import { stripePromise, isStripeConfigured } from '@/lib/stripe';
+import { useStripeClient } from '@/lib/stripe';
 import { showToast } from '@/lib/toast';
 import {
   usePaymentMethodsQuery,
@@ -140,6 +140,7 @@ export function CardPicker({
   addDialogOpen,
   onAddDialogOpenChange,
 }: CardPickerProps) {
+  const { stripePromise, isStripeConfigured } = useStripeClient();
   const { data: cards, isLoading, isError, refetch } = usePaymentMethodsQuery();
   const setDefault = useSetDefaultPaymentMethodMutation();
   const remove = useRemovePaymentMethodMutation();

@@ -12,14 +12,19 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { isStripeConfigured } from '@/lib/stripe';
+import { useStripeClient } from '@/lib/stripe';
+import { useSubscriptionQuery } from '@/queries/useBilling';
 
 export default function PaymentMethodsTab({
   defaultAddingCard = false,
 }: {
   defaultAddingCard?: boolean;
 } = {}) {
+  const { isStripeConfigured } = useStripeClient();
+  const { data: sub } = useSubscriptionQuery();
   const [isAdding, setIsAdding] = useState(defaultAddingCard);
+  // Razorpay keeps the card on its own recurring mandate; there are no saved Stripe cards.
+  const razorpay = sub?.gateway === 'razorpay';
 
   return (
     <Card>
@@ -35,7 +40,7 @@ export default function PaymentMethodsTab({
             </CardDescription>
           </div>
 
-          {isStripeConfigured && (
+          {isStripeConfigured && !razorpay && (
             <CardAction className="m-0">
               {isAdding ? (
                 <Button
@@ -63,11 +68,20 @@ export default function PaymentMethodsTab({
       </CardHeader>
 
       <CardContent>
-        <CardPicker
-          mode="manage"
-          addDialogOpen={isAdding}
-          onAddDialogOpenChange={setIsAdding}
-        />
+        {razorpay ? (
+          <p className="text-muted-foreground text-sm">
+            Your card is held securely by Razorpay for this subscription. To pay
+            with a different card, cancel and subscribe again with the new card
+            once the current period ends, or contact support if a payment is
+            failing.
+          </p>
+        ) : (
+          <CardPicker
+            mode="manage"
+            addDialogOpen={isAdding}
+            onAddDialogOpenChange={setIsAdding}
+          />
+        )}
       </CardContent>
     </Card>
   );

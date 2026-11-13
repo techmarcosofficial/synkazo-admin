@@ -6,25 +6,35 @@ import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { ChangePlanUpgradeForm } from './ChangePlanUpgradeForm';
 import { CheckoutForm } from './CheckoutForm';
 import { OrderSummary } from './OrderSummary';
+import {
+  RazorpayChangePlanForm,
+  RazorpayCheckoutForm,
+} from './RazorpayCheckoutForm';
 
 import { useTheme } from '@/components/theme-provider';
 import HeadingPair from '@/components/shared/HeadingPair';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { clearPendingPlan, savePendingPlan } from '@/lib/pendingPlan';
-import { stripePromise, isStripeConfigured } from '@/lib/stripe';
+import { useStripeClient } from '@/lib/stripe';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import {
   usePlansQuery,
   useRefreshPlanMutation,
   useSubscriptionQuery,
 } from '@/queries/useBilling';
+import { usePublicPaymentConfigQuery } from '@/queries/usePaymentGateways';
 import type { ApiPlan, ApiPrice, BillingInterval, PlanId } from '@/types';
 import { PageLoader } from '@/components/ui/brand-loader';
 
 const ACTIVE_SUB_STATUSES = new Set(['active', 'trialing']);
 
 export default function CheckoutPage() {
+  const {
+    stripePromise,
+    isStripeConfigured,
+    isLoading: stripeLoading,
+  } = useStripeClient();
   const [params] = useSearchParams();
   const navigate = useNavigate();
   // Applied promo code, owned here so the summary (which collects it) and the form (which
@@ -39,6 +49,7 @@ export default function CheckoutPage() {
   const { currentUser } = useSynkazoAuth();
   const refreshPlan = useRefreshPlanMutation();
   const subQuery = useSubscriptionQuery({ enabled: !!currentUser });
+  const paymentConfig = usePublicPaymentConfigQuery();
   const { theme } = useTheme();
   const isDark =
     theme === 'dark' ||
@@ -114,6 +125,15 @@ export default function CheckoutPage() {
   const showChangePlanFormRef = useRef(false);
   if (isChangingPlan) showChangePlanFormRef.current = true;
   const showChangePlanForm = showChangePlanFormRef.current;
+  // New subscriptions use the active gateway; a plan change stays on the subscription's own.
+  const razorpayNewCheckout = paymentConfig.data?.activeGateway === 'razorpay';
+  const razorpayPlanChange = subQuery.data?.gateway === 'razorpay';
+  const needsStripe = showChangePlanForm
+    ? !razorpayPlanChange
+    : !razorpayNewCheckout;
+  const gatewayMissing = needsStripe
+    ? !isStripeConfigured
+    : !paymentConfig.data?.razorpayKeyId;
 
   // Not logged in → remember the pick and send them through registration first. Day-interval
   // plans aren't part of this anonymous resume flow (super_admin-only, never reached without
@@ -128,7 +148,7 @@ export default function CheckoutPage() {
     return <Navigate to="/register" replace />;
   }
 
-  if (!isStripeConfigured) {
+  if (!stripeLoading && !paymentConfig.isLoading && gatewayMissing) {
     return (
       <Shell>
         <p className="text-muted-foreground">
@@ -139,12 +159,30 @@ export default function CheckoutPage() {
     );
   }
 
-  if (isRedirecting || plansQuery.isLoading || subQuery.isLoading) {
+  if (
+    isRedirecting ||
+    stripeLoading ||
+    paymentConfig.isLoading ||
+    plansQuery.isLoading ||
+    subQuery.isLoading
+  ) {
     return (
       <PageLoader
         label={isRedirecting ? 'Redirecting to checkout' : 'Loading checkout'}
       />
     );
+  }
+
+  // Users with an active paid plan should never be redirected to checkout automatically.
+  // Only allow checkout if they need to purchase a plan or are actively executing a plan change.
+  if (
+    hasActiveSub &&
+    !isChangingPlan &&
+    !showChangePlanForm &&
+    !isRedirecting
+  ) {
+    clearPendingPlan();
+    return <Navigate to={safeRedirect ?? '/dashboard'} replace />;
   }
 
   if (!resolved) {
@@ -231,10 +269,25 @@ export default function CheckoutPage() {
               }
             />
             {showChangePlanForm ? (
-              <ChangePlanUpgradeForm
+              razorpayPlanChange ? (
+                <RazorpayChangePlanForm
+                  price={price}
+                  onSuccess={onPurchaseSuccess}
+                />
+              ) : (
+                <ChangePlanUpgradeForm
+                  plan={plan}
+                  price={price}
+                  onSuccess={onPurchaseSuccess}
+                />
+              )
+            ) : razorpayNewCheckout ? (
+              <RazorpayCheckoutForm
                 plan={plan}
                 price={price}
                 onSuccess={onPurchaseSuccess}
+                couponCode={couponCode}
+                onCouponRejected={() => setCouponCode(undefined)}
               />
             ) : (
               <Elements
@@ -244,7 +297,28 @@ export default function CheckoutPage() {
                   amount: price.amount,
                   currency: price.currency,
                   paymentMethodCreation: 'manual',
-                  appearance: { theme: isDark ? 'night' : 'stripe' },
+                  appearance: {
+                    theme: isDark ? 'night' : 'stripe',
+                    variables: {
+                      colorPrimary: '#f85508',
+                      colorBackground: isDark ? '#18191d' : '#ffffff',
+                      colorText: isDark ? '#f3f4f6' : '#131418',
+                      colorDanger: '#db4437',
+                      fontFamily: 'Inter, system-ui, sans-serif',
+                      borderRadius: '12px',
+                      spacingUnit: '4px',
+                    },
+                    rules: {
+                      '.Input': {
+                        backgroundColor: isDark ? '#1f2026' : '#ffffff',
+                        boxShadow: 'none',
+                      },
+                      '.Input:focus': {
+                        borderColor: '#f85508',
+                        boxShadow: '0 0 0 1px #f85508',
+                      },
+                    },
+                  },
                 }}
               >
                 <CheckoutForm

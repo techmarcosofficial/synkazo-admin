@@ -3,6 +3,9 @@ import { createIdempotencyKey } from '@/lib/idempotency';
 
 import type {
   PlanStatus,
+  RazorpayCheckoutResponse,
+  RazorpayCheckoutSession,
+  RazorpayPlanChangePreview,
   UsageSummary,
   BillingInterval,
   ApiPlan,
@@ -78,6 +81,29 @@ export const billingApi = {
     req: EmbeddedCheckoutRequest,
   ): Promise<EmbeddedCheckoutResult> =>
     apiClient.post('/billing/checkout/embedded', req).then(d),
+
+  razorpayCheckout: (req: {
+    priceId: string;
+    couponCode?: string;
+  }): Promise<RazorpayCheckoutSession> =>
+    apiClient.post('/billing/razorpay/checkout', req).then(d),
+
+  razorpayVerify: (
+    res: RazorpayCheckoutResponse,
+  ): Promise<{ status: string }> =>
+    apiClient
+      .post('/billing/razorpay/verify', {
+        razorpayPaymentId: res.razorpay_payment_id,
+        razorpaySubscriptionId: res.razorpay_subscription_id,
+        razorpaySignature: res.razorpay_signature,
+      })
+      .then(d),
+
+  // Same endpoint as previewUpgrade; a Razorpay org gets the cycle-end shape.
+  previewRazorpayPlanChange: (req: {
+    priceId: string;
+  }): Promise<RazorpayPlanChangePreview> =>
+    apiClient.post('/billing/subscription/upgrade/preview', req).then(d),
 
   openPortal: (): Promise<{ url: string }> =>
     apiClient.post('/billing/portal').then(d),

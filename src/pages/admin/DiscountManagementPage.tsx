@@ -124,6 +124,7 @@ interface CouponForm {
   maxRedemptions: string;
   maxRedemptionsPerOrg: string;
   expiresAt: string;
+  razorpayOfferId: string;
 }
 
 const emptyForm = (): CouponForm => ({
@@ -138,6 +139,7 @@ const emptyForm = (): CouponForm => ({
   maxRedemptions: '',
   maxRedemptionsPerOrg: '1',
   expiresAt: '',
+  razorpayOfferId: '',
 });
 
 /**
@@ -182,6 +184,7 @@ function CouponDialog({ coupon }: { coupon?: Coupon }) {
               maxRedemptions: coupon.maxRedemptions?.toString() ?? '',
               maxRedemptionsPerOrg: String(coupon.maxRedemptionsPerOrg),
               expiresAt: coupon.expiresAt ? coupon.expiresAt.slice(0, 10) : '',
+              razorpayOfferId: coupon.razorpayOfferId ?? '',
             }
           : emptyForm(),
       );
@@ -223,6 +226,7 @@ function CouponDialog({ coupon }: { coupon?: Coupon }) {
       ...(form.expiresAt
         ? { expiresAt: new Date(`${form.expiresAt}T23:59:59`).toISOString() }
         : {}),
+      razorpayOfferId: form.razorpayOfferId.trim() || null,
     };
 
     try {
@@ -452,6 +456,19 @@ function CouponDialog({ coupon }: { coupon?: Coupon }) {
                 onChange={(e) => set('expiresAt', e.target.value)}
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="coupon-razorpay-offer">Razorpay Offer ID</Label>
+              <Input
+                id="coupon-razorpay-offer"
+                placeholder="offer_…"
+                value={form.razorpayOfferId}
+                onChange={(e) => set('razorpayOfferId', e.target.value)}
+              />
+              <p className="text-muted-foreground text-xs">
+                Needed for Razorpay checkouts. Create the matching offer in
+                Razorpay Dashboard → Offers, then paste its ID.
+              </p>
+            </div>
           </div>
         </div>
 
@@ -572,6 +589,7 @@ interface RuleForm {
   duration: CouponDuration;
   durationInMonths: string;
   priority: string;
+  razorpayOfferId: string;
 }
 
 const ANY_PLAN = '__any__';
@@ -587,6 +605,7 @@ const emptyRuleForm = (): RuleForm => ({
   duration: 'once',
   durationInMonths: '3',
   priority: '0',
+  razorpayOfferId: '',
 });
 
 /**
@@ -630,6 +649,7 @@ function RuleDialog({ rule }: { rule?: DiscountRule }) {
               duration: rule.duration,
               durationInMonths: String(rule.durationInMonths ?? 3),
               priority: String(rule.priority),
+              razorpayOfferId: rule.razorpayOfferId ?? '',
             }
           : emptyRuleForm(),
       );
@@ -670,6 +690,7 @@ function RuleDialog({ rule }: { rule?: DiscountRule }) {
         ? { durationInMonths: Number(form.durationInMonths) || 1 }
         : {}),
       priority: Number(form.priority) || 0,
+      razorpayOfferId: form.razorpayOfferId.trim() || null,
     };
 
     try {
@@ -890,6 +911,19 @@ function RuleDialog({ rule }: { rule?: DiscountRule }) {
                 onChange={(e) => set('priority', e.target.value)}
               />
               <p className="text-muted-foreground text-xs">Higher wins.</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="rule-razorpay-offer">Razorpay Offer ID</Label>
+              <Input
+                id="rule-razorpay-offer"
+                placeholder="offer_…"
+                value={form.razorpayOfferId}
+                onChange={(e) => set('razorpayOfferId', e.target.value)}
+              />
+              <p className="text-muted-foreground text-xs">
+                Needed for Razorpay checkouts. Create the matching offer in
+                Razorpay Dashboard → Offers, then paste its ID.
+              </p>
             </div>
           </div>
         </div>

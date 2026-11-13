@@ -96,8 +96,11 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@/lib/stripe', () => ({
-  isStripeConfigured: true,
-  stripePromise: Promise.resolve(null),
+  useStripeClient: () => ({
+    isStripeConfigured: true,
+    stripePromise: Promise.resolve(null),
+    isLoading: false,
+  }),
 }));
 
 vi.mock('@/queries/useBilling', () => ({

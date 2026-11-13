@@ -237,7 +237,7 @@ export function CheckoutForm({
     <div className="space-y-5">
       <div className="space-y-2">
         <Label required>Billing name &amp; address</Label>
-        <div className="border-border bg-muted/40 rounded-2xl border p-3">
+        <div className="border-border bg-card text-card-foreground relative isolate rounded-2xl border p-4 shadow-2xs">
           <AddressElement
             options={{ mode: 'billing', autocomplete: { mode: 'automatic' } }}
             onChange={handleAddressChange}
@@ -310,7 +310,7 @@ export function CheckoutForm({
             )}
 
             {selectedId === NEW_CARD && (
-              <div className="border-border bg-muted/40 rounded-2xl border p-3">
+              <div className="border-border bg-card text-card-foreground relative isolate rounded-2xl border p-4 shadow-2xs">
                 <PaymentElement options={{ layout: 'tabs' }} />
               </div>
             )}

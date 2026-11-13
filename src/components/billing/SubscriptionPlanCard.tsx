@@ -264,14 +264,17 @@ export default function SubscriptionPlanCard({
         ? 'Monthly'
         : billingInterval
           ? billingInterval
-          : planAccessSource === 'stripe_subscription'
+          : planAccessSource === 'stripe_subscription' ||
+              planAccessSource === 'razorpay_subscription'
             ? 'Monthly'
             : 'None';
 
   const providerLabel =
     planAccessSource === 'stripe_subscription'
       ? 'Stripe'
-      : planAccessSource === 'manual_override'
+      : planAccessSource === 'razorpay_subscription'
+        ? 'Razorpay'
+        : planAccessSource === 'manual_override'
         ? 'Internal Override'
         : 'Free Tier';
 

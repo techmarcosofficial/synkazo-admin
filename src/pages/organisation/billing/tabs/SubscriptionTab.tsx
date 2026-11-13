@@ -62,6 +62,8 @@ export default function SubscriptionTab() {
 
   const pendingCancel =
     sub.cancelAtPeriodEnd || sub.status === 'pending_cancel';
+  // A Razorpay cancellation can't be undone (no reactivate); they subscribe again instead.
+  const razorpay = sub.gateway === 'razorpay';
 
   const doCancelScheduledChange = async () => {
     try {
@@ -104,13 +106,16 @@ export default function SubscriptionTab() {
             <div className="border-warning/30 bg-warning/10 flex items-center justify-between rounded-3xl border p-4">
               <p className="text-warning text-sm">
                 Your subscription is scheduled to cancel at the period end.
+                {razorpay && ' You can subscribe again once it ends.'}
               </p>
-              <Button onClick={doReactivate} disabled={reactivate.isPending}>
-                {reactivate.isPending && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Reactivate
-              </Button>
+              {!razorpay && (
+                <Button onClick={doReactivate} disabled={reactivate.isPending}>
+                  {reactivate.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Reactivate
+                </Button>
+              )}
             </div>
           ) : (
             <Button
@@ -119,8 +124,9 @@ export default function SubscriptionTab() {
                 confirm({
                   variant: 'danger',
                   title: 'Cancel subscription?',
-                  description:
-                    'You’ll keep full access until the end of your current billing period, then your account moves to the free tier. You can reactivate any time before then.',
+                  description: razorpay
+                    ? 'You’ll keep full access until the end of your current billing period, then your account moves to the free tier. A cancelled Razorpay subscription can’t be resumed, but you can subscribe again at any time.'
+                    : 'You’ll keep full access until the end of your current billing period, then your account moves to the free tier. You can reactivate any time before then.',
                   confirmLabel: 'Cancel subscription',
                   cancelLabel: 'Keep subscription',
                   onConfirm: doCancel,

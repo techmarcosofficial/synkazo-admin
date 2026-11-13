@@ -13,7 +13,7 @@ import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getUserFriendlyError } from '@/lib/errorMessages';
-import { stripePromise, isStripeConfigured } from '@/lib/stripe';
+import { useStripeClient } from '@/lib/stripe';
 import { showToast } from '@/lib/toast';
 import {
   useUpgradeMutation,
@@ -59,6 +59,7 @@ export function ChangePlanUpgradeForm({
   price,
   onSuccess,
 }: ChangePlanFormProps) {
+  const { stripePromise, isStripeConfigured } = useStripeClient();
   if (!isStripeConfigured) return null;
   return (
     <Elements

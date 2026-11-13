@@ -321,7 +321,12 @@ export interface SuperAdminRunStatus {
 
 export interface SuperAdminBillingOverview {
   plan: {
-    planAccessSource?: 'free' | 'stripe_subscription' | 'manual_override';
+    planAccessSource?:
+      | 'free'
+      | 'stripe_subscription'
+      | 'razorpay_subscription'
+      | 'manual_override';
+    gateway?: 'stripe' | 'razorpay';
     pastDueStartedAt?: string | null;
     paymentHoldActive?: boolean;
     planId: string | null;

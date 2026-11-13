@@ -814,6 +814,18 @@ function PriceGroup({
                 </Badge>
               )}
               <CopyPriceIdButton priceId={price.stripePriceId} />
+              {price.isActive && price.billingInterval !== 'day' && (
+                <Badge
+                  size="xs"
+                  tone={price.razorpayPlanId ? 'success' : 'warning'}
+                  title={
+                    price.razorpayPlanId ??
+                    'Not synced to Razorpay yet. Use Platform Settings → Payment Gateways → Sync plans to Razorpay.'
+                  }
+                >
+                  {price.razorpayPlanId ? 'Razorpay' : 'Not on Razorpay'}
+                </Badge>
+              )}
               <span className="text-muted-foreground ml-auto flex shrink-0 items-center gap-1 text-xs">
                 {!price.isActive && loadingPriceId === price.id && (
                   <Loader2 className="size-3 animate-spin" />
@@ -923,19 +935,26 @@ function ToggleCard({
 // One unified 4-step wizard used for both creating and editing a plan (replaces the old
 // CreatePlanDialog / EditPlanDialog / FeaturesDialog split). Create mode is strictly
 // sequential; edit mode also allows clicking any step circle to jump directly to it.
-const PLAN_FORM_STEP_LABELS = [
+const CREATE_PLAN_STEP_LABELS = [
   'Basics & Marketing',
   'Limits & Sync Scope',
   'Capabilities & Trial',
-  'Price',
 ];
-const PLAN_FORM_TOTAL_STEPS = PLAN_FORM_STEP_LABELS.length;
+const EDIT_PLAN_STEP_LABELS = [
+  'Basics & Marketing',
+  'Limits & Sync Scope',
+  'Capabilities & Trial',
+  'Prices',
+];
 
 function PlanFormDialog(
   props: { mode: 'create' } | { mode: 'edit'; plan: AdminApiPlan },
 ) {
   const { mode } = props;
   const plan = mode === 'edit' ? props.plan : undefined;
+  const stepLabels =
+    mode === 'create' ? CREATE_PLAN_STEP_LABELS : EDIT_PLAN_STEP_LABELS;
+  const totalSteps = stepLabels.length;
 
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(1);
@@ -956,26 +975,16 @@ function PlanFormDialog(
   );
   // Create mode: keys the admin picks to lock permanently once the plan is published.
   const [lockedKeys, setLockedKeys] = useState<Set<string>>(new Set());
-  const [priceAmount, setPriceAmount] = useState('');
-  const [priceAmountError, setPriceAmountError] = useState<string | null>(null);
-  const [priceInterval, setPriceInterval] = useState<BillingInterval>('month');
-  const [priceDiscount, setPriceDiscount] = useState('');
-  // Prices staged in step 4, not yet submitted — entirely optional, any number can be queued.
-  const [stagedPrices, setStagedPrices] = useState<
-    { amount: string; interval: BillingInterval; discount: string }[]
-  >([]);
   const [loadingPriceId, setLoadingPriceId] = useState<string | null>(null);
 
   const create = useCreatePlanMutation();
   const update = useUpdatePlanMutation();
   const updateFeatures = useUpdateFeaturesMutation();
-  const addPrice = useAddPriceMutation();
   const updatePrice = useUpdatePriceMutation();
   const isPending =
     create.isPending ||
     update.isPending ||
-    updateFeatures.isPending ||
-    addPrice.isPending;
+    updateFeatures.isPending;
 
   // Edit mode: keys already locked at a prior publish — disabled + badged, can't be changed here.
   const existingLockedKeys = useMemo(
@@ -987,11 +996,6 @@ function PlanFormDialog(
     if (next) {
       setStep(1);
       setNameError(null);
-      setPriceAmount('');
-      setPriceAmountError(null);
-      setPriceInterval('month');
-      setPriceDiscount('');
-      setStagedPrices([]);
       if (mode === 'edit' && plan) {
         setName(plan.name);
         setDescription(plan.description ?? '');
@@ -1055,7 +1059,7 @@ function PlanFormDialog(
       setNameError('Plan name is required.');
       return;
     }
-    setStep(Math.min(PLAN_FORM_TOTAL_STEPS, Math.max(1, target)));
+    setStep(Math.min(totalSteps, Math.max(1, target)));
   };
 
   const buildFeaturesPayload = (): Record<string, string> => ({
@@ -1069,72 +1073,6 @@ function PlanFormDialog(
     [MARKETING_FEATURES_KEY]: linesToValue(marketingFeatures),
   });
 
-  // Edit mode: the plan already exists, so "Add" saves the price immediately (same
-  // request AddPriceDialog on the card makes) instead of silently queuing it behind
-  // the wizard's final Save — queuing it was the bug: closing the dialog, navigating
-  // away, or a later step's Save failing (e.g. a feature-lock conflict) would discard
-  // an "added" price the admin already believed was saved. Create mode still has no
-  // plan id to attach a price to, so it has no choice but to queue until the plan
-  // itself is created.
-  const handleAddPrice = async () => {
-    const dollars = Number(priceAmount);
-    if (!priceAmount.trim() || !Number.isFinite(dollars) || dollars < 0) {
-      setPriceAmountError('Enter a valid price amount.');
-      return;
-    }
-    if (mode === 'edit' && plan) {
-      try {
-        await addPrice.mutateAsync({
-          id: plan.id,
-          body: {
-            amount: Math.round(dollars * 100), // dollars → cents
-            billingInterval: priceInterval,
-            discountPercent: priceDiscount.trim()
-              ? Number(priceDiscount)
-              : null,
-          },
-        });
-        showToast.success('Price added.');
-      } catch (err) {
-        showToast.error(getUserFriendlyError(err as never));
-        return;
-      }
-    } else {
-      setStagedPrices((prev) => [
-        ...prev,
-        {
-          amount: priceAmount,
-          interval: priceInterval,
-          discount: priceDiscount,
-        },
-      ]);
-    }
-    setPriceAmount('');
-    setPriceAmountError(null);
-    setPriceDiscount('');
-  };
-
-  const removeStagedPrice = (index: number) =>
-    setStagedPrices((prev) => prev.filter((_, i) => i !== index));
-
-  // Create mode only by the time this runs (edit mode's "Add" already saved each price
-  // immediately, so stagedPrices stays empty there) — entirely optional either way, an
-  // empty staged list submits zero requests.
-  const submitStagedPrices = async (planId: string) => {
-    for (const staged of stagedPrices) {
-      await addPrice.mutateAsync({
-        id: planId,
-        body: {
-          amount: Math.round(Number(staged.amount) * 100), // dollars → cents
-          billingInterval: staged.interval,
-          discountPercent: staged.discount.trim()
-            ? Number(staged.discount)
-            : null,
-        },
-      });
-    }
-  };
-
   const submit = async () => {
     if (!name.trim()) {
       setNameError('Plan name is required.');
@@ -1143,7 +1081,7 @@ function PlanFormDialog(
     }
     try {
       if (mode === 'create') {
-        const created = await create.mutateAsync({
+        await create.mutateAsync({
           name: name.trim(),
           description: description.trim() || undefined,
           sortOrder: Number(sortOrder) || 0,
@@ -1151,8 +1089,9 @@ function PlanFormDialog(
           features: buildFeaturesPayload(),
           lockedFields: Array.from(lockedKeys),
         });
-        await submitStagedPrices(created.id);
-        showToast.success('Plan created.');
+        showToast.success(
+          'Plan created. You can now add prices using "+ Add price" on the plan card.',
+        );
       } else if (plan) {
         await update.mutateAsync({
           id: plan.id,
@@ -1167,7 +1106,6 @@ function PlanFormDialog(
           id: plan.id,
           features: buildFeaturesPayload(),
         });
-        await submitStagedPrices(plan.id);
         showToast.success('Plan updated.');
       }
       setOpen(false);
@@ -1176,7 +1114,7 @@ function PlanFormDialog(
     }
   };
 
-  const isLastStep = step === PLAN_FORM_TOTAL_STEPS;
+  const isLastStep = step === totalSteps;
   const isDirty =
     mode === 'create'
       ? name.trim() !== '' || description.trim() !== '' || step > 1
@@ -1219,8 +1157,8 @@ function PlanFormDialog(
         size="lg"
         isDirty={isDirty}
         currentStep={step}
-        totalSteps={PLAN_FORM_TOTAL_STEPS}
-        stepLabels={PLAN_FORM_STEP_LABELS}
+        totalSteps={totalSteps}
+        stepLabels={stepLabels}
         onStepClick={mode === 'edit' ? goToStep : undefined}
         footer={(requestClose) => (
           <>
@@ -1443,112 +1381,9 @@ function PlanFormDialog(
             />
           </div>
         )}
-        {step === 4 && (
+        {step === 4 && mode === 'edit' && plan && (
           <div className="space-y-6">
-            <div className="space-y-4 rounded-3xl border p-4">
-              <div>
-                <p className="text-sm font-semibold">Add a price</p>
-                <p className="text-muted-foreground text-xs">
-                  {mode === 'edit'
-                    ? 'Totally optional — saved immediately when you click Add, same as the plan card.'
-                    : 'Totally optional — queued here and created once you finish this wizard.'}
-                </p>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
-                <div className="space-y-2">
-                  <Label htmlFor="staged-price-amount" required>
-                    Amount (USD)
-                  </Label>
-                  <Input
-                    id="staged-price-amount"
-                    type="number"
-                    value={priceAmount}
-                    onChange={(e) => {
-                      setPriceAmount(e.target.value);
-                      if (priceAmountError) setPriceAmountError(null);
-                    }}
-                    placeholder="29"
-                    aria-invalid={!!priceAmountError}
-                  />
-                  {priceAmountError && (
-                    <p className="text-destructive text-xs">
-                      {priceAmountError}
-                    </p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label>Interval</Label>
-                  <Select
-                    value={priceInterval}
-                    onValueChange={(v) =>
-                      setPriceInterval(v as BillingInterval)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="month">Monthly</SelectItem>
-                      <SelectItem value="year">Yearly</SelectItem>
-                      <SelectItem value="day">Daily</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="price-discount">Discount %</Label>
-                  <Input
-                    id="price-discount"
-                    type="number"
-                    value={priceDiscount}
-                    onChange={(e) => setPriceDiscount(e.target.value)}
-                    placeholder="16.67"
-                  />
-                </div>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={handleAddPrice}
-                  disabled={mode === 'edit' && addPrice.isPending}
-                >
-                  {mode === 'edit' && addPrice.isPending ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Plus className="size-4" />
-                  )}
-                  Add
-                </Button>
-              </div>
-              {stagedPrices.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {stagedPrices.map((staged, i) => (
-                    <Badge
-                      key={i}
-                      variant="secondary"
-                      className="gap-1.5 rounded-full py-1 pr-1 pl-3 text-xs"
-                    >
-                      {money(
-                        Math.round(Number(staged.amount) * 100) || 0,
-                        'usd',
-                      )}
-                      /{staged.interval}
-                      {staged.discount.trim() && ` · ${staged.discount}% off`}
-                      <Button
-                        type="button"
-                        onClick={() => removeStagedPrice(i)}
-                        variant="ghost"
-                        size="icon-xs"
-                        className="hover:text-destructive ml-1 size-5"
-                        title="Remove"
-                        aria-label={`Remove ${staged.interval} staged price`}
-                      >
-                        <X className="size-3" />
-                      </Button>
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </div>
-            {mode === 'edit' && plan && pricesByInterval.length > 0 && (
+            {pricesByInterval.length > 0 ? (
               <div className="space-y-2">
                 <p className="text-sm font-semibold">Existing prices</p>
                 {pricesByInterval.map((group) => (
@@ -1563,6 +1398,11 @@ function PlanFormDialog(
                   />
                 ))}
               </div>
+            ) : (
+              <p className="text-muted-foreground text-sm">
+                No prices exist for this plan yet. Use '+ Add price' on the plan
+                card to add prices.
+              </p>
             )}
           </div>
         )}
