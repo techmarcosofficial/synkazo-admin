@@ -1,4 +1,5 @@
 import {
+  CalendarClock,
   GitMerge,
   History,
   RotateCcw,
@@ -15,6 +16,8 @@ import {
   JobDangerZoneCard,
   JobGeneralCard,
   JobRetryCard,
+  JobScheduleSettings,
+  JobScheduleSettingsHeader,
   JobSkipUpdateCard,
   JobSyncDirectionCard,
 } from '../settings';
@@ -40,7 +43,12 @@ const ConflictsTab = lazy(() => import('./ConflictsTab'));
 const WebhookEventsTab = lazy(() => import('./WebhookEventsTab'));
 
 export type JobSettingsSectionId =
-  'general' | 'advanced' | 'sync-history' | 'conflicts' | 'webhook-events';
+  | 'general'
+  | 'schedule'
+  | 'advanced'
+  | 'sync-history'
+  | 'conflicts'
+  | 'webhook-events';
 
 interface JobSettingsSection {
   id: JobSettingsSectionId;
@@ -61,6 +69,14 @@ const SECTIONS: JobSettingsSection[] = [
     description: 'Job identity, objects, sync direction, and danger zone.',
     icon: Settings2,
     group: 'settings',
+  },
+  {
+    id: 'schedule',
+    label: 'Scheduler',
+    description: 'Automated sync schedule and interval settings for this sync flow.',
+    icon: CalendarClock,
+    group: 'settings',
+    ownHeading: true,
   },
   {
     id: 'advanced',
@@ -236,6 +252,15 @@ export default function SettingsTab() {
         <div className="pt-6">
           <JobDangerZoneCard onDelete={handleDelete} />
         </div>
+      </div>
+    );
+  } else if (activeSectionId === 'schedule') {
+    sectionBody = (
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-1 py-1">
+          <JobScheduleSettingsHeader />
+        </div>
+        <JobScheduleSettings />
       </div>
     );
   } else if (activeSectionId === 'sync-history') {

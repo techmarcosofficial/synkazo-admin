@@ -652,6 +652,7 @@ export default function MemberDetailDrawer({
                       <FieldContent>
                         <Input
                           type="password"
+                          autoComplete="new-password"
                           placeholder="At least 8 characters"
                           value={manualPassword}
                           onChange={(e) => setManualPassword(e.target.value)}
@@ -666,6 +667,7 @@ export default function MemberDetailDrawer({
                       <FieldContent>
                         <Input
                           type="password"
+                          autoComplete="new-password"
                           placeholder="Re-enter password"
                           value={confirmManualPassword}
                           onChange={(e) =>

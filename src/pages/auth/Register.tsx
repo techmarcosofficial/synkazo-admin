@@ -32,7 +32,8 @@ import {
 } from '@/components/ui/field';
 import { Spinner } from '@/components/ui/spinner';
 import { registerSchema, type RegisterFormValues } from '@/lib/authValidation';
-import { consumePendingPlan, savePendingPlan } from '@/lib/pendingPlan';
+import { clearPendingPlan, consumePendingPlan, savePendingPlan } from '@/lib/pendingPlan';
+import { billingApi } from '@/api/billing';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { showToast } from '@/lib/toast';
 
@@ -64,13 +65,34 @@ export default function Register() {
 
   useEffect(() => {
     if (!isLoading && currentUser) {
-      const pending = consumePendingPlan();
-      navigate(
-        pending
-          ? `/checkout?plan=${pending.plan}&interval=${pending.interval}`
-          : '/dashboard',
-        { replace: true },
-      );
+      if (currentUser.role === 'super_admin') {
+        navigate('/super-admin/overview', { replace: true });
+        return;
+      }
+      billingApi
+        .getPlan()
+        .then((plan) => {
+          const hasActivePlan =
+            Boolean(plan) &&
+            ['active', 'trialing', 'pending_cancel', 'past_due'].includes(
+              plan.subscriptionStatus,
+            );
+          if (hasActivePlan) {
+            clearPendingPlan();
+            navigate('/dashboard', { replace: true });
+          } else {
+            const pending = consumePendingPlan();
+            navigate(
+              pending
+                ? `/checkout?plan=${pending.plan}&interval=${pending.interval}`
+                : '/dashboard',
+              { replace: true },
+            );
+          }
+        })
+        .catch(() => {
+          navigate('/dashboard', { replace: true });
+        });
     }
   }, [currentUser, isLoading, navigate]);
 

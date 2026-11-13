@@ -196,8 +196,8 @@ export default function ProjectsPage() {
   );
 
   return (
-    <div className="w-full space-y-6">
-      <section className="space-y-3" aria-label="Project results">
+    <div className="flex w-full flex-1 flex-col">
+      <section className="flex flex-1 flex-col space-y-3" aria-label="Project results">
         <ManagementCardHeader
           title="Projects"
           subtitle="Connect, monitor, and manage your syncs."
@@ -446,7 +446,7 @@ export default function ProjectsPage() {
           />
         )}
 
-        {hasResults && paginationBar}
+        {hasResults && <div className="mt-auto pt-6">{paginationBar}</div>}
       </section>
     </div>
   );

@@ -130,7 +130,7 @@
   --popover-foreground: #131418;
 
   /* Primary action — rich black in light mode; brand orange is reserved for focused accents and the dark-mode primary */
-  --primary: #131418;
+  --primary: #d7784c;
   --primary-foreground: #ffffff;
 
   /* Level 2: Inset Wells / Secondary / Muted Surfaces */

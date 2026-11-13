@@ -11,6 +11,7 @@ import IndividualSchedulerList, {
   type IndividualScheduleDraft,
 } from '@/components/jobs/IndividualSchedulerList';
 import { Button } from '@/components/ui/button';
+import InfoTip from '@/components/shared/InfoTip';
 import { Spinner } from '@/components/ui/spinner';
 import { showToast } from '@/lib/toast';
 import { useProjectJobsQuery } from '@/queries/useJobs';
@@ -334,6 +335,10 @@ export default function PriorityQueuePanel({
                 {localJobs.length + stagedJobs.length} configured{' '}
                 {localJobs.length + stagedJobs.length === 1 ? 'job' : 'jobs'}
               </span>
+              <InfoTip label="About Priority Queue">
+                Runs your core sync jobs sequentially in priority order. Jobs
+                higher in the list execute first each sync cycle.
+              </InfoTip>
             </div>
             <Button
               size="sm"
@@ -384,6 +389,9 @@ export default function PriorityQueuePanel({
             drafts={stagedJobs}
             draftsBusy={saving}
             jobs={jobsQuery.data ?? []}
+            onReorderDrafts={(reorderedDrafts) => {
+              setStagedJobs(reorderedDrafts);
+            }}
             onRemoveDraft={(id) =>
               setStagedJobs((current) =>
                 current.filter((row) => row.draftId !== id),

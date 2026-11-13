@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 
 interface PaginationBarProps {
   page: number;
@@ -24,6 +25,7 @@ interface PaginationBarProps {
   pageSizeOptions?: number[];
   pageSizeLabel?: string;
   disabled?: boolean;
+  className?: string;
 }
 
 export default function PaginationBar({
@@ -36,6 +38,7 @@ export default function PaginationBar({
   pageSizeOptions = [10, 25, 50],
   pageSizeLabel = 'Rows per page',
   disabled = false,
+  className,
 }: PaginationBarProps) {
   if (total === 0) return null;
 
@@ -51,7 +54,12 @@ export default function PaginationBar({
   const end = Math.min(safePage * pageSize, total);
 
   return (
-    <div className="flex w-full flex-wrap items-center justify-between gap-3">
+    <div
+      className={cn(
+        'flex w-full flex-wrap items-center justify-between gap-3',
+        className,
+      )}
+    >
       <p className="text-muted-foreground text-sm">
         Showing {start}–{end} of {total}
       </p>

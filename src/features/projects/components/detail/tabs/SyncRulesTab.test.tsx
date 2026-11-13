@@ -33,6 +33,14 @@ vi.mock('@/components/shared/PlanGate', () => ({
   }),
 }));
 
+vi.mock('@/queries/usePriorityQueue', () => ({
+  usePriorityQueueQuery: vi.fn(() => ({
+    data: null,
+    isLoading: false,
+    isError: false,
+  })),
+}));
+
 vi.mock('@/features/jobs/hooks', () => ({
   useJobDetailQuery: vi.fn(() => ({
     data: null,
@@ -215,6 +223,79 @@ describe('getJobLifecycle', () => {
     expect(lifecycle.actionVariant).toBe('outline');
     expect(lifecycle.highlight).toBeFalsy();
     expect(lifecycle.isActionable).toBe(false);
+  });
+
+  describe('schedule precedence rules', () => {
+    const baseJob: JobExt = {
+      id: 'job-sched-1',
+      projectId: 'proj-1',
+      name: 'Customers to Contacts',
+      sourceObject: 'customers',
+      destObject: 'contacts',
+      status: 'active',
+      fieldMappings: [
+        {
+          id: 'm-1',
+          jobId: 'job-sched-1',
+          sourceField: 'email',
+          destField: 'email',
+          direction: 'forward_only',
+        },
+      ],
+      isEnabled: true,
+      lastSyncedAt: '2026-09-26T10:00:00Z',
+      scheduleMode: 'interval',
+      intervalMinutes: 15,
+    };
+
+    it('prefers project priority queue schedule when job is selected in priority queue', () => {
+      const priorityQueue: any = {
+        schedulerMode: 'priority',
+        queue: {
+          scheduleMode: 'interval',
+          intervalMinutes: 60,
+        },
+        queueJobs: [
+          {
+            jobId: 'job-sched-1',
+            enabled: true,
+          },
+        ],
+      };
+
+      const lifecycle = getJobLifecycle(baseJob, null, 'proj-1', priorityQueue);
+      expect(lifecycle.scheduleText).toBe('Every 1h (Priority Queue)');
+    });
+
+    it('falls back to job-level schedule when job is not enabled in priority queue', () => {
+      const priorityQueue: any = {
+        schedulerMode: 'priority',
+        queue: {
+          scheduleMode: 'interval',
+          intervalMinutes: 60,
+        },
+        queueJobs: [
+          {
+            jobId: 'job-other',
+            enabled: true,
+          },
+        ],
+      };
+
+      const lifecycle = getJobLifecycle(baseJob, null, 'proj-1', priorityQueue);
+      expect(lifecycle.scheduleText).toBe('Every 15 min');
+    });
+
+    it('shows Setup required when neither project scheduler nor job-level schedule is set', () => {
+      const unscheduledJob: JobExt = {
+        ...baseJob,
+        scheduleMode: undefined,
+        intervalMinutes: undefined,
+      };
+
+      const lifecycle = getJobLifecycle(unscheduledJob, null, 'proj-1', null);
+      expect(lifecycle.scheduleText).toBe('Setup required');
+    });
   });
 });
 

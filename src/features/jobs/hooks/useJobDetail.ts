@@ -19,7 +19,8 @@ export type ScheduleState =
   | 'paused'
   | 'retry_pending'
   | 'paused_limit_reached'
-  | 'resume_pending';
+  | 'resume_pending'
+  | 'held';
 
 export type InitialSyncPeriod = 'now' | '24h' | '7d' | '30d' | 'custom';
 

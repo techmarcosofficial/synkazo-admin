@@ -141,6 +141,10 @@ export default function WelcomeOnboarding() {
                     </HelpText>
                   </FieldLabel>
                   <Input
+                    autoComplete="off"
+                    data-1p-ignore
+                    data-lpignore="true"
+                    spellCheck={false}
                     value={stForm.appKey}
                     onChange={(e) =>
                       setStForm((f) => ({ ...f, appKey: e.target.value }))
@@ -158,6 +162,10 @@ export default function WelcomeOnboarding() {
                     </HelpText>
                   </FieldLabel>
                   <Input
+                    autoComplete="off"
+                    data-1p-ignore
+                    data-lpignore="true"
+                    spellCheck={false}
                     value={stForm.clientId}
                     onChange={(e) =>
                       setStForm((f) => ({ ...f, clientId: e.target.value }))
@@ -175,6 +183,10 @@ export default function WelcomeOnboarding() {
                     </HelpText>
                   </FieldLabel>
                   <Input
+                    autoComplete="new-password"
+                    data-1p-ignore
+                    data-lpignore="true"
+                    spellCheck={false}
                     type="password"
                     value={stForm.clientSecret}
                     onChange={(e) =>
@@ -193,6 +205,10 @@ export default function WelcomeOnboarding() {
                     </HelpText>
                   </FieldLabel>
                   <Input
+                    autoComplete="off"
+                    data-1p-ignore
+                    data-lpignore="true"
+                    spellCheck={false}
                     value={stForm.tenantId}
                     onChange={(e) =>
                       setStForm((f) => ({ ...f, tenantId: e.target.value }))

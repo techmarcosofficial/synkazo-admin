@@ -84,8 +84,8 @@ export default function OrganisationProjectsPage() {
   const total = projectsQuery.data?.total ?? 0;
 
   return (
-    <div className="w-full space-y-6">
-      <section className="space-y-3" aria-label="Project results">
+    <div className="flex w-full flex-1 flex-col">
+      <section className="flex flex-1 flex-col space-y-3" aria-label="Project results">
         <ManagementCardHeader
           title="Projects"
           subtitle="Manage this organisation’s sync projects."
@@ -322,19 +322,23 @@ export default function OrganisationProjectsPage() {
             </Table>
           </div>
         )}
+        {total > 0 && (
+          <div className="mt-auto pt-6">
+            <PaginationBar
+              page={page}
+              totalPages={Math.max(1, Math.ceil(total / pageSize))}
+              total={total}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setPage(1);
+              }}
+            />
+          </div>
+        )}
       </section>
 
-      <PaginationBar
-        page={page}
-        totalPages={Math.max(1, Math.ceil(total / pageSize))}
-        total={total}
-        pageSize={pageSize}
-        onPageChange={setPage}
-        onPageSizeChange={(size) => {
-          setPageSize(size);
-          setPage(1);
-        }}
-      />
       {createOpen ? (
         <CreateOrganisationProjectDialog
           key={organisationId}

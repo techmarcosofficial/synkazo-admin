@@ -35,6 +35,8 @@ import {
 import { formatNum, formatSchedule } from '@/features/projects/utils';
 import { cn } from '@/lib/utils';
 import { useEntitlements } from '@/queries/useEntitlements';
+import { usePriorityQueueQuery } from '@/queries/usePriorityQueue';
+import type { PriorityQueueConfig, ProjectQueue } from '@/types';
 
 function formatLastSync(value: string | null): string {
   if (!value) return 'Never';
@@ -61,21 +63,74 @@ export interface JobLifecycle {
   isActionable: boolean;
 }
 
+export function formatProjectQueueSchedule(
+  queue: ProjectQueue | null | undefined,
+): string {
+  if (!queue) return 'Priority Queue';
+  if (queue.scheduleMode === 'interval') {
+    const m = queue.intervalMinutes ?? 60;
+    if (m >= 60 && m % 60 === 0) return `Every ${m / 60}h (Priority Queue)`;
+    return `Every ${m} min (Priority Queue)`;
+  }
+  if (queue.scheduleMode === 'daily_time') {
+    const t = (queue.scheduleTimes || ['02:00'])[0];
+    return `Daily at ${t} (Priority Queue)`;
+  }
+  if (queue.scheduleMode === 'day_specific') {
+    const t = (queue.scheduleTimes || ['02:00'])[0];
+    const days = (queue.scheduleDays || [])
+      .map((d: number) => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d])
+      .join(',');
+    return `${days || 'Selected days'} at ${t} (Priority Queue)`;
+  }
+  if (queue.scheduleMode === 'one_time') {
+    return 'One-time (Priority Queue)';
+  }
+  return 'Priority Queue';
+}
+
+export function resolveJobSchedule(
+  job: JobExt,
+  priorityQueue?: PriorityQueueConfig | null,
+): string | null {
+  // Precedence 1: When project priority queue is enabled and has this job enabled
+  if (priorityQueue) {
+    const isPriorityMode = priorityQueue.schedulerMode === 'priority';
+    const queueJob = priorityQueue.queueJobs?.find(
+      (q) => q.jobId === job.id && q.enabled,
+    );
+    if (isPriorityMode && queueJob) {
+      return formatProjectQueueSchedule(priorityQueue.queue);
+    }
+  }
+
+  // Precedence 2: When not in project scheduler, but job-level schedule is set
+  if (job.syncDirection === 'two_way') {
+    return 'Automatic sync';
+  }
+  const jobSchedule = formatSchedule(job);
+  if (jobSchedule !== 'No schedule') {
+    return jobSchedule;
+  }
+
+  return null;
+}
+
 export function getJobLifecycle(
   job: JobExt,
   detail?: JobDetailData | null,
   projectId?: string,
+  priorityQueue?: PriorityQueueConfig | null,
 ): JobLifecycle {
   const mappings = detail?.jobFieldMappings ?? job.fieldMappings ?? [];
   const mappingCount = mappings.length;
   const isDraftOrUnmapped = job.status === 'draft' || mappingCount === 0;
-  const twoWay = job.syncDirection === 'two_way';
-  const defaultSchedule = twoWay ? 'Automatic sync' : formatSchedule(job);
+  const resolvedSchedule = resolveJobSchedule(job, priorityQueue);
 
   if (isDraftOrUnmapped) {
     return {
       statusKey: 'needs_mapping',
-      scheduleText: 'Setup required',
+      scheduleText: resolvedSchedule ?? 'Setup required',
       actionLabel: 'Configure Mapping',
       actionVariant: 'default',
       highlight: true,
@@ -87,7 +142,7 @@ export function getJobLifecycle(
   if (!job.lastSyncedAt && !job.isEnabled) {
     return {
       statusKey: 'ready_to_test',
-      scheduleText: 'Test pending',
+      scheduleText: resolvedSchedule ?? 'Test pending',
       actionLabel: 'Test & Activate',
       actionVariant: 'default',
       highlight: true,
@@ -121,7 +176,7 @@ export function getJobLifecycle(
   if (job.isRunning) {
     return {
       statusKey: 'running',
-      scheduleText: defaultSchedule,
+      scheduleText: resolvedSchedule ?? 'Setup required',
       actionLabel: 'View Details',
       actionVariant: 'outline',
       targetUrl: `/projects/${projectId}/jobs/${job.id}`,
@@ -132,7 +187,7 @@ export function getJobLifecycle(
   if (!job.isEnabled) {
     return {
       statusKey: 'inactive',
-      scheduleText: 'Paused',
+      scheduleText: resolvedSchedule ? `${resolvedSchedule} (Paused)` : 'Paused',
       actionLabel: 'View Details',
       actionVariant: 'outline',
       targetUrl: `/projects/${projectId}/jobs/${job.id}`,
@@ -142,7 +197,7 @@ export function getJobLifecycle(
 
   return {
     statusKey: job.status || 'active',
-    scheduleText: defaultSchedule,
+    scheduleText: resolvedSchedule ?? 'Setup required',
     actionLabel: 'View Details',
     actionVariant: 'outline',
     targetUrl: `/projects/${projectId}/jobs/${job.id}`,
@@ -153,10 +208,12 @@ export function getJobLifecycle(
 function SyncJobCard({
   job,
   projectId,
+  priorityQueue,
   defaultOpen = false,
 }: {
   job: JobExt;
   projectId: string;
+  priorityQueue?: PriorityQueueConfig | null;
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -166,7 +223,12 @@ function SyncJobCard({
   const hasAnyRun = hasAnySyncRun(job, runs);
   const twoWay = job.syncDirection === 'two_way';
   const DirectionIcon = twoWay ? ArrowLeftRight : ArrowRight;
-  const lifecycle = getJobLifecycle(job, detailQuery.data, projectId);
+  const lifecycle = getJobLifecycle(
+    job,
+    detailQuery.data,
+    projectId,
+    priorityQueue,
+  );
   const isNeedsMapping = lifecycle.statusKey === 'needs_mapping';
   const backTo = '/projects/' + projectId + '?tab=sync-rules';
   const linkState = { jobBackTo: backTo, jobBackLabel: 'Back to Sync Flows' };
@@ -325,6 +387,7 @@ export default function SyncRulesTab() {
   const navigate = useNavigate();
   const { project, jobs, showCreateJob, setShowCreateJob, refetch } =
     useProjectDetailContext();
+  const priorityQueueQuery = usePriorityQueueQuery(project.id);
   const { hasPermission } = useSynkazoAuth();
   const canCreateJob = hasPermission('job.create');
   const { canAddJob } = useEntitlements();
@@ -426,6 +489,7 @@ export default function SyncRulesTab() {
                 key={job.id}
                 job={job}
                 projectId={project.id}
+                priorityQueue={priorityQueueQuery.data}
                 defaultOpen={shouldDefaultOpen}
               />
             );

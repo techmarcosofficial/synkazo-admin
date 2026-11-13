@@ -34,6 +34,7 @@ import QueueScheduleCard, {
   queueScheduleValid,
 } from '@/components/jobs/priority-queue/QueueScheduleCard';
 import StatusBadge from '@/components/shared/StatusBadge';
+import InfoTip from '@/components/shared/InfoTip';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
@@ -556,6 +557,10 @@ export default function OrganisationProjectScheduler({
                 {localJobs.length + stagedJobs.length} configured{' '}
                 {localJobs.length + stagedJobs.length === 1 ? 'job' : 'jobs'}
               </span>
+              <InfoTip label="About Priority Queue">
+                Runs your core sync jobs sequentially in priority order. Jobs
+                higher in the list execute first each sync cycle.
+              </InfoTip>
             </div>
             <Button
               size="sm"
@@ -672,6 +677,10 @@ export default function OrganisationProjectScheduler({
               {!associationEnabled && (
                 <span className="text-muted-foreground text-xs">· Off</span>
               )}
+              <InfoTip label="About Association Queue">
+                Runs relationship and linking rules between synced records after
+                the priority queue jobs complete.
+              </InfoTip>
             </div>
             <div className="flex items-center gap-2">
               {associationEnabled && (

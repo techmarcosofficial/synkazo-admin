@@ -25,10 +25,12 @@ import {
 } from '@/components/ui/field';
 import { loginSchema, type LoginFormValues } from '@/lib/authValidation';
 import {
+  clearPendingPlan,
   consumePendingPlan,
   readPendingPlan,
   savePendingPlan,
 } from '@/lib/pendingPlan';
+import { billingApi } from '@/api/billing';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { showToast } from '@/lib/toast';
 import { tokenStorage } from '@/lib/tokenStorage';
@@ -143,13 +145,37 @@ export default function Login() {
     };
   }, []);
 
-  const resumeTarget = (user: User) => {
+  const resolvePostLoginRedirect = async (user: User): Promise<string> => {
+    if (workspaceForUser(user) === 'platform') {
+      return postLoginPath(user, redirectTo);
+    }
+
+    // For tenant users: check if the organization already has an active paid plan
+    try {
+      const plan = await billingApi.getPlan();
+      const hasActivePlan =
+        Boolean(plan) &&
+        ['active', 'trialing', 'pending_cancel', 'past_due'].includes(
+          plan.subscriptionStatus,
+        );
+
+      if (hasActivePlan) {
+        // Users with an active paid plan should never be redirected to checkout
+        clearPendingPlan();
+        return postLoginPath(user, redirectTo);
+      }
+    } catch {
+      // In case of error fetching plan, proceed safely without failing login
+    }
+
+    // Only redirect to checkout if the tenant needs to purchase a plan
     const pending = consumePendingPlan();
     const checkout =
       pending && workspaceForUser(user) === 'tenant'
         ? `/checkout?plan=${encodeURIComponent(pending.plan)}&interval=${pending.interval}`
         : null;
-    return postLoginPath(user, checkout);
+
+    return postLoginPath(user, redirectTo ?? checkout);
   };
 
   useEffect(() => {
@@ -167,7 +193,9 @@ export default function Login() {
       window.location.reload();
       return;
     }
-    navigate(resumeTarget(currentUser), { replace: true });
+    void resolvePostLoginRedirect(currentUser).then((dest) => {
+      navigate(dest, { replace: true });
+    });
   }, [currentUser, isLoading, navigate, redirectTo]);
 
   if (isLoading || currentUser) return null;
@@ -178,12 +206,10 @@ export default function Login() {
     try {
       const user = await login(values.email, values.password, values.remember);
       showToast.success("Welcome back! You've logged in successfully.");
-      navigate(
-        redirectTo ? postLoginPath(user, redirectTo) : resumeTarget(user),
-        {
-          replace: true,
-        },
-      );
+      const destination = await resolvePostLoginRedirect(user);
+      navigate(destination, {
+        replace: true,
+      });
     } catch (err) {
       const e = err as { response?: { data?: { message?: string } } };
       const msg = e?.response?.data?.message || '';

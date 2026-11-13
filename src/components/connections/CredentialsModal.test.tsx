@@ -184,6 +184,32 @@ describe('CredentialsModal In-Modal Verification', () => {
     expect(onCloseMock).not.toHaveBeenCalled();
   });
 
+  it('stops browsers autofilling saved logins into API credential fields', () => {
+    render(
+      <CredentialsModal
+        projectId="proj-1"
+        conn={{
+          platformId: 'servicetitan',
+          connectionType: 'source',
+          environment: 'sandbox',
+        }}
+        onClose={onCloseMock}
+        onSaved={onSavedMock}
+      />,
+    );
+    const inputs = screen
+      .getByRole('dialog')
+      .querySelectorAll<HTMLInputElement>('input');
+    expect(inputs.length).toBeGreaterThan(0);
+    for (const input of inputs) {
+      expect(input).toHaveAttribute(
+        'autocomplete',
+        input.type === 'password' ? 'new-password' : 'off',
+      );
+      expect(input).toHaveAttribute('data-1p-ignore');
+    }
+  });
+
   it('shows a retained connection error when Fix reopens the form', async () => {
     render(
       <CredentialsModal

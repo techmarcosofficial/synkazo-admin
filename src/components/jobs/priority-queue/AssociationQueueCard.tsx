@@ -2,7 +2,9 @@ import type { DropResult } from '@hello-pangea/dnd';
 import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd';
 import { GripVertical, Plus, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 
+import InfoTip from '@/components/shared/InfoTip';
 import { Button } from '@/components/ui/button';
 import type { UpdateAssociationQueuePayload } from '@/api/priorityQueue';
 import { Input } from '@/components/ui/input';
@@ -146,23 +148,48 @@ export default function AssociationQueueCard({
               {!enabled && (
                 <span className="text-muted-foreground text-xs">· Off</span>
               )}
+              <InfoTip label="About Association Queue">
+                Runs relationship and linking rules between synced records after
+                the priority queue jobs complete.
+              </InfoTip>
             </div>
             <p className="text-muted-foreground text-xs">
               Runs after the Priority Queue completes.
+              {ruleOptions.length === 0 && (
+                <span className="ml-1.5">
+                  · No associations configured.{' '}
+                  <Link
+                    to={`/projects/${projectId}?tab=settings&section=associations`}
+                    className="text-primary font-medium hover:underline"
+                  >
+                    Add association
+                  </Link>
+                </span>
+              )}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           {enabled && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={composerOpen || availableOptions.length === 0}
-              onClick={() => setComposerOpen(true)}
-            >
-              <Plus /> Add rule
-            </Button>
+            <>
+              {ruleOptions.length === 0 && (
+                <Link
+                  to={`/projects/${projectId}?tab=settings&section=associations`}
+                  className="text-primary text-xs font-medium hover:underline"
+                >
+                  Add association
+                </Link>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={composerOpen || availableOptions.length === 0}
+                onClick={() => setComposerOpen(true)}
+              >
+                <Plus /> Add rule
+              </Button>
+            </>
           )}
           <Switch
             checked={enabled}
@@ -210,9 +237,20 @@ export default function AssociationQueueCard({
           </div>
 
           {localItems.length === 0 && !composerOpen ? (
-            <p className="text-muted-foreground rounded-3xl border py-6 text-center text-xs">
-              No association rules added to the queue yet.
-            </p>
+            <div className="text-muted-foreground flex flex-col items-center justify-center gap-1.5 rounded-3xl border py-6 text-center text-xs">
+              <p>No association rules added to the queue yet.</p>
+              {ruleOptions.length === 0 && (
+                <p>
+                  No associations configured for this project.{' '}
+                  <Link
+                    to={`/projects/${projectId}?tab=settings&section=associations`}
+                    className="text-primary inline-flex items-center gap-1 font-medium hover:underline"
+                  >
+                    Add association
+                  </Link>
+                </p>
+              )}
+            </div>
           ) : (
             <DragDropContext onDragEnd={onDragEnd}>
               <Droppable droppableId="association-queue">

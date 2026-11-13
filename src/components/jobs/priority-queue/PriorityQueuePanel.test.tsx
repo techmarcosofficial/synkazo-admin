@@ -123,6 +123,9 @@ describe('PriorityQueuePanel', () => {
     expect(setMode).not.toHaveBeenCalled();
     expect(screen.getByText('Priority job list')).toBeInTheDocument();
     expect(
+      screen.getByRole('button', { name: /About Priority Queue/i }),
+    ).toBeInTheDocument();
+    expect(
       screen.getAllByRole('button', { name: 'Save changes' }),
     ).toHaveLength(1);
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));

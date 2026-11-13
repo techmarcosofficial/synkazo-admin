@@ -456,6 +456,14 @@ export default function CredentialsModal({
                   <Input
                     id={f.key}
                     type={f.type}
+                    // API credentials, not a login: stop browsers offering saved usernames/passwords.
+                    autoComplete={
+                      f.type === 'password' ? 'new-password' : 'off'
+                    }
+                    data-1p-ignore
+                    data-lpignore="true"
+                    data-form-type="other"
+                    spellCheck={false}
                     value={form[f.key] || ''}
                     onChange={(e) => setField(f.key, e.target.value)}
                     placeholder={
@@ -493,7 +501,7 @@ interface KnowMoreProps {
   helpUrl?: string;
 }
 
-function KnowMore({ label, helpText, helpUrl }: KnowMoreProps) {
+export function KnowMore({ label, helpText, helpUrl }: KnowMoreProps) {
   if (!helpText && !helpUrl) return null;
   return (
     <Popover>
