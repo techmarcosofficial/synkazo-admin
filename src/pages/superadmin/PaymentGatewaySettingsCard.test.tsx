@@ -160,7 +160,7 @@ describe('Payment gateway connections', () => {
     ).toBeInTheDocument();
   });
 
-  it('Edit opens the popup with the public key prefilled, secrets blank, autofill off', async () => {
+  it('Edit opens the popup with saved keys shown filled (masked), status icons, autofill off', async () => {
     const user = userEvent.setup();
     render(<PaymentGatewaySettingsCard />);
     await user.click(screen.getByRole('button', { name: /Edit/ }));
@@ -177,16 +177,60 @@ describe('Payment gateway connections', () => {
     const secret = within(popup).getByLabelText(/^Secret key/, {
       selector: 'input',
     });
-    expect(secret).toHaveValue('');
-    expect(secret).toHaveAttribute('type', 'password');
+    // Saved secret looks filled: dots + last 4, never revealable, green "set" icon.
+    expect(secret).toHaveValue('••••••••••••1234');
     expect(secret).toHaveAttribute('autocomplete', 'new-password');
-    expect(secret).toHaveAttribute(
-      'placeholder',
-      'Leave blank to keep ••••1234',
-    );
+    expect(
+      within(popup).queryByRole('button', { name: /Show Secret key/ }),
+    ).not.toBeInTheDocument();
+    expect(secret).toHaveAccessibleDescription(/Set from \.env|Saved/);
     expect(
       within(popup).getByLabelText(/Publishable key/, { selector: 'input' }),
     ).toHaveAttribute('autocomplete', 'off');
+  });
+
+  it('typing over a masked secret replaces it; clearing it keeps the saved one', async () => {
+    const user = userEvent.setup();
+    render(<PaymentGatewaySettingsCard />);
+    await user.click(screen.getByRole('button', { name: /Edit/ }));
+    const popup = await dialog();
+    const secret = within(popup).getByLabelText(/^Secret key/, {
+      selector: 'input',
+    });
+    await user.click(secret);
+    await user.keyboard('{Backspace}');
+    expect(secret).toHaveValue('');
+    expect(secret).toHaveAttribute('type', 'password');
+    expect(
+      within(popup).getByRole('button', { name: /Show Secret key/ }),
+    ).toBeInTheDocument();
+    await user.tab();
+    expect(secret).toHaveValue('••••••••••••1234');
+    await user.click(secret);
+    await user.paste('sk_test_new');
+    expect(secret).toHaveValue('sk_test_new');
+    await user.click(
+      within(popup).getByRole('button', { name: 'Save & verify' }),
+    );
+    await waitFor(() =>
+      expect(state.save).toHaveBeenCalledWith({
+        stripe: { sandbox: { secretKey: 'sk_test_new' } },
+        idempotencyKey: expect.any(String),
+      }),
+    );
+  });
+
+  it('shows a red icon on keys that are still missing', async () => {
+    const user = userEvent.setup();
+    render(<PaymentGatewaySettingsCard />);
+    await user.click(screen.getByRole('tab', { name: /Razorpay/ }));
+    await user.click(
+      await screen.findByRole('button', { name: /Finish setup/ }),
+    );
+    const popup = await dialog();
+    expect(
+      within(popup).getByLabelText(/^Webhook secret/, { selector: 'input' }),
+    ).toHaveAccessibleDescription('Not set');
   });
 
   it('saves only changed keys, with no reason, then closes with a success toast', async () => {

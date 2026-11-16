@@ -174,7 +174,7 @@ export interface SubscriptionDetail {
   pendingPlanChangeAt: string | null;
 }
 
-// ── Razorpay (Checkout.js modal) ───────────────────────────────────────────────
+// ── Razorpay (inline custom checkout; modal fallback) ──────────────────────────
 
 export interface RazorpayCheckoutSession {
   gateway: 'razorpay';
@@ -184,6 +184,9 @@ export interface RazorpayCheckoutSession {
   email: string;
   description: string;
   trialDays: number;
+  /** Plan base price (smallest currency unit) passed to Custom Checkout's createPayment. */
+  amount: number;
+  currency: string;
 }
 
 /** Fields Razorpay Checkout passes to its success handler. */

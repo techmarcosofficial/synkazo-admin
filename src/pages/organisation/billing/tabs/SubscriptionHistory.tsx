@@ -20,6 +20,7 @@ const LABEL: Record<string, string> = {
   'subscription.updated': 'Subscription updated',
   'subscription.canceled': 'Subscription cancelled',
   'subscription.reactivated': 'Subscription reactivated',
+  payment_method_updated: 'Card updated',
   trial_started: 'Trial started',
   trial_ending: 'Trial ending soon',
   plan_changed: 'Plan changed',

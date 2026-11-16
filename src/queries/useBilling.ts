@@ -272,6 +272,15 @@ export function useResyncPlanMutation() {
   });
 }
 
+// Creates Razorpay plans for a plan's active prices so it's buyable while Razorpay is active.
+export function useSyncPlanToRazorpayMutation() {
+  const invalidate = useAdminPlansInvalidator();
+  return useMutation({
+    mutationFn: (id: string) => billingAdminApi.syncPlanToRazorpay(id),
+    onSuccess: invalidate,
+  });
+}
+
 // Manually assign an existing plan to an org (super_admin, bypasses Stripe). Invalidates the
 // organisations list (shown on the super-admin Organisations page) rather than the admin plan
 // catalogue, since this mutates an org, not a plan.

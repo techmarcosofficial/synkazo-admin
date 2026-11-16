@@ -17,7 +17,9 @@ const state = vi.hoisted(() => ({
   checkout: vi.fn(),
   verify: vi.fn(),
   preview: vi.fn(),
-  open: vi.fn(),
+  loadCustom: vi.fn(),
+  payCard: vi.fn(),
+  openModal: vi.fn(),
   refresh: vi.fn(),
   upgrade: vi.fn(),
   toastError: vi.fn(),
@@ -29,7 +31,11 @@ vi.mock('@/api/billing', () => ({
     previewRazorpayPlanChange: state.preview,
   },
 }));
-vi.mock('@/lib/razorpay', () => ({ openRazorpayCheckout: state.open }));
+vi.mock('@/lib/razorpay', () => ({
+  loadRazorpayCustom: state.loadCustom,
+  payWithCard: state.payCard,
+  openRazorpayCheckout: state.openModal,
+}));
 vi.mock('@/lib/toast', () => ({
   showToast: { error: state.toastError, success: vi.fn() },
 }));
@@ -60,6 +66,25 @@ function renderWithClient(ui: React.ReactElement) {
   );
 }
 
+// Fills the inline card form with valid test-card values (overridable per field).
+function fillCard(overrides: Partial<Record<string, string>> = {}) {
+  fireEvent.change(screen.getByPlaceholderText('Name on card'), {
+    target: { value: overrides.name ?? 'Gaurav Kumar' },
+  });
+  fireEvent.change(screen.getByPlaceholderText('9123456780'), {
+    target: { value: overrides.contact ?? '9123456780' },
+  });
+  fireEvent.change(screen.getByPlaceholderText('1234 1234 1234 1234'), {
+    target: { value: overrides.number ?? '4111111111111111' },
+  });
+  fireEvent.change(screen.getByPlaceholderText('MM/YY'), {
+    target: { value: overrides.expiry ?? '1234' },
+  });
+  fireEvent.change(screen.getByPlaceholderText('123'), {
+    target: { value: overrides.cvv ?? '123' },
+  });
+}
+
 afterEach(cleanup);
 beforeEach(() => {
   vi.clearAllMocks();
@@ -71,7 +96,10 @@ beforeEach(() => {
     email: 'buyer@example.com',
     description: 'Starter (monthly)',
     trialDays: 0,
+    amount: 2900,
+    currency: 'usd',
   });
+  state.loadCustom.mockResolvedValue(function FakeRazorpay() {});
   state.refresh.mockResolvedValue({
     planId: 'plan-1',
     subscriptionStatus: 'active',
@@ -80,10 +108,10 @@ beforeEach(() => {
 });
 
 describe('RazorpayCheckoutForm', () => {
-  it('opens Razorpay, verifies the signed result, then confirms access', async () => {
-    state.open.mockResolvedValue(response);
+  it('collects the card inline, hands it to Razorpay, verifies, then confirms access', async () => {
+    state.payCard.mockResolvedValue(response);
     const onSuccess = vi.fn();
-    render(
+    renderWithClient(
       <RazorpayCheckoutForm
         plan={plan}
         price={price}
@@ -91,6 +119,8 @@ describe('RazorpayCheckoutForm', () => {
         couponCode="SAVE10"
       />,
     );
+    await screen.findByPlaceholderText('Name on card');
+    fillCard();
     fireEvent.click(
       screen.getByRole('button', { name: 'Subscribe to Starter' }),
     );
@@ -99,33 +129,56 @@ describe('RazorpayCheckoutForm', () => {
       priceId: 'price-1',
       couponCode: 'SAVE10',
     });
-    expect(state.open).toHaveBeenCalledWith(
-      expect.objectContaining({
-        key: 'rzp_test_k',
-        subscription_id: 'sub_1',
-        prefill: { name: 'Acme', email: 'buyer@example.com' },
-      }),
+    expect(state.payCard).toHaveBeenCalledWith(
       expect.any(Function),
+      'rzp_test_k',
+      expect.objectContaining({
+        subscriptionId: 'sub_1',
+        amount: 2900,
+        currency: 'usd',
+        contact: '9123456780',
+        card: expect.objectContaining({ number: '4111111111111111' }),
+      }),
     );
     expect(state.verify).toHaveBeenCalledWith(response);
   });
 
-  it('does nothing when the customer closes the Razorpay window', async () => {
-    state.open.mockResolvedValue(null);
-    render(
+  it('blocks submit when the card number is invalid', async () => {
+    renderWithClient(
       <RazorpayCheckoutForm plan={plan} price={price} onSuccess={vi.fn()} />,
     );
+    await screen.findByPlaceholderText('Name on card');
+    fillCard({ number: '1234' });
     fireEvent.click(
       screen.getByRole('button', { name: 'Subscribe to Starter' }),
     );
-    await waitFor(() => expect(state.open).toHaveBeenCalled());
-    expect(state.verify).not.toHaveBeenCalled();
-    expect(
-      screen.getByRole('button', { name: 'Subscribe to Starter' }),
-    ).not.toBeDisabled();
+    await waitFor(() =>
+      expect(state.toastError).toHaveBeenCalledWith(
+        expect.stringContaining('valid card number'),
+      ),
+    );
+    expect(state.payCard).not.toHaveBeenCalled();
   });
 
-  it('drops a promo code the server no longer accepts', async () => {
+  it('shows a toast when Razorpay rejects the payment', async () => {
+    state.payCard.mockRejectedValue(new Error('Your card was declined.'));
+    renderWithClient(
+      <RazorpayCheckoutForm plan={plan} price={price} onSuccess={vi.fn()} />,
+    );
+    await screen.findByPlaceholderText('Name on card');
+    fillCard();
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Subscribe to Starter' }),
+    );
+    await waitFor(() =>
+      expect(state.toastError).toHaveBeenCalledWith('Your card was declined.'),
+    );
+    expect(
+      screen.queryByText('Subscription purchased successfully.'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('drops a promo code the server rejects while starting checkout', async () => {
     state.checkout.mockRejectedValue({
       response: {
         status: 400,
@@ -136,7 +189,7 @@ describe('RazorpayCheckoutForm', () => {
       },
     });
     const onCouponRejected = vi.fn();
-    render(
+    renderWithClient(
       <RazorpayCheckoutForm
         plan={plan}
         price={price}
@@ -145,23 +198,22 @@ describe('RazorpayCheckoutForm', () => {
         onCouponRejected={onCouponRejected}
       />,
     );
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Subscribe to Starter' }),
-    );
     await waitFor(() => expect(onCouponRejected).toHaveBeenCalled());
-    expect(state.open).not.toHaveBeenCalled();
+    expect(state.payCard).not.toHaveBeenCalled();
   });
 
   it('does not report success while access is still pending', async () => {
-    state.open.mockResolvedValue(response);
+    state.payCard.mockResolvedValue(response);
     state.refresh.mockResolvedValue({
       planId: 'free',
       subscriptionStatus: 'incomplete',
       paymentHoldActive: false,
     });
-    render(
+    renderWithClient(
       <RazorpayCheckoutForm plan={plan} price={price} onSuccess={vi.fn()} />,
     );
+    await screen.findByPlaceholderText('Name on card');
+    fillCard();
     fireEvent.click(
       screen.getByRole('button', { name: 'Subscribe to Starter' }),
     );
@@ -173,6 +225,27 @@ describe('RazorpayCheckoutForm', () => {
     expect(
       screen.queryByText('Subscription purchased successfully.'),
     ).not.toBeInTheDocument();
+  });
+
+  it('falls back to the Razorpay modal on request', async () => {
+    state.openModal.mockResolvedValue(response);
+    renderWithClient(
+      <RazorpayCheckoutForm plan={plan} price={price} onSuccess={vi.fn()} />,
+    );
+    await screen.findByPlaceholderText('Name on card');
+    fireEvent.click(
+      screen.getByRole('button', { name: /Pay in a Razorpay window instead/ }),
+    );
+    await waitFor(() => expect(state.openModal).toHaveBeenCalled());
+    expect(state.openModal).toHaveBeenCalledWith(
+      expect.objectContaining({
+        key: 'rzp_test_k',
+        subscription_id: 'sub_1',
+        prefill: { name: 'Acme', email: 'buyer@example.com' },
+      }),
+      expect.any(Function),
+    );
+    expect(state.verify).toHaveBeenCalledWith(response);
   });
 });
 

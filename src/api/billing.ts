@@ -99,6 +99,24 @@ export const billingApi = {
       })
       .then(d),
 
+  razorpayCardChange: (): Promise<{
+    subscriptionId: string;
+    keyId: string;
+    name: string;
+    email: string;
+  }> => apiClient.post('/billing/razorpay/card-change').then(d),
+
+  razorpayCardChangeVerify: (
+    res: RazorpayCheckoutResponse,
+  ): Promise<PaymentMethodView[]> =>
+    apiClient
+      .post('/billing/razorpay/card-change/verify', {
+        razorpayPaymentId: res.razorpay_payment_id,
+        razorpaySubscriptionId: res.razorpay_subscription_id,
+        razorpaySignature: res.razorpay_signature,
+      })
+      .then(d),
+
   // Same endpoint as previewUpgrade; a Razorpay org gets the cycle-end shape.
   previewRazorpayPlanChange: (req: {
     priceId: string;
@@ -187,6 +205,8 @@ export const billingAdminApi = {
     id: string,
   ): Promise<{ plan: AdminApiPlan; relinked: string[] }> =>
     apiClient.post(`/super-admin/billing/plans/${id}/resync`).then(d),
+  syncPlanToRazorpay: (id: string): Promise<AdminApiPlan> =>
+    apiClient.post(`/super-admin/billing/plans/${id}/sync-razorpay`).then(d),
 
   // Manually assign an existing plan to an org, bypassing Stripe — the org then functions
   // exactly per that plan's limits/features without being billed for it.

@@ -15,7 +15,6 @@ import {
   X,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 
 import {
   FEATURE_GROUPS,
@@ -90,10 +89,36 @@ import {
   useDeactivatePlanMutation,
   useAddPriceMutation,
   useUpdatePriceMutation,
+  useSyncPlanToRazorpayMutation,
   useUpdateFeaturesMutation,
   useResyncPlanMutation,
 } from '@/queries/useBilling';
+import { usePublicPaymentConfigQuery } from '@/queries/usePaymentGateways';
+import type { PaymentGateway } from '@/api/paymentGateways';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { AdminApiPlan, AdminApiPrice, BillingInterval } from '@/types';
+
+/** A price is buyable on Stripe always (it has a Stripe price); on Razorpay only once synced. */
+function priceOnGateway(
+  price: AdminApiPrice,
+  gateway: PaymentGateway,
+): boolean {
+  return gateway === 'razorpay'
+    ? !!price.razorpayPlanId && price.billingInterval !== 'day'
+    : !!price.stripePriceId;
+}
+
+/** A plan belongs to a gateway's tab if it has an active price buyable on that gateway. */
+function planOnGateway(plan: AdminApiPlan, gateway: PaymentGateway): boolean {
+  return plan.prices.some((p) => p.isActive && priceOnGateway(p, gateway));
+}
+
+/** Active, non-day prices still missing a Razorpay plan — what "Sync to Razorpay" would create. */
+function planHasUnsyncedRazorpay(plan: AdminApiPlan): boolean {
+  return plan.prices.some(
+    (p) => p.isActive && p.billingInterval !== 'day' && !p.razorpayPlanId,
+  );
+}
 
 const money = (cents: number, currency: string) =>
   new Intl.NumberFormat('en-US', {
@@ -563,7 +588,12 @@ function AddPriceDialog({
         <DialogHeader>
           <DialogTitle>Add price to {plan.name}</DialogTitle>
           <DialogDescription>
-            Creates a recurring Stripe price (USD).
+            Creates a recurring price (USD).{' '}
+            {plan.prices.some(
+              (p) => p.isActive && p.billingInterval === interval,
+            )
+              ? `This ${interval} interval already has an active price, so the new one is added inactive — activate it to make it the live price.`
+              : 'It becomes the live price for this interval.'}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
@@ -820,7 +850,7 @@ function PriceGroup({
                   tone={price.razorpayPlanId ? 'success' : 'warning'}
                   title={
                     price.razorpayPlanId ??
-                    'Not synced to Razorpay yet. Use Platform Settings → Payment Gateways → Sync plans to Razorpay.'
+                    'Not synced to Razorpay yet. Use the "Sync to Razorpay" button on this plan.'
                   }
                 >
                   {price.razorpayPlanId ? 'Razorpay' : 'Not on Razorpay'}
@@ -834,9 +864,6 @@ function PriceGroup({
               </span>
               {price.isActive && (
                 <div className="flex shrink-0 items-center gap-1">
-                  <Button asChild type="button" size="xs" variant="outline">
-                    <Link to={`/checkout?priceId=${price.id}`}>Buy</Link>
-                  </Button>
                   <Button
                     type="button"
                     size="xs"
@@ -1472,6 +1499,35 @@ function ResyncPlanButton({ plan }: { plan: AdminApiPlan }) {
   );
 }
 
+function SyncToRazorpayButton({ plan }: { plan: AdminApiPlan }) {
+  const sync = useSyncPlanToRazorpayMutation();
+  const run = async () => {
+    try {
+      await sync.mutateAsync(plan.id);
+      showToast.success('Plan synced to Razorpay.');
+    } catch (err) {
+      showToast.error(getUserFriendlyError(err as never));
+    }
+  };
+  return (
+    <Button
+      type="button"
+      size="xs"
+      variant="outline"
+      onClick={run}
+      disabled={sync.isPending}
+      title="Create Razorpay plans for this plan's active prices"
+    >
+      {sync.isPending ? (
+        <Loader2 className="size-3 animate-spin" />
+      ) : (
+        <ArrowLeftRight className="size-3" />
+      )}
+      Sync to Razorpay
+    </Button>
+  );
+}
+
 function PlanCard({ plan }: { plan: AdminApiPlan }) {
   const inactive = !plan.isActive;
   // Shared across all of this plan's interval groups (Monthly/Yearly/Daily) so activating or
@@ -1582,7 +1638,10 @@ function PlanCard({ plan }: { plan: AdminApiPlan }) {
           rest are compact icon buttons so the footer stays a single tidy row. */}
       <CardFooter className="justify-between gap-2 border-t">
         <AddPriceDialog plan={plan} disabled={inactive} />
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center justify-end gap-1">
+          {plan.isActive && planHasUnsyncedRazorpay(plan) && (
+            <SyncToRazorpayButton plan={plan} />
+          )}
           <PlanFormDialog mode="edit" plan={plan} />
           <ResyncPlanButton plan={plan} />
           {plan.isActive && <DeactivatePlanButton plan={plan} />}
@@ -1594,12 +1653,20 @@ function PlanCard({ plan }: { plan: AdminApiPlan }) {
 
 export default function PlanManagementPage() {
   const { data, isLoading, isError, refetch } = useAdminPlansQuery();
+  const configQuery = usePublicPaymentConfigQuery();
+  const activeGateway: PaymentGateway =
+    configQuery.data?.activeGateway ?? 'stripe';
+  // Default the tab to the gateway currently taking payments; the admin can switch.
+  const [selectedGateway, setSelectedGateway] = useState<PaymentGateway | null>(
+    null,
+  );
+  const gateway = selectedGateway ?? activeGateway;
 
   const header = (
     <PageHeader
       backTo={{ label: 'Back to Super Admin', to: '/super-admin' }}
       title="Plan Management"
-      description="Manage the plan catalogue, pricing, and feature limits. Every change syncs to Stripe."
+      description="Manage the plan catalogue, pricing, and feature limits. Each gateway shows the plans buyable on it."
       actions={<PlanFormDialog mode="create" />}
     />
   );
@@ -1626,9 +1693,25 @@ export default function PlanManagementPage() {
     );
   }
 
+  const gatewayLabel = gateway === 'razorpay' ? 'Razorpay' : 'Stripe';
+  const visiblePlans = data.filter((plan) => planOnGateway(plan, gateway));
+
   return (
     <div className="animate-fade-in-up space-y-6">
       {header}
+      <Tabs
+        value={gateway}
+        onValueChange={(v) => setSelectedGateway(v as PaymentGateway)}
+      >
+        <TabsList>
+          <TabsTrigger value="stripe">
+            Stripe{activeGateway === 'stripe' ? ' · Active' : ''}
+          </TabsTrigger>
+          <TabsTrigger value="razorpay">
+            Razorpay{activeGateway === 'razorpay' ? ' · Active' : ''}
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
       <div className="space-y-4">
         {data.length === 0 ? (
           <EmptyState
@@ -1637,9 +1720,20 @@ export default function PlanManagementPage() {
             description="Create a plan to start building your pricing catalogue."
             viewMode="card"
           />
+        ) : visiblePlans.length === 0 ? (
+          <EmptyState
+            icon={Package}
+            title={`No plans on ${gatewayLabel} yet`}
+            description={
+              gateway === 'razorpay'
+                ? 'Open a plan on the Stripe tab and use “Sync to Razorpay” to make it available here.'
+                : 'No plans have an active Stripe price yet.'
+            }
+            viewMode="card"
+          />
         ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {data.map((plan) => (
+            {visiblePlans.map((plan) => (
               <PlanCard key={plan.id} plan={plan} />
             ))}
           </div>

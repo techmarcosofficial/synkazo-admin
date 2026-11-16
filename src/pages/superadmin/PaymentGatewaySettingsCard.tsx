@@ -295,6 +295,11 @@ function CopyRow({ label, value }: { label: string; value: string }) {
  * "Verifying…" while the API checks the keys with the provider, and the failure shown here
  * (wrong keys are never saved).
  */
+/** What a saved secret looks like in its input: dots plus the last 4 characters. */
+function savedMask(preview: string | null | undefined) {
+  return `••••••••••••${(preview ?? '').replace(/^•+/, '')}`;
+}
+
 function GatewayCredentialsDialog({
   gateway,
   env,
@@ -328,6 +333,17 @@ function GatewayCredentialsDialog({
   const [verifyError, setVerifyError] = useState<string | null>(null);
   const [accountChange, setAccountChange] = useState<string | null>(null);
   const [visible, setVisible] = useState<Set<string>>(new Set());
+  // Saved secrets show as a mask (••••••••Gvkr) until the admin starts typing a replacement.
+  const [replacing, setReplacing] = useState<Set<string>>(new Set());
+  const showsSaved = (key: string, secret?: boolean) =>
+    !!secret && fields[key].configured && !replacing.has(key);
+  const setReplacingKey = (key: string, on: boolean) =>
+    setReplacing((r) => {
+      const next = new Set(r);
+      if (on) next.add(key);
+      else next.delete(key);
+      return next;
+    });
 
   const setField = (key: string, value: string) => {
     setForm((f) => ({ ...f, [key]: value }));
@@ -391,6 +407,7 @@ function GatewayCredentialsDialog({
 
   const generate = (key: string) => {
     const secret = randomSecret();
+    setReplacingKey(key, true);
     setField(key, secret);
     setVisible((v) => new Set(v).add(key));
     void navigator.clipboard
@@ -485,6 +502,17 @@ function GatewayCredentialsDialog({
             const id = `gateway-${gateway}-${env}-${f.key}`;
             const error = errors[f.key];
             const shown = visible.has(f.key);
+            const saved = showsSaved(f.key, f.secret);
+            const mask = savedMask(fields[f.key].preview);
+            const value = form[f.key].trim();
+            // Green: a saved (verified) or .env value is in place. Red: still missing.
+            const state = error
+              ? null
+              : saved || (fields[f.key].configured && value === initial[f.key])
+                ? 'set'
+                : !fields[f.key].configured && !value
+                  ? 'missing'
+                  : null;
             return (
               <Field key={f.key} data-invalid={!!error}>
                 <FieldLabel htmlFor={id}>
@@ -496,30 +524,84 @@ function GatewayCredentialsDialog({
                   />
                 </FieldLabel>
                 <div className="flex flex-wrap gap-2">
-                  <Input
-                    id={id}
-                    type={f.secret && !shown ? 'password' : 'text'}
-                    // API keys, not a login: never let the browser fill saved credentials.
-                    autoComplete={f.secret ? 'new-password' : 'off'}
-                    data-1p-ignore
-                    data-lpignore="true"
-                    data-form-type="other"
-                    spellCheck={false}
-                    value={form[f.key]}
-                    onChange={(e) => setField(f.key, e.target.value)}
-                    placeholder={
-                      f.secret && fields[f.key].configured
-                        ? `Leave blank to keep ${fields[f.key].preview ?? 'the current value'}`
-                        : f.placeholder[env]
-                    }
-                    disabled={save.isPending}
-                    aria-invalid={!!error}
-                    className={cn(
-                      'min-w-0 flex-1 basis-48',
-                      error && 'border-destructive',
+                  <div className="relative min-w-0 flex-1 basis-48">
+                    <Input
+                      id={id}
+                      type={saved || !f.secret || shown ? 'text' : 'password'}
+                      // API keys, not a login: never let the browser fill saved credentials.
+                      autoComplete={f.secret ? 'new-password' : 'off'}
+                      data-1p-ignore
+                      data-lpignore="true"
+                      data-form-type="other"
+                      data-saved={saved || undefined}
+                      spellCheck={false}
+                      value={saved ? mask : form[f.key]}
+                      onFocus={(e) => saved && e.currentTarget.select()}
+                      onChange={(e) => {
+                        if (!saved) return setField(f.key, e.target.value);
+                        // Typing or pasting over the mask starts a replacement.
+                        const raw = e.target.value;
+                        const deleting = (
+                          e.nativeEvent as InputEvent
+                        ).inputType?.startsWith('delete');
+                        setReplacingKey(f.key, true);
+                        setField(
+                          f.key,
+                          deleting
+                            ? ''
+                            : (raw.startsWith(mask)
+                                ? raw.slice(mask.length)
+                                : raw.endsWith(mask)
+                                  ? raw.slice(0, -mask.length)
+                                  : raw
+                              ).replace(/•/g, ''),
+                        );
+                      }}
+                      onBlur={() => {
+                        if (f.secret && !form[f.key].trim())
+                          setReplacingKey(f.key, false);
+                      }}
+                      placeholder={
+                        f.secret && fields[f.key].configured
+                          ? `Leave blank to keep ${fields[f.key].preview ?? 'the current value'}`
+                          : f.placeholder[env]
+                      }
+                      disabled={save.isPending}
+                      aria-invalid={!!error}
+                      aria-describedby={state ? `${id}-state` : undefined}
+                      className={cn(
+                        state && 'pr-9',
+                        saved && 'text-muted-foreground tracking-wide',
+                        error && 'border-destructive',
+                      )}
+                    />
+                    {state && (
+                      <span
+                        id={`${id}-state`}
+                        className="pointer-events-none absolute inset-y-0 right-3 flex items-center"
+                      >
+                        {state === 'set' ? (
+                          <CheckCircle2
+                            aria-hidden
+                            className="text-success size-4"
+                          />
+                        ) : (
+                          <XCircle
+                            aria-hidden
+                            className="text-destructive size-4"
+                          />
+                        )}
+                        <span className="sr-only">
+                          {state === 'set'
+                            ? fields[f.key].source === 'env'
+                              ? 'Set from .env'
+                              : 'Saved'
+                            : 'Not set'}
+                        </span>
+                      </span>
                     )}
-                  />
-                  {f.secret && (
+                  </div>
+                  {f.secret && !saved && (
                     <Button
                       type="button"
                       variant="ghost"
