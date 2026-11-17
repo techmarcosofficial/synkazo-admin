@@ -8,13 +8,46 @@ import ScheduleAndTimeSettingsCard from './ScheduleAndTimeSettingsCard';
 import ManageAuthPagesCard from './ManageAuthPagesCard';
 import BillingRecoveryCard from './BillingRecoveryCard';
 
+import InfoTip from '@/components/shared/InfoTip';
 import PageHeader from '@/components/shared/PageHeader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 type TabId = 'sync' | 'webhooks' | 'auth' | 'flags' | 'marketplace' | 'billing';
 
+// "Coming soon" tabs: the Feature flags + Marketplace surfaces exist in the
+// admin UI but nothing in the product consumes them yet, so they are disabled
+// and shown with a "coming soon" hint instead of being selectable. Keeping the
+// ids here (rather than hard-deleting the tabs) makes re-enabling a one-liner.
+const DISABLED_TAB_IDS: readonly TabId[] = ['flags', 'marketplace'];
+
+// The last-selected tab is remembered across refreshes so an operator mid-task
+// stays where they were. Only enabled tabs are valid targets to open or
+// restore; a stored value pointing at a now-disabled tab falls back to the
+// default. Reads are guarded because localStorage can throw or be unavailable
+// (private windows, blocked storage).
+const ACTIVE_TAB_STORAGE_KEY = 'superadmin.systemSettings.activeTab';
+const DEFAULT_TAB_ID: TabId = 'sync';
+const SELECTABLE_TAB_IDS: readonly TabId[] = [
+  'sync',
+  'webhooks',
+  'auth',
+  'billing',
+];
+
+function readStoredTab(): TabId {
+  try {
+    const stored = localStorage.getItem(ACTIVE_TAB_STORAGE_KEY);
+    if (stored && SELECTABLE_TAB_IDS.includes(stored as TabId)) {
+      return stored as TabId;
+    }
+  } catch {
+    // ignore — fall back to the default
+  }
+  return DEFAULT_TAB_ID;
+}
+
 export default function SystemSettingsPage() {
-  const [activeTab, setActiveTab] = useState<TabId>('sync');
+  const [activeTab, setActiveTab] = useState<TabId>(readStoredTab);
 
   const tabs: { id: TabId; label: string; icon: React.ReactNode }[] = [
     {
@@ -63,19 +96,50 @@ export default function SystemSettingsPage() {
 
       <Tabs
         value={activeTab}
-        onValueChange={(val) => setActiveTab(val as TabId)}
+        onValueChange={(val) => {
+          const next = val as TabId;
+          setActiveTab(next);
+          try {
+            localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, next);
+          } catch {
+            // ignore — persistence is best-effort
+          }
+        }}
       >
         <TabsList className="flex h-auto w-full flex-wrap">
-          {tabs.map((tab) => (
-            <TabsTrigger
-              key={tab.id}
-              value={tab.id}
-              className="flex items-center gap-2"
-            >
-              {tab.icon}
-              {tab.label}
-            </TabsTrigger>
-          ))}
+          {tabs.map((tab) => {
+            const isDisabled = DISABLED_TAB_IDS.includes(tab.id);
+
+            if (isDisabled) {
+              // Rendered as a static chip (not a TabsTrigger) so it can't be
+              // selected and the info "i" stays hoverable — a disabled Radix
+              // trigger would set pointer-events:none and swallow the hover.
+              return (
+                <div
+                  key={tab.id}
+                  aria-disabled="true"
+                  className="text-foreground/40 flex flex-1 cursor-not-allowed items-center justify-center gap-2 rounded-md border border-transparent px-3 py-1 text-sm font-medium whitespace-nowrap select-none"
+                >
+                  {tab.icon}
+                  {tab.label}
+                  <InfoTip label="Coming soon" side="bottom">
+                    Coming soon — this feature isn&apos;t available yet.
+                  </InfoTip>
+                </div>
+              );
+            }
+
+            return (
+              <TabsTrigger
+                key={tab.id}
+                value={tab.id}
+                className="flex items-center gap-2"
+              >
+                {tab.icon}
+                {tab.label}
+              </TabsTrigger>
+            );
+          })}
         </TabsList>
 
         <TabsContent value="sync" className="space-y-6">
