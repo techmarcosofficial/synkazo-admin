@@ -1,7 +1,7 @@
 import {
-  Archive,
   ArrowLeftRight,
   Check,
+  ChevronDown,
   Copy,
   Database,
   Eye,
@@ -41,7 +41,19 @@ import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
 import PageHeader from '@/components/shared/PageHeader';
 import StatusBadge from '@/components/shared/StatusBadge';
-import { Badge } from '@/components/ui/badge';
+import {
+  Badge,
+  badgeToneClasses,
+  useBadgeAppearance,
+} from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -86,7 +98,6 @@ import {
   useAdminPlansQuery,
   useCreatePlanMutation,
   useUpdatePlanMutation,
-  useDeactivatePlanMutation,
   useAddPriceMutation,
   useUpdatePriceMutation,
   useSyncPlanToRazorpayMutation,
@@ -1438,35 +1449,80 @@ function PlanFormDialog(
   );
 }
 
-function DeactivatePlanButton({ plan }: { plan: AdminApiPlan }) {
-  const deactivate = useDeactivatePlanMutation();
+/**
+ * Active/Inactive control for a plan, matching the job/project status dropdown: a status pill
+ * that opens a menu to switch status, with a confirmation before either change. Deactivating a
+ * plan hides it everywhere and strips its features from current subscribers, so the confirm
+ * copy spells that out.
+ */
+function PlanStatusDropdown({ plan }: { plan: AdminApiPlan }) {
+  const update = useUpdatePlanMutation();
   const { confirm } = useConfirmDialog();
+  const tinted = useBadgeAppearance() === 'tinted';
 
-  const run = () => {
+  const change = (next: boolean) => {
+    if (next === plan.isActive || update.isPending) return;
     confirm({
-      variant: 'danger',
-      title: `Deactivate ${plan.name}?`,
-      description:
-        'The plan is hidden from the pricing page and its Stripe product is archived. Existing subscribers are not affected. You can re-activate it later by editing it.',
-      confirmLabel: 'Deactivate',
+      variant: next ? 'success' : 'danger',
+      title: next ? `Activate ${plan.name}?` : `Deactivate ${plan.name}?`,
+      description: next
+        ? 'The plan becomes available on the pricing page and checkout for the gateways its active prices are synced to.'
+        : 'The plan is hidden from the pricing page and checkout, its Stripe product is archived, and organisations currently on it lose its features until it is reactivated.',
+      confirmLabel: next ? 'Activate' : 'Deactivate',
       onConfirm: () =>
-        deactivate.mutate(plan.id, {
-          onSuccess: () => showToast.success('Plan deactivated.'),
-          onError: (err) => showToast.error(getUserFriendlyError(err as never)),
-        }),
+        update.mutate(
+          { id: plan.id, body: { isActive: next } },
+          {
+            onSuccess: () =>
+              showToast.success(next ? 'Plan activated.' : 'Plan deactivated.'),
+            onError: (err) =>
+              showToast.error(getUserFriendlyError(err as never)),
+          },
+        ),
     });
   };
 
   return (
-    <Button
-      size="icon-sm"
-      variant="ghost"
-      className="text-destructive"
-      onClick={run}
-      title="Deactivate plan"
-    >
-      <Archive />
-    </Button>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild disabled={update.isPending}>
+        <Button
+          variant={tinted ? 'ghost' : 'outline'}
+          size="sm"
+          shape="pill"
+          data-badge-control={tinted ? 'tinted' : undefined}
+          className={cn(
+            'group transition-all duration-300',
+            tinted && 'border-0 shadow-none',
+            tinted && badgeToneClasses[plan.isActive ? 'success' : 'muted'],
+          )}
+          title="Change plan status"
+        >
+          <StatusBadge
+            variant="menu"
+            status={plan.isActive ? 'active' : 'inactive'}
+          />
+          <ChevronDown className="text-muted-foreground size-4 transition-transform group-data-[state=open]:rotate-180" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-56" align="start">
+        <DropdownMenuLabel>Change plan status</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          disabled={plan.isActive}
+          onSelect={() => change(true)}
+        >
+          <StatusBadge status="active" variant="menu" />
+          {plan.isActive && <Check className="text-primary ml-auto size-4" />}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          disabled={!plan.isActive}
+          onSelect={() => change(false)}
+        >
+          <StatusBadge status="inactive" variant="menu" />
+          {!plan.isActive && <Check className="text-primary ml-auto size-4" />}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -1537,21 +1593,13 @@ function PlanCard({ plan }: { plan: AdminApiPlan }) {
   const [loadingPriceId, setLoadingPriceId] = useState<string | null>(null);
   return (
     <Card className="flex flex-col">
-      {/* Plan identity + content dim when archived. Edit stays outside this wrapper so it
-          never gets the dimmed/disabled treatment — it's the only way to re-activate. */}
-      <div
-        className={cn(
-          'flex flex-1 flex-col gap-(--card-spacing)',
-          inactive && 'opacity-60',
-        )}
-      >
+      {/* Content dims when archived, but the header (with the status control) stays crisp so the
+          plan can be reactivated from here. Edit also stays outside the dim as a second path. */}
+      <div className="flex flex-1 flex-col gap-(--card-spacing)">
         <CardHeader>
           <CardTitle className="flex flex-wrap items-center gap-2 font-semibold">
             {plan.name}
-            <StatusBadge
-              status={plan.isActive ? 'active' : 'inactive'}
-              size="sm"
-            />
+            <PlanStatusDropdown plan={plan} />
             {plan.features[SHOW_ON_PRICING_KEY] === 'true' ? (
               <Badge
                 variant="outline"
@@ -1576,7 +1624,12 @@ function PlanCard({ plan }: { plan: AdminApiPlan }) {
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="flex flex-1 flex-col space-y-4">
+        <CardContent
+          className={cn(
+            'flex flex-1 flex-col space-y-4',
+            inactive && 'opacity-60',
+          )}
+        >
           {/* Pricing */}
           {plan.prices.length === 0 ? (
             <p className="text-muted-foreground text-sm">No prices yet.</p>
@@ -1644,7 +1697,6 @@ function PlanCard({ plan }: { plan: AdminApiPlan }) {
           )}
           <PlanFormDialog mode="edit" plan={plan} />
           <ResyncPlanButton plan={plan} />
-          {plan.isActive && <DeactivatePlanButton plan={plan} />}
         </div>
       </CardFooter>
     </Card>
@@ -1704,11 +1756,17 @@ export default function PlanManagementPage() {
         onValueChange={(v) => setSelectedGateway(v as PaymentGateway)}
       >
         <TabsList>
-          <TabsTrigger value="stripe">
-            Stripe{activeGateway === 'stripe' ? ' · Active' : ''}
+          <TabsTrigger value="stripe" className="gap-1.5">
+            Stripe
+            {activeGateway === 'stripe' && (
+              <StatusBadge status="active" size="xs" />
+            )}
           </TabsTrigger>
-          <TabsTrigger value="razorpay">
-            Razorpay{activeGateway === 'razorpay' ? ' · Active' : ''}
+          <TabsTrigger value="razorpay" className="gap-1.5">
+            Razorpay
+            {activeGateway === 'razorpay' && (
+              <StatusBadge status="active" size="xs" />
+            )}
           </TabsTrigger>
         </TabsList>
       </Tabs>
