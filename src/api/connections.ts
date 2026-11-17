@@ -9,6 +9,7 @@ import type {
   PaginatedResponse,
   WebhookEvent,
   WebhookSubscription,
+  WebhookValueChangesResult,
 } from '@/types';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -70,6 +71,15 @@ export const connectionsApi = {
         params: { page, limit },
       })
       .then((r) => r.data),
+  // Values are read live from HubSpot's property history; nothing is stored.
+  getWebhookEventChanges: (
+    projectId: string,
+    connId: string,
+    eventId: string,
+  ): Promise<WebhookValueChangesResult> =>
+    apiClient
+      .get(`${p(projectId)}/${connId}/webhooks/events/${eventId}/changes`)
+      .then(d),
   listWebhookSubscriptions: (
     projectId: string,
     connId: string,

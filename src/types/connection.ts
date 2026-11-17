@@ -199,6 +199,29 @@ export interface WebhookPropertyChange {
   isOwnWrite: boolean;
 }
 
+/**
+ * A property a webhook event actually changed, with the values read live from
+ * HubSpot's property history (Synkazo never stores record values).
+ */
+export interface WebhookValueChange {
+  property: string;
+  /** HubSpot's label, e.g. "Street Address"; falls back to the internal name */
+  label: string;
+  /** null means the property was empty (e.g. set for the first time) */
+  oldValue: string | null;
+  newValue: string | null;
+  changedAt: string | null;
+  sourceType: string | null;
+  sourceId: string | null;
+  isOwnWrite: boolean;
+}
+
+export interface WebhookValueChangesResult {
+  changes: WebhookValueChange[];
+  /** Why values could not be shown (record deleted, HubSpot unreachable) */
+  unavailableReason?: string;
+}
+
 /** A single discoverable object type (e.g. "contacts", "deals") */
 export interface DiscoveryObject {
   name: string;
