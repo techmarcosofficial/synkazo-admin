@@ -313,7 +313,7 @@ export default function CredentialsModal({
 
   const fieldsDisabled = loading || previewLoading;
   const environmentLabel =
-    conn.environment === 'sandbox' ? 'Sandbox' : 'Production';
+    conn.environment === 'sandbox' ? 'Test' : 'Live';
 
   // HubSpot is connected directly from its card using OAuth, including legacy-token replacement.
   if (platformId === 'hubspot') return null;

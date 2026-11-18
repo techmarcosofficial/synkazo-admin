@@ -12,13 +12,15 @@ import { cn } from '@/lib/utils';
 const ENVIRONMENTS = [
   {
     id: 'sandbox',
-    label: 'Sandbox',
+    label: 'Test',
+    desc: 'Try it safely — no real data changes',
     tone: 'bg-warning',
     border: 'border-warning',
   },
   {
     id: 'production',
-    label: 'Production',
+    label: 'Live',
+    desc: 'Writes to your real customer data',
     tone: 'bg-success',
     border: 'border-success',
   },
@@ -90,7 +92,12 @@ export default function ConnectionEnvDropdown({
                   )}
                 />
 
-                <span className="flex-1">{env.label}</span>
+                <span className="flex flex-1 flex-col">
+                  <span>{env.label}</span>
+                  <span className="text-muted-foreground text-xs">
+                    {env.desc}
+                  </span>
+                </span>
 
                 {activeEnv === env.id && <Check className="size-4" />}
               </DropdownMenuItem>

@@ -337,8 +337,8 @@ export default function MigrationComparisonCard({
   onGoToConnections: () => void;
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const fromLabel = reversed ? 'Production' : 'Sandbox';
-  const toLabel = reversed ? 'Sandbox' : 'Production';
+  const fromLabel = reversed ? 'Live' : 'Test';
+  const toLabel = reversed ? 'Test' : 'Live';
   const groups = migrationGroups(diff);
   const counts = migrationCounts(groups, selected);
   const sourceConnected = reversed
@@ -419,7 +419,7 @@ export default function MigrationComparisonCard({
             <AlertDescription className="space-y-3">
               <p>
                 {diff.message ??
-                  'Sandbox and Production must both be connected before configuration can be compared.'}
+                  'Test and Live must both be connected before configuration can be compared.'}
               </p>
               <div className="flex flex-wrap gap-2">
                 <StatusBadge

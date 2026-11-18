@@ -135,7 +135,7 @@ describe('MigrationPanel', () => {
       screen.getByRole('checkbox', { name: 'Select Customer tier' }),
     );
     await userEvent.click(
-      screen.getByRole('button', { name: 'Transfer to Production' }),
+      screen.getByRole('button', { name: 'Transfer to Live' }),
     );
 
     const dialog = screen.getByRole('dialog');
@@ -145,7 +145,7 @@ describe('MigrationPanel', () => {
       ),
     ).toBeInTheDocument();
     await userEvent.click(
-      within(dialog).getByRole('button', { name: 'Transfer to Production' }),
+      within(dialog).getByRole('button', { name: 'Transfer to Live' }),
     );
 
     await waitFor(() =>
@@ -177,7 +177,7 @@ describe('MigrationPanel', () => {
     );
     expect(
       screen.getByText('Read configuration').previousSibling,
-    ).toHaveTextContent('Production');
+    ).toHaveTextContent('Live');
   });
 
   it('shows connection prerequisites and routes to connection setup', async () => {
@@ -232,7 +232,7 @@ describe('MigrationPanel', () => {
       await screen.findByText('Environments are in sync'),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/every comparable Sandbox item/i),
+      screen.getByText(/every comparable Test item/i),
     ).toBeInTheDocument();
   });
 
@@ -247,7 +247,7 @@ describe('MigrationPanel', () => {
       screen.queryByRole('checkbox', { name: 'Select Customer tier' }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: 'Transfer to Production' }),
+      screen.queryByRole('button', { name: 'Transfer to Live' }),
     ).not.toBeInTheDocument();
   });
 
@@ -261,11 +261,11 @@ describe('MigrationPanel', () => {
     });
     await userEvent.click(checkbox);
     await userEvent.click(
-      screen.getByRole('button', { name: 'Transfer to Production' }),
+      screen.getByRole('button', { name: 'Transfer to Live' }),
     );
     await userEvent.click(
       within(screen.getByRole('dialog')).getByRole('button', {
-        name: 'Transfer to Production',
+        name: 'Transfer to Live',
       }),
     );
 

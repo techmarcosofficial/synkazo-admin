@@ -17,6 +17,7 @@ import type {
   ConnectionExt,
   ProjectExt,
 } from '@/features/projects/hooks/useProjectDetail';
+import { environmentLabel } from '@/lib/environmentLabel';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import type { ProjectEnvironment } from '@/types';
 
@@ -124,11 +125,9 @@ export default function EnvironmentOverviewCards({
 
   const requestActivation = (env: ProjectEnvironment) => {
     clearActivationError();
-    const targetLabel = env === 'sandbox' ? 'Sandbox' : 'Production';
+    const targetLabel = environmentLabel(env);
     const currentLabel = activeEnvironment
-      ? activeEnvironment === 'sandbox'
-        ? 'Sandbox'
-        : 'Production'
+      ? environmentLabel(activeEnvironment)
       : 'no active environment';
 
     confirm({
@@ -173,11 +172,7 @@ export default function EnvironmentOverviewCards({
               {activeEnvironment ? (
                 <StatusBadge
                   status={activeEnvironment}
-                  label={
-                    activeEnvironment === 'production'
-                      ? 'Production'
-                      : 'Sandbox'
-                  }
+                  label={environmentLabel(activeEnvironment)}
                   size="sm"
                 />
               ) : (
@@ -188,7 +183,7 @@ export default function EnvironmentOverviewCards({
           <p className="text-muted-foreground mt-0.5 text-xs">
             <span className="text-foreground font-medium">
               {activeEnvironment
-                ? `${activeEnvironment} is active`
+                ? `${environmentLabel(activeEnvironment)} is active`
                 : 'No environment active'}
             </span>
             {project.environmentActivatedAt && (
@@ -209,7 +204,7 @@ export default function EnvironmentOverviewCards({
             <div className="space-y-2">
               <div className="flex min-h-7 flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-semibold">Sandbox</span>
+                  <span className="text-sm font-semibold">Test</span>
                   {activeEnvironment === 'sandbox' && (
                     <Badge variant="default" size="xs">
                       Active
@@ -246,7 +241,7 @@ export default function EnvironmentOverviewCards({
                       ) : (
                         <ArrowRight className="size-3" />
                       )}
-                      {activating ? 'Activating…' : 'Switch to Sandbox'}
+                      {activating ? 'Activating…' : 'Switch to Test'}
                     </Button>
                   ) : (
                     <Badge variant="secondary" size="xs">
@@ -260,7 +255,7 @@ export default function EnvironmentOverviewCards({
                     onClick={onGoToConnections}
                     className="h-7 gap-1 text-xs"
                   >
-                    Configure Sandbox
+                    Configure Test
                     <ExternalLink className="size-3" />
                   </Button>
                 )}
@@ -287,7 +282,7 @@ export default function EnvironmentOverviewCards({
             <div className="space-y-2">
               <div className="flex min-h-7 flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-semibold">Production</span>
+                  <span className="text-sm font-semibold">Live</span>
                   {activeEnvironment === 'production' && (
                     <Badge variant="default" size="xs">
                       Active
@@ -311,13 +306,13 @@ export default function EnvironmentOverviewCards({
                     <span>Syncs running</span>
                   </div>
                 ) : !readiness.production.ready ? (
-                  /* SINGLE primary action button: only Configure Production */
+                  /* SINGLE primary action button: only Configure Live */
                   <Button
                     size="sm"
                     onClick={onGoToConnections}
                     className="h-7 gap-1 text-xs"
                   >
-                    Configure Production
+                    Configure Live
                     <ExternalLink className="size-3" />
                   </Button>
                 ) : canActivate ? (
@@ -332,7 +327,7 @@ export default function EnvironmentOverviewCards({
                     ) : (
                       <ArrowRight className="size-3" />
                     )}
-                    {activating ? 'Activating…' : 'Switch to Production'}
+                    {activating ? 'Activating…' : 'Switch to Live'}
                   </Button>
                 ) : (
                   <Badge variant="secondary" size="xs">

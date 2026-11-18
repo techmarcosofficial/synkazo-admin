@@ -103,9 +103,9 @@ describe('EnvironmentOverviewCards', () => {
     renderCards();
 
     expect(screen.getByText('Active sync environment')).toBeInTheDocument();
-    expect(screen.getByText('sandbox is active')).toBeInTheDocument();
+    expect(screen.getByText('Test is active')).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Switch to Production' }),
+      screen.getByRole('button', { name: 'Switch to Live' }),
     ).toBeEnabled();
   });
 
@@ -120,10 +120,10 @@ describe('EnvironmentOverviewCards', () => {
     });
 
     expect(
-      screen.queryByRole('button', { name: 'Switch to Production' }),
+      screen.queryByRole('button', { name: 'Switch to Live' }),
     ).not.toBeInTheDocument();
     await userEvent.click(
-      screen.getByRole('button', { name: 'Configure Production' }),
+      screen.getByRole('button', { name: 'Configure Live' }),
     );
     expect(onGoToConnections).toHaveBeenCalledOnce();
   });
@@ -132,14 +132,14 @@ describe('EnvironmentOverviewCards', () => {
     const props = renderCards();
 
     await userEvent.click(
-      screen.getByRole('button', { name: 'Switch to Production' }),
+      screen.getByRole('button', { name: 'Switch to Live' }),
     );
 
     const confirmation = useConfirmDialogStore.getState();
     expect(confirmation).toMatchObject({
       open: true,
-      title: 'Switch to Production?',
-      confirmLabel: 'Switch to Production',
+      title: 'Switch to Live?',
+      confirmLabel: 'Switch to Live',
     });
     render(<>{confirmation.body}</>);
     expect(
@@ -158,7 +158,7 @@ describe('EnvironmentOverviewCards', () => {
 
     expect(screen.getByText('Admin access required')).toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: 'Switch to Production' }),
+      screen.queryByRole('button', { name: 'Switch to Live' }),
     ).not.toBeInTheDocument();
   });
 

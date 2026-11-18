@@ -452,7 +452,7 @@ describe('CredentialsModal In-Modal Verification', () => {
     fireEvent.click(screen.getByRole('button', { name: /^submit$/i }));
 
     expect(
-      await screen.findByText('Sandbox connections ready'),
+      await screen.findByText('Test connections ready'),
     ).toBeInTheDocument();
     expect(
       screen.getByText(

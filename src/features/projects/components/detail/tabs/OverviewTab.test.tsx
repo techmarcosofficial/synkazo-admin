@@ -55,16 +55,16 @@ describe('Project OverviewTab - Environment Awareness & Production Promotion', (
 
     render(<OverviewTab />);
 
-    expect(screen.getByText('Sandbox Testing Complete')).toBeInTheDocument();
+    expect(screen.getByText('Test run complete')).toBeInTheDocument();
     expect(
       screen.getByRole('heading', {
         level: 3,
-        name: /ready to go live\? connect your production platforms/i,
+        name: /ready to go live\? connect your live platforms/i,
       }),
     ).toBeInTheDocument();
 
     const connectButton = screen.getByRole('button', {
-      name: /^connect production platforms/i,
+      name: /^connect live platforms/i,
     });
     expect(connectButton).toBeInTheDocument();
 
@@ -95,16 +95,16 @@ describe('Project OverviewTab - Environment Awareness & Production Promotion', (
 
     render(<OverviewTab />);
 
-    expect(screen.getByText('Production Ready')).toBeInTheDocument();
+    expect(screen.getByText('Ready to go Live')).toBeInTheDocument();
     expect(
       screen.getByRole('heading', {
         level: 3,
-        name: /ready to activate live production sync\?/i,
+        name: /ready to turn on your live sync\?/i,
       }),
     ).toBeInTheDocument();
 
     const promoteButton = screen.getByRole('button', {
-      name: /^promote to production/i,
+      name: /^go live/i,
     });
     expect(promoteButton).toBeInTheDocument();
 
@@ -136,9 +136,9 @@ describe('Project OverviewTab - Environment Awareness & Production Promotion', (
     render(<OverviewTab />);
 
     expect(
-      screen.queryByText('Sandbox Testing Complete'),
+      screen.queryByText('Test run complete'),
     ).not.toBeInTheDocument();
-    expect(screen.queryByText('Production Ready')).not.toBeInTheDocument();
+    expect(screen.queryByText('Ready to go Live')).not.toBeInTheDocument();
     expect(
       screen.queryByRole('heading', {
         level: 3,

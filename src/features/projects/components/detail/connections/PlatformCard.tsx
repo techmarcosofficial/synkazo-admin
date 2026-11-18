@@ -57,7 +57,7 @@ export default function PlatformCard({
 }: PlatformCardProps) {
   const access = useConnectionAccess();
   const meta = PLATFORM_META[conn.platformId] ?? { label: conn.platformId };
-  const envLabel = conn.environment === 'sandbox' ? 'Sandbox' : 'Production';
+  const envLabel = conn.environment === 'sandbox' ? 'Test' : 'Live';
   const { hasRole } = useSynkazoAuth();
   const canManage =
     access.audience === 'super_admin'

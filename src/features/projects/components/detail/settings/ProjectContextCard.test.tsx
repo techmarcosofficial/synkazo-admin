@@ -51,7 +51,7 @@ describe('ProjectContextCard', () => {
     expect(screen.getByText('ServiceTitan')).toBeInTheDocument();
     expect(screen.getByText('HubSpot')).toBeInTheDocument();
     expect(screen.getByText('One-way')).toBeInTheDocument();
-    expect(screen.getByText('Production')).toBeInTheDocument();
+    expect(screen.getByText('Live')).toBeInTheDocument();
     expect(
       screen.getByRole('link', { name: /view environments/i }),
     ).toHaveAttribute(

@@ -230,7 +230,7 @@ export default function MigrationHistoryCard({
           disabled={loading || !isProductionReady}
           title={
             !isProductionReady
-              ? 'Connect Production environment to refresh transfer history'
+              ? 'Connect your Live environment to refresh transfer history'
               : undefined
           }
         >

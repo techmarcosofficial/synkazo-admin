@@ -47,19 +47,19 @@ describe('RunConfirmModal - Environment Awareness & Safety Reassurance', () => {
   it('renders Sandbox badge and safety reassurance notice in Sandbox mode', () => {
     render(<RunConfirmModal {...defaultProps} environment="sandbox" />);
 
-    expect(screen.getByText('Sandbox')).toBeInTheDocument();
-    expect(screen.getByText(/Operating in Sandbox:/i)).toBeInTheDocument();
+    expect(screen.getByText('Test')).toBeInTheDocument();
+    expect(screen.getByText(/Test mode:/i)).toBeInTheDocument();
     expect(
-      screen.getByText(/No live production records will be modified/i),
+      screen.getByText(/None of your real customer records will be changed/i),
     ).toBeInTheDocument();
   });
 
   it('renders Production badge and does NOT render sandbox reassurance notice in Production mode', () => {
     render(<RunConfirmModal {...defaultProps} environment="production" />);
 
-    expect(screen.getByText('Production')).toBeInTheDocument();
+    expect(screen.getByText('Live')).toBeInTheDocument();
     expect(
-      screen.queryByText(/Operating in Sandbox:/i),
+      screen.queryByText(/Test mode:/i),
     ).not.toBeInTheDocument();
   });
 

@@ -321,7 +321,7 @@ describe('ConnectionBoard credential journey', () => {
     expect(
       await screen.findByRole('heading', { level: 2, name: /connections/i }),
     ).toBeInTheDocument();
-    expect(screen.getAllByText('Sandbox').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Test').length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByText(/test mode/i)).not.toBeInTheDocument();
     expect(screen.getByText('Connect source')).toBeInTheDocument();
     expect(screen.getByText('Connect destination')).toBeInTheDocument();

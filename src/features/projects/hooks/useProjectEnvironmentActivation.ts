@@ -67,7 +67,7 @@ export function useProjectEnvironmentActivation({
   const doActivate = async (env: ProjectEnvironment) => {
     setEnvActivating(true);
     setActivationError(null);
-    const envLabel = env === 'sandbox' ? 'Sandbox' : 'Production';
+    const envLabel = env === 'sandbox' ? 'Test' : 'Live';
     const toastId = toast.loading(
       `Switching to ${envLabel}… validating connections`,
     );

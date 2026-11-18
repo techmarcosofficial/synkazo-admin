@@ -93,7 +93,7 @@ describe('RunSyncTab', () => {
     render(<RunSyncTab />);
 
     expect(screen.getByRole('heading', { name: 'Run Sync' })).toBeVisible();
-    expect(screen.getByText('Sandbox')).toBeInTheDocument();
+    expect(screen.getByText('Test')).toBeInTheDocument();
     const workflow = screen.getByTestId('run-workflow');
     expect(workflow).toHaveAttribute('data-embedded', 'true');
     expect(workflow).toHaveAttribute('data-disabled', 'false');

@@ -166,9 +166,9 @@ export default function LimitSyncModal({
       : 'Start Limited Sync';
   const destinationLabel =
     environment === 'sandbox'
-      ? 'the Sandbox destination'
+      ? 'the Test destination'
       : environment === 'production'
-        ? 'the Production destination'
+        ? 'the Live destination'
         : 'the destination';
   const pipelineBlocked = pipelineRequired && !pipelineConfigured;
   const contactDateRequired =
@@ -564,9 +564,7 @@ export default function LimitSyncModal({
                     </div>
                     <div>
                       <div>
-                        {isSandbox
-                          ? 'Sandbox Test & Limited Run'
-                          : 'Limited Run'}
+                        {isSandbox ? 'Test Run' : 'Limited Run'}
                       </div>
                       <p className="text-muted-foreground flex items-center gap-1 text-xs font-normal">
                         {job?.sourceObject} <ArrowRight className="size-3" />{' '}
@@ -616,13 +614,13 @@ export default function LimitSyncModal({
                 <AlertDescription className="space-y-0.5 text-xs [&_p:not(:last-child)]:mb-0">
                   <p className="text-foreground font-semibold">
                     {isSandboxTest
-                      ? 'Sandbox Testing (Recommended)'
+                      ? 'Test Run (Recommended)'
                       : 'About Limited Runs'}
                   </p>
                   <p>
                     {isSandboxTest
-                      ? 'Run a small sample through your mappings. This writes or updates records in the Sandbox destination and does not advance the sync bookmark.'
-                      : `Process a controlled subset using this job's existing sync rules. This writes or updates records in ${destinationLabel} and does not advance the sync bookmark.`}
+                      ? 'Run a small sample through your field mappings. This adds or updates records in your Test destination and won’t change where your regular sync is up to.'
+                      : `Process a controlled subset using this job's existing sync rules. This adds or updates records in ${destinationLabel} and won’t change where your regular sync is up to.`}
                   </p>
                 </AlertDescription>
               </Alert>

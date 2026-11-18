@@ -48,7 +48,7 @@ describe('ActiveProjectPipelineCard', () => {
     expect(screen.getByText('Acme HVAC Integration')).toBeInTheDocument();
     expect(screen.getByText('Active')).toBeInTheDocument();
     expect(
-      screen.getByText(/limited runs write to production/i),
+      screen.getByText(/live runs write to your real customer data/i),
     ).toBeInTheDocument();
 
     // Verify Project Overview button is NOT present
@@ -264,7 +264,7 @@ describe('ActiveProjectPipelineCard', () => {
     );
 
     expect(screen.getByText('Test & Review')).toBeInTheDocument();
-    expect(screen.getByText(/limited runs write to sandbox only/i)).toBeInTheDocument();
-    expect(screen.queryByText(/limited runs write to production/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/test runs write to your test space only/i)).toBeInTheDocument();
+    expect(screen.queryByText(/live runs write to your real customer data/i)).not.toBeInTheDocument();
   });
 });

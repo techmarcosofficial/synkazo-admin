@@ -580,8 +580,8 @@ export default function CombineFieldsDialog({
                     </p>
                   </div>
                 </div>
-                <Badge className="border-0 bg-primary/10 text-primary text-[10px] font-mono font-medium">
-                  Live Sandbox
+                <Badge className="border-0 bg-primary/10 text-primary text-[10px] font-medium">
+                  Live preview
                 </Badge>
               </div>
 

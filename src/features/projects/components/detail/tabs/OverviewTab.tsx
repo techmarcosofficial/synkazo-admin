@@ -54,9 +54,7 @@ export default function OverviewTab() {
                 <StatusBadge
                   status={isProductionReady ? 'production' : 'sandbox'}
                   label={
-                    isProductionReady
-                      ? 'Production Ready'
-                      : 'Sandbox Testing Complete'
+                    isProductionReady ? 'Ready to go Live' : 'Test run complete'
                   }
                   size="sm"
                 />
@@ -66,13 +64,13 @@ export default function OverviewTab() {
                 level="h3"
                 title={
                   isProductionReady
-                    ? 'Ready to activate live Production sync?'
-                    : 'Ready to go live? Connect your Production platforms'
+                    ? 'Ready to turn on your Live sync?'
+                    : 'Ready to go live? Connect your Live platforms'
                 }
                 subtitle={
                   isProductionReady
-                    ? 'Your sync flows are verified in Sandbox and your live Production connections are connected. Open Environment Settings to switch active sync runtime to Production.'
-                    : 'Your sync flows have been verified cleanly in Sandbox. To begin syncing live customer data, connect your live production platforms. Your field mappings and configurations will carry over seamlessly.'
+                    ? 'Your syncs are verified in Test mode and your Live connections are ready. Open Environment Settings to switch your active sync to Live.'
+                    : 'Your syncs have been verified cleanly in Test mode. To start syncing your real customer data, connect your Live platforms. Your field mappings and settings carry over automatically.'
                 }
               />
             </div>
@@ -84,7 +82,7 @@ export default function OverviewTab() {
                     handleTabChange('settings', { section: 'environments' })
                   }
                 >
-                  Promote to Production
+                  Go Live
                   <ArrowRight data-icon="inline-end" aria-hidden="true" />
                 </Button>
               ) : (
@@ -94,7 +92,7 @@ export default function OverviewTab() {
                     handleTabChange('connections', { env: 'production' })
                   }
                 >
-                  Connect Production Platforms
+                  Connect Live Platforms
                   <ArrowRight data-icon="inline-end" aria-hidden="true" />
                 </Button>
               )}

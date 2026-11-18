@@ -55,13 +55,13 @@ export default function ProjectCard({ project, jobCount }: ProjectCardProps) {
             className="focus-visible:ring-ring relative z-10 inline-flex rounded-full transition-opacity hover:opacity-85 focus-visible:ring-2 focus-visible:outline-none"
             title={
               isSandbox
-                ? 'Operating in Sandbox — Click to open Environment Settings'
-                : 'Operating in Production — Click to open Environment Settings'
+                ? 'Test mode — click to open Environment Settings'
+                : 'Live mode — click to open Environment Settings'
             }
           >
             <StatusBadge
               status={activeEnv}
-              label={isSandbox ? 'Sandbox' : 'Production'}
+              label={isSandbox ? 'Test' : 'Live'}
               size="sm"
             />
           </Link>

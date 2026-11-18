@@ -255,7 +255,7 @@ export const CRED_SCHEMAS: Record<string, CredSchema> = {
     connectionType: 'source',
     environment: 'production',
 
-    note: 'Connect using your lowercase CloudLink tenant name and the API key provided by Texada. Sandbox and production require different API keys.',
+    note: 'Connect using your lowercase CloudLink tenant name and the API key provided by Texada. Test and Live require different API keys.',
 
     fields: [
       {

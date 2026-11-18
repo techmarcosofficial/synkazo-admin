@@ -135,11 +135,11 @@ export default function SettingsTab() {
 
   const handleEnvSwitch = (targetEnv: ProjectEnvironment) => {
     if (targetEnv === projectActiveEnv) return;
-    const targetLabel = targetEnv === 'sandbox' ? 'Sandbox' : 'Production';
+    const targetLabel = targetEnv === 'sandbox' ? 'Test' : 'Live';
     const currentLabel = projectActiveEnv
       ? projectActiveEnv === 'sandbox'
-        ? 'Sandbox'
-        : 'Production'
+        ? 'Test'
+        : 'Live'
       : 'no active environment';
 
     confirm({

@@ -167,8 +167,7 @@ export default function ConnectionPermissionsDialog({
             </span>
           </DialogTitle>
           <DialogDescription>
-            {conn.environment === 'sandbox' ? 'Sandbox' : 'Production'}{' '}
-            connection
+            {conn.environment === 'sandbox' ? 'Test' : 'Live'} connection
           </DialogDescription>
           <Tooltip>
             <TooltipTrigger asChild>

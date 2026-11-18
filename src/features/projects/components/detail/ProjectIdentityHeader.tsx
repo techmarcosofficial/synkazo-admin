@@ -63,15 +63,11 @@ export default function ProjectIdentityHeader({
           {activeEnvironment && (
             <StatusBadge
               status={activeEnvironment}
-              label={
-                activeEnvironment === 'sandbox'
-                  ? 'Sandbox'
-                  : 'Production'
-              }
+              label={activeEnvironment === 'sandbox' ? 'Test' : 'Live'}
               title={
                 activeEnvironment === 'sandbox'
-                  ? 'Operating in Sandbox — Live customer data is not affected'
-                  : 'Production Sync active'
+                  ? 'Test mode — your real customer data is never changed'
+                  : 'Live sync active'
               }
               size="md"
               className="h-8 gap-2 px-3 text-sm font-medium"

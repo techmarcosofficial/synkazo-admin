@@ -151,7 +151,7 @@ export const MOCK_CONNECTIONS = [
     platformId: 'hubspot',
     type: 'destination',
     status: 'error',
-    accountName: 'Acme HVAC — HubSpot (Sandbox)',
+    accountName: 'Acme HVAC — HubSpot (Test)',
     connectedAt: '2025-03-01T09:30:00Z',
     lastChecked: '2025-05-17T14:00:00Z',
   },

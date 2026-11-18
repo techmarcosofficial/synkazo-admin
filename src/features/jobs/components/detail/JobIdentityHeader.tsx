@@ -108,15 +108,11 @@ export default function JobIdentityHeader({
           {activeEnvironment && (
             <StatusBadge
               status={activeEnvironment}
-              label={
-                activeEnvironment === 'sandbox'
-                  ? 'Sandbox'
-                  : 'Production'
-              }
+              label={activeEnvironment === 'sandbox' ? 'Test' : 'Live'}
               title={
                 activeEnvironment === 'sandbox'
-                  ? 'Operating in Sandbox — Live customer data is not affected'
-                  : 'Production Sync active'
+                  ? 'Test mode — your real customer data is never changed'
+                  : 'Live sync active'
               }
               size="md"
               className={headerBadgeClassName}

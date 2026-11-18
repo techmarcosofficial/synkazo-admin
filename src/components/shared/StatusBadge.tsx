@@ -138,8 +138,8 @@ const STATUS_CONFIG: Record<
   awaiting_connection: { tone: 'muted', label: 'Awaiting connection' },
   partial: { tone: 'warning', label: 'Partial' },
   scheduled: { tone: 'info', label: 'Scheduled' },
-  sandbox: { tone: 'warning', label: 'Sandbox' },
-  production: { tone: 'success', label: 'Production' },
+  sandbox: { tone: 'warning', label: 'Test' },
+  production: { tone: 'success', label: 'Live' },
   one_way: { tone: 'muted', label: 'One-way', icon: ArrowRight },
   two_way: { tone: 'muted', label: 'Two-way', icon: ArrowLeftRight },
   unrestricted: {

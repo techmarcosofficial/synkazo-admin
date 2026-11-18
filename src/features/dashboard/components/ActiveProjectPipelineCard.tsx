@@ -346,7 +346,7 @@ export default function ActiveProjectPipelineCard({
                     ? 'Sync run completed'
                     : step4State === 'in_progress'
                       ? isSandbox
-                        ? 'Review a 5-record Sandbox run'
+                        ? 'Review a 5-record Test run'
                         : 'Run a controlled subset'
                       : 'Requires sync flows'
                 }
@@ -383,8 +383,8 @@ export default function ActiveProjectPipelineCard({
           <ShieldCheck className="text-muted-foreground size-3.5 shrink-0" />
           <span>
             {isSandbox
-              ? 'Limited runs write to Sandbox only. Production records remain untouched.'
-              : 'Limited runs write to Production. Review your settings before starting.'}
+              ? 'Test runs write to your Test space only. Your real customer records stay untouched.'
+              : 'Live runs write to your real customer data. Review your settings before starting.'}
           </span>
         </div>
       </div>

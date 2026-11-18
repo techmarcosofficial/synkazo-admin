@@ -46,7 +46,7 @@ export default function EnvironmentSyncTab() {
         <HeadingPair
           level="h3"
           title="Schema & custom properties transfer"
-          subtitle="Compare and transfer HubSpot custom objects, properties, and association labels between Sandbox and Production without recreating them manually."
+          subtitle="Compare and transfer HubSpot custom objects, properties, and association labels between Test and Live without recreating them manually."
           trailing={
             <Badge size="xs" variant="secondary">
               Optional
@@ -59,10 +59,10 @@ export default function EnvironmentSyncTab() {
             <AlertCircle className="text-warning size-4 shrink-0" />
             <p className="text-muted-foreground">
               <strong className="text-foreground font-medium">
-                Production connection required:
+                Live connection required:
               </strong>{' '}
-              To transfer custom schema and properties, connect your live
-              Production platforms in the environment card above first.
+              To transfer custom schema and properties, connect your Live
+              platforms in the environment card above first.
             </p>
           </div>
         )}
@@ -70,7 +70,7 @@ export default function EnvironmentSyncTab() {
         <PlanFeatureGate
           allowed={envMigration}
           title="Environment migration isn't on your plan"
-          description="Compare and transfer HubSpot custom objects, properties, and association labels between Sandbox and Production. Upgrade to enable environment migration."
+          description="Compare and transfer HubSpot custom objects, properties, and association labels between Test and Live. Upgrade to enable environment migration."
         >
           <MigrationPanel
             projectId={projectId}

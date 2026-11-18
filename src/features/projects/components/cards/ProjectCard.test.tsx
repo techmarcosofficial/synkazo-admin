@@ -73,7 +73,7 @@ describe('ProjectCard', () => {
       </MemoryRouter>,
     );
 
-    const badge = screen.getByText('Sandbox');
+    const badge = screen.getByText('Test');
     expect(badge).toBeInTheDocument();
 
     const envLink = badge.closest('a');
@@ -93,7 +93,7 @@ describe('ProjectCard', () => {
       </MemoryRouter>,
     );
 
-    const badge = screen.getByText('Production');
+    const badge = screen.getByText('Live');
     expect(badge).toBeInTheDocument();
 
     const envLink = badge.closest('a');

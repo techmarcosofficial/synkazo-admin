@@ -351,8 +351,8 @@ export function resolveNextAction(
       state: 'S12_TEST_RUNNING',
       title: isSandbox ? 'Sample test in progress' : 'Limited sync in progress',
       description: isSandbox
-        ? 'Synkazo is syncing a limited number of records in Sandbox for review.'
-        : 'Synkazo is syncing a limited number of records in Production.',
+        ? 'Synkazo is syncing a limited number of records in Test mode for review.'
+        : 'Synkazo is syncing a limited number of records in Live mode.',
       actionLabel: isSandbox ? 'View Test Progress' : 'View Sync Progress',
       actionUrl: `/projects/${targetProject.id}/jobs/${targetJob.id}?tab=overview`,
       actionType: 'navigate',
@@ -379,10 +379,10 @@ export function resolveNextAction(
   if (!hasSuccessfulRun) {
     return {
       state: 'S11_READY_FOR_TEST',
-      title: isSandbox ? 'Run a 5-record Sandbox test' : 'Run a limited sync',
+      title: isSandbox ? 'Run a 5-record Test' : 'Run a limited sync',
       description: isSandbox
-        ? 'Sync a small sample to your Sandbox destination and review the results before automating.'
-        : 'Sync a controlled number of records to your Production destination and review the results before automating.',
+        ? 'Sync a small sample to your Test destination and review the results before automating.'
+        : 'Sync a controlled number of records to your Live destination and review the results before automating.',
       actionLabel: isSandbox ? 'Run 5-Record Test' : 'Run Limited Sync',
       actionUrl: `/projects/${targetProject.id}/jobs/${targetJob.id}?tab=overview`,
       actionType: 'trigger',
@@ -515,8 +515,8 @@ export function computeJourneyProgressSteps(
       id: 'test_preview',
       title: isSandbox ? 'Test & Review' : 'Run & Review',
       description: isSandbox
-        ? 'Sync a small sample in Sandbox and review the result.'
-        : 'Run a limited sync in Production and review the result.',
+        ? 'Sync a small sample in Test mode and review the result.'
+        : 'Run a limited sync in Live mode and review the result.',
       status: testComplete ? 'complete' : jobExists ? 'current' : 'upcoming',
       url: targetJob
         ? `/projects/${targetProject.id}/jobs/${targetJob.id}?tab=overview`

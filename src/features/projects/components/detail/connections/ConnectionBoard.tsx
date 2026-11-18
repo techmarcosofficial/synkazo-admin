@@ -472,15 +472,11 @@ export default function ConnectionBoard({
   const envBadge = (
     <StatusBadge
       status={activeEnv === 'production' ? 'production' : 'sandbox'}
-      label={
-        activeEnv === 'production'
-          ? 'Production'
-          : 'Sandbox'
-      }
+      label={activeEnv === 'production' ? 'Live' : 'Test'}
       title={
         activeEnv === 'production'
-          ? 'Production Sync active'
-          : 'Operating in Sandbox — Live customer data is not affected'
+          ? 'Live sync active'
+          : 'Test mode — your real customer data is never changed'
       }
       size="sm"
     />

@@ -171,11 +171,11 @@ export default function RunConfirmModal({
       {environment && (
         <StatusBadge
           status={environment}
-          label={isSandbox ? 'Sandbox' : 'Production'}
+          label={isSandbox ? 'Test' : 'Live'}
           title={
             isSandbox
-              ? 'Operating in Sandbox — Live customer data is not affected'
-              : 'Production Sync active'
+              ? 'Test mode — your real customer data is never changed'
+              : 'Live sync active'
           }
           size="sm"
         />
@@ -187,9 +187,9 @@ export default function RunConfirmModal({
     <div className="flex items-center gap-2.5 rounded-2xl bg-muted/50 border border-border/60 px-3.5 py-2.5 text-xs text-muted-foreground">
       <ShieldCheck className="size-4 text-warning shrink-0" />
       <span>
-        <strong className="text-foreground">Operating in Sandbox:</strong> This
-        run tests data movement using your sandbox connections. No live
-        production records will be modified.
+        <strong className="text-foreground">Test mode:</strong> This run tests
+        data movement using your Test connections. None of your real customer
+        records will be changed.
       </span>
     </div>
   );

@@ -138,7 +138,7 @@ export function featureList(limits: PlanLimits) {
     { enabled: limits.customObjects, label: 'Custom object support (HubSpot)' },
     { enabled: limits.customFields, label: 'Custom field creation' },
     { enabled: limits.jobDependencyChains, label: 'Job dependency chains' },
-    { enabled: limits.envMigration, label: 'Sandbox → production migration' },
+    { enabled: limits.envMigration, label: 'Test → Live migration' },
     { enabled: true, label: `${limits.logRetentionDays}-day log retention` },
   ];
 }

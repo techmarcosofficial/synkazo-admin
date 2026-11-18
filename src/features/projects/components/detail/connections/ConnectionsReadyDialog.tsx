@@ -34,7 +34,7 @@ export default function ConnectionsReadyDialog({
   onContinue,
   onDismiss,
 }: ConnectionsReadyDialogProps) {
-  const envLabel = environment === 'production' ? 'Production' : 'Sandbox';
+  const envLabel = environment === 'production' ? 'Live' : 'Test';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
