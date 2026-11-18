@@ -290,10 +290,8 @@ export default function BillingOverviewTab() {
                       <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
                         <div
                           className={cn(
-                            'h-full rounded-full transition-all duration-500 bg-gradient-to-r',
-                            usageOver
-                              ? 'from-red-500 to-rose-600'
-                              : 'from-amber-500 to-orange-500',
+                            'h-full rounded-full transition-all duration-500',
+                            usageOver ? 'bg-destructive' : 'bg-primary',
                           )}
                           style={{
                             width: `${usage?.maxRecordsPerMonth == null ? (usage?.recordsSynced ? 25 : 0) : Math.min(100, Math.max(3, Math.round(usageRawPct)))}%`,
@@ -318,7 +316,7 @@ export default function BillingOverviewTab() {
                       </div>
                       <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
                         <div
-                          className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-blue-500 to-indigo-500"
+                          className="h-full rounded-full transition-all duration-500 bg-primary"
                           style={{
                             width: `${
                               plan.overLimit?.projects.limit
@@ -345,7 +343,7 @@ export default function BillingOverviewTab() {
                       </div>
                       <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
                         <div
-                          className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-purple-500 to-violet-500"
+                          className="h-full rounded-full transition-all duration-500 bg-primary"
                           style={{
                             width: `${
                               plan.overLimit?.jobs.limit
@@ -372,7 +370,7 @@ export default function BillingOverviewTab() {
                       </div>
                       <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
                         <div
-                          className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-emerald-500 to-teal-600"
+                          className="h-full rounded-full transition-all duration-500 bg-primary"
                           style={{
                             width: `${
                               plan.overLimit?.teamMembers.limit

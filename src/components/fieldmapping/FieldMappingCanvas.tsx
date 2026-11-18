@@ -3384,7 +3384,7 @@ export default function FieldMappingCanvas({
                                     ) : (
                                       <Lock className="size-4" />
                                     )}
-                                    Edit rule
+                                    Convert value
                                   </Button>
                                 )}
                                 {n.actionType === 'open_drawer' && (
