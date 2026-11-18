@@ -232,6 +232,12 @@ export default function PlatformPairField({
         platforms={destPlatforms}
         disabled={disabled || destDisabled}
         centerItems={destPlatformsOverride != null}
+        readOnly={destPlatformsOverride != null}
+        note={
+          destPlatformsOverride != null
+            ? 'Your records sync into HubSpot.'
+            : undefined
+        }
         cardClassName={compact ? 'w-full min-w-0 max-w-none' : 'min-w-0 w-full'}
         compact={compact}
         onChange={onDestChange}

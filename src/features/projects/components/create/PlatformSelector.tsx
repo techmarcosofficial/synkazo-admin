@@ -39,6 +39,15 @@ interface PlatformSelectorProps {
   // a single card doesn't look stranded against a taller sibling column.
   centerItems?: boolean;
 
+  // When true, the platform(s) are shown as a fixed, non-selectable card
+  // rather than a radio choice. Used for the destination, which is always
+  // HubSpot — a radio with one option reads as a choice the user doesn't have.
+  readOnly?: boolean;
+
+  // Optional plain-language line shown under the card (e.g. "Your records
+  // sync into HubSpot.") so the model is explained in-view, not only on hover.
+  note?: string;
+
   cardClassName?: string;
 
   /** Stack options and render shorter icon/title rows in compact forms. */
@@ -59,6 +68,8 @@ export default function PlatformSelector({
   platforms,
   disabled = false,
   centerItems = false,
+  readOnly = false,
+  note,
   cardClassName,
   compact = false,
   registerItemRef,
@@ -74,7 +85,7 @@ export default function PlatformSelector({
       )}
     >
       <div className="flex items-center gap-1.5">
-        <Label className="font-semibold whitespace-nowrap" required>
+        <Label className="font-semibold whitespace-nowrap" required={!readOnly}>
           {label}
         </Label>
 
@@ -96,9 +107,39 @@ export default function PlatformSelector({
         )}
       </div>
 
-      {/* `value` is always driven by the caller's state (never `defaultValue`),
+      {readOnly ? (
+        <div
+          className={cn(
+            'flex w-full gap-2',
+            compact && 'flex-col items-start',
+            centerItems && 'flex-1 justify-center',
+          )}
+        >
+          {platforms.map((platform) => (
+            <div
+              key={platform.platformId}
+              ref={(el) => registerItemRef?.(platform.platformId, el)}
+              className={cn(
+                'border-primary bg-primary/5 relative flex h-24 w-full min-w-30 flex-col items-center justify-center gap-2 rounded-3xl border-2 p-3 text-center',
+                compact &&
+                  'h-14 max-w-64 min-w-0 flex-row justify-start gap-3 rounded-2xl px-3 py-2 text-left',
+                cardClassName,
+              )}
+            >
+              <PlatformIcon
+                platformId={platform.platformId}
+                size={compact ? 28 : 32}
+              />
+              <span className="min-w-0 truncate font-medium">
+                {platform.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : (
+      /* `value` is always driven by the caller's state (never `defaultValue`),
           so switching platforms re-renders every item's selected/indicator
-          state on every change, not just the first one. */}
+          state on every change, not just the first one. */
       <RadioGroup
         value={value}
         onValueChange={(v) => {
@@ -169,6 +210,9 @@ export default function PlatformSelector({
           );
         })}
       </RadioGroup>
+      )}
+
+      {note && <p className="text-muted-foreground text-xs">{note}</p>}
     </div>
   );
 }
