@@ -9,10 +9,12 @@ import {
   useGuideAutoAdvance,
   useGuideSpot,
   useGuideStore,
-  useIsGuidedProject,
+  useIsTourProject,
+  type GuideProgress,
   type GuideSpot,
   type GuideStepId,
 } from '@/features/guide';
+import type { JobExt } from '@/features/projects/hooks/useProjectDetail';
 import { formatSchedule } from '@/features/projects/utils';
 import { useProjectJobsQuery } from '@/queries/useJobs';
 import { usePriorityQueueQuery } from '@/queries/usePriorityQueue';
@@ -28,18 +30,25 @@ const TAB_STEP: Partial<Record<string, GuideStepId>> = {
 };
 
 /**
- * First-run setup on the project page: the step-form header under the tabs,
- * plus the ring on whatever to click next. Renders nothing unless this is the
- * project the guide is following.
+ * Setup steps on the project page: the step-form header under the tabs, plus
+ * a highlight on whatever to click next. The project the first-run tour
+ * follows also gets hint cards and auto-next; every other project that isn't
+ * fully set up gets the header and a highlight only, in any browser, since
+ * progress comes from the server. Fully set-up projects show nothing.
  */
 export default function ProjectGuide({ className }: { className?: string }) {
   const { projectId } = useProjectDetailContext();
-  const guided = useIsGuidedProject(projectId);
-  if (!guided) return null;
-  return <ProjectGuideActive className={className} />;
+  const tour = useIsTourProject(projectId);
+  return <ProjectGuideActive key={String(tour)} tour={tour} className={className} />;
 }
 
-function ProjectGuideActive({ className }: { className?: string }) {
+function ProjectGuideActive({
+  tour,
+  className,
+}: {
+  tour: boolean;
+  className?: string;
+}) {
   const navigate = useNavigate();
   const {
     projectId,
@@ -50,54 +59,83 @@ function ProjectGuideActive({ className }: { className?: string }) {
     activeTab,
     handleTabChange,
   } = useProjectDetailContext();
-  const jobId = useGuideStore((s) => s.jobId);
+  const tourJobId = useGuideStore((s) => s.jobId);
   const setJob = useGuideStore((s) => s.setJob);
   const finish = useGuideStore((s) => s.finish);
-  const queue = usePriorityQueueQuery(projectId).data;
+  const setAssist = useGuideStore((s) => s.setAssist);
+  const queueQuery = usePriorityQueueQuery(projectId);
+  const queue = queueQuery.data;
   // The scheduler saves through this list, so it's fresher than the page's jobs.
-  const schedulerJobs = useProjectJobsQuery(projectId).data;
+  const schedulerJobsQuery = useProjectJobsQuery(projectId);
+  const schedulerJobs = schedulerJobsQuery.data;
+  // Schedule status loads apart from the page; wait for it so a scheduled
+  // project doesn't flash "Set a schedule" outside the tour.
+  const ready = !queueQuery.isLoading && !schedulerJobsQuery.isLoading;
 
-  // Follow the first sync job; if it was deleted, fall back to whatever is left.
+  // The tour follows the first sync job; if it was deleted, fall back to
+  // whatever is left.
   useEffect(() => {
-    if (jobId && jobs.some((j) => j.id === jobId)) return;
+    if (!tour) return;
+    if (tourJobId && jobs.some((j) => j.id === tourJobId)) return;
     const fallback = jobs[0]?.id ?? null;
-    if (fallback !== jobId) setJob(fallback);
-  }, [jobs, jobId, setJob]);
+    if (fallback !== tourJobId) setJob(fallback);
+  }, [tour, jobs, tourJobId, setJob]);
 
-  const job = jobs.find((j) => j.id === jobId) ?? null;
+  const progressFor = useCallback(
+    (job: JobExt | null): GuideProgress => {
+      const tested = Boolean(
+        job &&
+          (job.lastSyncedAt ||
+            (job.recordsSynced ?? 0) > 0 ||
+            logs.some(
+              (log) =>
+                log.jobId === job.id && log.metadata?.status === 'success',
+            )),
+      );
+      const mapped =
+        tested ||
+        Boolean(job?.fieldMappings?.some((mapping) => mapping.isMatchField));
+      const latest = schedulerJobs?.find((j) => j.id === job?.id);
+      const jobScheduled =
+        !!job &&
+        (job.syncDirection === 'two_way' ||
+          formatSchedule(job) !== 'No schedule' ||
+          (!!latest &&
+            formatSchedule(latest as unknown as typeof job) !== 'No schedule'));
+      const queueScheduled =
+        queue?.schedulerMode === 'priority' &&
+        (queue.queueJobs?.some((q) => q.enabled) ?? false);
+      return computeGuideProgress({
+        connected: hasBothConnections,
+        jobCreated: Boolean(job),
+        mapped,
+        tested,
+        scheduled: jobScheduled || queueScheduled,
+      });
+    },
+    [logs, queue, schedulerJobs, hasBothConnections],
+  );
 
-  const flags = useMemo(() => {
-    const tested = Boolean(
-      job &&
-        (job.lastSyncedAt ||
-          (job.recordsSynced ?? 0) > 0 ||
-          logs.some(
-            (log) => log.jobId === job.id && log.metadata?.status === 'success',
-          )),
-    );
-    const mapped =
-      tested ||
-      Boolean(job?.fieldMappings?.some((mapping) => mapping.isMatchField));
-    const latest = schedulerJobs?.find((j) => j.id === job?.id);
-    const jobScheduled =
-      !!job &&
-      (job.syncDirection === 'two_way' ||
-        formatSchedule(job) !== 'No schedule' ||
-        (!!latest &&
-          formatSchedule(latest as unknown as typeof job) !== 'No schedule'));
-    const queueScheduled =
-      queue?.schedulerMode === 'priority' &&
-      (queue.queueJobs?.some((q) => q.enabled) ?? false);
-    return {
-      connected: hasBothConnections,
-      jobCreated: Boolean(job),
-      mapped,
-      tested,
-      scheduled: jobScheduled || queueScheduled,
+  // Tour: the followed job. Otherwise the job furthest along, so a project
+  // with one working sync counts as set up even while a new job is drafted.
+  const { job, progress } = useMemo(() => {
+    if (tour) {
+      const followed = jobs.find((j) => j.id === tourJobId) ?? null;
+      return { job: followed, progress: progressFor(followed) };
+    }
+    let best: { job: JobExt | null; progress: GuideProgress } = {
+      job: null,
+      progress: progressFor(null),
     };
-  }, [job, logs, queue, schedulerJobs, hasBothConnections]);
+    for (const candidate of jobs) {
+      const p = progressFor(candidate);
+      if (!best.job || p.doneCount > best.progress.doneCount) {
+        best = { job: candidate, progress: p };
+      }
+    }
+    return best;
+  }, [tour, jobs, tourJobId, progressFor]);
 
-  const progress = computeGuideProgress(flags);
   const { current } = progress;
   const viewStep = TAB_STEP[activeTab] ?? null;
 
@@ -116,11 +154,20 @@ function ProjectGuideActive({ className }: { className?: string }) {
 
   const setCurrentStep = useGuideStore((s) => s.setCurrentStep);
   useEffect(() => {
-    setCurrentStep(current);
-  }, [current, setCurrentStep]);
+    if (tour) setCurrentStep(current);
+  }, [tour, current, setCurrentStep]);
 
+  // Highlight-only help while this page is open and setup is unfinished.
+  const assistJobId = job?.id ?? null;
+  useEffect(() => {
+    if (tour || !current || !ready) return;
+    setAssist({ projectId, jobId: assistJobId, step: current });
+    return () => setAssist(null);
+  }, [tour, current, ready, projectId, assistJobId, setAssist]);
+
+  // Auto-next belongs to the first-run tour only.
   useGuideAutoAdvance({
-    enabled: true,
+    enabled: tour,
     current,
     viewStep,
     from: AUTO_ADVANCE_FROM,
@@ -197,7 +244,7 @@ function ProjectGuideActive({ className }: { className?: string }) {
             body: 'Your test sync passed. Schedule the job so records keep syncing on their own.',
           }
         : null;
-  } else {
+  } else if (tour) {
     spot = {
       id: 'guide-complete',
       title: 'Your first sync is live',
@@ -205,10 +252,18 @@ function ProjectGuideActive({ className }: { className?: string }) {
       action: { label: 'Finish', onClick: finish },
     };
   }
-  useGuideSpot(spot && { ...spot, step: spot.step ?? current ?? undefined });
+  // Outside the tour, highlight only once assist mode is on (see above).
+  const showSpot = tour || (ready && !!current);
+  useGuideSpot(
+    showSpot && spot && { ...spot, step: spot.step ?? current ?? undefined },
+  );
+
+  // Outside the tour, a fully set-up project needs no header.
+  if (!tour && (!current || !ready)) return null;
 
   return (
     <GuideStepper
+      title={tour ? 'Getting started' : 'Project setup'}
       progress={progress}
       viewStep={viewStep}
       onGo={go}

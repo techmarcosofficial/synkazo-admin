@@ -51,6 +51,18 @@ interface RegisteredSpot extends GuideSpot {
   key: number;
 }
 
+/**
+ * Highlight-only help on any project or job that isn't fully set up, for
+ * every user and browser (progress comes from the server, not this store).
+ * Spots light up the next button with no hint card.
+ */
+export interface GuideAssist {
+  projectId: string;
+  /** The job whose setup is shown, or null when the project has none yet. */
+  jobId: string | null;
+  step: GuideStepId | null;
+}
+
 interface GuideState {
   userId: string | null;
   status: GuideStatus;
@@ -66,6 +78,8 @@ interface GuideState {
   spots: RegisteredSpot[];
   /** Session-only: the unfinished step, as last computed by a guided page. */
   currentStep: GuideStepId | null;
+  /** Session-only: set while a project or job page shows highlight-only help. */
+  assist: GuideAssist | null;
 
   bindUser: (userId: string) => void;
   start: () => void;
@@ -77,6 +91,7 @@ interface GuideState {
   pushSpot: (spot: RegisteredSpot) => void;
   removeSpot: (key: number) => void;
   setCurrentStep: (step: GuideStepId | null) => void;
+  setAssist: (assist: GuideAssist | null) => void;
 }
 
 export const useGuideStore = create<GuideState>()(
@@ -90,6 +105,7 @@ export const useGuideStore = create<GuideState>()(
       collapsed: {},
       spots: [],
       currentStep: null,
+      assist: null,
 
       bindUser: (userId) =>
         set((s) =>
@@ -111,6 +127,7 @@ export const useGuideStore = create<GuideState>()(
       removeSpot: (key) =>
         set((s) => ({ spots: s.spots.filter((x) => x.key !== key) })),
       setCurrentStep: (currentStep) => set({ currentStep }),
+      setAssist: (assist) => set({ assist }),
     }),
     {
       name: 'synkazo:first-run-guide',
@@ -124,41 +141,70 @@ export const useGuideStore = create<GuideState>()(
   ),
 );
 
-/** True when the guide is running and following this project. */
-export function useIsGuidedProject(projectId: string | null | undefined) {
+/** True when the first-run tour is running and following this project. */
+export function useIsTourProject(projectId: string | null | undefined) {
   return useGuideStore(
     (s) => s.status === 'active' && !!projectId && s.projectId === projectId,
   );
 }
 
-/** True when the guide is running and following this job. */
-export function useIsGuidedJob(jobId: string | null | undefined) {
+/** True when the first-run tour is running and following this job. */
+export function useIsTourJob(jobId: string | null | undefined) {
   return useGuideStore(
     (s) => s.status === 'active' && !!jobId && s.jobId === jobId,
   );
 }
 
-/** True when the guide follows this project and its next step is `step`. */
+/** True when this project gets setup help: the tour, or highlight-only assist. */
+export function useIsGuidedProject(projectId: string | null | undefined) {
+  return useGuideStore(
+    (s) =>
+      !!projectId &&
+      ((s.status === 'active' && s.projectId === projectId) ||
+        s.assist?.projectId === projectId),
+  );
+}
+
+/** True when this job gets setup help: the tour, or highlight-only assist. */
+export function useIsGuidedJob(jobId: string | null | undefined) {
+  return useGuideStore(
+    (s) =>
+      !!jobId &&
+      ((s.status === 'active' && s.jobId === jobId) || s.assist?.jobId === jobId),
+  );
+}
+
+/** True when this project gets setup help and its next step is `step`. */
 export function useIsGuideStep(
   projectId: string | null | undefined,
   step: GuideStepId,
 ) {
-  return useGuideStore(
-    (s) =>
+  return useGuideStore((s) => {
+    if (!projectId) return false;
+    if (s.assist?.projectId === projectId) return s.assist.step === step;
+    return (
       s.status === 'active' &&
-      !!projectId &&
       s.projectId === projectId &&
-      s.currentStep === step,
-  );
+      s.currentStep === step
+    );
+  });
 }
 
 /** True while the guided project still has no job (the create-job dialog is the next stop). */
 export function useIsCreatingGuidedJob(projectId?: string | null) {
-  return useGuideStore(
-    (s) =>
+  return useGuideStore((s) => {
+    if (s.assist) {
+      return (
+        !s.assist.jobId &&
+        s.assist.step === 'job' &&
+        (projectId == null || s.assist.projectId === projectId)
+      );
+    }
+    return (
       s.status === 'active' &&
       !!s.projectId &&
       !s.jobId &&
-      (projectId == null || s.projectId === projectId),
-  );
+      (projectId == null || s.projectId === projectId)
+    );
+  });
 }

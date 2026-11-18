@@ -6,6 +6,8 @@ export {
   useIsGuidedJob,
   useIsGuidedProject,
   useIsGuideStep,
+  useIsTourJob,
+  useIsTourProject,
   type GuideSpot,
 } from './guideStore';
 export {

@@ -11,6 +11,14 @@ import { Button } from '@/components/ui/button';
 
 const CHIP_OFFSET = 8;
 
+// Highlight-only help lights up controls, never whole areas or panels, and
+// doesn't force hidden controls into view.
+const ASSIST_EXTRA_MODES: ReadonlySet<string | undefined> = new Set([
+  undefined,
+  'control',
+  'text',
+]);
+
 // An open modal covers everything outside it; a ring there would point at a
 // control the user can't reach.
 const MODAL_SELECTOR = [
@@ -55,8 +63,9 @@ function isHidden(el: Element, box: Box) {
 
 /**
  * Renders the current guide spot: the control to use next lights up in the
- * theme's primary colour, with a small hint card beside it. Nothing here blocks the page; the
- * user clicks the real control.
+ * theme's primary colour, with a small hint card beside it during the
+ * first-run tour (highlight only otherwise). Nothing here blocks the page;
+ * the user clicks the real control.
  */
 export default function GuideLayer() {
   const status = useGuideStore((s) => s.status);
@@ -67,8 +76,11 @@ export default function GuideLayer() {
   );
   const collapse = useGuideStore((s) => s.collapse);
   const finish = useGuideStore((s) => s.finish);
+  // A page showing highlight-only help: light the control, no hint card.
+  const assistOnly = useGuideStore((s) => s.assist !== null);
 
-  const active = status === 'active' && !paused && Boolean(spot);
+  const active =
+    (status === 'active' || assistOnly) && !paused && Boolean(spot);
 
   const [box, setBox] = useState<Box | null>(null);
   const [avoid, setAvoid] = useState<Box | null>(null);
@@ -127,7 +139,7 @@ export default function GuideLayer() {
 
       if (el !== markedRef.current) {
         mark(markedRef, el, el ? (spot.targetMode ?? highlightMode(el)) : null);
-        if (el && next && scrolledFor.current !== spot.id) {
+        if (el && next && !assistOnly && scrolledFor.current !== spot.id) {
           scrolledFor.current = spot.id;
           if (isHidden(el, next)) {
             el.scrollIntoView({ block: 'center', behavior: 'smooth' });
@@ -138,6 +150,7 @@ export default function GuideLayer() {
       const desired = new Map<Element, string>();
       if (!isBlocked) {
         for (const extra of spot.extras ?? []) {
+          if (assistOnly && !ASSIST_EXTRA_MODES.has(extra.mode)) continue;
           const els = extra.all
             ? [...document.querySelectorAll(extra.target)].filter(
                 (x) => (!modal || modal.contains(x)) && toBox(x),
@@ -159,9 +172,9 @@ export default function GuideLayer() {
       cancelAnimationFrame(raf);
       clear();
     };
-  }, [active, spot]);
+  }, [active, assistOnly, spot]);
 
-  if (!active || !spot || blocked) return null;
+  if (!active || !spot || blocked || assistOnly) return null;
 
   const hasTarget = Boolean(spot.target);
   if (hasTarget && !box && !spot.floatWhenMissing) return null;

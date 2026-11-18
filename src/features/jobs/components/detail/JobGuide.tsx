@@ -9,7 +9,7 @@ import {
   useGuideAutoAdvance,
   useGuideSpot,
   useGuideStore,
-  useIsGuidedJob,
+  useIsTourJob,
   type GuideSpot,
   type GuideStepId,
 } from '@/features/guide';
@@ -26,18 +26,25 @@ const AUTO_ADVANCE_DELAYS: Partial<Record<GuideStepId, number>> = {
 };
 
 /**
- * First-run setup on the sync-job page: the same six-step header as the
- * project page, plus rings for the parts this page owns. The field-mapping
- * and run-sync tabs point at their own controls; this covers everything else.
+ * Setup steps on the sync-job page: the same six-step header as the project
+ * page, plus highlights for the parts this page owns. The field-mapping and
+ * run-sync tabs point at their own controls; this covers everything else.
+ * The job the first-run tour follows also gets hint cards and auto-next;
+ * any other unfinished job gets the header and highlights only.
  */
 export default function JobGuide({ className }: { className?: string }) {
   const { job } = useJobDetailContext();
-  const guided = useIsGuidedJob(job.id);
-  if (!guided) return null;
-  return <JobGuideActive className={className} />;
+  const tour = useIsTourJob(job.id);
+  return <JobGuideActive key={String(tour)} tour={tour} className={className} />;
 }
 
-function JobGuideActive({ className }: { className?: string }) {
+function JobGuideActive({
+  tour,
+  className,
+}: {
+  tour: boolean;
+  className?: string;
+}) {
   const navigate = useNavigate();
   const {
     projectId,
@@ -50,7 +57,12 @@ function JobGuideActive({ className }: { className?: string }) {
     handleTabChange,
   } = useJobDetailContext();
   const finish = useGuideStore((s) => s.finish);
-  const queue = usePriorityQueueQuery(projectId).data;
+  const setAssist = useGuideStore((s) => s.setAssist);
+  const queueQuery = usePriorityQueueQuery(projectId);
+  const queue = queueQuery.data;
+  // Schedule status loads apart from the page; wait for it so a scheduled
+  // job doesn't flash "Set a schedule" outside the tour.
+  const ready = !queueQuery.isLoading;
 
   const state = selectJobOnboardingState({
     mappings: jobFieldMappings,
@@ -102,11 +114,19 @@ function JobGuideActive({ className }: { className?: string }) {
 
   const setCurrentStep = useGuideStore((s) => s.setCurrentStep);
   useEffect(() => {
-    setCurrentStep(current);
-  }, [current, setCurrentStep]);
+    if (tour) setCurrentStep(current);
+  }, [tour, current, setCurrentStep]);
 
+  // Highlight-only help while this page is open and setup is unfinished.
+  useEffect(() => {
+    if (tour || !current || !ready) return;
+    setAssist({ projectId, jobId: job.id, step: current });
+    return () => setAssist(null);
+  }, [tour, current, ready, projectId, job.id, setAssist]);
+
+  // Auto-next belongs to the first-run tour only.
   useGuideAutoAdvance({
-    enabled: true,
+    enabled: tour,
     current,
     viewStep,
     from: AUTO_ADVANCE_FROM,
@@ -150,7 +170,7 @@ function JobGuideActive({ className }: { className?: string }) {
       title: 'Test passed. One step left',
       body: 'Back on the project, set a schedule so this job keeps syncing on its own.',
     };
-  } else if (!current) {
+  } else if (!current && tour) {
     spot = {
       id: 'guide-complete',
       title: 'Your first sync is live',
@@ -158,10 +178,16 @@ function JobGuideActive({ className }: { className?: string }) {
       action: { label: 'Finish', onClick: finish },
     };
   }
-  useGuideSpot(spot && { ...spot, step: current ?? undefined });
+  // Outside the tour, highlight only once assist mode is on (see above).
+  const showSpot = tour || (ready && !!current);
+  useGuideSpot(showSpot && spot && { ...spot, step: current ?? undefined });
+
+  // Outside the tour, a fully set-up job needs no header.
+  if (!tour && (!current || !ready)) return null;
 
   return (
     <GuideStepper
+      title={tour ? 'Getting started' : 'Job setup'}
       progress={progress}
       viewStep={viewStep}
       onGo={go}

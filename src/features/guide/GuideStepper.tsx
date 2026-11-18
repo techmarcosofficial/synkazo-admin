@@ -25,11 +25,14 @@ const NAVIGABLE: ReadonlySet<GuideStepId> = new Set([
  * is finished, and never skips past the first unfinished step.
  */
 export default function GuideStepper({
+  title = 'Getting started',
   progress,
   viewStep,
   onGo,
   className,
 }: {
+  /** Heading before the count. */
+  title?: string;
   progress: GuideProgress;
   /** The step this tab belongs to, or null on tabs outside the setup path. */
   viewStep: GuideStepId | null;
@@ -68,7 +71,7 @@ export default function GuideStepper({
       )}
     >
       <p className="flex shrink-0 items-baseline gap-2">
-        <span className="text-sm font-semibold">Getting started</span>
+        <span className="text-sm font-semibold">{title}</span>
         <span className="text-muted-foreground text-xs tabular-nums">
           {doneCount} of {GUIDE_STEP_COUNT} done
         </span>
