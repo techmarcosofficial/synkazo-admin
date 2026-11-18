@@ -162,7 +162,7 @@ export default function ConnectionPermissionsDialog({
             <span className="flex items-center gap-2 text-lg leading-snug">
               <ShieldCheck className="size-5 shrink-0" aria-hidden="true" />
               {isHubSpotOAuth
-                ? 'HubSpot permissions & rescoping'
+                ? 'HubSpot permissions'
                 : `${meta.label} permissions`}
             </span>
           </DialogTitle>

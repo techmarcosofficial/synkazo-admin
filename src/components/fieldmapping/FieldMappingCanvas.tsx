@@ -2554,7 +2554,7 @@ export default function FieldMappingCanvas({
                         : 'text-muted-foreground hover:text-foreground',
                     )}
                     onClick={() => setMatchMode('and')}
-                    title="All selected identifier keys must match"
+                    title="A record must match on all of your Identifiers"
                   >
                     Match All
                   </button>
@@ -2567,7 +2567,7 @@ export default function FieldMappingCanvas({
                         : 'text-muted-foreground hover:text-foreground',
                     )}
                     onClick={() => setMatchMode('or')}
-                    title="Try identifier keys in priority order; first match wins"
+                    title="A record matches if any one of your Identifiers matches"
                   >
                     Match Any
                   </button>
@@ -2793,7 +2793,7 @@ export default function FieldMappingCanvas({
                         : 'text-muted-foreground hover:text-foreground',
                     )}
                     onClick={() => setMatchMode('and')}
-                    title="All selected identifier keys must match"
+                    title="A record must match on all of your Identifiers"
                   >
                     Match All
                   </button>
@@ -2806,7 +2806,7 @@ export default function FieldMappingCanvas({
                         : 'text-muted-foreground hover:text-foreground',
                     )}
                     onClick={() => setMatchMode('or')}
-                    title="Try identifier keys in priority order; first match wins"
+                    title="A record matches if any one of your Identifiers matches"
                   >
                     Match Any
                   </button>

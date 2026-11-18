@@ -263,7 +263,7 @@ export default function PlatformCard({
                     >
                       <ShieldCheck className="size-3.5" />
                       {conn.platformId === 'hubspot'
-                        ? 'Permissions & Rescoping'
+                        ? 'Manage permissions'
                         : 'Permissions'}
                     </Button>
 
