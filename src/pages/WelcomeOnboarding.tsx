@@ -83,6 +83,15 @@ export default function WelcomeOnboarding() {
 
   const invalidLink = !projectId || !token;
 
+  // Non-technical escape: these credentials usually live with IT/a developer.
+  // Let the user forward this exact setup link, or skip and finish later in-app.
+  const setupLink = typeof window !== 'undefined' ? window.location.href : '';
+  const mailtoHref = `mailto:?subject=${encodeURIComponent(
+    'Finish connecting ServiceTitan to Synkazo',
+  )}&body=${encodeURIComponent(
+    `Please finish connecting our ServiceTitan account to Synkazo using this secure setup link:\n\n${setupLink}\n\nYou'll need our ServiceTitan App Key, Client ID, Client Secret and Tenant ID (found under Settings → Integrations → API Applications).`,
+  )}`;
+
   return (
     <div className="bg-background flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-md">
@@ -233,6 +242,41 @@ export default function WelcomeOnboarding() {
                   {loading ? 'Testing…' : 'Test & Connect'}
                 </Button>
               </FieldGroup>
+
+              <div className="border-border/60 bg-muted/20 rounded-2xl border p-3 text-left">
+                <p className="text-foreground text-xs font-medium">
+                  Don&rsquo;t have these details?
+                </p>
+                <p className="text-muted-foreground mt-0.5 text-xs">
+                  They come from your ServiceTitan account &mdash; usually
+                  something your IT team or developer can provide. You can send
+                  them this setup link, or finish this later.
+                </p>
+                <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => {
+                      window.location.href = mailtoHref;
+                    }}
+                  >
+                    <Mail /> Email this link to your team
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => navigate('/login')}
+                  >
+                    I&rsquo;ll do this later
+                  </Button>
+                </div>
+                <p className="text-muted-foreground mt-2 text-[11px]">
+                  You can finish connecting ServiceTitan any time from Project
+                  &rarr; Connections.
+                </p>
+              </div>
             </div>
           )}
         </CardContent>
