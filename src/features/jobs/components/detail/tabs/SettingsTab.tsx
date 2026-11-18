@@ -147,15 +147,15 @@ function CheckpointInformation() {
         visualLevel="card"
         level="h3"
         titleId="job-checkpoint-title"
-        title="Sync Progress Bookmark (Checkpoint)"
-        subtitle="Saved progress used to continue an interrupted sync without starting over from scratch."
+        title="Sync progress"
+        subtitle="Where the last sync left off, so an interrupted sync can pick up instead of starting over."
         className="mb-4"
       />
 
       <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="bg-muted/50 rounded-3xl border px-3 py-2.5">
           <dt className="text-muted-foreground text-xs">
-            Current Bookmark (Page)
+            Last position
           </dt>
           <dd className="mt-1 text-sm font-medium">
             {job.checkpointPage != null
@@ -164,14 +164,14 @@ function CheckpointInformation() {
           </dd>
         </div>
         <div className="bg-muted/50 rounded-3xl border px-3 py-2.5">
-          <dt className="text-muted-foreground text-xs">Bookmark Timestamp</dt>
+          <dt className="text-muted-foreground text-xs">Last updated</dt>
           <dd className="mt-1 text-sm font-medium">
             {formatCheckpointDate(job.checkpointSince)}
           </dd>
         </div>
         <div className="bg-muted/50 rounded-3xl border px-3 py-2.5">
           <dt className="text-muted-foreground text-xs">
-            Full Resync Bookmark
+            Full re-sync position
           </dt>
           <dd className="mt-1 text-sm font-medium">
             {job.syncAllPage != null

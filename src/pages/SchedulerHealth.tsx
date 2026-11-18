@@ -529,7 +529,7 @@ export default function SchedulerHealth() {
           tone: queueStats.waiting > 20 ? 'text-warning' : 'text-foreground',
         },
         {
-          label: 'Active',
+          label: 'Running now',
           value: queueStats.active,
           tone: queueStats.active > 0 ? 'text-success' : 'text-foreground',
         },
@@ -539,7 +539,7 @@ export default function SchedulerHealth() {
           tone: queueStats.failed > 0 ? 'text-destructive' : 'text-foreground',
         },
         {
-          label: 'Completed',
+          label: 'Done',
           value: queueStats.completed,
           tone: 'text-muted-foreground',
         },
@@ -568,7 +568,7 @@ export default function SchedulerHealth() {
                       : 'text-destructive',
                   )}
                 >
-                  Worker {queueStats.workerOnline ? 'Online' : 'Offline'}
+                  Sync engine {queueStats.workerOnline ? 'running' : 'paused'}
                 </span>
               </div>
               <div className="bg-border h-4 w-px" />
