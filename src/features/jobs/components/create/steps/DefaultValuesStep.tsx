@@ -41,6 +41,12 @@ export default function DefaultValuesStep({
 
   return (
     <div className="space-y-3">
+      <div className="border-border/60 bg-muted/30 text-muted-foreground rounded-2xl border p-3 text-xs">
+        Because this is a two-way sync, Synkazo also writes records back to your
+        source. For each required field below, set a value to use when it&rsquo;s
+        empty &mdash; or choose to skip those records &mdash; so write-backs
+        don&rsquo;t fail.
+      </div>
       <RequiredFieldDefaults
         sourceFields={sourceFields as unknown as CanvasFieldDef[]}
         destFields={destFields as unknown as CanvasFieldDef[]}

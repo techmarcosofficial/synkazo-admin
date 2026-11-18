@@ -218,7 +218,7 @@ export default function EditorDashboard() {
                 {logs.slice(0, 10).map((log) => {
                   const status = STATUS_LABEL[log.metadata?.status ?? ''];
                   const title = log.jobRunId
-                    ? `Run ID: ${log.jobRunId}`
+                    ? `Reference: ${log.jobRunId}`
                     : undefined;
                   return (
                     <ListRow key={log.id} className="items-start" title={title}>

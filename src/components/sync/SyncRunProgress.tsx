@@ -1179,7 +1179,7 @@ export default function SyncRunProgress({
                     )}
                     <span className="truncate">
                       {current.state === 'failed'
-                        ? 'Run failed. Check detailed error trace and payload logs.'
+                        ? 'This run failed. Open it to see which records had a problem and why.'
                         : current.state === 'stopped'
                           ? 'Run was stopped. Review captured progress and logs.'
                           : failed > 0
