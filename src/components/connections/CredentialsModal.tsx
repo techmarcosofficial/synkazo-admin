@@ -333,8 +333,8 @@ export default function CredentialsModal({
         phase === 'success'
           ? undefined
           : isEdit
-            ? 'Update your API credentials'
-            : 'Enter your API credentials'
+            ? `Updating your ${environmentLabel} connection details.`
+            : `You're setting up your ${environmentLabel} connection. Enter the details below.`
       }
       size={phase === 'success' ? 'xs' : 'sm'}
       compact={phase === 'success'}
