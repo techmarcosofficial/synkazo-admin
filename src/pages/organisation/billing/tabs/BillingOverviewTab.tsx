@@ -236,7 +236,7 @@ export default function BillingOverviewTab() {
                   Plan limits &amp; features
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Included in your {plan.planName} plan and current monthly consumption.
+                  Included in your {plan.planName} plan, and how much you’ve used this month.
                 </CardDescription>
               </CardHeader>
 
@@ -245,7 +245,7 @@ export default function BillingOverviewTab() {
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Resource Usage &amp; Quotas
+                      This month’s usage
                     </h4>
                     <span className="text-xs text-muted-foreground">
                       Billing cycle: <strong className="text-foreground font-medium">{formatDate(usage?.periodStart ?? null)}</strong> – <strong className="text-foreground font-medium">{formatDate(renewalDate)}</strong>
@@ -274,7 +274,7 @@ export default function BillingOverviewTab() {
                         </div>
                         <span
                           className={cn(
-                            'font-mono text-xs',
+                            'text-xs',
                             usageOver
                               ? 'font-semibold text-destructive'
                               : usage?.maxRecordsPerMonth == null
@@ -310,7 +310,7 @@ export default function BillingOverviewTab() {
                           <FolderOpen className="size-3.5 text-blue-500" aria-hidden="true" />
                           <span>Projects</span>
                         </div>
-                        <span className="font-mono text-xs font-medium text-foreground">
+                        <span className="text-xs font-medium text-foreground">
                           {plan.overLimit?.projects.limit != null
                             ? `${plan.overLimit.projects.count.toLocaleString()} / ${plan.overLimit.projects.limit.toLocaleString()}`
                             : `${plan.overLimit?.projects.count ?? 0} / Unlimited`}
@@ -337,7 +337,7 @@ export default function BillingOverviewTab() {
                           <Package className="size-3.5 text-purple-500" aria-hidden="true" />
                           <span>Sync jobs</span>
                         </div>
-                        <span className="font-mono text-xs font-medium text-foreground">
+                        <span className="text-xs font-medium text-foreground">
                           {plan.overLimit?.jobs.limit != null
                             ? `${plan.overLimit.jobs.count.toLocaleString()} / ${plan.overLimit.jobs.limit.toLocaleString()}`
                             : `${plan.overLimit?.jobs.count ?? 0} / Unlimited`}
@@ -364,7 +364,7 @@ export default function BillingOverviewTab() {
                           <Users className="size-3.5 text-emerald-500" aria-hidden="true" />
                           <span>Team members</span>
                         </div>
-                        <span className="font-mono text-xs font-medium text-foreground">
+                        <span className="text-xs font-medium text-foreground">
                           {plan.overLimit?.teamMembers.limit != null
                             ? `${plan.overLimit.teamMembers.count.toLocaleString()} / ${plan.overLimit.teamMembers.limit.toLocaleString()}`
                             : `${plan.overLimit?.teamMembers.count ?? 0} / Unlimited`}
@@ -390,10 +390,10 @@ export default function BillingOverviewTab() {
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Plan Capabilities &amp; Inclusions
+                      What’s included
                     </h4>
                     <Badge variant="secondary" className="text-[10px] rounded-full px-2 py-0 border-0 font-medium">
-                      {plan.planName} tier
+                      {plan.planName} plan
                     </Badge>
                   </div>
 

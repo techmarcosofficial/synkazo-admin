@@ -3,6 +3,7 @@
 import {
   Building2,
   ClipboardList,
+  CreditCard,
   FolderOpen,
   LayoutDashboard,
   Settings,
@@ -63,6 +64,12 @@ const TENANT_NAV: NavGroup[] = [
         title: 'Organization',
         url: ORGANIZATION_URL,
         icon: Building2,
+        minRole: 'org_admin',
+      },
+      {
+        title: 'Billing',
+        url: '/organization/billing',
+        icon: CreditCard,
         minRole: 'org_admin',
       },
       {
