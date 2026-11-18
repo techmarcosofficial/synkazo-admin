@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   ArrowRight,
   Calendar as CalendarIcon,
+  ChevronDown,
   ChevronRight,
   Info,
   Play,
@@ -20,6 +21,11 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import {
   Dialog,
   DialogContent,
@@ -672,7 +678,7 @@ export default function LimitSyncModal({
                 </div>
               </div>
 
-              <FieldGroup className="grid gap-2 sm:grid-cols-3">
+              <FieldGroup>
                 <Field data-invalid={!!errors.limit}>
                   <FieldLabel htmlFor="limit-count" className="text-xs">
                     Number of records
@@ -695,7 +701,15 @@ export default function LimitSyncModal({
                     Max 50,000 per run
                   </p>
                 </Field>
+              </FieldGroup>
 
+              <Collapsible className="space-y-2">
+                <CollapsibleTrigger className="group text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-xs font-medium">
+                  <ChevronDown className="size-3.5 transition-transform group-data-[state=open]:rotate-180" />
+                  Advanced (page &amp; batch size)
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <FieldGroup className="grid gap-2 sm:grid-cols-2">
                 <Field data-invalid={!!errors.startPage}>
                   <FieldLabel htmlFor="start-page" className="text-xs">
                     Starting page
@@ -747,7 +761,9 @@ export default function LimitSyncModal({
                     Between 10 and 500 records
                   </p>
                 </Field>
-              </FieldGroup>
+                  </FieldGroup>
+                </CollapsibleContent>
+              </Collapsible>
 
               <div className="border-border/60 space-y-2 rounded-xl border p-3">
                 <div className="flex items-start gap-2">
