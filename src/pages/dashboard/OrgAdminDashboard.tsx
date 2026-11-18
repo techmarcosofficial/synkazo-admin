@@ -24,7 +24,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PERMISSION_GROUPS, roleLabel } from '@/lib/permissions';
+import {
+  PERMISSION_GROUPS,
+  PERMISSION_LABELS,
+  roleLabel,
+} from '@/lib/permissions';
 import { useSynkazoAuth } from '@/lib/synkazoAuth';
 import { useInvitationsQuery } from '@/queries/useInvitations';
 import { useMyOrgQuery } from '@/queries/useOrganisations';
@@ -330,8 +334,8 @@ export default function OrgAdminDashboard() {
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {group.perms.map((perm) => (
-                      <Badge key={perm} variant="outline" className="font-mono">
-                        {perm}
+                      <Badge key={perm} variant="outline">
+                        {PERMISSION_LABELS[perm] || perm}
                       </Badge>
                     ))}
                   </div>

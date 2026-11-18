@@ -586,8 +586,10 @@ export default function SchedulerHealth() {
             </div>
             {!queueStats.workerOnline && (
               <p className="text-destructive text-xs">
-                Sync jobs are queued but no worker is processing them. Run:{' '}
-                <code>pm2 start synkazo-worker</code>
+                Your scheduled syncs are paused for a moment while our system
+                catches up. They&rsquo;ll resume automatically &mdash; no action
+                needed. If this doesn&rsquo;t clear shortly, please contact
+                support.
               </p>
             )}
           </CardContent>

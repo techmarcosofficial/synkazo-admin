@@ -444,7 +444,7 @@ export default function LogsPage() {
                                   {log.jobId && (
                                     <div>
                                       <div className="text-muted-foreground mb-1 text-xs font-semibold tracking-wide uppercase">
-                                        Rule
+                                        Job
                                       </div>
                                       <div className="text-muted-foreground text-xs">
                                         {log.jobLabel}
@@ -454,11 +454,11 @@ export default function LogsPage() {
                                   {log.jobRunId && (
                                     <div>
                                       <div className="text-muted-foreground mb-1 text-xs font-semibold tracking-wide uppercase">
-                                        Run ID
+                                        Reference
                                       </div>
                                       <div
                                         className="text-muted-foreground font-mono text-xs"
-                                        title="For debugging/support reference only"
+                                        title="Share this reference with support if you need help with this run"
                                       >
                                         {log.jobRunId}
                                       </div>
