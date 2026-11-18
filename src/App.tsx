@@ -114,6 +114,7 @@ const SuperAdminLayout = lazy(
   () => import('@/pages/superadmin/SuperAdminLayout'),
 );
 const CheckoutPage = lazy(() => import('@/pages/checkout/CheckoutPage'));
+const ChoosePlanPage = lazy(() => import('@/pages/checkout/ChoosePlanPage'));
 const Dashboard = lazy(() => import('@/pages/dashboard/Dashboard'));
 const ProjectsPage = lazy(() => import('@/pages/projects/ProjectsPage'));
 const ProjectDetail = lazy(() => import('@/pages/projects/ProjectDetail'));
@@ -225,6 +226,14 @@ function App() {
                 element={
                   <TenantOnlyPage>
                     <CheckoutPage />
+                  </TenantOnlyPage>
+                }
+              />
+              <Route
+                path="/plans"
+                element={
+                  <TenantOnlyPage>
+                    <ChoosePlanPage />
                   </TenantOnlyPage>
                 }
               />

@@ -157,11 +157,9 @@ export default function CheckoutPage() {
           <Button
             variant="link"
             className="px-0"
-            onClick={() => {
-              window.location.href = `${import.meta.env.VITE_FRONTEND_URL}/pricing`;
-            }}
+            onClick={() => navigate('/plans')}
           >
-            Back to pricing
+            Choose a plan
           </Button>
         </div>
       </Shell>
@@ -210,9 +208,7 @@ export default function CheckoutPage() {
         variant="ghost"
         size="sm"
         className="text-muted-foreground mb-6 -ml-2"
-        onClick={() => {
-          window.location.href = `${import.meta.env.VITE_FRONTEND_URL}/pricing`;
-        }}
+        onClick={() => navigate('/plans')}
       >
         <ArrowLeft className="h-4 w-4" /> Back to plans
       </Button>
