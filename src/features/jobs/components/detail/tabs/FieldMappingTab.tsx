@@ -518,7 +518,7 @@ export default function FieldMappingTab() {
     if (!pairs.some((m) => m.isMatchField)) {
       setAttentionSignal((s) => s + 1);
       toast.error(
-        'At least one Unique Identifier is required — designate an identifier key (like Email or ID) to look up matching records.',
+        'At least one Identifier is required — designate an identifier key (like Email or ID) to look up matching records.',
         {
           action: {
             label: 'Review Issues',
@@ -838,7 +838,7 @@ export default function FieldMappingTab() {
                       variant="secondary"
                       className="bg-primary/10 text-primary border-primary/20 border"
                     >
-                      Unique Identifier
+                      Identifier
                     </Badge>
                   </div>
                   <p className="text-muted-foreground text-xs leading-relaxed">

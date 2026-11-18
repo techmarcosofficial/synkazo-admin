@@ -314,7 +314,7 @@ function JobSetupJourney({
       }
       description={
         stage === 'field-mapping'
-          ? 'Map source and destination fields, then choose at least one Match Field.'
+          ? 'Map source and destination fields, then choose at least one Identifier.'
           : stage === 'pipeline'
             ? 'Choose the destination pipeline required before running this job.'
             : 'Run a limited sync to verify records move cleanly between platforms.'

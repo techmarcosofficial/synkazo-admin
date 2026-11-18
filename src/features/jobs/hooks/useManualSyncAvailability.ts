@@ -58,7 +58,7 @@ export function useManualSyncAvailability() {
     blockedReason = 'Connect both platforms on the project before syncing.';
   } else if (!onboarding.mappingReady) {
     blockedReason =
-      'Map your fields and choose at least one Match Field on Field Mapping first.';
+      'Map your fields and choose at least one Identifier on Field Mapping first.';
   } else if (!onboarding.configurationReady) {
     blockedReason = 'Choose the destination pipeline on Pipeline first.';
   } else if (!canStartSync) {

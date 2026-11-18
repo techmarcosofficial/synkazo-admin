@@ -1399,7 +1399,7 @@ export default function FieldMappingCanvas({
       ? [
           {
             id: 'missing-identifier',
-            name: 'Primary Identifier',
+            name: 'Identifier',
             note: 'No record lookup key designated',
             why: 'Every sync job requires at least one primary identifier (such as Email, Phone, or ID) to look up existing records and update them instead of creating duplicates on every sync run.',
             targetLabel: 'Required for Record Lookup',
@@ -2692,7 +2692,7 @@ export default function FieldMappingCanvas({
                                   onClick={() =>
                                     toggleMatch(am.sourceField, am.destKey)
                                   }
-                                  aria-label="Remove match key"
+                                  aria-label="Remove identifier"
                                   title="Remove key"
                                 >
                                   <X />
@@ -2884,7 +2884,7 @@ export default function FieldMappingCanvas({
                                     onClick={() =>
                                       toggleMatch(am.sourceField, am.destKey)
                                     }
-                                    aria-label="Remove match key"
+                                    aria-label="Remove identifier"
                                     title="Remove key"
                                   >
                                     <X />
@@ -3822,8 +3822,8 @@ export default function FieldMappingCanvas({
                                   onClick={() => toggleMatch(m.sourceField, dk)}
                                   title={
                                     isNewlySetIdentifier
-                                      ? 'Identifier match key (will move to top on save) — click to unset'
-                                      : 'Identifier match key (click to unset)'
+                                      ? 'Identifier (will move to top on save) — click to unset'
+                                      : 'Identifier (click to unset)'
                                   }
                                 >
                                   <KeyRound className="text-primary size-3 shrink-0" />
@@ -3842,7 +3842,7 @@ export default function FieldMappingCanvas({
                                   className="text-muted-foreground hover:text-primary hover:bg-primary/10 border-border/70 hover:border-primary/40 h-7.5 shrink-0 cursor-pointer gap-1.5 rounded-lg border border-dashed px-2 text-xs font-medium opacity-0 transition-opacity group-hover/row:opacity-100"
                                   onClick={() => toggleMatch(m.sourceField, dk)}
                                   data-guide="set-identifier"
-                                  title="Set as identifier match key (will move to top on save)"
+                                  title="Set as identifier (will move to top on save)"
                                 >
                                   <KeyRound className="size-3.5" />
                                   Set Identifier

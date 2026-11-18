@@ -59,7 +59,7 @@ export default function JobStatusDropdown({
     ? 'Connect both platforms first'
     : fieldMappingCount === 0
       ? 'Map your fields first'
-      : 'Designate a Unique Identifier first';
+      : 'Choose an Identifier first';
 
   return (
     <>

@@ -191,7 +191,7 @@ export default function FieldMappingStep({
                   <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h4 className="text-foreground text-sm font-semibold">
-                        How should we identify matching records? (Unique Identifier)
+                        How should we identify matching records? (Identifier)
                       </h4>
                       {hasMatchField ? (
                         <Badge

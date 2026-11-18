@@ -647,7 +647,7 @@ export const CreateJobForm = forwardRef<
       }
       if (!fieldMappings.some((m) => m.matchDestKey)) {
         toast.error(
-          'Please choose how to identify matching records (Match Field) before continuing.',
+          'Please choose how to identify matching records (Identifier) before continuing.',
         );
         return false;
       }
