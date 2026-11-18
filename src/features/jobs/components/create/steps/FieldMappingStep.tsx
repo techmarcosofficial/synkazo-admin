@@ -1,6 +1,7 @@
 import {
   AlertCircleIcon,
   CheckCircle2,
+  ChevronDown,
   Key,
   Link2,
   RefreshCw,
@@ -9,6 +10,11 @@ import {
 import { useMemo } from 'react';
 
 import SkipRecordEditor from '@/components/fieldmapping/SkipRecordEditor';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import FieldMappingCanvas, {
   type FieldDef as CanvasFieldDef,
   type MappingRow as CanvasMappingRow,
@@ -280,39 +286,47 @@ export default function FieldMappingStep({
         </div>
       )}
 
-      <SkipRecordEditor
-        sourceFields={sourceFields as unknown as CanvasFieldDef[]}
-        destinationFields={destFields as unknown as CanvasFieldDef[]}
-        sourceConditions={excludeConditions}
-        sourceConditionLogic={excludeConditionLogic}
-        destinationConditions={destinationSkipConditions}
-        onSourceChange={onExcludeConditionsChange}
-        onDestinationChange={onDestinationSkipConditionsChange}
-        mappedSourceKeys={mappedSourceKeys}
-        mappedDestinationKeys={mappedDestinationKeys}
-      />
+      <Collapsible className="space-y-3">
+        <CollapsibleTrigger className="group text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-sm font-medium">
+          <ChevronDown className="size-4 transition-transform group-data-[state=open]:rotate-180" />
+          Advanced options (optional)
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-4">
+          <SkipRecordEditor
+            sourceFields={sourceFields as unknown as CanvasFieldDef[]}
+            destinationFields={destFields as unknown as CanvasFieldDef[]}
+            sourceConditions={excludeConditions}
+            sourceConditionLogic={excludeConditionLogic}
+            destinationConditions={destinationSkipConditions}
+            onSourceChange={onExcludeConditionsChange}
+            onDestinationChange={onDestinationSkipConditionsChange}
+            mappedSourceKeys={mappedSourceKeys}
+            mappedDestinationKeys={mappedDestinationKeys}
+          />
 
-      <Card>
-        <CardContent>
-          <Field orientation="horizontal">
-            <FieldContent>
-              <FieldLabel htmlFor="wizard-skip-update-on-match">
-                Never update matched records
-              </FieldLabel>
-              <p className="text-muted-foreground text-xs">
-                When a record already exists in the destination, leave it
-                completely untouched instead of updating it — only brand-new
-                records get written.
-              </p>
-            </FieldContent>
-            <Switch
-              id="wizard-skip-update-on-match"
-              checked={skipUpdateOnMatch}
-              onCheckedChange={onSkipUpdateOnMatchChange}
-            />
-          </Field>
-        </CardContent>
-      </Card>
+          <Card>
+            <CardContent>
+              <Field orientation="horizontal">
+                <FieldContent>
+                  <FieldLabel htmlFor="wizard-skip-update-on-match">
+                    Never update matched records
+                  </FieldLabel>
+                  <p className="text-muted-foreground text-xs">
+                    When a record already exists in the destination, leave it
+                    completely untouched instead of updating it — only brand-new
+                    records get written.
+                  </p>
+                </FieldContent>
+                <Switch
+                  id="wizard-skip-update-on-match"
+                  checked={skipUpdateOnMatch}
+                  onCheckedChange={onSkipUpdateOnMatchChange}
+                />
+              </Field>
+            </CardContent>
+          </Card>
+        </CollapsibleContent>
+      </Collapsible>
 
       <div className="border-border/60 bg-muted/40 flex flex-col gap-3 rounded-2xl border p-3.5 text-xs sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2.5">
