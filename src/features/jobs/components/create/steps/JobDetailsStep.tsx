@@ -366,14 +366,24 @@ export default function JobDetailsStep({
         </section>
       )}
 
+      {displayedRecipes.length > 0 && !compact && (
+        <div className="flex items-center gap-2">
+          <span className="bg-border h-px flex-1" />
+          <span className="text-muted-foreground text-xs">
+            Or set it up manually
+          </span>
+          <span className="bg-border h-px flex-1" />
+        </div>
+      )}
+
       {/* Connection */}
       <div className={cn(compact ? 'space-y-2' : 'space-y-3')}>
         {!compact && (
           <HeadingPair
             visualLevel="card"
             level="h3"
-            title="Objects to sync"
-            subtitle="Choose the source and destination records for this sync."
+            title="What to sync"
+            subtitle="Pick the records you want to keep in sync — or use a 1-click recipe above."
           />
         )}
 

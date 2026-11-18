@@ -141,7 +141,9 @@ export default function SyncDirectionFields({
         <Alert>
           <Lock />
           <AlertDescription>
-            These settings cannot be changed after the job is created.
+            A few choices below (like the sync direction) are set once and
+            can&rsquo;t be changed later, so take a moment to pick what fits.
+            Everything else you can adjust any time.
           </AlertDescription>
         </Alert>
       )}
