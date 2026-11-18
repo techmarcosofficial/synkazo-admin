@@ -25,6 +25,7 @@ import {
   CheckCircle2,
   CircleHelp,
   ExternalLink,
+  UserPlus,
 } from 'lucide-react';
 
 interface ConnectionPayload {
@@ -57,6 +58,13 @@ interface CredentialsModalProps {
   ) => void | Promise<void>;
   onVerificationError?: (message: string) => void;
   onTestingChange?: (testing: boolean) => void;
+  /**
+   * When provided, the form shows a "Don't have these details? Invite a
+   * teammate to finish" handoff. The tenant ConnectionBoard supplies it
+   * (routing to the org invite flow); it is omitted in the super-admin
+   * console, where that tenant route doesn't apply.
+   */
+  onInviteTeammate?: () => void;
 }
 
 type ModalPhase = 'form' | 'success';
@@ -73,6 +81,7 @@ export default function CredentialsModal({
   onSubmitCredentials,
   onVerificationError,
   onTestingChange,
+  onInviteTeammate,
 }: CredentialsModalProps) {
   const { api: connectionsApi } = useConnectionAccess();
   const platformId = conn.platformId ?? 'servicetitan';
@@ -311,6 +320,15 @@ export default function CredentialsModal({
     onContinue?.();
   };
 
+  // The caller (tenant ConnectionBoard) supplies this to offer a "finish this
+  // step for me" handoff to the org invite flow. It is omitted in the
+  // super-admin console, where that tenant route doesn't apply.
+  const showInviteHandoff = !!onInviteTeammate;
+  const handleInviteTeammate = () => {
+    onClose();
+    onInviteTeammate?.();
+  };
+
   const fieldsDisabled = loading || previewLoading;
   const environmentLabel =
     conn.environment === 'sandbox' ? 'Test' : 'Live';
@@ -488,6 +506,28 @@ export default function CredentialsModal({
 
           {schema.note && (
             <p className="text-muted-foreground mt-3 text-xs">{schema.note}</p>
+          )}
+
+          {showInviteHandoff && !isEdit && (
+            <div className="border-border/60 bg-muted/20 mt-4 rounded-2xl border p-3">
+              <p className="text-foreground text-xs font-medium">
+                Don&rsquo;t have these details?
+              </p>
+              <p className="text-muted-foreground mt-0.5 text-xs">
+                They come from your {schema.title} account &mdash; usually
+                something your IT team or admin can provide. You can invite them
+                to finish this step, or come back to it later.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="xs"
+                className="mt-2"
+                onClick={handleInviteTeammate}
+              >
+                <UserPlus className="size-3.5" /> Invite a teammate to finish
+              </Button>
+            </div>
           )}
         </>
       )}

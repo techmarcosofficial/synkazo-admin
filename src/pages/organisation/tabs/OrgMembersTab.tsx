@@ -1,5 +1,6 @@
 import { Eye, Plus, RefreshCw, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import InviteMemberDialog from '@/components/organisation/InviteMemberDialog';
 import MemberDetailDrawer from '@/components/organisation/MemberDetailDrawer';
@@ -68,6 +69,17 @@ export default function OrgMembersTab() {
   const detailUser =
     members.find((member) => member.id === detailUserId) ?? null;
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Deep link from the connect-platform handoff ("Invite a teammate to
+  // finish setup") opens the invite dialog straight away, then cleans the URL.
+  useEffect(() => {
+    if (searchParams.get('invite') === '1' && canEdit) {
+      setInviteOpen(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete('invite');
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, canEdit, setSearchParams]);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'org_admin' | 'editor'>('all');
   const { setMemberActive } = useSetMemberActive();

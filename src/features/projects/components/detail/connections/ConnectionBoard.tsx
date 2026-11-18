@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import ConnectionsReadyDialog from './ConnectionsReadyDialog';
 import PlatformCard from './PlatformCard';
@@ -233,6 +234,7 @@ export default function ConnectionBoard({
   subtitleInTooltip = false,
 }: ConnectionBoardProps) {
   const { api: connectionsApi, audience } = useConnectionAccess();
+  const navigate = useNavigate();
   const {
     loading,
     loadError,
@@ -667,6 +669,11 @@ export default function ConnectionBoard({
             activeConn.connectionType === 'source'
               ? setTestingSource
               : setTestingDest
+          }
+          onInviteTeammate={
+            audience === 'tenant'
+              ? () => navigate('/organization/members?invite=1')
+              : undefined
           }
           initialError={readVerificationError(projectId, activeConn)}
           willCompleteBoth={false}
