@@ -391,7 +391,9 @@ export default function SyncDirectionFields({
           {/* Operational opt-in — editable even after creation. */}
           <Field>
             <FieldLabel>
-              {compact ? 'HubSpot change detection' : 'Enable HubSpot Webhook'}
+              {compact
+                ? 'HubSpot change detection'
+                : 'Instant updates from HubSpot'}
             </FieldLabel>
             <div
               className={cn(
@@ -406,13 +408,13 @@ export default function SyncDirectionFields({
                 <p className="text-muted-foreground text-xs">
                   {compact
                     ? 'Receive HubSpot updates automatically when available.'
-                    : 'On by default for two-way jobs. synkazo subscribes to HubSpot create/update events and writes those changes back to the source. Turn it off to keep this job polling-only. Only takes effect once the job is Active.'}
+                    : 'On by default for two-way syncs. Changes you make in HubSpot are picked up and sent back to your source automatically. Turn it off to only check for changes on each scheduled run. Takes effect once the sync is Active.'}
                 </p>
               </div>
               <Switch
                 checked={hubspotWebhookEnabled}
                 onCheckedChange={onHubspotWebhookEnabledChange}
-                aria-label="Enable HubSpot Webhook"
+                aria-label="Instant updates from HubSpot"
               />
             </div>
           </Field>

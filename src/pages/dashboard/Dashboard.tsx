@@ -171,7 +171,7 @@ export default function Dashboard() {
       ? "Let's set up your first integration project."
       : !journey.isGraduated
         ? 'Complete your setup journey to start syncing your data.'
-        : 'Overview of integration health, data throughput, and sync activity.';
+        : 'An overview of your integrations and recent sync activity.';
   const metricsRangeLabel =
     metricsQuery.data?.period === metricsPeriod
       ? formatRangeLabel(
@@ -318,7 +318,7 @@ export default function Dashboard() {
                 <div className="space-y-1">
                   <CardTitle>Sync Metrics</CardTitle>
                   <CardDescription>
-                    Organization-wide throughput and run health · {metricsRangeLabel}
+                    Records synced across your organization · {metricsRangeLabel}
                   </CardDescription>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">

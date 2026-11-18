@@ -62,7 +62,7 @@ const SUPPORT_LEVEL_LABELS: Record<string, string> = {
   email: 'Email',
   priority: 'Priority',
   dedicated: 'Dedicated',
-  dedicated_sla: 'Dedicated + SLA',
+  dedicated_sla: 'Dedicated + guaranteed response times',
 };
 
 /** A few headline features to reassure the buyer at checkout. */

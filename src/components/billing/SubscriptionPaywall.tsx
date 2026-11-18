@@ -99,7 +99,7 @@ export default function SubscriptionPaywall() {
             className="items-center"
           />
           <p className="text-muted-foreground text-xs leading-relaxed">
-            Automated sync flow executions are paused while this hold remains active. If you need assistance or wish to resolve outstanding invoices, please contact support.
+            Your automatic syncs are paused while this hold is active. If you need help or want to settle any outstanding invoices, please contact support.
           </p>
           <div className="flex flex-col sm:flex-row items-center gap-2 w-full mt-2">
             <Button asChild className="w-full">

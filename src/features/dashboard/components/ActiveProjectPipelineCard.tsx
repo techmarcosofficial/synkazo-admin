@@ -115,7 +115,7 @@ export default function ActiveProjectPipelineCard({
                     </Link>
                   </>
                 ) : (
-                  'Setup pipeline checkpoints for this integration. Click any checkpoint to configure.'
+                  'Finish the setup steps for this integration. Click any step to configure it.'
                 )
               }
             />
@@ -154,7 +154,7 @@ export default function ActiveProjectPipelineCard({
                 level="h3"
                 visualLevel="item"
                 title="Project Created"
-                subtitle="Endpoints defined"
+                subtitle="Source and destination chosen"
               />
             </div>
             <div className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
@@ -203,8 +203,8 @@ export default function ActiveProjectPipelineCard({
                 title="Connections"
                 subtitle={
                   areConnectionsComplete
-                    ? 'Both platforms authorized'
-                    : 'Authenticate endpoints'
+                    ? 'Both platforms connected'
+                    : 'Connect both platforms'
                 }
               />
             </div>
