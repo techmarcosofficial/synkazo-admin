@@ -93,6 +93,7 @@ export default function OrgAdminDashboard() {
   );
   const organisation = orgQuery.data ?? null;
 
+  const [activeTab, setActiveTab] = useState('Overview');
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const editingUser =
     orgMembers.find((member) => member.id === editingUserId) ?? null;
@@ -101,7 +102,7 @@ export default function OrgAdminDashboard() {
   const header = (
     <PageHeader
       backTo={{ label: 'Back to Dashboard', to: '/dashboard' }}
-      title={organisation?.name || 'Organisation Dashboard'}
+      title={organisation?.name || 'Organisation'}
       description={`Organisation Admin · ${currentUser?.email}`}
       actions={
         <Button asChild>
@@ -143,7 +144,7 @@ export default function OrgAdminDashboard() {
     <div className="animate-fade-in-up space-y-6">
       {header}
 
-      <Tabs defaultValue="Overview">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="Overview">Overview</TabsTrigger>
           <TabsTrigger value="Team">Team</TabsTrigger>
@@ -323,10 +324,18 @@ export default function OrgAdminDashboard() {
               <CardTitle>Permission Management</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-muted-foreground text-sm">
-                Select an editor from the Team tab to manage their specific
-                permissions.
-              </p>
+              <div className="flex flex-col items-start gap-2">
+                <p className="text-muted-foreground text-sm">
+                  Pick an editor to manage exactly what they can see and do.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setActiveTab('Team')}
+                >
+                  Go to Team
+                </Button>
+              </div>
               {PERMISSION_GROUPS.map((group) => (
                 <div key={group.label}>
                   <p className="text-muted-foreground mb-2 text-xs font-semibold tracking-wider uppercase">

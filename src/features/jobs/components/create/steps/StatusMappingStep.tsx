@@ -89,9 +89,17 @@ export default function StatusMappingStep({
       <Field>
         <FieldLabel>Sales Pipeline (HubSpot Pipeline)</FieldLabel>
         {pipelines.length === 0 ? (
-          <p className="text-destructive text-xs">
-            No pipelines found for this object type. Create one in HubSpot
-            first.
+          <p className="text-muted-foreground text-xs">
+            No sales pipelines found yet.{' '}
+            <a
+              href="https://knowledge.hubspot.com/object-settings/create-and-edit-pipelines"
+              target="_blank"
+              rel="noreferrer"
+              className="text-primary font-medium underline underline-offset-2"
+            >
+              Create one in HubSpot
+            </a>
+            , then come back to this step.
           </p>
         ) : (
           <Select value={destPipelineId} onValueChange={onPipelineChange}>
