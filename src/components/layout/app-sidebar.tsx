@@ -71,6 +71,7 @@ const TENANT_NAV: NavGroup[] = [
         url: '/organization/billing',
         icon: CreditCard,
         minRole: 'org_admin',
+        indent: true,
       },
       {
         title: 'Audit log',

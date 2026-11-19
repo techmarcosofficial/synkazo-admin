@@ -28,6 +28,8 @@ export interface NavItem {
   tourId?: string;
   badge?: string;
   openInNewTab?: boolean;
+  /** Indent the item so it reads as a child of the item above it. */
+  indent?: boolean;
 }
 
 export interface NavGroup {
@@ -78,7 +80,11 @@ export function NavMain({
                         asChild
                         isActive={isActive(item.url)}
                         tooltip={item.title}
-                        className="data-[active=true]:before:bg-primary data-[active=true]:text-primary relative data-[active=true]:before:absolute data-[active=true]:before:top-1/2 data-[active=true]:before:left-0 data-[active=true]:before:h-6 data-[active=true]:before:w-1 data-[active=true]:before:-translate-y-1/2 data-[active=true]:before:rounded-r-full"
+                        className={cn(
+                          'data-[active=true]:before:bg-primary data-[active=true]:text-primary relative data-[active=true]:before:absolute data-[active=true]:before:top-1/2 data-[active=true]:before:left-0 data-[active=true]:before:h-6 data-[active=true]:before:w-1 data-[active=true]:before:-translate-y-1/2 data-[active=true]:before:rounded-r-full',
+                          item.indent &&
+                            'ml-4 group-data-[collapsible=icon]:ml-0',
+                        )}
                       >
                         <Link
                           to={item.url}

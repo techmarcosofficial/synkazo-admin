@@ -503,12 +503,26 @@ function FeatureGroupStep({
   );
 }
 
+// A single popup for adding a price, reused everywhere (plan card, and both the create
+// and edit wizards). When `plan` is given it saves the price immediately via Stripe and
+// surfaces success/error; without a plan (create wizard — no plan id exists yet) it hands
+// the entered values back through `onStage` to be queued and created once the plan is saved.
 function AddPriceDialog({
   plan,
+  planName,
+  onStage,
   disabled,
+  triggerLabel = 'Add price',
 }: {
-  plan: AdminApiPlan;
+  plan?: AdminApiPlan;
+  planName?: string;
+  onStage?: (staged: {
+    amount: string;
+    interval: BillingInterval;
+    discount: string;
+  }) => void;
   disabled?: boolean;
+  triggerLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState('');
@@ -516,6 +530,7 @@ function AddPriceDialog({
   const [interval, setInterval] = useState<BillingInterval>('month');
   const [discount, setDiscount] = useState('');
   const add = useAddPriceMutation();
+  const targetName = plan?.name ?? planName ?? 'plan';
 
   const onOpenChange = (next: boolean) => {
     if (next) {
@@ -533,19 +548,25 @@ function AddPriceDialog({
       setAmountError('Enter a valid amount.');
       return;
     }
-    try {
-      await add.mutateAsync({
-        id: plan.id,
-        body: {
-          amount: Math.round(dollars * 100), // dollars → cents
-          billingInterval: interval,
-          discountPercent: discount.trim() ? Number(discount) : null,
-        },
-      });
-      showToast.success('Price added.');
+    if (plan) {
+      try {
+        await add.mutateAsync({
+          id: plan.id,
+          body: {
+            amount: Math.round(dollars * 100), // dollars → cents
+            billingInterval: interval,
+            discountPercent: discount.trim() ? Number(discount) : null,
+          },
+        });
+        showToast.success('Price added.');
+        setOpen(false);
+      } catch (err) {
+        showToast.error(getUserFriendlyError(err as never));
+      }
+    } else if (onStage) {
+      onStage({ amount, interval, discount });
+      showToast.success('Price queued — it’s created when you save the plan.');
       setOpen(false);
-    } catch (err) {
-      showToast.error(getUserFriendlyError(err as never));
     }
   };
 
@@ -553,7 +574,7 @@ function AddPriceDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
         <Button size="sm" variant="secondary" disabled={disabled}>
-          <Plus className="size-4" /> Add price
+          <Plus className="size-4" /> {triggerLabel}
         </Button>
       </DialogTrigger>
       <DialogContent
@@ -561,9 +582,11 @@ function AddPriceDialog({
         onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogHeader>
-          <DialogTitle>Add price to {plan.name}</DialogTitle>
+          <DialogTitle>Add price to {targetName}</DialogTitle>
           <DialogDescription>
-            Creates a recurring Stripe price (USD).
+            {plan
+              ? 'Creates a recurring Stripe price (USD).'
+              : 'Queued here and created as a Stripe price when you save the plan.'}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
@@ -619,9 +642,11 @@ function AddPriceDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button onClick={submit} disabled={add.isPending}>
-            {add.isPending && <Loader2 className="size-4 animate-spin" />}
-            Add price
+          <Button onClick={submit} disabled={!!plan && add.isPending}>
+            {!!plan && add.isPending && (
+              <Loader2 className="size-4 animate-spin" />
+            )}
+            {plan ? 'Add price' : 'Queue price'}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -956,10 +981,6 @@ function PlanFormDialog(
   );
   // Create mode: keys the admin picks to lock permanently once the plan is published.
   const [lockedKeys, setLockedKeys] = useState<Set<string>>(new Set());
-  const [priceAmount, setPriceAmount] = useState('');
-  const [priceAmountError, setPriceAmountError] = useState<string | null>(null);
-  const [priceInterval, setPriceInterval] = useState<BillingInterval>('month');
-  const [priceDiscount, setPriceDiscount] = useState('');
   // Prices staged in step 4, not yet submitted — entirely optional, any number can be queued.
   const [stagedPrices, setStagedPrices] = useState<
     { amount: string; interval: BillingInterval; discount: string }[]
@@ -987,10 +1008,6 @@ function PlanFormDialog(
     if (next) {
       setStep(1);
       setNameError(null);
-      setPriceAmount('');
-      setPriceAmountError(null);
-      setPriceInterval('month');
-      setPriceDiscount('');
       setStagedPrices([]);
       if (mode === 'edit' && plan) {
         setName(plan.name);
@@ -1069,51 +1086,9 @@ function PlanFormDialog(
     [MARKETING_FEATURES_KEY]: linesToValue(marketingFeatures),
   });
 
-  // Edit mode: the plan already exists, so "Add" saves the price immediately (same
-  // request AddPriceDialog on the card makes) instead of silently queuing it behind
-  // the wizard's final Save — queuing it was the bug: closing the dialog, navigating
-  // away, or a later step's Save failing (e.g. a feature-lock conflict) would discard
-  // an "added" price the admin already believed was saved. Create mode still has no
-  // plan id to attach a price to, so it has no choice but to queue until the plan
-  // itself is created.
-  const handleAddPrice = async () => {
-    const dollars = Number(priceAmount);
-    if (!priceAmount.trim() || !Number.isFinite(dollars) || dollars < 0) {
-      setPriceAmountError('Enter a valid price amount.');
-      return;
-    }
-    if (mode === 'edit' && plan) {
-      try {
-        await addPrice.mutateAsync({
-          id: plan.id,
-          body: {
-            amount: Math.round(dollars * 100), // dollars → cents
-            billingInterval: priceInterval,
-            discountPercent: priceDiscount.trim()
-              ? Number(priceDiscount)
-              : null,
-          },
-        });
-        showToast.success('Price added.');
-      } catch (err) {
-        showToast.error(getUserFriendlyError(err as never));
-        return;
-      }
-    } else {
-      setStagedPrices((prev) => [
-        ...prev,
-        {
-          amount: priceAmount,
-          interval: priceInterval,
-          discount: priceDiscount,
-        },
-      ]);
-    }
-    setPriceAmount('');
-    setPriceAmountError(null);
-    setPriceDiscount('');
-  };
-
+  // Both wizards now add prices through the shared AddPriceDialog popup: edit mode saves
+  // immediately (the popup has the plan), create mode has no plan id yet so the popup hands
+  // values back via onStage to queue here and create them on the wizard's final Save below.
   const removeStagedPrice = (index: number) =>
     setStagedPrices((prev) => prev.filter((_, i) => i !== index));
 
@@ -1446,77 +1421,25 @@ function PlanFormDialog(
         {step === 4 && (
           <div className="space-y-6">
             <div className="space-y-4 rounded-3xl border p-4">
-              <div>
-                <p className="text-sm font-semibold">Add a price</p>
-                <p className="text-muted-foreground text-xs">
-                  {mode === 'edit'
-                    ? 'Totally optional — saved immediately when you click Add, same as the plan card.'
-                    : 'Totally optional — queued here and created once you finish this wizard.'}
-                </p>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end">
-                <div className="space-y-2">
-                  <Label htmlFor="staged-price-amount" required>
-                    Amount (USD)
-                  </Label>
-                  <Input
-                    id="staged-price-amount"
-                    type="number"
-                    value={priceAmount}
-                    onChange={(e) => {
-                      setPriceAmount(e.target.value);
-                      if (priceAmountError) setPriceAmountError(null);
-                    }}
-                    placeholder="29"
-                    aria-invalid={!!priceAmountError}
-                  />
-                  {priceAmountError && (
-                    <p className="text-destructive text-xs">
-                      {priceAmountError}
-                    </p>
-                  )}
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold">Add a price</p>
+                  <p className="text-muted-foreground text-xs">
+                    {mode === 'edit'
+                      ? 'Opens the add-price dialog and saves to Stripe immediately.'
+                      : 'Opens the add-price dialog; queued prices are created once you save the plan.'}
+                  </p>
                 </div>
-                <div className="space-y-2">
-                  <Label>Interval</Label>
-                  <Select
-                    value={priceInterval}
-                    onValueChange={(v) =>
-                      setPriceInterval(v as BillingInterval)
+                {mode === 'edit' && plan ? (
+                  <AddPriceDialog plan={plan} />
+                ) : (
+                  <AddPriceDialog
+                    planName={name.trim() || 'new plan'}
+                    onStage={(staged) =>
+                      setStagedPrices((prev) => [...prev, staged])
                     }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="month">Monthly</SelectItem>
-                      <SelectItem value="year">Yearly</SelectItem>
-                      <SelectItem value="day">Daily</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="price-discount">Discount %</Label>
-                  <Input
-                    id="price-discount"
-                    type="number"
-                    value={priceDiscount}
-                    onChange={(e) => setPriceDiscount(e.target.value)}
-                    placeholder="16.67"
                   />
-                </div>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={handleAddPrice}
-                  disabled={mode === 'edit' && addPrice.isPending}
-                >
-                  {mode === 'edit' && addPrice.isPending ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Plus className="size-4" />
-                  )}
-                  Add
-                </Button>
+                )}
               </div>
               {stagedPrices.length > 0 && (
                 <div className="flex flex-wrap gap-2">
