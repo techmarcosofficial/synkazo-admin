@@ -286,6 +286,7 @@ describe('OrganisationBillingPage', () => {
     mocks.org = {
       ...orgFixture,
       syncHealth: {
+        totalJobs: 6,
         activeJobs: 2,
         heldJobs: 4,
         pausedJobs: 0,

@@ -11,12 +11,13 @@ import {
   PlayCircle,
   ShieldAlert,
   ShieldCheck,
+  Trash2,
   TriangleAlert,
   Users,
   Workflow,
 } from 'lucide-react';
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorState from '@/components/shared/ErrorState';
@@ -37,6 +38,7 @@ import { Progress } from '@/components/ui/progress';
 import { Spinner } from '@/components/ui/spinner';
 import { showToast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
+import { DeleteOrganisationDialog } from '@/components/superadmin/DeleteOrganisationDialog';
 import LifecycleConfirmDialog from '@/pages/superadmin/lifecycle/LifecycleConfirmDialog';
 import EditOrganisationMetadataDialog from '@/pages/superadmin/organisations/EditOrganisationMetadataDialog';
 import {
@@ -94,8 +96,10 @@ export default function OrganisationDetailPage() {
     | 'impose-payment-hold'
     | 'clear-payment-hold';
 
+  const navigate = useNavigate();
   const [openAction, setOpenAction] = useState<ActionKey | null>(null);
   const closeDialog = () => setOpenAction(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const [editOpen, setEditOpen] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
@@ -860,11 +864,30 @@ export default function OrganisationDetailPage() {
                     Restore organisation
                   </Button>
                 )}
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 w-full text-xs font-medium text-destructive border-destructive/30 hover:bg-destructive/10"
+                  onClick={() => setDeleteOpen(true)}
+                >
+                  <Trash2 className="size-3.5 mr-1.5" />
+                  Delete organisation
+                </Button>
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Delete organisation → moves the org + its projects & jobs to trash */}
+      <DeleteOrganisationDialog
+        organisationId={organisationId}
+        organisationName={org.name}
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        onDeleted={() => navigate('/super-admin/organisations')}
+      />
 
       {/* Lifecycle Confirmation Dialogs */}
       <LifecycleConfirmDialog
@@ -885,7 +908,7 @@ export default function OrganisationDetailPage() {
             ? (transitionMutation.error as Error)?.message
             : null
         }
-        onConfirm={(reason) => {
+        onSubmit={({ reason }) => {
           transitionMutation.mutate(
             { targetStatus: 'suspended', confirmName: org.name, reason },
             {
@@ -908,7 +931,7 @@ export default function OrganisationDetailPage() {
         title="Reactivate organisation"
         description="Clear suspension, unpause sync schedules, and permit tenant logins again. Active Bull queues will accept new sync runs immediately."
         actionLabel="Reactivate"
-        tone="default"
+        tone="warning"
         organisationName={org.name}
         minReasonLength={10}
         reasonPlaceholder="Why is this organisation being reactivated?"
@@ -918,7 +941,7 @@ export default function OrganisationDetailPage() {
             ? (transitionMutation.error as Error)?.message
             : null
         }
-        onConfirm={(reason) => {
+        onSubmit={({ reason }) => {
           transitionMutation.mutate(
             { targetStatus: 'active', confirmName: org.name, reason },
             {
@@ -942,7 +965,7 @@ export default function OrganisationDetailPage() {
         description="Soft-delete the organisation and start the 30-day recovery window. Restoring within this period preserves project definitions and mapping history."
         bodyWarning="Only suspended organisations may be archived. All scheduled jobs and tokens remain disabled."
         actionLabel="Archive"
-        tone="destructive"
+        tone="danger"
         organisationName={org.name}
         requiresNameConfirm
         minReasonLength={10}
@@ -953,7 +976,7 @@ export default function OrganisationDetailPage() {
             ? (transitionMutation.error as Error)?.message
             : null
         }
-        onConfirm={(reason) => {
+        onSubmit={({ reason }) => {
           transitionMutation.mutate(
             { targetStatus: 'archived', confirmName: org.name, reason },
             {
@@ -976,7 +999,7 @@ export default function OrganisationDetailPage() {
         title="Restore from archive"
         description="Move organisation out of the recovery window back to suspended state. You can then review and reactivate."
         actionLabel="Restore"
-        tone="default"
+        tone="warning"
         organisationName={org.name}
         minReasonLength={10}
         reasonPlaceholder="Why is this organisation being restored?"
@@ -986,7 +1009,7 @@ export default function OrganisationDetailPage() {
             ? (transitionMutation.error as Error)?.message
             : null
         }
-        onConfirm={(reason) => {
+        onSubmit={({ reason }) => {
           transitionMutation.mutate(
             { targetStatus: 'suspended', confirmName: org.name, reason },
             {
@@ -1017,7 +1040,7 @@ export default function OrganisationDetailPage() {
         errorMessage={
           holdMutation.isError ? (holdMutation.error as Error)?.message : null
         }
-        onConfirm={(reason) => {
+        onSubmit={({ reason }) => {
           holdMutation.mutate(
             { reason },
             {
@@ -1054,9 +1077,9 @@ export default function OrganisationDetailPage() {
             ? (imposeHoldMutation.error as Error)?.message
             : null
         }
-        onConfirm={(reason) => {
+        onSubmit={({ reason }) => {
           imposeHoldMutation.mutate(
-            { reason },
+            { reason, confirmName: org.name },
             {
               onSuccess: () => {
                 showToast.success('Payment hold imposed.');
@@ -1079,7 +1102,7 @@ export default function OrganisationDetailPage() {
         title="Clear payment hold"
         description="Lift the commercial hold. Scheduled sync execution will resume automatically on their next cron tick."
         actionLabel="Clear payment hold"
-        tone="default"
+        tone="warning"
         organisationName={org.name}
         minReasonLength={5}
         reasonPlaceholder="Reason for lifting payment hold"
@@ -1089,7 +1112,7 @@ export default function OrganisationDetailPage() {
             ? (clearHoldMutation.error as Error)?.message
             : null
         }
-        onConfirm={(reason) => {
+        onSubmit={({ reason }) => {
           clearHoldMutation.mutate(
             { reason },
             {

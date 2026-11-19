@@ -52,6 +52,7 @@ export default function JobDangerZoneCard({
               confirm({
                 variant: 'danger',
                 title: 'Delete this job?',
+                requireType: 'DELETE',
                 description:
                   'This permanently deletes the job and all its logs. This cannot be undone.',
                 confirmLabel: 'Yes, delete',

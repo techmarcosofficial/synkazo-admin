@@ -9,6 +9,7 @@ import {
   Settings,
   Settings2,
   Tag,
+  Trash2,
   Users,
 } from 'lucide-react';
 
@@ -47,6 +48,12 @@ export const SUPER_ADMIN_NAV: NavGroup[] = [
         title: 'Users',
         url: '/super-admin/users',
         icon: Users,
+        minRole: 'super_admin',
+      },
+      {
+        title: 'Trash',
+        url: '/super-admin/trash',
+        icon: Trash2,
         minRole: 'super_admin',
       },
     ],

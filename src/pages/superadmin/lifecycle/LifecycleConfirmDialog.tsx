@@ -32,7 +32,7 @@ interface LifecycleConfirmDialogProps {
   actionLabel: string;
   tone: LifecycleTone;
   organisationName: string;
-  requiresNameConfirm: boolean;
+  requiresNameConfirm?: boolean;
   caseSensitiveNameConfirm?: boolean;
   minReasonLength: number;
   reasonPlaceholder?: string;
@@ -50,7 +50,7 @@ export default function LifecycleConfirmDialog({
   actionLabel,
   tone,
   organisationName,
-  requiresNameConfirm,
+  requiresNameConfirm = false,
   caseSensitiveNameConfirm = false,
   minReasonLength,
   reasonPlaceholder,

@@ -73,6 +73,9 @@ const OrganisationBillingPage = lazy(
   () => import('@/pages/superadmin/OrganisationBillingPage'),
 );
 const UsersPage = lazy(() => import('@/pages/superadmin/UsersPage'));
+const SuperAdminTrashPage = lazy(
+  () => import('@/pages/superadmin/TrashPage'),
+);
 const MarketingPage = lazy(() => import('@/pages/superadmin/MarketingPage'));
 const PlanManagementPage = lazy(
   () => import('@/pages/admin/PlanManagementPage'),
@@ -161,6 +164,7 @@ const PaymentHistoryTab = lazy(
 );
 const CreateJob = lazy(() => import('@/pages/jobs/CreateJob'));
 const AuditLogPage = lazy(() => import('@/pages/audit/AuditLogPage'));
+const TrashPage = lazy(() => import('@/pages/trash/TrashPage'));
 const ProjectConnections = lazy(
   () => import('@/pages/projects/ProjectConnections'),
 );
@@ -348,6 +352,7 @@ function App() {
                     element={<SetupOrganisation />}
                   />
                   <Route path="/org-admin" element={<OrgAdminDashboard />} />
+                  <Route path="/trash" element={<TrashPage />} />
                 </Route>
               </Route>
 
@@ -439,6 +444,7 @@ function App() {
                     />
                   </Route>
                   <Route path="users" element={<UsersPage />} />
+                  <Route path="trash" element={<SuperAdminTrashPage />} />
                   <Route
                     path="super-admins"
                     element={

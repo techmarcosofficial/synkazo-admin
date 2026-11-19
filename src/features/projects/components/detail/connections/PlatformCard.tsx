@@ -206,6 +206,7 @@ export default function PlatformCard({
                                     projectId={conn.projectId}
                                   />
                                 ),
+                                requireType: 'DELETE',
                                 confirmLabel: 'Yes, Remove',
                                 onConfirm: handleDisconnect,
                               }))
@@ -292,6 +293,7 @@ export default function PlatformCard({
                                     projectId={conn.projectId}
                                   />
                                 ),
+                                requireType: 'DELETE',
                                 confirmLabel: 'Yes, Disconnect',
                                 onConfirm: handleDisconnect,
                               }))

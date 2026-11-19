@@ -158,6 +158,7 @@ export function CardPicker({
     confirm({
       variant: 'danger',
       title: 'Remove this card?',
+      requireType: 'DELETE',
       description: `${card.cardBrand ?? 'Card'} •••• ${card.cardLast4 ?? '····'} will be removed from your account and can no longer be used for billing.`,
       confirmLabel: 'Remove',
       onConfirm: () =>

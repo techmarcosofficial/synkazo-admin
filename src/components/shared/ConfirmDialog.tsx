@@ -5,6 +5,7 @@ import {
   Info,
   type LucideIcon,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 import {
   AlertDialog,
@@ -17,6 +18,11 @@ import {
   AlertDialogMedia,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Label } from '@/components/ui/label';
+import {
+  isConfirmWordMatched,
+  TypeToConfirmField,
+} from '@/components/shared/TypeToConfirmField';
 import { Spinner } from '@/components/ui/spinner';
 import {
   useConfirmDialogStore,
@@ -65,6 +71,7 @@ export default function ConfirmDialog() {
     body,
     confirmLabel,
     cancelLabel,
+    requireType,
     isConfirming,
     close,
     handleConfirm,
@@ -72,6 +79,15 @@ export default function ConfirmDialog() {
 
   const meta = VARIANT_META[variant];
   const Icon = meta.icon;
+
+  // Local state for the "type DELETE to confirm" gate. Reset whenever the
+  // dialog opens or the required word changes.
+  const [typed, setTyped] = useState('');
+  useEffect(() => {
+    setTyped('');
+  }, [open, requireType]);
+
+  const typeConfirmed = !requireType || isConfirmWordMatched(typed, requireType);
 
   return (
     <AlertDialog
@@ -91,6 +107,21 @@ export default function ConfirmDialog() {
 
         {body && <div className="min-w-0">{body}</div>}
 
+        {requireType && (
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="confirm-dialog-type">
+              Type <span className="font-semibold">{requireType}</span> to
+              confirm
+            </Label>
+            <TypeToConfirmField
+              id="confirm-dialog-type"
+              word={requireType}
+              value={typed}
+              onChange={setTyped}
+            />
+          </div>
+        )}
+
         <AlertDialogFooter>
           <AlertDialogCancel
             variant="outline"
@@ -104,7 +135,7 @@ export default function ConfirmDialog() {
           <AlertDialogAction
             variant="default"
             size="sm"
-            disabled={isConfirming}
+            disabled={isConfirming || !typeConfirmed}
             onClick={(e) => {
               e.preventDefault();
               void handleConfirm();

@@ -69,6 +69,7 @@ export default function SecurityTab() {
     confirm({
       variant: 'danger',
       title: 'Deactivate your account?',
+      requireType: 'DELETE',
       description: `You will be signed out immediately. An administrator can reactivate your account later.${currentUser?.role === 'super_admin' ? '' : ' Jobs you created will be paused.'}`,
       body: (
         <Input

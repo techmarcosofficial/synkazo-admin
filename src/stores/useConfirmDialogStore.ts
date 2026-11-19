@@ -12,6 +12,10 @@ export interface ConfirmOptions {
   body?: ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
+  /** When set, the dialog shows a locked "type this word to confirm" field
+   *  (the ghost DELETE input) and the confirm button stays disabled until the
+   *  word is typed. Use for irreversible/destructive actions, e.g. 'DELETE'. */
+  requireType?: string;
   onConfirm: () => void | Promise<void>;
 }
 
@@ -23,6 +27,7 @@ interface ConfirmDialogState {
   body?: ReactNode;
   confirmLabel: string;
   cancelLabel: string;
+  requireType?: string;
   isConfirming: boolean;
   onConfirm: (() => void | Promise<void>) | null;
   confirm: (options: ConfirmOptions) => void;
@@ -50,11 +55,18 @@ export const useConfirmDialogStore = create<ConfirmDialogState>((set, get) => ({
       body: options.body,
       confirmLabel: options.confirmLabel ?? 'Confirm',
       cancelLabel: options.cancelLabel ?? 'Cancel',
+      requireType: options.requireType,
       isConfirming: false,
       onConfirm: options.onConfirm,
     }),
 
-  close: () => set({ open: false, isConfirming: false, onConfirm: null }),
+  close: () =>
+    set({
+      open: false,
+      isConfirming: false,
+      onConfirm: null,
+      requireType: undefined,
+    }),
 
   handleConfirm: async () => {
     const { onConfirm } = get();

@@ -32,6 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { usePagination } from '@/hooks/usePagination';
 import { useSort } from '@/hooks/useSort';
 import { roleLabel } from '@/lib/permissions';
@@ -102,6 +103,7 @@ function compareInvitations(
  */
 export default function OrgInvitationsTab() {
   const { currentUser } = useSynkazoAuth();
+  const { confirm } = useConfirmDialog();
   const invitationsQuery = useInvitationsQuery();
   const revokeMutation = useRevokeInvitationMutation();
   const resendMutation = useResendInvitationMutation();
@@ -136,11 +138,19 @@ export default function OrgInvitationsTab() {
   };
 
   const handleRevoke = (id: string) =>
-    run(
-      () => revokeMutation.mutateAsync(id),
-      'Invitation revoked.',
-      'Failed to revoke invitation',
-    );
+    confirm({
+      variant: 'danger',
+      title: 'Revoke invitation?',
+      description:
+        'The invite link stops working immediately. You can send a new invitation later.',
+      confirmLabel: 'Revoke invitation',
+      onConfirm: () =>
+        run(
+          () => revokeMutation.mutateAsync(id),
+          'Invitation revoked.',
+          'Failed to revoke invitation',
+        ),
+    });
 
   const handleResend = (id: string) =>
     run(
@@ -150,11 +160,19 @@ export default function OrgInvitationsTab() {
     );
 
   const handleDelete = (id: string) =>
-    run(
-      () => deleteMutation.mutateAsync(id),
-      'Invitation deleted.',
-      'Failed to delete invitation',
-    );
+    confirm({
+      variant: 'danger',
+      title: 'Delete invitation?',
+      description:
+        'This permanently removes the invitation from the list. You can send a new one later.',
+      confirmLabel: 'Delete invitation',
+      onConfirm: () =>
+        run(
+          () => deleteMutation.mutateAsync(id),
+          'Invitation deleted.',
+          'Failed to delete invitation',
+        ),
+    });
 
   const displayList = useMemo(() => {
     const q = search.trim().toLowerCase();

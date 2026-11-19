@@ -1504,6 +1504,7 @@ function DeactivatePlanButton({ plan }: { plan: AdminApiPlan }) {
       title: `Deactivate ${plan.name}?`,
       description:
         'The plan is hidden from the pricing page and its Stripe product is archived. Existing subscribers are not affected. You can re-activate it later by editing it.',
+      requireType: 'DELETE',
       confirmLabel: 'Deactivate',
       onConfirm: () =>
         deactivate.mutate(plan.id, {

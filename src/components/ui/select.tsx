@@ -12,6 +12,14 @@ import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from 'lucide-react';
 
 type SelectSize = 'sm' | 'default';
 
+// This radix-ui version doesn't surface `modal` on Select.Root's prop types,
+// but the primitive accepts and uses it at runtime. We keep selects non-modal
+// (so they work inside dialogs) by forwarding `modal` through a thin typed
+// alias instead of dropping it, which would revert to Radix's modal default.
+const SelectRoot = SelectPrimitive.Root as React.ComponentType<
+  React.ComponentProps<typeof SelectPrimitive.Root> & { modal?: boolean }
+>;
+
 const SelectContext = React.createContext<{
   size: SelectSize;
   setSize: React.Dispatch<React.SetStateAction<SelectSize>>;
@@ -27,6 +35,7 @@ function Select({
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Root> & {
   size?: SelectSize;
+  modal?: boolean;
 }) {
   const [size, setSize] = React.useState<SelectSize>(controlledSize ?? 'default');
 
@@ -38,9 +47,9 @@ function Select({
 
   return (
     <SelectContext.Provider value={{ size, setSize }}>
-      <SelectPrimitive.Root data-slot="select" modal={modal} {...props}>
+      <SelectRoot data-slot="select" modal={modal} {...props}>
         {children}
-      </SelectPrimitive.Root>
+      </SelectRoot>
     </SelectContext.Provider>
   );
 }

@@ -7,6 +7,7 @@ import {
   FolderOpen,
   LayoutDashboard,
   Settings,
+  Trash2,
 } from 'lucide-react';
 import * as React from 'react';
 import { Link } from 'react-router-dom';
@@ -77,6 +78,12 @@ const TENANT_NAV: NavGroup[] = [
         title: 'Audit log',
         url: '/audit-logs',
         icon: ClipboardList,
+        minRole: 'org_admin',
+      },
+      {
+        title: 'Trash',
+        url: '/trash',
+        icon: Trash2,
         minRole: 'org_admin',
       },
     ],
