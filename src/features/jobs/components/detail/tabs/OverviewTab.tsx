@@ -71,15 +71,14 @@ export default function OverviewTab() {
   const canRunJob = hasPermission('job.run');
   const canEditJob = hasPermission('job.edit');
 
+  // The quick-editor modal only opens on an explicit ?openSchedule=true deep
+  // link. A ?section=schedule link belongs to the dedicated Settings Scheduler
+  // section and must not be hijacked into opening this Overview modal.
   useEffect(() => {
-    if (
-      searchParams.get('openSchedule') === 'true' ||
-      searchParams.get('section') === 'schedule'
-    ) {
+    if (searchParams.get('openSchedule') === 'true') {
       setScheduleModalOpen(canEditJob);
       const next = new URLSearchParams(searchParams);
       next.delete('openSchedule');
-      next.delete('section');
       setSearchParams(next, { replace: true });
     }
   }, [canEditJob, searchParams, setSearchParams]);

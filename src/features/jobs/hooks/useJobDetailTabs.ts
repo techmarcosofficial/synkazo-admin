@@ -40,8 +40,11 @@ export function useJobDetailTabs(ctx: JobDetailTabContext) {
     label: tab.label,
   }));
 
-  // Old history/conflicts/webhook tab links (e.g. ?tab=webhook-events&runId=…)
-  // open the matching Settings section, keeping their other params.
+  // Old history/conflicts/webhook/schedule tab links (e.g.
+  // ?tab=webhook-events&runId=… or the legacy ?tab=schedule) open the matching
+  // Settings section, keeping their other params. The Scheduler now lives as a
+  // dedicated Settings section (?tab=settings&section=schedule) rather than an
+  // Overview modal, so those links must land there without being bounced away.
   useEffect(() => {
     if (!legacySection) return;
     const next = new URLSearchParams(searchParams);
@@ -49,21 +52,6 @@ export function useJobDetailTabs(ctx: JobDetailTabContext) {
     next.set('section', legacySection);
     setSearchParams(next, { replace: true });
   }, [legacySection, searchParams, setSearchParams]);
-
-  // Automatically migrate legacy ?tab=schedule or ?tab=settings&section=schedule links to Overview tab with modal auto-open.
-  useEffect(() => {
-    if (
-      rawRequestedTab === 'schedule' ||
-      (rawRequestedTab === 'settings' &&
-        searchParams.get('section') === 'schedule')
-    ) {
-      const next = new URLSearchParams(searchParams);
-      next.set('tab', 'overview');
-      next.set('openSchedule', 'true');
-      next.delete('section');
-      setSearchParams(next, { replace: true });
-    }
-  }, [rawRequestedTab, searchParams, setSearchParams]);
 
   const handleTabChange = (
     id: JobDetailTabId,

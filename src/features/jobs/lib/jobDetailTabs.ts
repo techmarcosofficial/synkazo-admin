@@ -15,6 +15,9 @@ export const LEGACY_SETTINGS_SECTION_TABS: Record<string, string> = {
   'sync-history': 'sync-history',
   conflicts: 'conflicts',
   'webhook-events': 'webhook-events',
+  // Scheduler used to be its own tab / an Overview modal; it now lives as a
+  // dedicated Settings section. Old `?tab=schedule` links land on it.
+  schedule: 'schedule',
 };
 
 export interface JobDetailTabContext {

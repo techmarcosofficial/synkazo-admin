@@ -15,13 +15,18 @@ describe('job detail tabs', () => {
     });
   });
 
-  it('sends old history, conflict and webhook tab links to Settings sections', () => {
+  it('sends old history, conflict, webhook and schedule tab links to Settings sections', () => {
     expect(LEGACY_SETTINGS_SECTION_TABS).toEqual({
       'run-history': 'sync-history',
       'sync-history': 'sync-history',
       conflicts: 'conflicts',
       'webhook-events': 'webhook-events',
+      schedule: 'schedule',
     });
+  });
+
+  it('maps the legacy schedule tab to the dedicated Scheduler settings section', () => {
+    expect(LEGACY_SETTINGS_SECTION_TABS.schedule).toBe('schedule');
   });
 
   it('maintains the expected tab sequence', () => {

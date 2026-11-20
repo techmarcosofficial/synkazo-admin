@@ -10,7 +10,6 @@ import HeadingPair from '@/components/shared/HeadingPair';
 import UpgradeRequiredDialog from '@/components/shared/UpgradeRequiredDialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { CardAction } from '@/components/ui/card';
 import { Field, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import {
@@ -41,10 +40,61 @@ import {
   matchFrequency,
   type FrequencyPreset,
 } from '@/features/jobs/utils';
+import type { ExtJob } from '@/features/jobs/hooks';
 import { BROWSER_TIMEZONE } from '@/lib/timezones';
 import { showToast } from '@/lib/toast';
+import { cn } from '@/lib/utils';
 import { useEntitlements } from '@/queries/useEntitlements';
 import { usePriorityQueueQuery } from '@/queries/usePriorityQueue';
+
+function ScheduleStatusBadge({ job }: { job: ExtJob }) {
+  const isTwoWay = job.syncDirection === 'two_way';
+  const isHeld = job.scheduleState === 'held';
+  const isActive =
+    job.syncEnabled &&
+    (job.scheduleState === 'active' ||
+      job.scheduleState === 'retry_pending' ||
+      job.scheduleState === 'resume_pending');
+
+  const { label, className } = isTwoWay
+    ? {
+        label: 'Managed',
+        className:
+          'border-sky-500/40 bg-sky-500/10 text-sky-700 dark:text-sky-400',
+      }
+    : isHeld
+      ? {
+          label: 'Held',
+          className:
+            'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400',
+        }
+      : isActive
+        ? {
+            label: 'Active',
+            className:
+              'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+          }
+        : {
+            label: 'Paused',
+            className:
+              'border-border bg-muted text-muted-foreground',
+          };
+
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold',
+        className,
+      )}
+    >
+      <span
+        aria-hidden="true"
+        className="size-1.5 rounded-full bg-current opacity-70"
+      />
+      {label}
+    </span>
+  );
+}
 
 export function JobScheduleSettingsHeader() {
   const {
@@ -61,23 +111,32 @@ export function JobScheduleSettingsHeader() {
     priorityQueueQuery.data?.schedulerMode === 'priority';
 
   return (
-    <>
+    <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="flex items-start gap-3">
         <span className="bg-muted text-muted-foreground flex size-10 shrink-0 items-center justify-center rounded-xl">
           <CalendarClock className="size-4.5" aria-hidden="true" />
         </span>
-        <HeadingPair
-          visualLevel="card"
-          titleId="job-settings-section-title"
-          title="Schedule"
-          subtitle="Control when this job runs automatically."
-        />
+        <div className="flex flex-col gap-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <HeadingPair
+              visualLevel="card"
+              titleId="job-settings-section-title"
+              title="Scheduler"
+              subtitle="Control when this job runs automatically."
+            />
+          </div>
+          {!priorityModeActive &&
+            !priorityQueueQuery.isLoading &&
+            !priorityQueueQuery.isError && (
+              <ScheduleStatusBadge job={job} />
+            )}
+        </div>
       </div>
 
-      <CardAction>
-        {!priorityModeActive &&
-          !priorityQueueQuery.isLoading &&
-          !priorityQueueQuery.isError && (
+      {!priorityModeActive &&
+        !priorityQueueQuery.isLoading &&
+        !priorityQueueQuery.isError && (
+          <div className="shrink-0">
             <ScheduleEnableToggle
               projectId={projectId}
               jobId={job.id}
@@ -89,9 +148,9 @@ export function JobScheduleSettingsHeader() {
               onScheduleToggle={handleScheduleToggle}
               className="w-auto"
             />
-          )}
-      </CardAction>
-    </>
+          </div>
+        )}
+    </div>
   );
 }
 

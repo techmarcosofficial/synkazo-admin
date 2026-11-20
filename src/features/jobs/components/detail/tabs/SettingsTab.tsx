@@ -257,7 +257,7 @@ export default function SettingsTab() {
   } else if (activeSectionId === 'schedule') {
     sectionBody = (
       <div className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 px-1 py-1">
+        <div className="px-1 py-1">
           <JobScheduleSettingsHeader />
         </div>
         <JobScheduleSettings />
