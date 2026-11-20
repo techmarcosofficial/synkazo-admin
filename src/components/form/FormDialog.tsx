@@ -175,10 +175,10 @@ export default function FormDialog({
                   )}
                 >
                   {Icon && <Icon className="text-primary size-5 shrink-0" />}
-                  <span>{title}</span>
+                  <span className="min-w-0 break-words">{title}</span>
                 </DialogTitle>
                 {description && (
-                  <DialogDescription className="text-muted-foreground text-xs">
+                  <DialogDescription className="text-muted-foreground text-xs break-words">
                     {description}
                   </DialogDescription>
                 )}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { CRED_SCHEMAS } from './platformMeta';
 
@@ -505,7 +505,9 @@ export default function CredentialsModal({
           </FieldGroup>
 
           {schema.note && (
-            <p className="text-muted-foreground mt-3 text-xs">{schema.note}</p>
+            <p className="text-muted-foreground mt-3 text-xs break-words">
+              {schema.note}
+            </p>
           )}
 
           {showInviteHandoff && !isEdit && (
@@ -542,27 +544,67 @@ interface KnowMoreProps {
 }
 
 export function KnowMore({ label, helpText, helpUrl }: KnowMoreProps) {
+  const [open, setOpen] = useState(false);
+  // Small dismissal delay so the pointer can travel from the trigger into the
+  // card to click the "View documentation" link without it closing first.
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelClose = () => {
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  };
+
+  const openNow = () => {
+    cancelClose();
+    setOpen(true);
+  };
+
+  const scheduleClose = () => {
+    cancelClose();
+    closeTimer.current = setTimeout(() => setOpen(false), 150);
+  };
+
+  // Clear any pending timer on unmount to avoid a state update after teardown.
+  useEffect(() => () => cancelClose(), []);
+
   if (!helpText && !helpUrl) return null;
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           type="button"
           variant="ghost"
           size="icon-xs"
-          className="text-muted-foreground hover:text-foreground size-5"
+          className="text-muted-foreground hover:text-foreground size-5 align-middle"
           aria-label={`Help with ${label}`}
+          onMouseEnter={openNow}
+          onMouseLeave={scheduleClose}
+          onFocus={openNow}
+          onBlur={scheduleClose}
         >
           <CircleHelp className="size-3.5" />
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent align="start" side="top" className="w-72">
-        <PopoverHeader>
-          <PopoverTitle className="text-sm">{label}</PopoverTitle>
+      <PopoverContent
+        align="start"
+        side="bottom"
+        avoidCollisions
+        collisionPadding={12}
+        // Open below the trigger and never steal focus, so the card does not
+        // cover the dialog title / close button when the first field is helped.
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onMouseEnter={cancelClose}
+        onMouseLeave={scheduleClose}
+        className="w-72 max-w-[calc(100vw-2rem)] sm:max-w-xs"
+      >
+        <PopoverHeader className="min-w-0">
+          <PopoverTitle className="text-sm break-words">{label}</PopoverTitle>
 
           {helpText && (
-            <PopoverDescription className="text-xs leading-relaxed">
+            <PopoverDescription className="text-xs leading-relaxed break-words [overflow-wrap:anywhere]">
               {helpText}
             </PopoverDescription>
           )}
@@ -573,10 +615,10 @@ export function KnowMore({ label, helpText, helpUrl }: KnowMoreProps) {
             href={helpUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-primary mt-3 inline-flex items-center gap-1 text-xs font-medium hover:underline"
+            className="text-primary mt-3 inline-flex items-center gap-1 text-xs font-medium break-words [overflow-wrap:anywhere] hover:underline"
           >
             View documentation
-            <ExternalLink className="size-3" />
+            <ExternalLink className="size-3 shrink-0" />
           </a>
         )}
       </PopoverContent>

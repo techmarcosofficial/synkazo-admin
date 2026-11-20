@@ -73,7 +73,7 @@ function PopoverDescription({
     <p
       data-slot="popover-description"
       className={cn(
-        'text-muted-foreground text-sm leading-5 font-normal',
+        'text-muted-foreground text-sm leading-5 font-normal break-words',
         className,
       )}
       {...props}
