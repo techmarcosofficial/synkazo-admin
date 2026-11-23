@@ -143,12 +143,6 @@ export const queryKeys = {
   invitations: {
     all: ['invitations'] as const,
   },
-  // Org-scoped trash (the caller's own organisation's deleted projects & jobs).
-  trash: {
-    all: ['trash'] as const,
-    list: (filters: Record<string, unknown> = {}) =>
-      ['trash', filters] as const,
-  },
   // Super Admin workspace. Every org-scoped key includes organisationId in
   // its second slot so React Query never returns Organisation A's cached
   // data while the sidebar is displaying Organisation B (SA-202, SA-213).

@@ -164,7 +164,6 @@ const PaymentHistoryTab = lazy(
 );
 const CreateJob = lazy(() => import('@/pages/jobs/CreateJob'));
 const AuditLogPage = lazy(() => import('@/pages/audit/AuditLogPage'));
-const TrashPage = lazy(() => import('@/pages/trash/TrashPage'));
 const ProjectConnections = lazy(
   () => import('@/pages/projects/ProjectConnections'),
 );
@@ -352,7 +351,6 @@ function App() {
                     element={<SetupOrganisation />}
                   />
                   <Route path="/org-admin" element={<OrgAdminDashboard />} />
-                  <Route path="/trash" element={<TrashPage />} />
                 </Route>
               </Route>
 

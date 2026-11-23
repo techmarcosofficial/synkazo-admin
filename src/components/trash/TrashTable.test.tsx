@@ -17,7 +17,6 @@ const item: TrashItem = {
   deletedById: 'user-1',
   deletionReason: 'cleanup',
   deletionBatchId: 'batch-1',
-  daysRemaining: 42,
 };
 
 const baseProps = {
@@ -40,13 +39,12 @@ describe('TrashTable', () => {
     render(<TrashTable {...baseProps} items={[item]} onRestore={onRestore} />);
 
     expect(screen.getByText('Revenue Ops')).toBeInTheDocument();
-    expect(screen.getByText('42 days left')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /restore/i }));
     expect(onRestore).toHaveBeenCalledWith(item);
   });
 
-  it('hides permanent delete when no handler is provided (org scope)', () => {
+  it('hides permanent delete when no handler is provided', () => {
     render(<TrashTable {...baseProps} items={[item]} />);
     expect(
       screen.queryByRole('button', { name: /^delete$/i }),

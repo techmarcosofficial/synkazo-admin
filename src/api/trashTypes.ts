@@ -1,4 +1,5 @@
-// Shared trash types for both the platform (super-admin) and org-scoped surfaces.
+// Trash types for the platform (super-admin) trash surface. Organisation
+// admins have no trash of their own — their deletes are soft but invisible.
 
 export type TrashEntityType = 'organisation' | 'project' | 'job';
 
@@ -14,7 +15,6 @@ export interface TrashItem {
   deletedById: string | null;
   deletionReason: string | null;
   deletionBatchId: string | null;
-  daysRemaining: number;
 }
 
 export interface TrashDeleteImpact {

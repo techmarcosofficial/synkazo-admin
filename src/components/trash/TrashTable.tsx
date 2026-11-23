@@ -20,7 +20,6 @@ interface TrashTableProps {
   isError: boolean;
   onRetry: () => void;
   onRestore: (item: TrashItem) => void;
-  // Omitted on the org-scoped view — only a super admin can permanently delete.
   onPermanentDelete?: (item: TrashItem) => void;
   busyId?: string | null;
 }
@@ -99,7 +98,6 @@ export function TrashTable({
             <TableHead>Type</TableHead>
             <TableHead>Belongs to</TableHead>
             <TableHead>Deleted</TableHead>
-            <TableHead>Auto-purge</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -124,14 +122,6 @@ export function TrashTable({
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {formatDate(item.deletedAt)}
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    variant={item.daysRemaining <= 7 ? 'destructive' : 'outline'}
-                  >
-                    {item.daysRemaining} day{item.daysRemaining === 1 ? '' : 's'}{' '}
-                    left
-                  </Badge>
                 </TableCell>
                 <TableCell>
                   <div className="flex justify-end gap-2">

@@ -17,7 +17,6 @@ const item: TrashItem = {
   deletedById: null,
   deletionReason: null,
   deletionBatchId: 'job-1',
-  daysRemaining: 90,
 };
 
 function renderDialog(overrides: Partial<React.ComponentProps<typeof PermanentDeleteTrashDialog>> = {}) {

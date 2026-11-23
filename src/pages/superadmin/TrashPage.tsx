@@ -70,7 +70,7 @@ export default function TrashPage() {
         level="h1"
         visualLevel="page"
         title="Trash"
-        subtitle="Deleted organisations, projects, and jobs across every tenant. Restore them, or permanently delete them. Anything left is automatically purged 90 days after deletion."
+        subtitle="Deleted organisations, projects, and jobs across every tenant. Restore them, or permanently delete them. Nothing is removed automatically — items stay here until you delete them."
       />
 
       <div className="flex flex-wrap items-center gap-3">
