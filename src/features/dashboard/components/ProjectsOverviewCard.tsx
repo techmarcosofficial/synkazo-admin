@@ -61,6 +61,9 @@ export default function ProjectsOverviewCard({
                       destPlatformId={project.destPlatformId}
                       size="xl"
                       variant="avatar"
+                      direction={
+                        project.syncMode === 'two_way' ? 'two_way' : 'one_way'
+                      }
                     />
                     <div>
                       <span className="truncate font-semibold">

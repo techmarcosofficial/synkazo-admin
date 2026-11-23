@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 import {
   Field,
   FieldContent,
@@ -18,12 +20,15 @@ export function ChoiceCardItem({
   title,
   description,
   disabled,
+  info,
 }: {
   value: string;
   id: string;
   title: string;
   description?: string;
   disabled?: boolean;
+  /** Optional hint (e.g. an InfoTip) shown beside the title. */
+  info?: ReactNode;
 }) {
   return (
     <FieldLabel
@@ -32,7 +37,10 @@ export function ChoiceCardItem({
     >
       <Field orientation="horizontal">
         <FieldContent>
-          <FieldTitle>{title}</FieldTitle>
+          <FieldTitle>
+            {title}
+            {info}
+          </FieldTitle>
           {description && <FieldDescription>{description}</FieldDescription>}
         </FieldContent>
         <RadioGroupItem value={value} id={id} disabled={disabled} />

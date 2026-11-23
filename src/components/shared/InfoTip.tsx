@@ -43,7 +43,10 @@ export default function InfoTip({
         </TooltipTrigger>
         <TooltipContent
           side={side}
-          className="max-w-64 text-xs leading-snug font-normal"
+          /* `block` overrides TooltipContent's inline-flex: with flex, each
+             paragraph becomes a flex child and the text stacks into narrow
+             columns instead of wrapping normally. */
+          className="block max-w-xs text-xs leading-snug font-normal text-pretty"
         >
           {children}
         </TooltipContent>

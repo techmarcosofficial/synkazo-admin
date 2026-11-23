@@ -95,28 +95,32 @@ export default function ActiveProjectPipelineCard({
               visualLevel="card"
               title={project.name}
               trailing={
-                <PlatformPair
-                  sourcePlatformId={project.sourcePlatformId ?? 'servicetitan'}
-                  destPlatformId={project.destPlatformId ?? 'hubspot'}
-                  variant="badge"
-                />
-              }
-              subtitle={
-                isMultipleProjects ? (
-                  <>
-                    Showing setup for your most recently created project (1 of{' '}
-                    {totalProjects} in progress).{' '}
+                <>
+                  <PlatformPair
+                    sourcePlatformId={project.sourcePlatformId ?? 'servicetitan'}
+                    destPlatformId={project.destPlatformId ?? 'hubspot'}
+                    variant="badge"
+                    direction={
+                      project.syncMode === 'two_way' ? 'two_way' : 'one_way'
+                    }
+                  />
+                  {/* Stays visible: a link inside a hover tooltip is not
+                      reliably reachable. */}
+                  {isMultipleProjects && (
                     <Link
                       to="/projects"
-                      className="text-primary inline-flex items-center gap-0.5 font-medium hover:underline"
+                      className="text-primary inline-flex items-center gap-0.5 text-xs font-medium hover:underline"
                     >
                       <span>View all projects</span>
                       <ArrowRight className="size-3" />
                     </Link>
-                  </>
-                ) : (
-                  'Finish the setup steps for this integration. Click any step to configure it.'
-                )
+                  )}
+                </>
+              }
+              subtitle={
+                isMultipleProjects
+                  ? `Showing setup for your most recently created project (1 of ${totalProjects} in progress).`
+                  : 'Finish the setup steps for this integration. Click any step to configure it.'
               }
             />
 

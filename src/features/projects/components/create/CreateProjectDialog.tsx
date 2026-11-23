@@ -8,6 +8,7 @@ import type { CreateProjectFormRef, CreateProjectSelection } from '../../types';
 import { CreateProjectForm } from '.';
 
 import { PlatformPair } from '@/components/platform';
+import InfoTip from '@/components/shared/InfoTip';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -44,8 +45,14 @@ export default function CreateProjectDialog() {
         onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogHeader className="shrink-0 gap-1.5 border-b px-6 py-4 pr-14">
-          <DialogTitle>Create Project</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="flex items-center gap-2">
+            Create Project
+            <InfoTip label="What a project is" side="right">
+              Pairs one source platform with HubSpot and holds its connections,
+              sync jobs and history.
+            </InfoTip>
+          </DialogTitle>
+          <DialogDescription className="sr-only">
             Create a new synchronization project.
           </DialogDescription>
         </DialogHeader>

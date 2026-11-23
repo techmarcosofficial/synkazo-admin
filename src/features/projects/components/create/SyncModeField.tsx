@@ -1,24 +1,15 @@
 import { ChoiceCardItem } from '@/components/form/ChoiceCard';
+import InfoTip from '@/components/shared/InfoTip';
 import { PlanLock, PlanLockBadge } from '@/components/shared/PlanGate';
 import {
   Field,
   FieldContent,
-  FieldDescription,
   FieldError,
   FieldLabel,
 } from '@/components/ui/field';
 import { RadioGroup } from '@/components/ui/radio-group';
 import { useEntitlements } from '@/queries/useEntitlements';
 import type { ProjectSyncMode } from '@/types/project';
-
-// Copy for the three states: nothing chosen yet, One Way chosen, Two Way chosen.
-const SYNC_MODE_HELP: Record<'' | ProjectSyncMode, string> = {
-  '': "Choose how data flows between platforms for jobs in this project. This is a project-wide setting and can't be changed after the project is created.",
-  one_way:
-    'Jobs sync in a single direction only — records flow from the source platform into HubSpot. Changes made in HubSpot are never written back. Connect HubSpot using OAuth.',
-  two_way:
-    'Jobs can sync in both directions — a change on either platform updates the other, with per-job conflict handling (source of truth, deletes) set when you create each job. HubSpot must be connected with OAuth ("Login with HubSpot") so real-time webhooks work; manual token connection isn\'t available.',
-};
 
 export interface SyncModeFieldProps {
   value: ProjectSyncMode | '';
@@ -27,12 +18,24 @@ export interface SyncModeFieldProps {
   error?: string;
 }
 
+/** One short line for the "i" beside the Sync Direction label. */
+const SYNC_MODE_SUMMARY: Record<'' | ProjectSyncMode, string> = {
+  '': 'How data flows between the two platforms for every job here. Project-wide and fixed once created.',
+  one_way:
+    'One Way selected: records only flow source → HubSpot. Project-wide and fixed once created.',
+  two_way:
+    'Two Way selected: changes flow both ways, per-job conflict rules. Project-wide and fixed once created.',
+};
+
 /**
  * Project-level One Way / Two Way selector. Shared by the create-project modal
  * and the HubSpot Marketplace source-setup step (SourceSetupDialog /
  * SourcePlatformPicker) so the choice — and its explanatory copy — stays
  * identical everywhere it's offered. The value gates which job sync directions
  * the project allows, and which HubSpot connection methods are offered.
+ *
+ * The explanation lives in one-line hover hints rather than a paragraph under
+ * the cards: one on the label (what's selected right now) and one per mode.
  *
  * Each mode is additionally gated on the org's plan (`sync_direction`): a mode the plan
  * doesn't include stays visible but inert, since sync mode is immutable once the project
@@ -53,6 +56,9 @@ export default function SyncModeField({
       <FieldLabel className="flex items-center gap-2">
         Sync Direction
         <span className="text-destructive -ml-1.5">*</span>
+        <InfoTip label="About sync direction" side="right">
+          {SYNC_MODE_SUMMARY[value]}
+        </InfoTip>
         {!(canOneWay && canTwoWay) && <PlanLockBadge label="Plan limited" />}
       </FieldLabel>
       <FieldContent>
@@ -72,6 +78,12 @@ export default function SyncModeField({
               title="One Way"
               description="Source → HubSpot"
               disabled={!canOneWay}
+              info={
+                <InfoTip label="About one-way sync">
+                  Source records are written into HubSpot; HubSpot edits are
+                  never sent back.
+                </InfoTip>
+              }
             />
           </PlanLock>
           <PlanLock
@@ -84,11 +96,16 @@ export default function SyncModeField({
               title="Two Way"
               description="Source ↔ HubSpot"
               disabled={!canTwoWay}
+              info={
+                <InfoTip label="About two-way sync">
+                  Either side updates the other. Needs HubSpot connected with
+                  OAuth, not a manual token.
+                </InfoTip>
+              }
             />
           </PlanLock>
         </RadioGroup>
       </FieldContent>
-      <FieldDescription>{SYNC_MODE_HELP[value]}</FieldDescription>
       <FieldError>{error}</FieldError>
     </Field>
   );

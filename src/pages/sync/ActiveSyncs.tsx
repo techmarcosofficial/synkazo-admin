@@ -311,7 +311,13 @@ export default function ActiveSyncs() {
                             }}
                           >
                             <div className="bg-muted text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-lg">
-                              <ArrowLeftRight className="size-4" />
+                              {/* Glyph follows the job's own direction, so a
+                                  one-way job never reads as two-way. */}
+                              {job.syncDirection === 'two_way' ? (
+                                <ArrowLeftRight className="size-4" />
+                              ) : (
+                                <ArrowRight className="size-4" />
+                              )}
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="truncate text-sm font-semibold">
