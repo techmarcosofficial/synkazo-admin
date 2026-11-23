@@ -73,7 +73,6 @@ export default function ProjectRecentActivity({
           level="h3"
           title="Recent Activity"
           subtitle="Latest sync runs and project events."
-          subtitleInTooltip
         />
         <Button
           variant="link"

@@ -97,10 +97,11 @@ describe('OrganisationsPage', () => {
         name: 'Provision organisation',
       }),
     ).toBeInTheDocument();
+    // The description now lives in the header's info tooltip.
     expect(
-      within(pageHeader as HTMLElement).getByText(
-        'Review status, billing, and customer workspaces.',
-      ),
+      within(pageHeader as HTMLElement).getByRole('button', {
+        name: /more information/i,
+      }),
     ).toBeInTheDocument();
     expect(
       within(pageHeader as HTMLElement).getByLabelText('1 organisation total'),

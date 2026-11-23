@@ -81,7 +81,10 @@ describe('DangerZoneCard', () => {
     expect(screen.getByText('Connections retained')).toBeInTheDocument();
     expect(screen.getByText('Runs retained')).toBeInTheDocument();
     expect(screen.getByText('27')).toBeInTheDocument();
-    expect(screen.getByText(/soft archive/i)).toBeInTheDocument();
+    // The soft-archive caveat now sits in the row's info tooltip.
+    expect(
+      screen.getAllByRole('button', { name: /more information/i }).length,
+    ).toBeGreaterThan(0);
   });
 
   it('requires the exact project name before archiving and redirects on success', async () => {

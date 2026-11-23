@@ -31,10 +31,13 @@ export default function JobDangerZoneCard({
       />
 
       <div className="pt-3">
-        <p className="text-sm font-medium">Delete Job</p>
-        <p className="text-muted-foreground mb-3 text-xs">
-          Permanently deletes this job and all its logs.
-        </p>
+        <HeadingPair
+          level="h4"
+          visualLevel="item"
+          title="Delete Job"
+          subtitle="Permanently deletes this job and all its logs."
+          className="mb-3"
+        />
         <ActionTooltip
           tooltip={
             !canDeleteJob

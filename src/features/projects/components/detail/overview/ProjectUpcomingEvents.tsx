@@ -38,7 +38,6 @@ export default function ProjectUpcomingEvents({
             level="h3"
             title="Upcoming Events"
             subtitle="Next scheduled sync runs."
-            subtitleInTooltip
           />
           <Button
             variant="link"

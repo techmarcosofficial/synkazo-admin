@@ -43,7 +43,6 @@ export function FieldMappingWorkspaceHeader({
           </Badge>
         }
         subtitle="Map fields between your connected platforms to synchronize record data accurately."
-        subtitleInTooltip
       />
       <div className="flex flex-wrap items-center gap-2">
         {!hideActionButtons && (

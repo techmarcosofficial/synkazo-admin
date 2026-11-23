@@ -57,10 +57,7 @@ export default function JobRetryCard({
       <div className="space-y-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field>
-            <FieldLabel>Max Retries</FieldLabel>
-            <p className="text-muted-foreground text-xs">
-              0 = no automatic retry.
-            </p>
+            <FieldLabel hint="0 = no automatic retry.">Max Retries</FieldLabel>
             <Input
               type="number"
               min={0}
@@ -74,10 +71,9 @@ export default function JobRetryCard({
             />
           </Field>
           <Field>
-            <FieldLabel>Backoff Base (seconds)</FieldLabel>
-            <p className="text-muted-foreground text-xs">
-              Delay = base × 2^(attempt−1).
-            </p>
+            <FieldLabel hint="Delay = base × 2^(attempt−1).">
+              Backoff Base (seconds)
+            </FieldLabel>
             <Input
               type="number"
               min={1}

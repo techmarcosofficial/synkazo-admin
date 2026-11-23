@@ -3,6 +3,7 @@ import { lazy, Suspense, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
 import HeadingPair from '@/components/shared/HeadingPair';
+import InfoTip from '@/components/shared/InfoTip';
 import { cn } from '@/lib/utils';
 import { useHeaderStore } from '@/stores/useHeaderStore';
 import { useWorkspaceKind } from '@/lib/workspace-context';
@@ -72,14 +73,9 @@ export default function PageHeader({
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+                {description && <InfoTip>{description}</InfoTip>}
                 {badge}
               </div>
-
-              {description && (
-                <p className="text-muted-foreground mt-1.5 max-w-3xl text-sm leading-5">
-                  {description}
-                </p>
-              )}
             </div>
           ) : greeting ? (
             <div
@@ -97,13 +93,9 @@ export default function PageHeader({
                     {title}
                   </span>
                 </h1>
+                {description && <InfoTip>{description}</InfoTip>}
                 {badge}
               </div>
-              {description && (
-                <p className="text-muted-foreground mt-1 text-xs leading-5 sm:text-sm">
-                  {description}
-                </p>
-              )}
             </div>
           ) : (
             <HeadingPair

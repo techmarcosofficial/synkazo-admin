@@ -1,3 +1,4 @@
+import HeadingPair from '@/components/shared/HeadingPair';
 import type { UpdateQueueSchedulePayload } from '@/api/priorityQueue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,12 +54,12 @@ export default function QueueScheduleCard({
 
   return (
     <div className="space-y-2.5">
-      <div>
-        <h3 className="text-sm font-semibold">Cycle start</h3>
-        <p className="text-muted-foreground text-xs">
-          When a new queue cycle begins
-        </p>
-      </div>
+      <HeadingPair
+        level="h3"
+        visualLevel="card"
+        title="Cycle start"
+        subtitle="When a new queue cycle begins"
+      />
       <div className="grid gap-2.5 sm:grid-cols-[minmax(10rem,13rem)_minmax(0,1fr)] sm:items-end">
         <div className="space-y-1">
           <label className="text-xs font-medium">Schedule type</label>

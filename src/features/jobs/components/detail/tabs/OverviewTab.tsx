@@ -310,7 +310,6 @@ export default function OverviewTab() {
               visualLevel="section"
               title="Sync overview"
               subtitle="Monitor sync activity and trigger fresh data syncs whenever you need to."
-              subtitleInTooltip
             />
             <div className="flex flex-wrap items-center gap-2">
               {runLogs[0]?.bullmqJobId && queued && !isSyncing && (

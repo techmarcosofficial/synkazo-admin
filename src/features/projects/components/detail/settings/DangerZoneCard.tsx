@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 
+import HeadingPair from '@/components/shared/HeadingPair';
 import type { ProjectArchiveImpact } from '@/api/projects';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -313,13 +314,12 @@ export default function DangerZoneCard({
             )}
 
             <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
-              <div>
-                <p className="text-sm font-semibold">Archive project</p>
-                <p className="text-muted-foreground mt-1 text-xs">
-                  This is a soft archive. Related records are retained rather
-                  than permanently deleted.
-                </p>
-              </div>
+              <HeadingPair
+                level="h4"
+                visualLevel="item"
+                title="Archive project"
+                subtitle="This is a soft archive. Related records are retained rather than permanently deleted."
+              />
               <ActionTooltip
                 tooltip={
                   !canDeleteProject

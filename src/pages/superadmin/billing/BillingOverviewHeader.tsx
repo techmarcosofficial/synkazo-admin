@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import React, { useState } from 'react';
 
+import HeadingPair from '@/components/shared/HeadingPair';
 import { showToast } from '@/lib/toast';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { cn } from '@/lib/utils';
@@ -73,15 +74,12 @@ export default function BillingOverviewHeader({
 
   return (
     <div className={cn('space-y-4', className)}>
-      <div>
-        <h2 className="text-xl font-bold tracking-tight text-foreground">
-          Billing Overview
-        </h2>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Manage this organisation&rsquo;s subscription, view invoices and payment
-          history, and add internal notes.
-        </p>
-      </div>
+      <HeadingPair
+        level="h2"
+        visualLevel="page"
+        title="Billing Overview"
+        subtitle="Manage this organisation’s subscription, view invoices and payment history, and add internal notes."
+      />
 
       {/* 6 mini stat cards */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">

@@ -10,6 +10,7 @@ import ErrorState from '@/components/shared/ErrorState';
 import ConnectionEnvDropdown from '@/components/connections/ConnectionEnvToggle';
 import { PLATFORM_META } from '@/components/connections/platformMeta';
 import HeadingPair from '@/components/shared/HeadingPair';
+import InfoTip from '@/components/shared/InfoTip';
 import CredentialsModal from '@/components/connections/CredentialsModal';
 import type {
   ExtConnection,
@@ -22,7 +23,6 @@ import {
   Card,
   CardAction,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -47,7 +47,6 @@ interface ConnectionBoardProps {
   onContinue?: () => void;
   className?: string;
   asCard?: boolean;
-  subtitleInTooltip?: boolean;
 }
 
 function verificationErrorKey(projectId: string, conn: ExtConnection): string {
@@ -231,7 +230,6 @@ export default function ConnectionBoard({
   onContinue,
   className,
   asCard = true,
-  subtitleInTooltip = false,
 }: ConnectionBoardProps) {
   const { api: connectionsApi, audience } = useConnectionAccess();
   const navigate = useNavigate();
@@ -607,11 +605,11 @@ export default function ConnectionBoard({
           >
             <div className="flex flex-wrap items-center gap-2">
               <CardTitle>Connections</CardTitle>
+              <InfoTip>{boardDescription}</InfoTip>
               {envBadge}
             </div>
-            <CardDescription>{boardDescription}</CardDescription>
             {envToggle && (
-              <CardAction className="col-start-1 row-span-1 row-start-3 w-full justify-self-start sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:w-auto sm:justify-self-end">
+              <CardAction className="col-start-1 row-span-1 row-start-2 w-full justify-self-start sm:col-start-2 sm:row-span-1 sm:row-start-1 sm:w-auto sm:justify-self-end">
                 {envToggle}
               </CardAction>
             )}
@@ -630,7 +628,6 @@ export default function ConnectionBoard({
               visualLevel="section"
               title="Connections"
               subtitle={boardDescription}
-              subtitleInTooltip={subtitleInTooltip}
               trailing={envBadge}
             />
             {envToggle && (

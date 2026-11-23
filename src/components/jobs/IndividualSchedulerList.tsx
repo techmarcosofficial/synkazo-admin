@@ -1,6 +1,7 @@
 import { AlertCircle, Pause, Play } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
+import HeadingPair from '@/components/shared/HeadingPair';
 import { jobsApi } from '@/api/jobs';
 import IndividualScheduleRow from '@/components/jobs/scheduler/IndividualScheduleRow';
 import {
@@ -149,13 +150,12 @@ export default function IndividualSchedulerList({
     <div className="space-y-3">
       {error && <p className="text-destructive text-sm">{error}</p>}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h3 className="text-sm font-semibold">Project job schedules</h3>
-          <p className="text-muted-foreground text-xs">
-            Review each cadence and next run. Configure a job to change its
-            schedule.
-          </p>
-        </div>
+        <HeadingPair
+          level="h3"
+          visualLevel="card"
+          title="Project job schedules"
+          subtitle="Review each cadence and next run. Configure a job to change its schedule."
+        />
         <div className="flex flex-wrap gap-2">
           <Button
             size="sm"

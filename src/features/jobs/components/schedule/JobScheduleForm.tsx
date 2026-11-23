@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { toast } from 'sonner';
 
+import HeadingPair from '@/components/shared/HeadingPair';
 import { jobsApi } from '@/api/jobs';
 import ErrorState from '@/components/shared/ErrorState';
 import { Button } from '@/components/ui/button';
@@ -254,12 +255,12 @@ export const JobScheduleForm = forwardRef<
         <CardContent className="space-y-4">
           {mode === 'daily_time' && (
             <>
-              <div>
-                <h4 className="mb-1 text-sm font-semibold">Times of Day</h4>
-                <p className="text-muted-foreground text-xs">
-                  Job runs every day at each time listed below.
-                </p>
-              </div>
+              <HeadingPair
+                level="h4"
+                visualLevel="card"
+                title="Times of Day"
+                subtitle="Job runs every day at each time listed below."
+              />
               <div className="space-y-2">
                 {times.map((t, i) => (
                   <TimeInput
@@ -285,13 +286,12 @@ export const JobScheduleForm = forwardRef<
 
           {mode === 'interval' && (
             <>
-              <div>
-                <h4 className="mb-1 text-sm font-semibold">Run Interval</h4>
-                <p className="text-muted-foreground text-xs">
-                  Job runs this long after each run completes — including manual
-                  runs.
-                </p>
-              </div>
+              <HeadingPair
+                level="h4"
+                visualLevel="card"
+                title="Run Interval"
+                subtitle="Job runs this long after each run completes — including manual runs."
+              />
               <div className="flex items-center gap-3">
                 <Input
                   type="number"
@@ -336,12 +336,12 @@ export const JobScheduleForm = forwardRef<
 
           {mode === 'day_specific' && (
             <>
-              <div>
-                <h4 className="mb-1 text-sm font-semibold">Days of Week</h4>
-                <p className="text-muted-foreground text-xs">
-                  Job runs only on the selected days, at each time listed.
-                </p>
-              </div>
+              <HeadingPair
+                level="h4"
+                visualLevel="card"
+                title="Days of Week"
+                subtitle="Job runs only on the selected days, at each time listed."
+              />
               <div className="flex flex-wrap gap-2">
                 {WEEKDAYS.map((wd) => (
                   <Button

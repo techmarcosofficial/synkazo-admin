@@ -218,12 +218,9 @@ export default function PreferencesTab() {
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-3">
-            <div>
-              <FieldLabel>Theme</FieldLabel>
-              <p className="text-muted-foreground mt-0.5 text-xs">
-                Select the color mode that feels most comfortable.
-              </p>
-            </div>
+            <FieldLabel hint="Select the color mode that feels most comfortable.">
+              Theme
+            </FieldLabel>
             <RadioGroup
               value={theme}
               onValueChange={(value) => setTheme(value as typeof theme)}
@@ -258,12 +255,12 @@ export default function PreferencesTab() {
           </div>
 
           <div className="border-t pt-5">
-            <div className="mb-3">
-              <FieldLabel>Default View</FieldLabel>
-              <p className="text-muted-foreground mt-0.5 text-xs">
-                Used across management pages until a page is switched manually.
-              </p>
-            </div>
+            <FieldLabel
+              className="mb-3"
+              hint="Used across management pages until a page is switched manually."
+            >
+              Default View
+            </FieldLabel>
             <RadioGroup
               value={defaultView}
               onValueChange={(value) =>
@@ -298,12 +295,12 @@ export default function PreferencesTab() {
           </div>
 
           <div className="border-t pt-5">
-            <div className="mb-3">
-              <FieldLabel>Layout Style</FieldLabel>
-              <p className="text-muted-foreground mt-0.5 text-xs">
-                Choose how major cards, panels, drawers, and dialogs separate.
-              </p>
-            </div>
+            <FieldLabel
+              className="mb-3"
+              hint="Choose how major cards, panels, drawers, and dialogs separate."
+            >
+              Layout Style
+            </FieldLabel>
             <RadioGroup
               value={layoutStyle}
               onValueChange={(value) =>

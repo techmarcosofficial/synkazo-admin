@@ -33,6 +33,19 @@ This repository contains the administrative interface for Synkazo across two pri
   - Outer cards use `rounded-3xl` or `rounded-4xl` with semantic borders.
   - Compact padding across cards (`p-3 sm:p-4`) and list rows (`h-12 sm:h-14`).
   - Standardized typography using `HeadingPair` with semantic level hierarchy.
+  - **Titles stand alone.** A header shows only its title; its description moves
+    into an `InfoTip` (`src/components/shared/InfoTip.tsx`) beside it. This is
+    the default for `HeadingPair` (`subtitle`), `PageHeader` (`description`) and
+    `CardHeader` (a `CardDescription` child is lifted into the title row
+    automatically), and is available on `FieldLabel` via `hint`.
+    Escape hatches: `HeadingPair subtitleInline` and `CardHeader
+    inlineDescription` — use them only for the documented exceptions below.
+  - Descriptions that stay visible: option/choice cards and switch rows (people
+    compare them side by side), `Dialog`/`Sheet` descriptions (wired to
+    `aria-describedby`), `Alert` body copy, empty- and error-state copy, row
+    metadata, and any visually hidden (`sr-only`) heading. Never put a link or
+    other interactive element inside a description — a hover tooltip cannot be
+    reached reliably.
   - Interactive status badges with inline lowercase fix links (e.g. `fix` opening `CredentialsModal`).
 
 ### D. Dialog & Drawer Standards

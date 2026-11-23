@@ -61,4 +61,33 @@ describe('PreferencesTab', () => {
       }),
     );
   });
+
+  it('keeps headings and field labels bare while option cards stay readable', () => {
+    render(<PreferencesTab />);
+
+    // Card and field descriptions moved into their info tooltips.
+    const collapsed = [
+      'Choose which sync updates arrive by email.',
+      'Personalize how Synkazo looks and presents your data.',
+      'Select the color mode that feels most comfortable.',
+      'Used across management pages until a page is switched manually.',
+      'Choose how major cards, panels, drawers, and dialogs separate.',
+    ];
+    for (const text of collapsed) {
+      expect(screen.queryByText(text)).toBeNull();
+    }
+    expect(
+      screen.getAllByRole('button', { name: /more information/i }),
+    ).toHaveLength(collapsed.length);
+
+    // Choosable options still describe themselves on the page.
+    for (const text of [
+      'Bright and clean throughout the app',
+      'Comfortable in low-light environments',
+      'Compact rows for scanning more data',
+      'Email when a sync job finishes successfully',
+    ]) {
+      expect(screen.getByText(text)).toBeInTheDocument();
+    }
+  });
 });

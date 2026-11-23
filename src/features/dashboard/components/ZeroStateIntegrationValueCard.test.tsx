@@ -35,6 +35,10 @@ describe('ZeroStateIntegrationValueCard', () => {
   it('does not render a duplicate primary create button', () => {
     render(<ZeroStateIntegrationValueCard />);
 
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    // Info tooltip triggers are buttons too; only a create action would be a
+    // duplicate here.
+    expect(
+      screen.queryByRole('button', { name: /create|new project/i }),
+    ).not.toBeInTheDocument();
   });
 });

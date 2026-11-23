@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import HeadingPair from '@/components/shared/HeadingPair';
 import InfoTip from '@/components/shared/InfoTip';
 import { cn } from '@/lib/utils';
 
@@ -58,9 +59,8 @@ export function TabIntro({
   subtitle: string;
 }) {
   return (
-    <div className="space-y-0.5 pb-1">
-      <h3 className="text-foreground text-[15px] font-semibold">{title}</h3>
-      <p className="text-muted-foreground text-[13px]">{subtitle}</p>
+    <div className="pb-1">
+      <HeadingPair level="h3" visualLevel="section" title={title} subtitle={subtitle} />
     </div>
   );
 }

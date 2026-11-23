@@ -60,6 +60,9 @@ export default function SkipRecordEditor({
           titleId="skip-record-heading"
           title="Skip Record"
           subtitle="Source conditions inspect incoming source data before mapping. Destination conditions run only after an existing destination record is found and can skip that record's update."
+          /* The whole heading is visually hidden, so there is nothing to
+             declutter — keep the text readable by screen readers. */
+          subtitleInline
         />
       </div>
 

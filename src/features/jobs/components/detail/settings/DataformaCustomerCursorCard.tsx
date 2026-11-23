@@ -61,10 +61,9 @@ export default function DataformaCustomerCursorCard({
       <div className="space-y-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field>
-            <FieldLabel>Starting Customer ID</FieldLabel>
-            <p className="text-muted-foreground text-xs">
-              0 = sync every customer from the beginning.
-            </p>
+            <FieldLabel hint="0 = sync every customer from the beginning.">
+              Starting Customer ID
+            </FieldLabel>
             <Input
               type="number"
               min={0}
@@ -75,10 +74,9 @@ export default function DataformaCustomerCursorCard({
             />
           </Field>
           <Field>
-            <FieldLabel>Currently Synced Through</FieldLabel>
-            <p className="text-muted-foreground text-xs">
-              Highest customer ID synced so far.
-            </p>
+            <FieldLabel hint="Highest customer ID synced so far.">
+              Currently Synced Through
+            </FieldLabel>
             <div className="bg-muted text-muted-foreground truncate rounded-3xl px-3 py-2 text-sm">
               {job.dataformaCustomerIdCursor ?? '—'}
             </div>

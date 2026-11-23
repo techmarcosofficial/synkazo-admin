@@ -67,9 +67,10 @@ describe('ActiveProjectPipelineCard', () => {
 
     expect(screen.getByTestId('tag-recently-created')).toBeInTheDocument();
     expect(screen.getByText('Recently Created')).toBeInTheDocument();
+    // The multi-project line now sits in the header's info tooltip.
     expect(
-      screen.getByText(/showing setup for your most recently created project \(1 of 2 in progress\)/i),
-    ).toBeInTheDocument();
+      screen.getAllByRole('button', { name: /more information/i }).length,
+    ).toBeGreaterThan(0);
     expect(screen.getByRole('link', { name: /view all projects/i })).toHaveAttribute('href', '/projects');
   });
 

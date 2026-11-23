@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 
 import { cn } from '@/lib/utils';
+import InfoTip from '@/components/shared/InfoTip';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 
@@ -100,8 +101,13 @@ function FieldContent({ className, ...props }: React.ComponentProps<'div'>) {
 
 function FieldLabel({
   className,
+  hint,
+  children,
   ...props
-}: React.ComponentProps<typeof Label>) {
+}: React.ComponentProps<typeof Label> & {
+  /** Helper text shown in an `InfoTip` beside the label instead of under it. */
+  hint?: React.ReactNode;
+}) {
   return (
     <Label
       data-slot="field-label"
@@ -111,7 +117,10 @@ function FieldLabel({
         className,
       )}
       {...props}
-    />
+    >
+      {children}
+      {hint && <InfoTip>{hint}</InfoTip>}
+    </Label>
   );
 }
 

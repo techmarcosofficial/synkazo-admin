@@ -9,6 +9,7 @@ import type {
   UpdateQueueJobPayload,
   UpdateQueueSchedulePayload,
 } from '@/api/priorityQueue';
+import HeadingPair from '@/components/shared/HeadingPair';
 import { superAdminOperationsApi } from '@/api/superAdminOperations';
 import { superAdminPriorityQueueApi } from '@/api/superAdminPriorityQueue';
 import ErrorState from '@/components/shared/ErrorState';
@@ -824,13 +825,12 @@ export default function OrganisationProjectScheduler({
       {!priority && (
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 className="text-sm font-semibold">Project job schedules</h3>
-              <p className="text-muted-foreground text-xs">
-                Review each cadence and next run. Configure a job to change its
-                schedule.
-              </p>
-            </div>
+            <HeadingPair
+              level="h3"
+              visualLevel="card"
+              title="Project job schedules"
+              subtitle="Review each cadence and next run. Configure a job to change its schedule."
+            />
             <div className="flex flex-wrap gap-2">
               <Button
                 size="sm"

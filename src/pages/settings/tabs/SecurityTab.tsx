@@ -3,6 +3,7 @@ import { useState } from 'react';
 
 import PasswordInput from '@/components/auth/PasswordInput';
 import PasswordStrength from '@/components/auth/PasswordStrength';
+import HeadingPair from '@/components/shared/HeadingPair';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -177,13 +178,12 @@ export default function SecurityTab() {
         </CardHeader>
         <CardContent>
           <div className="border-destructive/20 bg-destructive/5 flex flex-col gap-3 rounded-3xl border p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-medium">Deactivate Account</p>
-              <p className="text-muted-foreground text-xs">
-                Sign out and disable access until an administrator reactivates
-                your account.
-              </p>
-            </div>
+            <HeadingPair
+              level="h3"
+              visualLevel="item"
+              title="Deactivate Account"
+              subtitle="Sign out and disable access until an administrator reactivates your account."
+            />
             <Button
               className="w-fit shrink-0"
               variant="destructive"

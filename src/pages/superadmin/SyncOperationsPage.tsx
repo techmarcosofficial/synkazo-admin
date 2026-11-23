@@ -11,6 +11,7 @@ import {
   RefreshCw,
   Server,
 } from 'lucide-react';
+import HeadingPair from '@/components/shared/HeadingPair';
 import ManagementCardHeader from '@/components/shared/ManagementCardHeader';
 import ManagementToolbar from '@/components/shared/ManagementToolbar';
 import StatusBadge from '@/components/shared/StatusBadge';
@@ -107,14 +108,16 @@ function ProcessResourceCard({
             <span className="bg-primary/10 text-primary flex size-7 shrink-0 items-center justify-center rounded-lg">
               <Server className="size-4" aria-hidden="true" />
             </span>
-            <div className="min-w-0">
-              <h2 className="text-sm font-semibold">{title}</h2>
-              <p className="text-muted-foreground text-[11px]">
-                {worker
+            <HeadingPair
+              level="h2"
+              visualLevel="card"
+              title={title}
+              subtitle={
+                worker
                   ? 'Queued and scheduled syncs'
-                  : 'API requests and webhook syncs'}
-              </p>
-            </div>
+                  : 'API requests and webhook syncs'
+              }
+            />
           </div>
           <Badge variant="secondary">
             {loading

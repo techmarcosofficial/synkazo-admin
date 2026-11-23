@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+import HeadingPair from '@/components/shared/HeadingPair';
 import type { TrashEntityType, TrashItem } from '@/api/trashTypes';
 import { PermanentDeleteTrashDialog } from '@/components/trash/PermanentDeleteTrashDialog';
 import { TrashTable } from '@/components/trash/TrashTable';
@@ -65,14 +66,12 @@ export default function TrashPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Trash</h1>
-        <p className="text-sm text-muted-foreground">
-          Deleted organisations, projects, and jobs across every tenant.
-          Restore them, or permanently delete them. Anything left is
-          automatically purged 90 days after deletion.
-        </p>
-      </header>
+      <HeadingPair
+        level="h1"
+        visualLevel="page"
+        title="Trash"
+        subtitle="Deleted organisations, projects, and jobs across every tenant. Restore them, or permanently delete them. Anything left is automatically purged 90 days after deletion."
+      />
 
       <div className="flex flex-wrap items-center gap-3">
         <Select

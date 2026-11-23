@@ -19,43 +19,26 @@ afterAll(() => vi.unstubAllGlobals());
 afterEach(cleanup);
 
 describe('HeadingPair', () => {
-  it('renders title and subtitle below as a paragraph by default', () => {
-    render(
-      <HeadingPair
-        title="Recent Activity"
-        subtitle="Latest sync runs and project events."
-      />,
-    );
-
-    expect(
-      screen.getByRole('heading', { level: 2, name: 'Recent Activity' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText('Latest sync runs and project events.'),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: /more information/i }),
-    ).not.toBeInTheDocument();
-  });
-
-  it('renders subtitle inside tooltip when subtitleInTooltip is true', async () => {
+  it('moves the subtitle into an info tooltip by default', async () => {
     const user = userEvent.setup();
     render(
       <HeadingPair
         title="Recent Activity"
         subtitle="Latest sync runs and project events."
-        subtitleInTooltip
       />,
     );
 
     expect(
       screen.getByRole('heading', { level: 2, name: 'Recent Activity' }),
     ).toBeInTheDocument();
+    // The description must not take a line of its own.
+    expect(
+      screen.queryByText('Latest sync runs and project events.'),
+    ).not.toBeInTheDocument();
 
     const infoButton = screen.getByRole('button', {
       name: /more information/i,
     });
-    expect(infoButton).toBeInTheDocument();
 
     await user.hover(infoButton);
     expect(
@@ -65,31 +48,25 @@ describe('HeadingPair', () => {
     ).toBeInTheDocument();
   });
 
-  it('renders subtitle inside tooltip when subtitleAsTooltip is true', async () => {
-    const user = userEvent.setup();
+  it('renders the subtitle as a paragraph when subtitleInline is set', () => {
     render(
       <HeadingPair
         title="Upcoming Events"
         subtitle="Next scheduled sync runs."
-        subtitleAsTooltip
+        subtitleInline
       />,
     );
 
-    const infoButton = screen.getByRole('button', {
-      name: /more information/i,
-    });
-    expect(infoButton).toBeInTheDocument();
-
-    await user.hover(infoButton);
     expect(
-      await screen.findByRole('tooltip', {
-        name: 'Next scheduled sync runs.',
-      }),
+      screen.getByText('Next scheduled sync runs.'),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /more information/i }),
+    ).not.toBeInTheDocument();
   });
 
-  it('does not render tooltip button when no subtitle is provided even if subtitleInTooltip is true', () => {
-    render(<HeadingPair title="Title Only" subtitleInTooltip />);
+  it('renders no info trigger when there is no subtitle', () => {
+    render(<HeadingPair title="Title Only" />);
 
     expect(
       screen.getByRole('heading', { level: 2, name: 'Title Only' }),

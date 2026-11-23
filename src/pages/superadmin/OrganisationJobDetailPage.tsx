@@ -116,12 +116,12 @@ function JobOverview({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-base font-semibold">Sync overview</h2>
-          <p className="text-muted-foreground text-sm">
-            Current job and schedule state.
-          </p>
-        </div>
+        <HeadingPair
+          level="h2"
+          visualLevel="section"
+          title="Sync overview"
+          subtitle="Current job and schedule state."
+        />
         {runAction}
       </div>
       {runStatus}

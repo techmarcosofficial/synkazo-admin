@@ -1,5 +1,6 @@
 import * as React from 'react';
 
+import InfoTip from '@/components/shared/InfoTip';
 import {
   headingSubtitleStyles,
   headingTitleStyles,
@@ -49,11 +50,90 @@ function Card({
   );
 }
 
+/** Flattens one level of fragments so `<>{title}{description}</>` still works. */
+function flattenHeaderChildren(children: React.ReactNode): React.ReactNode[] {
+  const flat: React.ReactNode[] = [];
+  React.Children.forEach(children, (child) => {
+    if (React.isValidElement(child) && child.type === React.Fragment) {
+      React.Children.forEach(
+        (child.props as { children?: React.ReactNode }).children,
+        (nested) => flat.push(nested),
+      );
+      return;
+    }
+    flat.push(child);
+  });
+  return flat;
+}
+
+/**
+ * Swaps the `CardTitle` for a title + `InfoTip` row, wherever it sits — titles
+ * are often wrapped in a flex row alongside a badge.
+ */
+function attachHintToTitle(
+  node: React.ReactNode,
+  hint: React.ReactNode,
+  state: { done: boolean },
+): React.ReactNode {
+  if (state.done || !React.isValidElement(node)) return node;
+
+  if (node.type === CardTitle) {
+    state.done = true;
+    return (
+      <div className="flex min-w-0 items-center gap-2">
+        {node}
+        <InfoTip>{hint}</InfoTip>
+      </div>
+    );
+  }
+
+  const { children } = node.props as { children?: React.ReactNode };
+  if (children == null || typeof children !== 'object') return node;
+
+  const mapped = React.Children.map(children, (child) =>
+    attachHintToTitle(child, hint, state),
+  );
+  return state.done ? React.cloneElement(node, undefined, mapped) : node;
+}
+
+/**
+ * Headers show the title alone; a `CardDescription` sibling is lifted into an
+ * `InfoTip` beside it so cards stay compact. Pass `inlineDescription` to keep
+ * the description as a visible line instead.
+ */
+function collapseDescriptionIntoTitle(children: React.ReactNode) {
+  const flat = flattenHeaderChildren(children);
+
+  const descriptions = flat.filter(
+    (child) => React.isValidElement(child) && child.type === CardDescription,
+  ) as React.ReactElement<{ children?: React.ReactNode }>[];
+
+  // Without a description there is nothing to merge; render as authored.
+  if (descriptions.length === 0) return children;
+
+  const hint = descriptions.map((description, index) => (
+    <React.Fragment key={index}>{description.props.children}</React.Fragment>
+  ));
+
+  const state = { done: false };
+  const rest = flat
+    .filter((child) => !descriptions.includes(child as never))
+    .map((child) => attachHintToTitle(child, hint, state));
+
+  // No title to hang the hint on — keep the description visible.
+  return state.done ? rest : children;
+}
+
 function CardHeader({
   className,
   visualLevel = 'card',
+  inlineDescription = false,
+  children,
   ...props
-}: React.ComponentProps<'div'> & { visualLevel?: HeadingVisualLevel }) {
+}: React.ComponentProps<'div'> & {
+  visualLevel?: HeadingVisualLevel;
+  inlineDescription?: boolean;
+}) {
   return (
     <CardHeadingContext.Provider value={visualLevel}>
       <div
@@ -63,7 +143,9 @@ function CardHeader({
           className,
         )}
         {...props}
-      />
+      >
+        {inlineDescription ? children : collapseDescriptionIntoTitle(children)}
+      </div>
     </CardHeadingContext.Provider>
   );
 }

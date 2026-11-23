@@ -95,10 +95,11 @@ describe('ProjectsPage - Environment Awareness in Table View', () => {
     const pageHeader = projectHeading.closest('header');
     expect(pageHeader).not.toBeNull();
     const results = screen.getByRole('region', { name: 'Project results' });
+    // The description now lives in the header's info tooltip.
     expect(
-      within(pageHeader as HTMLElement).getByText(
-        'Connect, monitor, and manage your syncs.',
-      ),
+      within(pageHeader as HTMLElement).getByRole('button', {
+        name: /more information/i,
+      }),
     ).toBeInTheDocument();
     expect(
       within(pageHeader as HTMLElement).getByLabelText('2 projects total'),

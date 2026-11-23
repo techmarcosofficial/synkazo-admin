@@ -98,12 +98,18 @@ export default function SubscriptionPaywall() {
             }
             className="items-center"
           />
-          <p className="text-muted-foreground text-xs leading-relaxed">
-            Your automatic syncs are paused while this hold is active. If you need help or want to settle any outstanding invoices, please contact support.
+          <p className="text-muted-foreground max-w-sm text-xs leading-relaxed">
+            Your automatic syncs are paused while this hold is active. If you
+            need help or want to settle any outstanding invoices, please
+            contact support.
           </p>
-          <div className="flex flex-col sm:flex-row items-center gap-2 w-full mt-2">
+          {/* Grid rather than flex: two `w-full` children in a flex row each
+              claim the full track and overflow the card. */}
+          <div className="mt-2 grid w-full gap-2 sm:grid-cols-2">
             <Button asChild className="w-full">
-              <a href={`mailto:${SUPPORT_EMAIL}?subject=Synkazo Administrative Hold Assistance`}>
+              <a
+                href={`mailto:${SUPPORT_EMAIL}?subject=Synkazo Administrative Hold Assistance`}
+              >
                 Contact Support
               </a>
             </Button>
@@ -111,8 +117,14 @@ export default function SubscriptionPaywall() {
               <Link to="/organization/billing/invoices">View Invoices</Link>
             </Button>
           </div>
-          <Button variant="ghost" size="sm" onClick={logout} className="mt-2 text-xs">
-            <LogOut className="size-3.5 mr-1" aria-hidden="true" /> Log out
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={logout}
+            className="text-muted-foreground hover:text-foreground mt-1 text-xs"
+          >
+            <LogOut className="size-3.5" aria-hidden="true" />
+            Log out
           </Button>
         </div>
       </div>
