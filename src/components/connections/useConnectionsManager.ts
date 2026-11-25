@@ -59,6 +59,32 @@ export function useConnectionsManager({
 
   const initialLoadDoneRef = useRef(false);
 
+  // Smart default: when projectActiveEnv is null (fresh project, never
+  // activated) and no URL ?env= param is present, prefer the environment that
+  // actually has connected connections. This prevents marketplace-first users
+  // from landing on an empty sandbox when their HubSpot is in production.
+  useEffect(() => {
+    if (envInitializedRef.current) return;
+    if (!initialLoadDoneRef.current) return;
+    if (searchParams.get('env')) return;
+    const prodConnected = connections.some(
+      (c) =>
+        c.id &&
+        (c.environment ?? 'production') === 'production' &&
+        c.status === 'connected',
+    );
+    const sandboxConnected = connections.some(
+      (c) =>
+        c.id &&
+        (c.environment ?? 'production') === 'sandbox' &&
+        c.status === 'connected',
+    );
+    if (prodConnected && !sandboxConnected) {
+      setActiveEnv('production');
+      envInitializedRef.current = true;
+    }
+  }, [connections, searchParams]);
+
   const loadConnections = useCallback(
     async (silent = false) => {
       if (!projectId) return;

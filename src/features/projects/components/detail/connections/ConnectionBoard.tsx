@@ -616,6 +616,18 @@ export default function ConnectionBoard({
           </CardHeader>
 
           <CardContent className="space-y-6 pt-2">
+            {destinationComplete && !sourceComplete && (
+              <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
+                <p className="font-medium text-primary">
+                  Connect your source platform
+                </p>
+                <p className="text-muted-foreground mt-1">
+                  HubSpot is connected as the destination. Add your source
+                  platform credentials below so Synkazo can start syncing
+                  records.
+                </p>
+              </div>
+            )}
             {stepsContent}
           </CardContent>
           {continueBanner}
@@ -637,6 +649,17 @@ export default function ConnectionBoard({
             )}
           </div>
 
+          {destinationComplete && !sourceComplete && (
+            <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
+              <p className="font-medium text-primary">
+                Connect your source platform
+              </p>
+              <p className="text-muted-foreground mt-1">
+                HubSpot is connected as the destination. Add your source
+                platform credentials below so Synkazo can start syncing records.
+              </p>
+            </div>
+          )}
           {stepsContent}
           {continueBanner}
         </div>
