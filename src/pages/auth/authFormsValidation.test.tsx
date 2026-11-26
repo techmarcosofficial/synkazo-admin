@@ -62,13 +62,13 @@ describe('auth form inline validation', () => {
   it('offers HubSpot login only on the login page', () => {
     const { unmount } = renderAuthPage(<Login />);
     expect(
-      screen.getByRole('button', { name: 'Login with HubSpot' }),
+      screen.getByRole('button', { name: 'Continue with HubSpot' }),
     ).toBeInTheDocument();
 
     unmount();
     renderAuthPage(<Register />);
     expect(
-      screen.queryByRole('button', { name: 'Login with HubSpot' }),
+      screen.queryByRole('button', { name: 'Continue with HubSpot' }),
     ).not.toBeInTheDocument();
   });
 

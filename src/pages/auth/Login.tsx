@@ -303,14 +303,14 @@ export default function Login() {
           size="lg"
           variant="outline"
           className="w-full"
-          aria-label="Login with HubSpot"
+          aria-label="Continue with HubSpot"
           disabled={hubspotRedirecting}
           onClick={handleHubSpotLogin}
         >
           <PlatformIcon platformId="hubspot" size={20} />
           {hubspotRedirecting
             ? 'Redirecting to HubSpot…'
-            : 'Login with HubSpot'}
+            : 'Continue with HubSpot'}
         </Button>
         <div className="flex items-center gap-3" aria-hidden="true">
           <span className="bg-border h-px flex-1" />
